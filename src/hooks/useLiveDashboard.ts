@@ -1,0 +1,142 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { AirspaceAlert, MaritimeVessel, GeoAlert, RiskScore, TimelineEvent } from "@/data/mockData";
+
+export function useLiveDashboard() {
+  const [airspaceAlerts, setAirspaceAlerts] = useState<AirspaceAlert[]>([]);
+  const [vessels, setVessels] = useState<MaritimeVessel[]>([]);
+  const [geoAlerts, setGeoAlerts] = useState<GeoAlert[]>([]);
+  const [riskScore, setRiskScore] = useState<RiskScore>({
+    overall: 0, airspace: 0, maritime: 0, diplomatic: 0, sentiment: 0,
+    trend: "stable", lastUpdated: new Date().toISOString(),
+  });
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Initial fetch
+  useEffect(() => {
+    async function fetchAll() {
+      const [aRes, vRes, gRes, rRes, tRes] = await Promise.all([
+        supabase.from("airspace_alerts").select("*"),
+        supabase.from("vessels").select("*"),
+        supabase.from("geo_alerts").select("*"),
+        supabase.from("risk_scores").select("*").order("last_updated", { ascending: false }).limit(1),
+        supabase.from("timeline_events").select("*").order("timestamp", { ascending: true }),
+      ]);
+
+      if (aRes.data) setAirspaceAlerts(aRes.data.map(mapAirspace));
+      if (vRes.data) setVessels(vRes.data.map(mapVessel));
+      if (gRes.data) setGeoAlerts(gRes.data.map(mapGeoAlert));
+      if (rRes.data?.[0]) setRiskScore(mapRisk(rRes.data[0]));
+      if (tRes.data) setTimeline(tRes.data.map(mapTimeline));
+      setLoading(false);
+    }
+    fetchAll();
+  }, []);
+
+  // Realtime subscriptions
+  useEffect(() => {
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "airspace_alerts" }, () => {
+        supabase.from("airspace_alerts").select("*").then(({ data }) => {
+          if (data) setAirspaceAlerts(data.map(mapAirspace));
+        });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "vessels" }, () => {
+        supabase.from("vessels").select("*").then(({ data }) => {
+          if (data) setVessels(data.map(mapVessel));
+        });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "geo_alerts" }, () => {
+        supabase.from("geo_alerts").select("*").then(({ data }) => {
+          if (data) setGeoAlerts(data.map(mapGeoAlert));
+        });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "risk_scores" }, () => {
+        supabase.from("risk_scores").select("*").order("last_updated", { ascending: false }).limit(1).then(({ data }) => {
+          if (data?.[0]) setRiskScore(mapRisk(data[0]));
+        });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "timeline_events" }, () => {
+        supabase.from("timeline_events").select("*").order("timestamp", { ascending: true }).then(({ data }) => {
+          if (data) setTimeline(data.map(mapTimeline));
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading };
+}
+
+// Mappers from DB rows to app types
+function mapAirspace(row: any): AirspaceAlert {
+  return {
+    id: row.id,
+    type: row.type,
+    region: row.region,
+    lat: row.lat,
+    lng: row.lng,
+    radius: row.radius,
+    severity: row.severity,
+    description: row.description,
+    timestamp: row.timestamp,
+    active: row.active,
+  };
+}
+
+function mapVessel(row: any): MaritimeVessel {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    flag: row.flag,
+    lat: row.lat,
+    lng: row.lng,
+    heading: row.heading,
+    speed: row.speed,
+    destination: row.destination ?? undefined,
+    timestamp: row.timestamp,
+  };
+}
+
+function mapGeoAlert(row: any): GeoAlert {
+  return {
+    id: row.id,
+    type: row.type,
+    region: row.region,
+    title: row.title,
+    summary: row.summary,
+    severity: row.severity,
+    source: row.source,
+    timestamp: row.timestamp,
+    lat: row.lat,
+    lng: row.lng,
+  };
+}
+
+function mapRisk(row: any): RiskScore {
+  return {
+    overall: row.overall,
+    airspace: row.airspace,
+    maritime: row.maritime,
+    diplomatic: row.diplomatic,
+    sentiment: row.sentiment,
+    trend: row.trend,
+    lastUpdated: row.last_updated,
+  };
+}
+
+function mapTimeline(row: any): TimelineEvent {
+  return {
+    id: row.id,
+    timestamp: row.timestamp,
+    type: row.type,
+    title: row.title,
+    severity: row.severity,
+  };
+}

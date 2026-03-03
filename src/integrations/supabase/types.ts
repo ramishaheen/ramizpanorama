@@ -14,7 +14,180 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      airspace_alerts: {
+        Row: {
+          active: boolean
+          description: string
+          id: string
+          lat: number
+          lng: number
+          radius: number
+          region: string
+          severity: Database["public"]["Enums"]["severity_level"]
+          timestamp: string
+          type: Database["public"]["Enums"]["airspace_alert_type"]
+        }
+        Insert: {
+          active?: boolean
+          description?: string
+          id: string
+          lat: number
+          lng: number
+          radius: number
+          region: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          timestamp?: string
+          type: Database["public"]["Enums"]["airspace_alert_type"]
+        }
+        Update: {
+          active?: boolean
+          description?: string
+          id?: string
+          lat?: number
+          lng?: number
+          radius?: number
+          region?: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          timestamp?: string
+          type?: Database["public"]["Enums"]["airspace_alert_type"]
+        }
+        Relationships: []
+      }
+      geo_alerts: {
+        Row: {
+          id: string
+          lat: number
+          lng: number
+          region: string
+          severity: Database["public"]["Enums"]["severity_level"]
+          source: string
+          summary: string
+          timestamp: string
+          title: string
+          type: Database["public"]["Enums"]["geo_alert_type"]
+        }
+        Insert: {
+          id: string
+          lat: number
+          lng: number
+          region: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          source?: string
+          summary?: string
+          timestamp?: string
+          title: string
+          type: Database["public"]["Enums"]["geo_alert_type"]
+        }
+        Update: {
+          id?: string
+          lat?: number
+          lng?: number
+          region?: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          source?: string
+          summary?: string
+          timestamp?: string
+          title?: string
+          type?: Database["public"]["Enums"]["geo_alert_type"]
+        }
+        Relationships: []
+      }
+      risk_scores: {
+        Row: {
+          airspace: number
+          diplomatic: number
+          id: string
+          last_updated: string
+          maritime: number
+          overall: number
+          sentiment: number
+          trend: Database["public"]["Enums"]["risk_trend"]
+        }
+        Insert: {
+          airspace?: number
+          diplomatic?: number
+          id?: string
+          last_updated?: string
+          maritime?: number
+          overall?: number
+          sentiment?: number
+          trend?: Database["public"]["Enums"]["risk_trend"]
+        }
+        Update: {
+          airspace?: number
+          diplomatic?: number
+          id?: string
+          last_updated?: string
+          maritime?: number
+          overall?: number
+          sentiment?: number
+          trend?: Database["public"]["Enums"]["risk_trend"]
+        }
+        Relationships: []
+      }
+      timeline_events: {
+        Row: {
+          id: string
+          severity: Database["public"]["Enums"]["severity_level"]
+          timestamp: string
+          title: string
+          type: Database["public"]["Enums"]["timeline_event_type"]
+        }
+        Insert: {
+          id: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          timestamp?: string
+          title: string
+          type: Database["public"]["Enums"]["timeline_event_type"]
+        }
+        Update: {
+          id?: string
+          severity?: Database["public"]["Enums"]["severity_level"]
+          timestamp?: string
+          title?: string
+          type?: Database["public"]["Enums"]["timeline_event_type"]
+        }
+        Relationships: []
+      }
+      vessels: {
+        Row: {
+          destination: string | null
+          flag: string
+          heading: number
+          id: string
+          lat: number
+          lng: number
+          name: string
+          speed: number
+          timestamp: string
+          type: Database["public"]["Enums"]["vessel_type"]
+        }
+        Insert: {
+          destination?: string | null
+          flag?: string
+          heading?: number
+          id: string
+          lat: number
+          lng: number
+          name: string
+          speed?: number
+          timestamp?: string
+          type?: Database["public"]["Enums"]["vessel_type"]
+        }
+        Update: {
+          destination?: string | null
+          flag?: string
+          heading?: number
+          id?: string
+          lat?: number
+          lng?: number
+          name?: string
+          speed?: number
+          timestamp?: string
+          type?: Database["public"]["Enums"]["vessel_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +196,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      airspace_alert_type: "NOTAM" | "TFR" | "CLOSURE"
+      geo_alert_type: "DIPLOMATIC" | "MILITARY" | "ECONOMIC" | "HUMANITARIAN"
+      risk_trend: "rising" | "falling" | "stable"
+      severity_level: "low" | "medium" | "high" | "critical"
+      timeline_event_type: "airspace" | "maritime" | "alert" | "diplomatic"
+      vessel_type: "MILITARY" | "CARGO" | "TANKER" | "FISHING" | "UNKNOWN"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +328,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      airspace_alert_type: ["NOTAM", "TFR", "CLOSURE"],
+      geo_alert_type: ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"],
+      risk_trend: ["rising", "falling", "stable"],
+      severity_level: ["low", "medium", "high", "critical"],
+      timeline_event_type: ["airspace", "maritime", "alert", "diplomatic"],
+      vessel_type: ["MILITARY", "CARGO", "TANKER", "FISHING", "UNKNOWN"],
+    },
   },
 } as const
