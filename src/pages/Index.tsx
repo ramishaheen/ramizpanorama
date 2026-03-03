@@ -7,15 +7,11 @@ import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
 import { TimelineSlider } from "@/components/dashboard/TimelineSlider";
 import { LayerControls, type LayerState } from "@/components/dashboard/LayerControls";
 import { Disclaimer } from "@/components/dashboard/Disclaimer";
-import {
-  mockAirspaceAlerts,
-  mockVessels,
-  mockGeoAlerts,
-  mockRiskScore,
-  mockTimeline,
-} from "@/data/mockData";
+import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 
 const Index = () => {
+  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading } = useLiveDashboard();
+
   const [layers, setLayers] = useState<LayerState>({
     airspace: true,
     maritime: true,
@@ -27,41 +23,52 @@ const Index = () => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Loading intel…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <DashboardHeader />
       <StatsBar
-        airspaceCount={mockAirspaceAlerts.filter(a => a.active).length}
-        vesselCount={mockVessels.length}
-        alertCount={mockGeoAlerts.length}
-        riskScore={mockRiskScore.overall}
+        airspaceCount={airspaceAlerts.filter(a => a.active).length}
+        vesselCount={vessels.length}
+        alertCount={geoAlerts.length}
+        riskScore={riskScore.overall}
       />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar */}
         <div className="w-64 flex-shrink-0 border-r border-border flex flex-col overflow-hidden">
           <div className="p-3 space-y-3">
-            <RiskScoreGauge score={mockRiskScore} />
+            <RiskScoreGauge score={riskScore} />
             <LayerControls layers={layers} onToggle={toggleLayer} />
           </div>
           <div className="p-3 pt-0">
-            <TimelineSlider events={mockTimeline} />
+            <TimelineSlider events={timeline} />
           </div>
         </div>
 
         {/* Map */}
         <div className="flex-1 relative">
           <IntelMap
-            airspaceAlerts={mockAirspaceAlerts}
-            vessels={mockVessels}
-            geoAlerts={mockGeoAlerts}
+            airspaceAlerts={airspaceAlerts}
+            vessels={vessels}
+            geoAlerts={geoAlerts}
             layers={layers}
           />
         </div>
 
         {/* Right sidebar - notifications */}
         <div className="w-80 flex-shrink-0 border-l border-border overflow-hidden">
-          <NotificationPanel alerts={mockGeoAlerts} />
+          <NotificationPanel alerts={geoAlerts} />
         </div>
       </div>
 
