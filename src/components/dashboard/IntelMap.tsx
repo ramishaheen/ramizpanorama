@@ -1,9 +1,20 @@
-import { useEffect } from "react";
-import { MapContainer, TileLayer, CircleMarker, Circle, Popup, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Circle, Popup, Marker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
+
+// Fix default marker icon without using delete operator
+const defaultIcon = L.icon({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+L.Marker.prototype.options.icon = defaultIcon;
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -26,14 +37,6 @@ const vesselColors: Record<MaritimeVessel["type"], string> = {
   FISHING: "#22c55e",
   UNKNOWN: "#888888",
 };
-
-// Fix default marker icon
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
 
 const createVesselIcon = (type: MaritimeVessel["type"], heading: number) => {
   const color = vesselColors[type];
