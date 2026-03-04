@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, RiskScore, TimelineEvent } from "@/data/mockData";
 
 export function useLiveDashboard() {
@@ -48,10 +49,18 @@ export function useLiveDashboard() {
           if (data) setVessels(data.map(mapVessel));
         });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "geo_alerts" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "geo_alerts" }, (payload) => {
         supabase.from("geo_alerts").select("*").then(({ data }) => {
           if (data) setGeoAlerts(data.map(mapGeoAlert));
         });
+        // Toast for new critical alerts
+        if (payload.eventType === "INSERT" && payload.new?.severity === "critical") {
+          toast({
+            variant: "destructive",
+            title: "⚠ CRITICAL ALERT",
+            description: `${payload.new.title} — ${payload.new.region}`,
+          });
+        }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "risk_scores" }, () => {
         supabase.from("risk_scores").select("*").order("last_updated", { ascending: false }).limit(1).then(({ data }) => {
