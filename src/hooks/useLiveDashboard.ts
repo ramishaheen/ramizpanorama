@@ -70,6 +70,20 @@ export function useLiveDashboard() {
     };
   }, []);
 
+  // Auto-simulate live intel every 15 seconds
+  useEffect(() => {
+    const simulate = () => {
+      supabase.functions.invoke("simulate-intel").catch(console.error);
+    };
+    // Initial trigger after 3s
+    const initialTimeout = setTimeout(simulate, 3000);
+    const interval = setInterval(simulate, 15000);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
   return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading };
 }
 
