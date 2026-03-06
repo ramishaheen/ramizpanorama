@@ -6,6 +6,11 @@ const corsHeaders = {
 };
 
 const AV_BASE = "https://www.alphavantage.co/query";
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// In-memory cache
+let cachedData: { prices: Record<string, PriceResult>; timestamp: string } | null = null;
+let cacheTime = 0;
 
 interface PriceResult {
   key: string;
@@ -14,11 +19,17 @@ interface PriceResult {
   changePercent: number;
 }
 
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 async function fetchGlobalQuote(symbol: string, key: string, apiKey: string): Promise<PriceResult | null> {
   try {
     const url = `${AV_BASE}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
+    if (data["Note"] || data["Information"]) {
+      console.warn(`Rate limited on GLOBAL_QUOTE ${symbol}`);
+      return null;
+    }
     const q = data["Global Quote"];
     if (!q || !q["05. price"]) return null;
     const price = parseFloat(q["05. price"]);
@@ -35,10 +46,13 @@ async function fetchForex(from: string, to: string, key: string, apiKey: string)
     const url = `${AV_BASE}?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
+    if (data["Note"] || data["Information"]) {
+      console.warn(`Rate limited on FOREX ${from}/${to}`);
+      return null;
+    }
     const rate = data["Realtime Currency Exchange Rate"];
     if (!rate) return null;
     const price = parseFloat(rate["5. Exchange Rate"]);
-    // AV forex doesn't give change, we return 0 and let client compute from history
     return { key, price, change: 0, changePercent: 0 };
   } catch {
     return null;
@@ -50,6 +64,10 @@ async function fetchCommodityDaily(func: string, key: string, apiKey: string): P
     const url = `${AV_BASE}?function=${func}&interval=daily&apikey=${apiKey}`;
     const res = await fetch(url);
     const data = await res.json();
+    if (data["Note"] || data["Information"]) {
+      console.warn(`Rate limited on commodity ${func}`);
+      return null;
+    }
     const seriesData = data["data"];
     if (!seriesData || seriesData.length < 2) return null;
     const latest = parseFloat(seriesData[0]["value"]);
@@ -76,30 +94,46 @@ serve(async (req) => {
     });
   }
 
-  try {
-    // Fetch in parallel — these are the key prices we can get from Alpha Vantage
-    // Note: Free tier = 25 requests/day, so each refresh uses ~9 calls
-    const results = await Promise.allSettled([
-      fetchCommodityDaily("WTI", "oil", apiKey),
-      fetchCommodityDaily("BRENT", "brent", apiKey),
-      fetchCommodityDaily("NATURAL_GAS", "gas", apiKey),
-      fetchCommodityDaily("COPPER", "copper", apiKey),
-      fetchCommodityDaily("WHEAT", "wheat", apiKey),
-      fetchForex("USD", "ILS", "usdils", apiKey),
-      fetchForex("USD", "SAR", "usdsar", apiKey),
-      fetchGlobalQuote("ITA", "ita", apiKey),
-      fetchGlobalQuote("GLD", "gold_etf", apiKey),
-      fetchGlobalQuote("SLV", "silver_etf", apiKey),
-    ]);
+  // Return cached data if still fresh
+  if (cachedData && (Date.now() - cacheTime) < CACHE_TTL_MS) {
+    console.log("Returning cached commodity prices");
+    return new Response(JSON.stringify({
+      ...cachedData,
+      cached: true,
+      cacheAge: Math.round((Date.now() - cacheTime) / 1000),
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
+  try {
     const prices: Record<string, PriceResult> = {};
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value) {
-        prices[r.value.key] = r.value;
+
+    // Fetch sequentially with delays to respect Alpha Vantage free tier (5 calls/min)
+    const fetchers: Array<() => Promise<PriceResult | null>> = [
+      () => fetchCommodityDaily("WTI", "oil", apiKey),
+      () => fetchCommodityDaily("BRENT", "brent", apiKey),
+      () => fetchCommodityDaily("NATURAL_GAS", "gas", apiKey),
+      () => fetchCommodityDaily("COPPER", "copper", apiKey),
+      () => fetchCommodityDaily("WHEAT", "wheat", apiKey),
+      () => fetchForex("USD", "ILS", "usdils", apiKey),
+      () => fetchForex("USD", "SAR", "usdsar", apiKey),
+      () => fetchGlobalQuote("ITA", "ita", apiKey),
+      () => fetchGlobalQuote("GLD", "gold_etf", apiKey),
+      () => fetchGlobalQuote("SLV", "silver_etf", apiKey),
+    ];
+
+    for (const fetcher of fetchers) {
+      const result = await fetcher();
+      if (result) {
+        prices[result.key] = result;
       }
+      // 13s delay between calls → 10 calls in ~2 min, well within limits
+      await delay(13000);
     }
 
-    // Convert GLD ETF price to approximate gold $/oz (GLD ≈ 1/10 of gold price)
+    // Convert GLD ETF to gold $/oz (GLD ≈ 1/10 of gold price)
     if (prices.gold_etf) {
       prices.gold = {
         key: "gold",
@@ -110,7 +144,7 @@ serve(async (req) => {
       delete prices.gold_etf;
     }
 
-    // Convert SLV ETF price to approximate silver $/oz (SLV ≈ silver price)
+    // Convert SLV ETF to silver $/oz
     if (prices.silver_etf) {
       prices.silver = {
         key: "silver",
@@ -121,11 +155,19 @@ serve(async (req) => {
       delete prices.silver_etf;
     }
 
-    return new Response(JSON.stringify({
+    const responseData = {
       prices,
       timestamp: new Date().toISOString(),
       source: "alpha_vantage",
-    }), {
+      cached: false,
+    };
+
+    // Cache the result
+    cachedData = { prices, timestamp: responseData.timestamp };
+    cacheTime = Date.now();
+    console.log(`Cached ${Object.keys(prices).length} commodity prices`);
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
