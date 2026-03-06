@@ -350,9 +350,14 @@ export const CommodityTracker = ({ riskScore = 50 }: { riskScore?: number }) => 
           <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
           {t(tr["section.commodities"].en, tr["section.commodities"].ar)}
         </h4>
-        {prices.loading && (
-          <RefreshCw className="h-3 w-3 animate-spin text-primary" />
-        )}
+        <button
+          onClick={() => prices.refresh()}
+          disabled={prices.loading}
+          className="p-1 rounded hover:bg-muted/40 transition-colors disabled:opacity-50"
+          title={isArabic ? "تحديث الأسعار" : "Refresh prices"}
+        >
+          <RefreshCw className={`h-3 w-3 text-primary ${prices.loading ? "animate-spin" : ""}`} />
+        </button>
       </div>
       <ScrollArea className="h-[420px] pr-2">
         <div>

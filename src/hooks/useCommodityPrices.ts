@@ -17,6 +17,7 @@ export interface CommodityPrices {
   eth: PriceData;
   loading: boolean;
   history: Record<string, number[]>;
+  refresh: () => void;
 }
 
 const KEYS = ["oil", "brent", "gold", "silver", "gas", "copper", "wheat", "usdils", "usdsar", "ita", "btc", "eth"];
@@ -30,6 +31,8 @@ const initHistory = (): Record<string, number[]> =>
 
 export const useCommodityPrices = (): CommodityPrices => {
   const historyRef = useRef<Record<string, number[]>>(initHistory());
+  const refreshKeyRef = useRef(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [prices, setPrices] = useState<CommodityPrices>({
     oil: { price: 82.45, change: 1.23, changePercent: 1.51 },
     brent: { price: 87.20, change: 0.95, changePercent: 1.10 },
@@ -45,6 +48,7 @@ export const useCommodityPrices = (): CommodityPrices => {
     eth: { price: 0, change: 0, changePercent: 0 },
     loading: true,
     history: initHistory(),
+    refresh: () => {},
   });
 
   const pushHistory = useCallback((key: string, price: number) => {
@@ -55,6 +59,7 @@ export const useCommodityPrices = (): CommodityPrices => {
   }, []);
 
   useEffect(() => {
+    setPrices(prev => ({ ...prev, loading: true }));
     const baseOil = 78 + Math.random() * 12;
     const baseBrent = baseOil + 3 + Math.random() * 3;
     const baseGold = 2600 + Math.random() * 200;
@@ -178,7 +183,12 @@ export const useCommodityPrices = (): CommodityPrices => {
       clearInterval(commodityInterval);
       clearInterval(cryptoInterval);
     };
+  }, [refreshKey]);
+
+  const refresh = useCallback(() => {
+    refreshKeyRef.current += 1;
+    setRefreshKey(refreshKeyRef.current);
   }, []);
 
-  return prices;
+  return { ...prices, refresh };
 };
