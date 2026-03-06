@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin, DollarSign, Wheat, Shield, CircleDot } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin, DollarSign, Wheat, Shield, CircleDot, ArrowLeftRight, Activity } from "lucide-react";
 import { useCommodityPrices, type PriceData } from "@/hooks/useCommodityPrices";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
@@ -132,6 +132,90 @@ const PriceRow = ({ config, data, history, isArabic }: { config: typeof commodit
   );
 };
 
+const OilSpreadIndicator = ({ brent, wti, isArabic }: { brent: PriceData; wti: PriceData; isArabic: boolean }) => {
+  const spread = parseFloat((brent.price - wti.price).toFixed(2));
+  const spreadPercent = wti.price > 0 ? parseFloat(((spread / wti.price) * 100).toFixed(2)) : 0;
+  const isWidening = spread > 4;
+  const isNarrowing = spread < 2;
+
+  // Contango/Backwardation: simulated using spread trend
+  // Positive spread + rising = contango (future > spot), negative/falling = backwardation
+  const isContango = spread > 0 && brent.change >= wti.change;
+  const curveLabel = isContango ? "CONTANGO" : "BACKWARDATION";
+  const curveColor = isContango ? "text-warning" : "text-success";
+  const curveBg = isContango ? "bg-warning/10 border-warning/30" : "bg-success/10 border-success/30";
+  const curveDesc = isContango
+    ? (isArabic ? "أسعار العقود الآجلة أعلى من الفورية" : "Futures priced above spot — storage costs rising")
+    : (isArabic ? "أسعار الفورية أعلى من الآجلة" : "Spot priced above futures — immediate demand high");
+
+  return (
+    <div className="border-t border-border/40 pt-2 mt-1 space-y-1.5">
+      {/* Brent-WTI Spread */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 w-3 rounded-full bg-primary/20 flex items-center justify-center">
+            <ArrowLeftRight className="h-2 w-2 text-primary" />
+          </div>
+          <span className="font-mono text-[9px] font-semibold text-muted-foreground uppercase">
+            {isArabic ? "فارق برنت-WTI" : "Brent-WTI Spread"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`font-mono text-xs font-bold ${spread > 5 ? "text-warning" : spread < 1 ? "text-success" : "text-foreground"}`}>
+            ${spread.toFixed(2)}
+          </span>
+          <span className={`font-mono text-[8px] px-1.5 py-0.5 rounded border ${
+            isWidening ? "bg-warning/10 border-warning/30 text-warning" :
+            isNarrowing ? "bg-success/10 border-success/30 text-success" :
+            "bg-muted/30 border-border text-muted-foreground"
+          }`}>
+            {isWidening ? (isArabic ? "يتسع" : "WIDENING") : isNarrowing ? (isArabic ? "يضيق" : "NARROW") : (isArabic ? "طبيعي" : "NORMAL")}
+          </span>
+          <span className="font-mono text-[8px] text-muted-foreground">
+            ({spreadPercent > 0 ? "+" : ""}{spreadPercent}%)
+          </span>
+        </div>
+      </div>
+
+      {/* Spread bar visualization */}
+      <div className="relative h-1.5 bg-muted/30 rounded-full overflow-hidden">
+        <motion.div
+          className={`absolute inset-y-0 left-0 rounded-full ${spread > 5 ? "bg-warning" : spread < 1 ? "bg-success" : "bg-primary"}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(100, (spread / 10) * 100)}%` }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        />
+        <div className="absolute inset-y-0 left-[40%] w-px bg-muted-foreground/30" title="$4 avg" />
+      </div>
+      <div className="flex justify-between font-mono text-[7px] text-muted-foreground/50">
+        <span>$0</span>
+        <span>{isArabic ? "متوسط $4" : "$4 avg"}</span>
+        <span>$10+</span>
+      </div>
+
+      {/* Contango / Backwardation */}
+      <div className={`flex items-center justify-between px-2 py-1.5 rounded border ${curveBg}`}>
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-3 w-3 text-muted-foreground" />
+          <span className="font-mono text-[8px] text-muted-foreground uppercase">
+            {isArabic ? "منحنى العقود" : "Futures Curve"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <motion.span
+            className={`font-mono text-[9px] font-black ${curveColor} uppercase tracking-wider`}
+            animate={{ opacity: [1, 0.6, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            {curveLabel}
+          </motion.span>
+        </div>
+      </div>
+      <p className="font-mono text-[7px] text-muted-foreground/40 text-center">{curveDesc}</p>
+    </div>
+  );
+};
+
 export const CommodityTracker = () => {
   const prices = useCommodityPrices();
   const { t, isArabic } = useLanguage();
@@ -147,11 +231,12 @@ export const CommodityTracker = () => {
           <RefreshCw className="h-3 w-3 animate-spin text-primary" />
         )}
       </div>
-      <ScrollArea className="h-[260px] pr-2">
+      <ScrollArea className="h-[320px] pr-2">
         <div>
           {commodityConfig.map((cfg) => (
             <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} history={prices.history[cfg.key] || []} isArabic={isArabic} />
           ))}
+          <OilSpreadIndicator brent={prices.brent} wti={prices.oil} isArabic={isArabic} />
         </div>
       </ScrollArea>
       <p className="font-mono text-[7px] text-muted-foreground/50 mt-1.5 text-right">
