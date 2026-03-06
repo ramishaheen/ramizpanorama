@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Volume2, VolumeX, X, Play, Radio, RefreshCw, ExternalLink } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Volume2, VolumeX, X, Play, Radio, RefreshCw, ExternalLink, AlertTriangle } from "lucide-react";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface Channel {
@@ -59,17 +59,66 @@ const getEmbedUrl = (channel: Channel, muted: boolean) => {
 
 const getDirectUrl = (channel: Channel) => channel.directUrl || null;
 
+// Check if a YouTube video ID is valid/embeddable using oEmbed
+const checkVideoValid = async (videoId: string): Promise<boolean> => {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
 export const LiveNewsFeed = () => {
   const [muted, setMuted] = useState(true);
   const [activeChannel, setActiveChannel] = useState<number>(0);
   const [expandedChannel, setExpandedChannel] = useState<number | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [filterRegion, setFilterRegion] = useState<string | null>(null);
+  const [failedVideos, setFailedVideos] = useState<Set<string>>(new Set());
+  const checkedVideos = useRef<Set<string>>(new Set());
   const { t } = useLanguage();
 
+  // Auto-check active channel's video validity
+  useEffect(() => {
+    const channel = channels[activeChannel];
+    if (!channel || checkedVideos.current.has(channel.videoId)) return;
+    checkedVideos.current.add(channel.videoId);
+
+    checkVideoValid(channel.videoId).then((valid) => {
+      if (!valid) {
+        setFailedVideos((prev) => new Set(prev).add(channel.videoId));
+      }
+    });
+  }, [activeChannel]);
+
+  // Also check expanded channel
+  useEffect(() => {
+    if (expandedChannel === null) return;
+    const channel = channels[expandedChannel];
+    if (!channel || checkedVideos.current.has(channel.videoId)) return;
+    checkedVideos.current.add(channel.videoId);
+
+    checkVideoValid(channel.videoId).then((valid) => {
+      if (!valid) {
+        setFailedVideos((prev) => new Set(prev).add(channel.videoId));
+      }
+    });
+  }, [expandedChannel]);
+
   const handleManualRetry = useCallback(() => {
+    // Clear failed status for current channel so it re-checks
+    const ch = channels[activeChannel];
+    checkedVideos.current.delete(ch.videoId);
+    setFailedVideos((prev) => {
+      const next = new Set(prev);
+      next.delete(ch.videoId);
+      return next;
+    });
     setRetryKey((k) => k + 1);
-  }, []);
+  }, [activeChannel]);
 
   const filteredChannels = filterRegion
     ? channels.filter((c) => c.region === filterRegion)
@@ -140,13 +189,37 @@ export const LiveNewsFeed = () => {
             </div>
           </div>
           <div className="aspect-video">
-            <iframe
-              key={`player-${channels[activeChannel].videoId}-${muted}-${retryKey}`}
-              src={getEmbedUrl(channels[activeChannel], muted)}
-              title={channels[activeChannel].name}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            />
+            {failedVideos.has(channels[activeChannel].videoId) && channels[activeChannel].directUrl ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 gap-2 p-4">
+                <AlertTriangle className="h-6 w-6 text-warning" />
+                <p className="text-[10px] font-mono text-muted-foreground text-center">
+                  {t("Stream unavailable on YouTube", "البث غير متاح على يوتيوب")}
+                </p>
+                <a
+                  href={channels[activeChannel].directUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded bg-primary text-primary-foreground text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-primary/90 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {t("Watch on official site", "شاهد على الموقع الرسمي")}
+                </a>
+                <button
+                  onClick={handleManualRetry}
+                  className="text-[8px] font-mono text-muted-foreground hover:text-foreground transition-colors mt-1"
+                >
+                  {t("↻ Retry YouTube", "↻ أعد المحاولة")}
+                </button>
+              </div>
+            ) : (
+              <iframe
+                key={`player-${channels[activeChannel].videoId}-${muted}-${retryKey}`}
+                src={getEmbedUrl(channels[activeChannel], muted)}
+                title={channels[activeChannel].name}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+            )}
           </div>
         </div>
 
@@ -207,7 +280,11 @@ export const LiveNewsFeed = () => {
                         {ch.name}
                       </span>
                     </div>
-                    {activeChannel === globalIdx ? (
+                    {failedVideos.has(ch.videoId) ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-destructive/20">
+                        <AlertTriangle className="h-3 w-3 text-destructive" />
+                      </div>
+                    ) : activeChannel === globalIdx ? (
                       <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
                         <Radio className="h-3 w-3 text-primary animate-pulse" />
                       </div>
@@ -265,14 +342,38 @@ export const LiveNewsFeed = () => {
               </div>
             </div>
             <div className="aspect-video">
-              <iframe
-                key={`expanded-${channels[expandedChannel].videoId}-${muted}-${retryKey}`}
-                src={getEmbedUrl(channels[expandedChannel], muted)}
-                title={channels[expandedChannel].name}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {failedVideos.has(channels[expandedChannel].videoId) && channels[expandedChannel].directUrl ? (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 gap-3 p-6">
+                  <AlertTriangle className="h-10 w-10 text-warning" />
+                  <p className="text-sm font-mono text-muted-foreground text-center">
+                    {t("Stream unavailable on YouTube", "البث غير متاح على يوتيوب")}
+                  </p>
+                  <a
+                    href={channels[expandedChannel].directUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm font-mono font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    {t("Watch on official site", "شاهد على الموقع الرسمي")}
+                  </a>
+                  <button
+                    onClick={handleManualRetry}
+                    className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors mt-1"
+                  >
+                    {t("↻ Retry YouTube", "↻ أعد المحاولة")}
+                  </button>
+                </div>
+              ) : (
+                <iframe
+                  key={`expanded-${channels[expandedChannel].videoId}-${muted}-${retryKey}`}
+                  src={getEmbedUrl(channels[expandedChannel], muted)}
+                  title={channels[expandedChannel].name}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
             </div>
             <div className="flex gap-1 px-3 py-2 overflow-x-auto border-t border-border bg-background">
               {channels.map((ch, i) => (
