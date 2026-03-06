@@ -236,3 +236,11 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(190 100% 50% / 0.3) hsl(220 18% 10%);
 }
+
+/* Left-side scrollbar via direction trick */
+.direction-rtl {
+  direction: rtl;
+}
+.direction-ltr {
+  direction: ltr;
+}
