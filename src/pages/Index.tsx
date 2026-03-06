@@ -21,6 +21,7 @@ const Index = () => {
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
 
+  const [alertMuted, setAlertMuted] = useState(false);
   const [layers, setLayers] = useState<LayerState>({
     airspace: true,
     maritime: true,
@@ -46,8 +47,8 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
-      <MissileAlertBanner rockets={rockets} />
-      <DashboardHeader dataFresh={dataFresh} />
+      <MissileAlertBanner rockets={rockets} muted={alertMuted} />
+      <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} />
       <StatsBar
         airspaceCount={airspaceAlerts.filter(a => a.active).length}
         vesselCount={vessels.length}
