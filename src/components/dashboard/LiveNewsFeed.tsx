@@ -255,7 +255,7 @@ export const LiveNewsFeed = () => {
             <div className="aspect-video">
               <iframe
                 key={`expanded-${channels[expandedChannel].channelId}-${muted}-${retryKey}`}
-                src={getEmbedUrl(channels[expandedChannel].channelId, muted)}
+                src={getEmbedUrl(channels[expandedChannel], muted)}
                 title={channels[expandedChannel].name}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
