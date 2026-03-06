@@ -38,7 +38,7 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
 
   return (
     <motion.div
-      className={`text-lg font-mono font-bold ${color} transition-colors duration-300`}
+      className={`text-sm font-mono font-bold ${color} transition-colors duration-300`}
       animate={flash ? { scale: [1, 1.2, 1] } : {}}
       transition={{ duration: 0.4 }}
     >
@@ -51,12 +51,12 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix }: { icon: an
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    className={`flex items-center gap-2 px-3 py-2 bg-card border rounded-md transition-all duration-500 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
+    className={`flex items-center gap-1.5 px-2 py-1 bg-card border rounded-md transition-all duration-500 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
   >
-    <Icon className={`h-4 w-4 ${color} ${pulse ? "animate-pulse" : ""}`} />
+    <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
     <div>
       <div className="flex items-center gap-0.5">
-        {prefix && <span className={`text-lg font-mono font-bold ${color}`}>{prefix}</span>}
+        {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
         <AnimatedNumber value={value} color={color} />
       </div>
       <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
@@ -106,7 +106,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`grid grid-cols-6 gap-2 px-4 py-2 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`grid grid-cols-6 gap-1.5 px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <StatCard icon={Plane} label="Airspace Alerts" value={airspaceCount} color="text-primary" pulse={dataFresh} />
         <StatCard icon={Ship} label="Tracked Vessels" value={vesselCount} color="text-primary" pulse={dataFresh} />
         <StatCard icon={Rocket} label="Missiles Active" value={rocketCount} color={rocketCount > 0 ? "text-critical" : "text-muted-foreground"} pulse={rocketCount > 0} />
@@ -117,7 +117,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
 
       {/* War cost cards */}
       {warCosts.data && !warCosts.error && (
-        <div className={`grid grid-cols-8 gap-2 px-4 py-2 border-t border-border/50 bg-card/30 transition-shadow duration-500`}>
+        <div className={`grid grid-cols-8 gap-1.5 px-3 py-1 border-t border-border/50 bg-card/30 transition-shadow duration-500`}>
           <StatCard
             icon={DollarSign}
             label="Daily War Cost"
