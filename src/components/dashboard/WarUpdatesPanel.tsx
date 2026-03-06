@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { WarUpdatesData, WarUpdate } from "@/hooks/useWarUpdates";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface WarUpdatesPanelProps {
   data: WarUpdatesData | null;
@@ -96,6 +97,7 @@ const UpdateCard = ({ update }: { update: WarUpdate }) => {
 
 export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesPanelProps) => {
   const [showSummary, setShowSummary] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <div className="flex flex-col h-full border-t border-border">
@@ -104,9 +106,9 @@ export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesP
         <div className="flex items-center gap-2">
           <Newspaper className="h-3.5 w-3.5 text-destructive" />
           <h3 className="text-[11px] font-semibold uppercase tracking-widest text-foreground">
-            War Intelligence
+            {t(tr["section.war_updates"].en, tr["section.war_updates"].ar)}
           </h3>
-          <span className="text-[9px] font-mono text-primary uppercase">AI-Live</span>
+          <span className="text-[9px] font-mono text-primary uppercase">{t(tr["war.ai_live"].en, tr["war.ai_live"].ar)}</span>
           {data?.threat_level && (
             <span className={`text-[8px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-current/20 ${threatColors[data.threat_level] || "text-warning"}`}>
               {data.threat_level}
@@ -119,7 +121,7 @@ export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesP
               onClick={() => setShowSummary(!showSummary)}
               className="px-1.5 py-0.5 text-[8px] font-mono uppercase text-muted-foreground hover:text-primary border border-border rounded transition-colors"
             >
-              {showSummary ? "Hide" : "SITREP"}
+              {showSummary ? t(tr["action.hide"].en, tr["action.hide"].ar) : t(tr["action.sitrep"].en, tr["action.sitrep"].ar)}
             </button>
           )}
           <button
@@ -161,7 +163,7 @@ export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesP
         <div className="flex-1 flex items-center justify-center py-8">
           <div className="flex items-center gap-2">
             <RefreshCw className="h-3 w-3 animate-spin text-primary" />
-            <span className="font-mono text-[10px] text-muted-foreground">Gathering intelligence…</span>
+            <span className="font-mono text-[10px] text-muted-foreground">{t(tr["war.gathering"].en, tr["war.gathering"].ar)}</span>
           </div>
         </div>
       ) : (

@@ -38,9 +38,10 @@ const severityText: Record<GeoAlert["severity"], string> = {
 
 export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
   const [selectedAlert, setSelectedAlert] = useState<GeoAlert | null>(null);
-  const { t } = useLanguage();
+  const { t, isArabic } = useLanguage();
 
-  // Escape key handler
+  const locale = isArabic ? 'ar-SA' : 'en-US';
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSelectedAlert(null);
@@ -48,6 +49,7 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
   const sorted = [...alerts].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
@@ -65,7 +67,6 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
           </div>
         </div>
 
-        {/* Show latest alerts with scrollable area (~5 rows visible) */}
         <div className="overflow-y-auto min-h-0 intel-feed-scroll" style={{ maxHeight: "200px" }}>
           <div className="p-1.5 space-y-0.5">
             <AnimatePresence>
@@ -97,7 +98,7 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
                       </p>
                     </div>
                     <span className="text-[8px] text-muted-foreground/50 font-mono flex-shrink-0">
-                      {new Date(alert.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                      {new Date(alert.timestamp).toLocaleTimeString(locale, { hour12: false, hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </motion.div>
@@ -125,7 +126,6 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
               className={`relative w-[420px] max-w-[90vw] bg-card border border-border rounded-lg shadow-2xl overflow-hidden border-l-4 ${severityBorder[selectedAlert.severity]}`}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80">
                 <div className="flex items-center gap-2">
                   <div className={severityText[selectedAlert.severity]}>
@@ -151,7 +151,6 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
                 </button>
               </div>
 
-              {/* Body */}
               <div className="px-4 py-3 space-y-3">
                 <h2 className="text-sm font-semibold text-foreground leading-snug">
                   {selectedAlert.title}
@@ -162,10 +161,10 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
 
                 <div className="flex items-center justify-between pt-2 border-t border-border/50">
                   <span className="text-[9px] text-muted-foreground/70 font-mono">
-                    Source: {selectedAlert.source}
+                    {t(tr["notif.source"].en, tr["notif.source"].ar)}: {selectedAlert.source}
                   </span>
                   <span className="text-[9px] text-muted-foreground/70 font-mono">
-                    {new Date(selectedAlert.timestamp).toLocaleString('en-US', {
+                    {new Date(selectedAlert.timestamp).toLocaleString(locale, {
                       hour12: false,
                       hour: '2-digit',
                       minute: '2-digit',
@@ -175,7 +174,7 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
                 </div>
 
                 <div className="text-[9px] text-muted-foreground/50 font-mono">
-                  Coords: {selectedAlert.lat.toFixed(4)}°N, {selectedAlert.lng.toFixed(4)}°E
+                  {t(tr["notif.coords"].en, tr["notif.coords"].ar)}: {selectedAlert.lat.toFixed(4)}°N, {selectedAlert.lng.toFixed(4)}°E
                 </div>
               </div>
             </motion.div>

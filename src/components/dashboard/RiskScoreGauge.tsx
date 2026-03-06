@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { RiskScore } from "@/data/mockData";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface RiskScoreGaugeProps {
   score: RiskScore;
@@ -45,13 +46,6 @@ const TrendIcon = ({ trend }: { trend: RiskScore["trend"] }) => {
   return <Minus className="h-4 w-4 text-muted-foreground" />;
 };
 
-const LINES = [
-  { key: "airspace", color: "hsl(var(--warning))", label: "Airspace" },
-  { key: "maritime", color: "hsl(var(--primary))", label: "Maritime" },
-  { key: "diplomatic", color: "hsl(var(--critical))", label: "Diplomatic" },
-  { key: "sentiment", color: "hsl(var(--success))", label: "Sentiment" },
-] as const;
-
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload) return null;
   return (
@@ -70,6 +64,14 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export const RiskScoreGauge = ({ score }: RiskScoreGaugeProps) => {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const lastUpdated = useRef<string>("");
+  const { t, isArabic } = useLanguage();
+
+  const LINES = [
+    { key: "airspace", color: "hsl(var(--warning))", label: t(tr["chart.airspace"].en, tr["chart.airspace"].ar) },
+    { key: "maritime", color: "hsl(var(--primary))", label: t(tr["chart.maritime"].en, tr["chart.maritime"].ar) },
+    { key: "diplomatic", color: "hsl(var(--critical))", label: t(tr["chart.diplomatic"].en, tr["chart.diplomatic"].ar) },
+    { key: "sentiment", color: "hsl(var(--success))", label: t(tr["chart.sentiment"].en, tr["chart.sentiment"].ar) },
+  ] as const;
 
   useEffect(() => {
     if (score.lastUpdated === lastUpdated.current) return;
@@ -97,11 +99,19 @@ export const RiskScoreGauge = ({ score }: RiskScoreGaugeProps) => {
     });
   }, [score]);
 
+  const severityLabel = score.overall >= 80
+    ? t(tr["risk.critical"].en, tr["risk.critical"].ar)
+    : score.overall >= 60
+    ? t(tr["risk.elevated"].en, tr["risk.elevated"].ar)
+    : score.overall >= 40
+    ? t(tr["risk.moderate"].en, tr["risk.moderate"].ar)
+    : t(tr["risk.low"].en, tr["risk.low"].ar);
+
   return (
     <div className={`rounded-lg border p-4 ${getSeverityBg(score.overall)} ${getSeverityGlow(score.overall)}`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          AI Risk Index
+          {t(tr["section.risk_gauge"].en, tr["section.risk_gauge"].ar)}
         </h3>
         <div className="flex items-center gap-1">
           <TrendIcon trend={score.trend} />
@@ -120,7 +130,7 @@ export const RiskScoreGauge = ({ score }: RiskScoreGaugeProps) => {
         </motion.span>
         <div className="flex flex-col">
           <span className={`text-xs font-semibold uppercase ${getSeverityColor(score.overall)}`}>
-            {score.overall >= 80 ? "CRITICAL" : score.overall >= 60 ? "ELEVATED" : score.overall >= 40 ? "MODERATE" : "LOW"}
+            {severityLabel}
           </span>
           <span className="text-[10px] text-muted-foreground">/ 100</span>
         </div>
@@ -174,7 +184,7 @@ export const RiskScoreGauge = ({ score }: RiskScoreGaugeProps) => {
 
       <div className="pt-2 border-t border-border/50">
         <span className="text-[10px] text-muted-foreground font-mono">
-          LAST UPDATE: {new Date(score.lastUpdated).toLocaleTimeString("en-US", { hour12: false })} UTC
+          {t(tr["risk.last_update"].en, tr["risk.last_update"].ar)}: {new Date(score.lastUpdated).toLocaleTimeString(isArabic ? "ar-SA" : "en-US", { hour12: false })} UTC
         </span>
       </div>
     </div>

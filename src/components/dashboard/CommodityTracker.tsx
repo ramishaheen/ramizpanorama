@@ -2,13 +2,14 @@ import { useState } from "react";
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin } from "lucide-react";
 import { useCommodityPrices, type PriceData } from "@/hooks/useCommodityPrices";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 const commodityConfig = [
-  { key: "oil", label: "Crude Oil", unit: "$/bbl", icon: Fuel, color: "hsl(25 90% 50%)" },
-  { key: "gold", label: "Gold", unit: "$/oz", icon: Gem, color: "hsl(45 100% 55%)" },
-  { key: "gas", label: "Nat Gas", unit: "$/MMBtu", icon: Flame, color: "hsl(200 80% 55%)" },
-  { key: "btc", label: "Bitcoin", unit: "USD", icon: Bitcoin, color: "hsl(35 100% 55%)" },
-  { key: "eth", label: "Ethereum", unit: "USD", icon: Gem, color: "hsl(230 60% 60%)" },
+  { key: "oil", label: "Crude Oil", labelAr: "النفط الخام", unit: "$/bbl", icon: Fuel, color: "hsl(25 90% 50%)" },
+  { key: "gold", label: "Gold", labelAr: "الذهب", unit: "$/oz", icon: Gem, color: "hsl(45 100% 55%)" },
+  { key: "gas", label: "Nat Gas", labelAr: "الغاز الطبيعي", unit: "$/MMBtu", icon: Flame, color: "hsl(200 80% 55%)" },
+  { key: "btc", label: "Bitcoin", labelAr: "بيتكوين", unit: "USD", icon: Bitcoin, color: "hsl(35 100% 55%)" },
+  { key: "eth", label: "Ethereum", labelAr: "إيثريوم", unit: "USD", icon: Gem, color: "hsl(230 60% 60%)" },
 ] as const;
 
 const formatPrice = (price: number, key: string) => {
@@ -70,13 +71,10 @@ const Sparkline = ({ data, color, label, width = 60, height = 20 }: { data: numb
       </svg>
       {hovered && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-popover border border-border shadow-lg whitespace-nowrap z-50">
-          <div className="font-mono text-[8px] text-muted-foreground uppercase tracking-wider mb-0.5">{label} Range ({data.length} ticks)</div>
+          <div className="font-mono text-[8px] text-muted-foreground uppercase tracking-wider mb-0.5">{label} ({data.length})</div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[9px] text-success font-bold">H: ${max.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
             <span className="font-mono text-[9px] text-destructive font-bold">L: ${min.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
-          </div>
-          <div className="font-mono text-[8px] text-muted-foreground">
-            Spread: ${(max - min).toLocaleString("en-US", { maximumFractionDigits: 2 })}
           </div>
         </div>
       )}
@@ -84,7 +82,7 @@ const Sparkline = ({ data, color, label, width = 60, height = 20 }: { data: numb
   );
 };
 
-const PriceRow = ({ config, data, history }: { config: typeof commodityConfig[number]; data: PriceData; history: number[] }) => {
+const PriceRow = ({ config, data, history, isArabic }: { config: typeof commodityConfig[number]; data: PriceData; history: number[]; isArabic: boolean }) => {
   const isUp = data.change > 0;
   const isFlat = data.change === 0;
   const Icon = config.icon;
@@ -96,7 +94,7 @@ const PriceRow = ({ config, data, history }: { config: typeof commodityConfig[nu
       <div className="flex items-center gap-2">
         <Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: config.color }} />
         <div>
-          <span className="font-mono text-[10px] font-semibold text-foreground">{config.label}</span>
+          <span className="font-mono text-[10px] font-semibold text-foreground">{isArabic ? config.labelAr : config.label}</span>
           <span className="font-mono text-[8px] text-muted-foreground ml-1">{config.unit}</span>
         </div>
       </div>
@@ -126,13 +124,14 @@ const PriceRow = ({ config, data, history }: { config: typeof commodityConfig[nu
 
 export const CommodityTracker = () => {
   const prices = useCommodityPrices();
+  const { t, isArabic } = useLanguage();
 
   return (
     <div className="bg-card border border-border rounded-lg p-3">
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-          Commodity & Crypto Prices
+          {t(tr["section.commodities"].en, tr["section.commodities"].ar)}
         </h4>
         {prices.loading && (
           <RefreshCw className="h-3 w-3 animate-spin text-primary" />
@@ -140,11 +139,11 @@ export const CommodityTracker = () => {
       </div>
       <div>
         {commodityConfig.map((cfg) => (
-          <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} history={prices.history[cfg.key] || []} />
+          <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} history={prices.history[cfg.key] || []} isArabic={isArabic} />
         ))}
       </div>
       <p className="font-mono text-[7px] text-muted-foreground/50 mt-1.5 text-right">
-        Oil & Gold simulated • Crypto via CoinGecko • Updates every 15–30s
+        {t(tr["commodity.simulated"].en, tr["commodity.simulated"].ar)}
       </p>
     </div>
   );

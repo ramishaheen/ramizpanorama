@@ -48,7 +48,6 @@ export const SectorPredictions = () => {
   const [detailCountry, setDetailCountry] = useState<{ name: string; code: string; overall_outlook: string; sectors: any[] } | null>(null);
   const { t } = useLanguage();
 
-  // Escape key handler
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") { setSelectedSector(null); setDetailCountry(null); }
@@ -78,7 +77,7 @@ export const SectorPredictions = () => {
         {loading && !data && (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-            <span className="text-[9px] text-muted-foreground ml-2 font-mono">Analyzing regional sectors…</span>
+            <span className="text-[9px] text-muted-foreground ml-2 font-mono">{t(tr["sector.analyzing"].en, tr["sector.analyzing"].ar)}</span>
           </div>
         )}
 
@@ -149,7 +148,7 @@ export const SectorPredictions = () => {
         )}
       </div>
 
-      {/* Country overview popup on double-click */}
+      {/* Country overview popup */}
       <AnimatePresence>
         {detailCountry && (
           <motion.div
@@ -173,7 +172,7 @@ export const SectorPredictions = () => {
                   <div>
                     <h2 className="font-mono text-sm font-bold text-foreground">{detailCountry.name}</h2>
                     <span className={`font-mono text-[10px] font-bold uppercase ${outlookColors[detailCountry.overall_outlook]}`}>
-                      Outlook: {detailCountry.overall_outlook}
+                      {t(tr["sector.outlook"].en, tr["sector.outlook"].ar)}: {detailCountry.overall_outlook}
                     </span>
                   </div>
                 </div>
@@ -183,7 +182,7 @@ export const SectorPredictions = () => {
               </div>
 
               <div className="px-4 py-3 space-y-2 max-h-[60vh] overflow-y-auto">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block">All Sectors ({detailCountry.sectors?.length})</span>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block">{t(tr["sector.all_sectors"].en, tr["sector.all_sectors"].ar)} ({detailCountry.sectors?.length})</span>
                 {detailCountry.sectors?.map((sector, i) => (
                   <div
                     key={i}
@@ -200,9 +199,6 @@ export const SectorPredictions = () => {
                     <p className="text-[9px] text-muted-foreground leading-snug">{sector.prediction}</p>
                   </div>
                 ))}
-                <div className="text-[8px] text-muted-foreground/40 font-mono pt-2 border-t border-border/30">
-                  Double-click country row to open • Click sector for details
-                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -243,10 +239,10 @@ export const SectorPredictions = () => {
               <div className="px-4 py-3 space-y-3">
                 <div className="flex items-center gap-2">
                   <span className={`text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-current/20 ${impactColors[selectedSector.sector.impact]}`}>
-                    Impact: {selectedSector.sector.impact}
+                    {t(tr["sector.impact"].en, tr["sector.impact"].ar)}: {selectedSector.sector.impact}
                   </span>
                   <span className="text-[9px] font-mono text-muted-foreground">
-                    Confidence: {selectedSector.sector.confidence}
+                    {t(tr["sector.confidence"].en, tr["sector.confidence"].ar)}: {selectedSector.sector.confidence}
                   </span>
                 </div>
 
@@ -254,7 +250,7 @@ export const SectorPredictions = () => {
 
                 {selectedSector.sector.opportunities?.length > 0 && (
                   <div>
-                    <h4 className="text-[9px] font-mono uppercase text-success font-bold mb-1">Opportunities</h4>
+                    <h4 className="text-[9px] font-mono uppercase text-success font-bold mb-1">{t(tr["sector.opportunities"].en, tr["sector.opportunities"].ar)}</h4>
                     <ul className="space-y-0.5">
                       {selectedSector.sector.opportunities.map((opp: string, i: number) => (
                         <li key={i} className="flex items-start gap-1.5">
@@ -268,7 +264,7 @@ export const SectorPredictions = () => {
 
                 {selectedSector.sector.risks?.length > 0 && (
                   <div>
-                    <h4 className="text-[9px] font-mono uppercase text-critical font-bold mb-1">Risks</h4>
+                    <h4 className="text-[9px] font-mono uppercase text-critical font-bold mb-1">{t(tr["sector.risks"].en, tr["sector.risks"].ar)}</h4>
                     <ul className="space-y-0.5">
                       {selectedSector.sector.risks.map((risk: string, i: number) => (
                         <li key={i} className="flex items-start gap-1.5">

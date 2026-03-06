@@ -1,4 +1,5 @@
 import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff } from "lucide-react";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 export interface LayerState {
   airspace: boolean;
@@ -14,38 +15,42 @@ interface LayerControlsProps {
 }
 
 const layerConfig = [
-  { key: "airspace" as const, label: "Airspace", icon: Plane, color: "text-primary" },
-  { key: "maritime" as const, label: "Maritime", icon: Ship, color: "text-primary" },
-  { key: "alerts" as const, label: "Alerts", icon: AlertTriangle, color: "text-warning" },
-  { key: "rockets" as const, label: "Rockets", icon: Rocket, color: "text-critical" },
-  { key: "heatmap" as const, label: "Heatmap", icon: Radio, color: "text-critical" },
+  { key: "airspace" as const, trKey: "layer.airspace", icon: Plane, color: "text-primary" },
+  { key: "maritime" as const, trKey: "layer.maritime", icon: Ship, color: "text-primary" },
+  { key: "alerts" as const, trKey: "layer.alerts", icon: AlertTriangle, color: "text-warning" },
+  { key: "rockets" as const, trKey: "layer.rockets", icon: Rocket, color: "text-critical" },
+  { key: "heatmap" as const, trKey: "layer.heatmap", icon: Radio, color: "text-critical" },
 ];
 
-export const LayerControls = ({ layers, onToggle }: LayerControlsProps) => (
-  <div className="bg-card border border-border rounded-lg p-3">
-    <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-      Layers
-    </h3>
-    <div className="space-y-1.5">
-      {layerConfig.map(({ key, label, icon: Icon, color }) => (
-        <button
-          key={key}
-          onClick={() => onToggle(key)}
-          className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded transition-colors ${
-            layers[key] ? "bg-secondary/60" : "opacity-40 hover:opacity-70"
-          }`}
-        >
-          {layers[key] ? (
-            <Eye className={`h-3 w-3 ${color}`} />
-          ) : (
-            <EyeOff className="h-3 w-3 text-muted-foreground" />
-          )}
-          <Icon className={`h-3.5 w-3.5 ${layers[key] ? color : "text-muted-foreground"}`} />
-          <span className={`text-xs ${layers[key] ? "text-foreground" : "text-muted-foreground"}`}>
-            {label}
-          </span>
-        </button>
-      ))}
+export const LayerControls = ({ layers, onToggle }: LayerControlsProps) => {
+  const { t } = useLanguage();
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-3">
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+        {t(tr["section.layers"].en, tr["section.layers"].ar)}
+      </h3>
+      <div className="space-y-1.5">
+        {layerConfig.map(({ key, trKey, icon: Icon, color }) => (
+          <button
+            key={key}
+            onClick={() => onToggle(key)}
+            className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded transition-colors ${
+              layers[key] ? "bg-secondary/60" : "opacity-40 hover:opacity-70"
+            }`}
+          >
+            {layers[key] ? (
+              <Eye className={`h-3 w-3 ${color}`} />
+            ) : (
+              <EyeOff className="h-3 w-3 text-muted-foreground" />
+            )}
+            <Icon className={`h-3.5 w-3.5 ${layers[key] ? color : "text-muted-foreground"}`} />
+            <span className={`text-xs ${layers[key] ? "text-foreground" : "text-muted-foreground"}`}>
+              {t(tr[trKey].en, tr[trKey].ar)}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
