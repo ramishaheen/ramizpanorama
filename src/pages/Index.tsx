@@ -54,8 +54,8 @@ interface LayoutState {
 const DEFAULT_LAYOUT: LayoutState = {
   leftOrder: DEFAULT_LEFT_ORDER,
   rightOrder: DEFAULT_RIGHT_ORDER,
-  leftWidth: 420,
-  rightWidth: 320,
+  leftWidth: 380,
+  rightWidth: 300,
   leftCollapsed: false,
   rightCollapsed: false,
 };
