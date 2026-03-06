@@ -143,7 +143,7 @@ export const LiveNewsFeed = () => {
           </div>
           <div className="aspect-video">
             <iframe
-              key={`player-${channels[activeChannel].channelId}-${muted}-${retryKey}`}
+              key={`player-${channels[activeChannel].videoId}-${muted}-${retryKey}`}
               src={getEmbedUrl(channels[activeChannel], muted)}
               title={channels[activeChannel].name}
               className="w-full h-full"
@@ -196,7 +196,7 @@ export const LiveNewsFeed = () => {
                 >
                   <div className="aspect-video bg-muted relative flex items-center justify-center">
                     <img
-                      src={`https://yt3.googleusercontent.com/ytc/AIdro_kPlaceholder=${ch.channelId}`}
+                      src={`https://img.youtube.com/vi/${ch.videoId}/mqdefault.jpg`}
                       alt={ch.name}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -268,7 +268,7 @@ export const LiveNewsFeed = () => {
             </div>
             <div className="aspect-video">
               <iframe
-                key={`expanded-${channels[expandedChannel].channelId}-${muted}-${retryKey}`}
+                key={`expanded-${channels[expandedChannel].videoId}-${muted}-${retryKey}`}
                 src={getEmbedUrl(channels[expandedChannel], muted)}
                 title={channels[expandedChannel].name}
                 className="w-full h-full"
