@@ -136,7 +136,7 @@ export const TotalLaunchesWidget = ({ rockets }: TotalLaunchesWidgetProps) => {
   const grandImpact = useMemo(() => mergedHistorical.reduce((s, d) => s + d.impact, 0), [mergedHistorical]);
   const interceptRate = grandTotal > 0 ? ((grandIntercepted / grandTotal) * 100).toFixed(1) : "0";
 
-  const tooltip = `🚀 TOTAL WAR LAUNCHES: ${grandTotal.toLocaleString()}\n\n── By Type (today) ──\n${Object.entries(byType).map(([t, c]) => `• ${t}: ${c}`).join("\n")}\n\n── By Status (today) ──\n• Active: ${active}\n• Intercepted: ${intercepted}\n• Impact: ${impact}\n\n── Historical (Oct 2023 – present) ──\n• Total: ${grandTotal.toLocaleString()}\n• Intercepted: ${grandIntercepted.toLocaleString()} (${interceptRate}%)\n• Impact: ${grandImpact.toLocaleString()}`;
+  const tooltip = `🚀 TOTAL WAR LAUNCHES: ${grandTotal.toLocaleString()}\n\n── Today (LIVE) — ${total} launches ──\n${Object.entries(byType).map(([t, c]) => `• ${t}: ${c}`).join("\n")}\nActive: ${active} | Intercepted: ${intercepted} | Impact: ${impact}\n\n── Historical (Oct 7 2023 – present) ──\n• Total: ${grandTotal.toLocaleString()}\n• Intercepted: ${grandIntercepted.toLocaleString()} (${interceptRate}%)\n• Impact: ${grandImpact.toLocaleString()}`;
 
   const ExpandIcon = expanded ? ChevronDown : ChevronUp;
 
