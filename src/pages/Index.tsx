@@ -33,8 +33,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-const DEFAULT_LEFT_ORDER = ["risk", "commodities", "predictions", "layers", "timeline"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "live-news", "war-updates"];
+const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "layers", "timeline"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
@@ -86,6 +86,7 @@ const Index = () => {
   const leftWidgets: Record<string, ReactNode> = {
     risk: <RiskScoreGauge score={riskScore} />,
     commodities: <CommodityTracker />,
+    news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
     layers: <LayerControls layers={layers} onToggle={toggleLayer} />,
     timeline: <TimelineSlider events={timeline} />,
@@ -95,11 +96,6 @@ const Index = () => {
     notifications: (
       <div className="min-h-0 flex flex-col" style={{ maxHeight: "40%" }}>
         <NotificationPanel alerts={geoAlerts} />
-      </div>
-    ),
-    "live-news": (
-      <div className="min-h-0 flex flex-col">
-        <LiveNewsFeed />
       </div>
     ),
     "war-updates": (
