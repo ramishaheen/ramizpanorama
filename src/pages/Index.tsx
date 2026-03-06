@@ -33,8 +33,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "layers", "timeline"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
+const DEFAULT_LEFT_ORDER = ["risk", "commodities", "predictions", "layers", "timeline"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "live-news", "war-updates"];
 
 const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
@@ -86,7 +86,6 @@ const Index = () => {
   const leftWidgets: Record<string, ReactNode> = {
     risk: <RiskScoreGauge score={riskScore} />,
     commodities: <CommodityTracker />,
-    news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
     layers: <LayerControls layers={layers} onToggle={toggleLayer} />,
     timeline: <TimelineSlider events={timeline} />,
@@ -94,12 +93,17 @@ const Index = () => {
 
   const rightWidgets: Record<string, ReactNode> = {
     notifications: (
-      <div className="flex-1 min-h-0 flex flex-col" style={{ maxHeight: "45%" }}>
+      <div className="min-h-0 flex flex-col" style={{ maxHeight: "40%" }}>
         <NotificationPanel alerts={geoAlerts} />
       </div>
     ),
+    "live-news": (
+      <div className="min-h-0 flex flex-col">
+        <LiveNewsFeed />
+      </div>
+    ),
     "war-updates": (
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="min-h-0 flex flex-col">
         <WarUpdatesPanel
           data={warUpdates.data}
           loading={warUpdates.loading}
@@ -172,7 +176,7 @@ const Index = () => {
         </div>
 
         {/* Right sidebar - draggable */}
-        <div className="w-80 flex-shrink-0 border-l border-border overflow-hidden flex flex-col">
+        <div className="w-80 flex-shrink-0 border-l border-border overflow-y-auto flex flex-col intel-feed-scroll">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
             <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
               {rightOrder.map((id) => (
