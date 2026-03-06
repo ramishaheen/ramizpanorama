@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, ReactNode } from "react";
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers } from "lucide-react";
 import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
@@ -19,6 +19,7 @@ import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
   closestCenter,
@@ -38,10 +39,20 @@ import {
 const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
+const MOBILE_TABS = [
+  { id: "map", label: "Map", icon: Map },
+  { id: "intel", label: "Intel", icon: BarChart3 },
+  { id: "alerts", label: "Alerts", icon: Bell },
+  { id: "layers", label: "Layers", icon: Layers },
+] as const;
+
+type MobileTab = typeof MOBILE_TABS[number]["id"];
+
 const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
+  const isMobile = useIsMobile();
 
   const [alertMuted, setAlertMuted] = useState(false);
   const [layers, setLayers] = useState<LayerState>({
@@ -57,6 +68,7 @@ const Index = () => {
   const [leftWidth, setLeftWidth] = useState(420);
   const [rightWidth, setRightWidth] = useState(320);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("map");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleResizeLeft = useCallback((e: React.MouseEvent) => {
@@ -167,6 +179,100 @@ const Index = () => {
     );
   }
 
+  // ─── MOBILE / TABLET LAYOUT ───
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden relative">
+        <MissileAlertBanner rockets={rockets} muted={alertMuted} />
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} />
+        <StatsBar
+          airspaceCount={airspaceAlerts.filter(a => a.active).length}
+          vesselCount={vessels.length}
+          alertCount={geoAlerts.length + airspaceAlerts.filter(a => a.active).length}
+          riskScore={riskScore.overall}
+          rocketCount={rockets.filter(r => r.status === 'launched' || r.status === 'in_flight').length}
+          impactCount={rockets.filter(r => r.status === 'impact' || r.status === 'intercepted').length}
+          totalRockets={rockets.length}
+          rockets={rockets}
+          geoAlerts={geoAlerts}
+          airspaceAlerts={airspaceAlerts}
+          dataFresh={dataFresh}
+        />
+
+        {/* Mobile tab content */}
+        <div className="flex-1 overflow-hidden relative">
+          {mobileTab === "map" && (
+            <div className="h-full flex flex-col">
+              <div className="flex-1 relative min-h-0">
+                <IntelMap
+                  airspaceAlerts={airspaceAlerts}
+                  vessels={vessels}
+                  geoAlerts={geoAlerts}
+                  rockets={rockets}
+                  layers={layers}
+                  safetyData={citizenSecurity.data?.countries}
+                />
+              </div>
+              <CitizenSecurity
+                data={citizenSecurity.data}
+                loading={citizenSecurity.loading}
+                error={citizenSecurity.error}
+                onRefresh={citizenSecurity.refresh}
+              />
+            </div>
+          )}
+
+          {mobileTab === "intel" && (
+            <div className="h-full overflow-y-auto p-3 space-y-3">
+              {leftOrder.map((id) => (
+                <div key={id}>{leftWidgets[id]}</div>
+              ))}
+            </div>
+          )}
+
+          {mobileTab === "alerts" && (
+            <div className="h-full overflow-y-auto">
+              {rightOrder.map((id) => (
+                <div key={id}>{rightWidgets[id]}</div>
+              ))}
+            </div>
+          )}
+
+          {mobileTab === "layers" && (
+            <div className="h-full overflow-y-auto p-3 space-y-3">
+              <LayerControls layers={layers} onToggle={toggleLayer} />
+              <TimelineSlider events={timeline} />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom tab bar */}
+        <div className="flex-shrink-0 border-t border-border bg-card/90 backdrop-blur flex">
+          {MOBILE_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = mobileTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setMobileTab(tab.id)}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="text-[9px] font-mono uppercase tracking-wider">{tab.label}</span>
+                {active && <div className="w-4 h-0.5 rounded-full bg-primary" />}
+              </button>
+            );
+          })}
+        </div>
+
+        <Disclaimer />
+      </div>
+    );
+  }
+
+  // ─── DESKTOP LAYOUT ───
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
       
