@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, ExternalLink, Languages } from "lucide-react";
+import { RefreshCw, ExternalLink, Languages, Play } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,6 +8,8 @@ interface TelegramPost {
   text: string;
   date: string;
   views?: string;
+  media?: string;
+  mediaType?: "photo" | "video";
 }
 
 export const TelegramFeed = () => {
@@ -27,7 +29,6 @@ export const TelegramFeed = () => {
       if (fnError) throw fnError;
       if (data?.posts) {
         setPosts(data.posts);
-        // Auto-translate new posts if translation is enabled
         if (showTranslation) {
           translatePosts(data.posts);
         }
@@ -41,7 +42,6 @@ export const TelegramFeed = () => {
   }, [showTranslation]);
 
   const translatePosts = useCallback(async (postsToTranslate: TelegramPost[]) => {
-    // Only translate posts we haven't translated yet
     const untranslated = postsToTranslate.filter(p => !translations[p.id]);
     if (untranslated.length === 0) return;
 
@@ -151,7 +151,7 @@ export const TelegramFeed = () => {
               const displayText = showTranslation && translations[post.id] 
                 ? translations[post.id] 
                 : post.text;
-              const isTranslated = showTranslation && translations[post.id];
+              const isTranslated = showTranslation && !!translations[post.id];
 
               return (
                 <a
@@ -164,6 +164,25 @@ export const TelegramFeed = () => {
                     isTranslated ? "text-left" : "text-right"
                   }`}
                 >
+                  {/* Media thumbnail */}
+                  {post.media && (
+                    <div className="relative mb-2 rounded overflow-hidden bg-muted/20">
+                      <img
+                        src={post.media}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-28 object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                      />
+                      {post.mediaType === "video" && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                            <Play className="h-4 w-4 text-white fill-white ml-0.5" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <p className="font-mono text-xs text-foreground leading-relaxed line-clamp-4 group-hover:text-[#29B6F6] transition-colors">
                     {displayText}
                   </p>
