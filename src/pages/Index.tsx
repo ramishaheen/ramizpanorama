@@ -132,7 +132,7 @@ const Index = () => {
 
   const leftWidgets: Record<string, ReactNode> = {
     risk: <RiskScoreGauge score={riskScore} />,
-    commodities: <CommodityTracker />,
+    commodities: <CommodityTracker riskScore={riskScore.overall} />,
     news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
     sectors: <SectorPredictions />,
