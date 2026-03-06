@@ -12,35 +12,35 @@ interface Channel {
 
 const channels: Channel[] = [
   // Middle East - Arabic
-  { channelId: "UCfiwzLy-8yKzIbsmZTzxDgw", name: "الجزيرة", region: "🇶🇦 Arabic" },
+  { channelId: "UCfiwzLy-8yKzIbsmZTzxDgw", name: "الجزيرة", region: "🇶🇦 Arabic", directUrl: "https://www.aljazeera.net/live" },
   { channelId: "UCYMAnZ1rFgaPS6PaJ4PMiIA", name: "العربية", region: "🇸🇦 Arabic", directUrl: "https://www.alarabiya.net/live-stream" },
-  { channelId: "UCIJXOvggjKtCagMfxvcCzAA", name: "سكاي نيوز عربية", region: "🇦🇪 Arabic" },
-  { channelId: "UCLsE0EPaHMHRLYOCchOhYNg", name: "الحدث", region: "🇸🇦 Arabic" },
-  { channelId: "UCj0bEC3L7cNZrZBXFLGjJRA", name: "BBC عربي", region: "🇬🇧 Arabic" },
-  { channelId: "UCIwKT4JYoai2WidLzaRz1SA", name: "France 24 عربي", region: "🇫🇷 Arabic" },
-  { channelId: "UCHMr60HFkJO-qEUYHG8LTtA", name: "DW عربية", region: "🇩🇪 Arabic" },
-  { channelId: "UCddiUEpeqJcYeBxX1IVBKvQ", name: "RT عربي", region: "🇷🇺 Arabic" },
+  { channelId: "UCIJXOvggjKtCagMfxvcCzAA", name: "سكاي نيوز عربية", region: "🇦🇪 Arabic", directUrl: "https://www.skynewsarabia.com/live-tv" },
+  { channelId: "UCLsE0EPaHMHRLYOCchOhYNg", name: "الحدث", region: "🇸🇦 Arabic", directUrl: "https://www.alhadath.net/live-stream" },
+  { channelId: "UCj0bEC3L7cNZrZBXFLGjJRA", name: "BBC عربي", region: "🇬🇧 Arabic", directUrl: "https://www.bbc.com/arabic/live" },
+  { channelId: "UCIwKT4JYoai2WidLzaRz1SA", name: "France 24 عربي", region: "🇫🇷 Arabic", directUrl: "https://www.france24.com/ar/%D8%A7%D9%84%D8%A8%D8%AB-%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B4%D8%B1" },
+  { channelId: "UCHMr60HFkJO-qEUYHG8LTtA", name: "DW عربية", region: "🇩🇪 Arabic", directUrl: "https://www.dw.com/ar/live-tv/channel-arabic" },
+  { channelId: "UCddiUEpeqJcYeBxX1IVBKvQ", name: "RT عربي", region: "🇷🇺 Arabic", directUrl: "https://arabic.rt.com/live/" },
   // Jordan
-  { channelId: "UC0jiFAzTgl17k7awGbuoYew", name: "المملكة", region: "🇯🇴 Jordan" },
+  { channelId: "UC0jiFAzTgl17k7awGbuoYew", name: "المملكة", region: "🇯🇴 Jordan", directUrl: "https://www.almamlakatv.com/live" },
   // Iraq / Kurdish
-  { channelId: "UCAUHoE2Ykw0sguyi5AjhrjQ", name: "Rudaw", region: "🇮🇶 Kurdistan" },
+  { channelId: "UCAUHoE2Ykw0sguyi5AjhrjQ", name: "Rudaw", region: "🇮🇶 Kurdistan", directUrl: "https://www.rudaw.net/english/onair/tv/live" },
   // Israel
-  { channelId: "UCJg9wBPyKMNA5sRDnvzmkdg", name: "i24 News EN", region: "🇮🇱 Israel" },
-  { channelId: "UCUrHMEQjdPvOYgzVOmCCSbw", name: "Press TV", region: "🇮🇷 Iran" },
+  { channelId: "UCJg9wBPyKMNA5sRDnvzmkdg", name: "i24 News EN", region: "🇮🇱 Israel", directUrl: "https://www.i24news.tv/en/live" },
+  { channelId: "UCUrHMEQjdPvOYgzVOmCCSbw", name: "Press TV", region: "🇮🇷 Iran", directUrl: "https://www.presstv.ir/live" },
   // English - International
-  { channelId: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera EN", region: "🇶🇦 English" },
-  { channelId: "UCoMdktPbSTixAyNGwb-UYkQ", name: "Sky News", region: "🇬🇧 English" },
-  { channelId: "UC16niRr50-MSBwiO3YDb3RA", name: "BBC News", region: "🇬🇧 English" },
-  { channelId: "UCQfwfsi5VrQ8yKZ-UWmAEFg", name: "France 24 EN", region: "🇫🇷 English" },
-  { channelId: "UC7fWeaHhqgM4Lba7TTRFDKA", name: "TRT World", region: "🇹🇷 English" },
-  { channelId: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", region: "🇩🇪 English" },
+  { channelId: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera EN", region: "🇶🇦 English", directUrl: "https://www.aljazeera.com/live" },
+  { channelId: "UCoMdktPbSTixAyNGwb-UYkQ", name: "Sky News", region: "🇬🇧 English", directUrl: "https://news.sky.com/watch-live" },
+  { channelId: "UC16niRr50-MSBwiO3YDb3RA", name: "BBC News", region: "🇬🇧 English", directUrl: "https://www.bbc.com/news/live" },
+  { channelId: "UCQfwfsi5VrQ8yKZ-UWmAEFg", name: "France 24 EN", region: "🇫🇷 English", directUrl: "https://www.france24.com/en/live" },
+  { channelId: "UC7fWeaHhqgM4Lba7TTRFDKA", name: "TRT World", region: "🇹🇷 English", directUrl: "https://www.trtworld.com/live" },
+  { channelId: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News", region: "🇩🇪 English", directUrl: "https://www.dw.com/en/live-tv/channel-english" },
   // USA
-  { channelId: "UCupvZG-5ko_eiXAupbDfxWw", name: "CNN", region: "🇺🇸 USA" },
-  { channelId: "UCBi2mrWuNuyYy4gbM6fU18Q", name: "NBC News", region: "🇺🇸 USA" },
-  { channelId: "UCaXkIU1QidjPwiAYu6GcHjg", name: "MSNBC", region: "🇺🇸 USA" },
-  { channelId: "UCXIJgqnII2ZOINSWNOGFThA", name: "Fox News", region: "🇺🇸 USA" },
-  { channelId: "UCBnbGo_3PbO2AKkmCBPK0Xg", name: "ABC News", region: "🇺🇸 USA" },
-  { channelId: "UC8p1vwvWtl6T73JiExfWs1g", name: "CBS News", region: "🇺🇸 USA" },
+  { channelId: "UCRrW0ddrbFnJCbyZqHHv4KQ", name: "CNN", region: "🇺🇸 USA", directUrl: "https://edition.cnn.com/live-tv" },
+  { channelId: "UCBi2mrWuNuyYy4gbM6fU18Q", name: "NBC News", region: "🇺🇸 USA", directUrl: "https://www.nbcnews.com/now" },
+  { channelId: "UCaXkIU1QidjPwiAYu6GcHjg", name: "MSNBC", region: "🇺🇸 USA", directUrl: "https://www.msnbc.com/live" },
+  { channelId: "UCXIJgqnII2ZOINSWNOGFThA", name: "Fox News", region: "🇺🇸 USA", directUrl: "https://www.foxnews.com/video/5614615980001" },
+  { channelId: "UCBnbGo_3PbO2AKkmCBPK0Xg", name: "ABC News", region: "🇺🇸 USA", directUrl: "https://abcnews.go.com/live" },
+  { channelId: "UC8p1vwvWtl6T73JiExfWs1g", name: "CBS News", region: "🇺🇸 USA", directUrl: "https://www.cbsnews.com/live/" },
   // Asia
   { channelId: "UCef1-8eOpJgud7szVPlZQAQ", name: "CNN-News18", region: "🇮🇳 India" },
   { channelId: "UC_gUM8rL-Lrg6O3adPW9K1g", name: "WION", region: "🇮🇳 India" },
@@ -49,7 +49,7 @@ const channels: Channel[] = [
   { channelId: "UC2wKfjlioOCLP4xQMOJNzg0", name: "CGTN", region: "🇨🇳 China" },
   { channelId: "UC3Uo9-MNEkPr9DJH53xUWQA", name: "NHK World", region: "🇯🇵 Japan" },
   // Europe
-  { channelId: "UCW2QcKZiU8aUGg4yxCIditg", name: "Euronews", region: "🇪🇺 Europe" },
+  { channelId: "UCW2QcKZiU8aUGg4yxCIditg", name: "Euronews", region: "🇪🇺 Europe", directUrl: "https://www.euronews.com/live" },
 ];
 
 const REGIONS = [...new Set(channels.map((c) => c.region))];
