@@ -1,6 +1,7 @@
-import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield } from "lucide-react";
 import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
+import { useWarCosts } from "@/hooks/useWarCosts";
 import { useEffect, useRef, useState } from "react";
 
 interface StatsBarProps {
@@ -46,7 +47,7 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color, pulse }: { icon: any; label: string; value: number | string; color: string; pulse?: boolean }) => (
+const StatCard = ({ icon: Icon, label, value, color, pulse, prefix }: { icon: any; label: string; value: number | string; color: string; pulse?: boolean; prefix?: string }) => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -54,7 +55,10 @@ const StatCard = ({ icon: Icon, label, value, color, pulse }: { icon: any; label
   >
     <Icon className={`h-4 w-4 ${color} ${pulse ? "animate-pulse" : ""}`} />
     <div>
-      <AnimatedNumber value={value} color={color} />
+      <div className="flex items-center gap-0.5">
+        {prefix && <span className={`text-lg font-mono font-bold ${color}`}>{prefix}</span>}
+        <AnimatedNumber value={value} color={color} />
+      </div>
       <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
     </div>
   </motion.div>
@@ -88,6 +92,16 @@ const MarqueeItem = ({ icon: Icon, label, price, change, changePercent }: {
 
 export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, rocketCount = 0, impactCount = 0, dataFresh }: StatsBarProps) => {
   const { oil, gold, btc, eth, loading } = useCommodityPrices();
+  const warCosts = useWarCosts();
+
+  const sectorIcons: Record<string, any> = {
+    "Oil & Energy": Fuel,
+    "Aviation & Airspace": PlaneTakeoff,
+    "Tourism & Hospitality": Building2,
+    "Shipping & Trade": Anchor,
+    "Real Estate & Construction": HardHat,
+    "Defense Spending": Shield,
+  };
 
   return (
     <div className="space-y-0">
@@ -100,6 +114,46 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
         <StatCard icon={AlertTriangle} label="Active Alerts" value={alertCount} color="text-warning" pulse={dataFresh} />
         <StatCard icon={Activity} label="Risk Index" value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
       </div>
+
+      {/* War cost cards */}
+      {warCosts.data && !warCosts.error && (
+        <div className={`grid grid-cols-8 gap-2 px-4 py-2 border-t border-border/50 bg-card/30 transition-shadow duration-500`}>
+          <StatCard
+            icon={DollarSign}
+            label="Daily War Cost"
+            value={Math.round(warCosts.data.total_daily_cost_billions * 1000)}
+            color="text-critical"
+            pulse
+            prefix="$"
+          />
+          <StatCard
+            icon={DollarSign}
+            label="Total Est. Cost"
+            value={Math.round(warCosts.data.cumulative_estimate_billions)}
+            color="text-critical"
+            prefix="$"
+          />
+          {warCosts.data.sectors.map((sector) => {
+            const SectorIcon = sectorIcons[sector.name] || DollarSign;
+            return (
+              <StatCard
+                key={sector.name}
+                icon={SectorIcon}
+                label={sector.name}
+                value={Math.round(sector.daily_cost_millions)}
+                color="text-warning"
+                prefix="$"
+              />
+            );
+          })}
+        </div>
+      )}
+      {warCosts.loading && (
+        <div className="flex items-center gap-2 px-4 py-1.5 border-t border-border/50">
+          <div className="h-3 w-3 border border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-[9px] text-muted-foreground font-mono uppercase">Calculating war costs…</span>
+        </div>
+      )}
 
       {/* Marquee ticker */}
       {!loading && (
