@@ -5,6 +5,7 @@ import type { Rocket as RocketType } from "@/data/mockData";
 
 interface MissileAlertBannerProps {
   rockets: RocketType[];
+  muted?: boolean;
 }
 
 interface AlertItem {
@@ -81,9 +82,9 @@ function getRegionName(lat: number, lng: number): string {
   return `${lat.toFixed(1)}°N ${lng.toFixed(1)}°E`;
 }
 
-export const MissileAlertBanner = ({ rockets }: MissileAlertBannerProps) => {
+export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAlertBannerProps) => {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const soundEnabled = !externalMuted;
   const seenIdsRef = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
 
@@ -194,18 +195,10 @@ export const MissileAlertBanner = ({ rockets }: MissileAlertBannerProps) => {
                   </motion.span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {i === 0 && (
-                    <button
-                      onClick={() => setSoundEnabled(!soundEnabled)}
-                      className="p-1 rounded hover:bg-destructive/20 transition-colors"
-                      title={soundEnabled ? "Mute alerts" : "Enable alert sounds"}
-                    >
-                      {soundEnabled ? (
-                        <Volume2 className="h-3.5 w-3.5 text-destructive/70" />
-                      ) : (
-                        <VolumeX className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                    </button>
+                  {i === 0 && !soundEnabled && (
+                    <span className="p-1" title="Alerts muted from header">
+                      <VolumeX className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    </span>
                   )}
                   <button
                     onClick={() => dismiss(alert.id)}
