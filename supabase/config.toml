@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.simulate-intel]
 verify_jwt = false
+
+[functions.citizen-security]
+verify_jwt = false
