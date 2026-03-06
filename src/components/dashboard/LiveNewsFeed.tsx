@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Volume2, VolumeX, X, Play, Radio } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Volume2, VolumeX, X, Play, Radio, RefreshCw } from "lucide-react";
 
 const channels = [
   { id: "9Auq9mYxFEe", name: "Sky News" },
@@ -29,6 +29,28 @@ export const LiveNewsFeed = () => {
   const [muted, setMuted] = useState(true);
   const [activeChannel, setActiveChannel] = useState<number>(0);
   const [expandedChannel, setExpandedChannel] = useState<number | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const retryCountRef = useRef<Record<number, number>>({});
+
+  const handleIframeError = useCallback((channelIndex: number) => {
+    const count = (retryCountRef.current[channelIndex] || 0) + 1;
+    retryCountRef.current[channelIndex] = count;
+
+    if (count <= 3) {
+      // Retry same channel with a new key to force reload
+      setTimeout(() => setRetryKey((k) => k + 1), 2000);
+    } else {
+      // Skip to next available channel
+      retryCountRef.current[channelIndex] = 0;
+      const next = (channelIndex + 1) % channels.length;
+      setActiveChannel(next);
+    }
+  }, []);
+
+  const handleManualRetry = useCallback(() => {
+    retryCountRef.current[activeChannel] = 0;
+    setRetryKey((k) => k + 1);
+  }, [activeChannel]);
 
   return (
     <>
@@ -59,20 +81,30 @@ export const LiveNewsFeed = () => {
               <span className="text-[9px] font-mono font-bold text-foreground">{channels[activeChannel].name}</span>
               <span className="text-[8px] font-mono text-primary uppercase">LIVE</span>
             </div>
-            <button
-              onClick={() => setExpandedChannel(activeChannel)}
-              className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
-            >
-              Fullscreen
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setExpandedChannel(activeChannel)}
+                className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
+              >
+                Fullscreen
+              </button>
+              <button
+                onClick={handleManualRetry}
+                className="p-0.5 rounded hover:bg-secondary/60 transition-colors"
+                title="Retry stream"
+              >
+                <RefreshCw className="h-2.5 w-2.5 text-muted-foreground" />
+              </button>
+            </div>
           </div>
           <div className="aspect-video">
             <iframe
-              key={`player-${channels[activeChannel].id}-${muted}`}
+              key={`player-${channels[activeChannel].id}-${muted}-${retryKey}`}
               src={`https://www.youtube.com/embed/${channels[activeChannel].id}?autoplay=1&mute=${muted ? 1 : 0}`}
               title={channels[activeChannel].name}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              onError={() => handleIframeError(activeChannel)}
             />
           </div>
         </div>
