@@ -9,9 +9,11 @@ interface TimelineSliderProps {
 }
 
 const channels = [
-  { id: "bNyUyrR0PHo", name: "Sky News Live" },
-  { id: "n7eQejkXbnM", name: "Al Jazeera Live" },
-  { id: "0PJ2Sj4PVpg", name: "France 24 Live" },
+  { id: "9Auq9mYxFEe", name: "Sky News" },
+  { id: "gCNeDWCI0vo", name: "Al Jazeera" },
+  { id: "0PJ2Sj4PVpg", name: "France 24" },
+  { id: "w_Ma8oQLmSM", name: "BBC News" },
+  { id: "XWq5kBlakcQ", name: "TRT World" },
 ];
 
 const LiveNewsFeed = () => {
