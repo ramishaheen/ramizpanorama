@@ -48,6 +48,8 @@ const Index = () => {
         vesselCount={vessels.length}
         alertCount={geoAlerts.length}
         riskScore={riskScore.overall}
+        rocketCount={rockets.filter(r => r.status === 'launched' || r.status === 'in_flight').length}
+        impactCount={rockets.filter(r => r.status === 'impact' || r.status === 'intercepted').length}
         dataFresh={dataFresh}
       />
 
