@@ -35,7 +35,7 @@ export const TelegramFeed = () => {
 
   useEffect(() => {
     fetchPosts();
-    const interval = setInterval(fetchPosts, 120000); // refresh every 2 min
+    const interval = setInterval(fetchPosts, 60_000); // refresh every 60s
     return () => clearInterval(interval);
   }, [fetchPosts]);
 
@@ -96,19 +96,20 @@ export const TelegramFeed = () => {
                 href={`https://t.me/WarsLeaks/${post.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block px-3 py-2.5 hover:bg-muted/30 transition-colors group"
+                dir="rtl"
+                className="block px-3 py-2.5 hover:bg-muted/30 transition-colors group text-right"
               >
-                <p className="font-mono text-[10px] text-foreground leading-relaxed line-clamp-4 group-hover:text-[#29B6F6] transition-colors">
+                <p className="font-mono text-xs text-foreground leading-relaxed line-clamp-4 group-hover:text-[#29B6F6] transition-colors">
                   {post.text}
                 </p>
-                <div className="flex items-center gap-3 mt-1.5">
-                  <span className="font-mono text-[8px] text-muted-foreground/60">
+                <div className="flex items-center gap-3 mt-1.5 justify-start" dir="ltr">
+                  <span className="font-mono text-[9px] text-muted-foreground/60">
                     {new Date(post.date).toLocaleString("en-GB", { 
                       day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" 
                     })}
                   </span>
                   {post.views && (
-                    <span className="font-mono text-[8px] text-muted-foreground/40">
+                    <span className="font-mono text-[9px] text-muted-foreground/40">
                       👁 {post.views}
                     </span>
                   )}
