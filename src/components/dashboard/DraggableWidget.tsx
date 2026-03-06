@@ -26,16 +26,18 @@ export const DraggableWidget = ({ id, children }: DraggableWidgetProps) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="group">
+    <div ref={setNodeRef} style={style} className="group relative">
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-1 left-1 z-10 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing bg-muted/80 hover:bg-muted"
+        className="absolute -left-1 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-0.5 px-1 py-2 rounded-md cursor-grab active:cursor-grabbing bg-primary/15 border border-primary/30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-primary/25 hover:scale-110 shadow-sm"
         title="Drag to reorder"
       >
-        <GripVertical className="h-3 w-3 text-muted-foreground" />
+        <GripVertical className="h-4 w-4 text-primary" />
       </div>
-      {children}
+      <div className="group-hover:ring-1 group-hover:ring-primary/20 rounded-lg transition-all duration-200">
+        {children}
+      </div>
     </div>
   );
 };
