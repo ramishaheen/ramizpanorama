@@ -435,21 +435,23 @@ const Index = () => {
             >
               <PanelRightClose className="h-4 w-4 text-muted-foreground" />
             </button>
-            <div className="flex-1 overflow-y-auto intel-feed-scroll">
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
-                <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                  {rightOrder.map((id) => (
-                    <DraggableWidget key={id} id={id}>
-                      {rightWidgets[id]}
-                    </DraggableWidget>
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </div>
-            <div className="flex-shrink-0 border-t border-border p-2 space-y-2">
-              <LayerControls layers={layers} onToggle={toggleLayer} />
-              <TimelineSlider events={timeline} />
-              <CyberSecurityAlerts />
+            <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
+              <div className="direction-ltr">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+                  <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+                    {rightOrder.map((id) => (
+                      <DraggableWidget key={id} id={id}>
+                        {rightWidgets[id]}
+                      </DraggableWidget>
+                    ))}
+                  </SortableContext>
+                </DndContext>
+                <div className="p-2 space-y-2">
+                  <LayerControls layers={layers} onToggle={toggleLayer} />
+                  <TimelineSlider events={timeline} />
+                  <CyberSecurityAlerts />
+                </div>
+              </div>
             </div>
           </div>
         ) : (
