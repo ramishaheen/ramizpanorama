@@ -111,8 +111,9 @@ export const useCommodityPrices = (): CommodityPrices => {
       history: { ...historyRef.current },
     }));
 
-    // Fetch live prices immediately
+    // Fetch live prices immediately + every 60s
     fetchLivePrices();
+    const liveInterval = setInterval(fetchLivePrices, 60_000);
 
     // Simulate minor ticks between live updates
     const updateCommodities = () => {
@@ -201,6 +202,7 @@ export const useCommodityPrices = (): CommodityPrices => {
     return () => {
       clearInterval(commodityInterval);
       clearInterval(cryptoInterval);
+      clearInterval(liveInterval);
     };
   }, [refreshKey]);
 
