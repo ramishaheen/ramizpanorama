@@ -54,8 +54,12 @@ const channels: Channel[] = [
 
 const REGIONS = [...new Set(channels.map((c) => c.region))];
 
-const getEmbedUrl = (channelId: string, muted: boolean) =>
-  `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=${muted ? 1 : 0}`;
+const getEmbedUrl = (channel: Channel, muted: boolean) => {
+  // YouTube live embed is the default
+  return `https://www.youtube.com/embed/live_stream?channel=${channel.channelId}&autoplay=1&mute=${muted ? 1 : 0}`;
+};
+
+const getDirectUrl = (channel: Channel) => channel.directUrl || null;
 
 export const LiveNewsFeed = () => {
   const [muted, setMuted] = useState(true);
