@@ -7,9 +7,18 @@ interface SectorCost {
   description: string;
 }
 
+interface CountryCost {
+  country: string;
+  code: string;
+  total_cost_billions: number;
+  daily_cost_millions: number;
+  breakdown: string;
+}
+
 export interface WarCostsData {
   total_daily_cost_billions: number;
   sectors: SectorCost[];
+  country_costs?: CountryCost[];
   cumulative_estimate_billions: number;
   cumulative_unit?: "B" | "T";
   daily_unit?: "B";
