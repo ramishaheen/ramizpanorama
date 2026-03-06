@@ -56,10 +56,10 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
               )}
             </button>
             {!chatOpen && showBalloon && (
-              <div className="absolute bottom-full right-0 mb-2 z-50 animate-bounce">
+              <div className="absolute top-1/2 -translate-y-1/2 left-full ml-2 z-50 animate-bounce">
                 <div className="relative bg-primary text-primary-foreground text-[9px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
                   Chat with me 💬
-                  <div className="absolute -bottom-1 right-2 w-2 h-2 bg-primary rotate-45" />
+                  <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-2 h-2 bg-primary rotate-45" />
                 </div>
               </div>
             )}
