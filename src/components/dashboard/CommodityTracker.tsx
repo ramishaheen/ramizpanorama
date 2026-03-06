@@ -16,7 +16,56 @@ const formatPrice = (price: number, key: string) => {
   return price.toFixed(2);
 };
 
-const PriceRow = ({ config, data }: { config: typeof commodityConfig[number]; data: PriceData }) => {
+const Sparkline = ({ data, color, width = 60, height = 20 }: { data: number[]; color: string; width?: number; height?: number }) => {
+  if (data.length < 2) return <div style={{ width, height }} />;
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const padding = 1;
+
+  const points = data.map((v, i) => {
+    const x = padding + (i / (data.length - 1)) * (width - padding * 2);
+    const y = padding + (1 - (v - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  });
+
+  const isUp = data[data.length - 1] >= data[0];
+  const strokeColor = color;
+  const fillId = `spark-${color.replace(/[^a-z0-9]/gi, "")}`;
+
+  return (
+    <svg width={width} height={height} className="flex-shrink-0">
+      <defs>
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={strokeColor} stopOpacity={0.3} />
+          <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <polygon
+        points={`${points[0].split(",")[0]},${height} ${points.join(" ")} ${points[points.length - 1].split(",")[0]},${height}`}
+        fill={`url(#${fillId})`}
+      />
+      <polyline
+        points={points.join(" ")}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={1.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Latest point dot */}
+      <circle
+        cx={parseFloat(points[points.length - 1].split(",")[0])}
+        cy={parseFloat(points[points.length - 1].split(",")[1])}
+        r={1.8}
+        fill={strokeColor}
+      />
+    </svg>
+  );
+};
+
+const PriceRow = ({ config, data, history }: { config: typeof commodityConfig[number]; data: PriceData; history: number[] }) => {
   const isUp = data.change > 0;
   const isFlat = data.change === 0;
   const Icon = config.icon;
@@ -33,18 +82,19 @@ const PriceRow = ({ config, data }: { config: typeof commodityConfig[number]; da
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <Sparkline data={history} color={config.color} />
         <AnimatePresence mode="popLayout">
           <motion.span
             key={data.price}
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="font-mono text-xs font-bold text-foreground"
+            className="font-mono text-xs font-bold text-foreground min-w-[52px] text-right"
           >
             ${formatPrice(data.price, config.key)}
           </motion.span>
         </AnimatePresence>
-        <div className={`flex items-center gap-0.5 ${changeColor}`}>
+        <div className={`flex items-center gap-0.5 min-w-[42px] ${changeColor}`}>
           <TrendIcon className="h-2.5 w-2.5" />
           <span className="font-mono text-[9px] font-semibold">
             {isUp ? "+" : ""}{data.changePercent}%
@@ -71,7 +121,7 @@ export const CommodityTracker = () => {
       </div>
       <div>
         {commodityConfig.map((cfg) => (
-          <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} />
+          <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} history={prices.history[cfg.key] || []} />
         ))}
       </div>
       <p className="font-mono text-[7px] text-muted-foreground/50 mt-1.5 text-right">
