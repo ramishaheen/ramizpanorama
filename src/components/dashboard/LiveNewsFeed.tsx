@@ -1,56 +1,46 @@
 import { useState, useCallback, useRef } from "react";
 import { Volume2, VolumeX, X, Play, Radio, RefreshCw } from "lucide-react";
 
+// Using YouTube channel IDs — the embed auto-resolves to the current live stream
 const channels = [
-  { id: "9Auq9mYxFEe", name: "Sky News" },
-  { id: "gCNeDWCI0vo", name: "Al Jazeera" },
-  { id: "0PJ2Sj4PVpg", name: "France 24" },
-  { id: "w_Ma8oQLmSM", name: "BBC News" },
-  { id: "XWq5kBlakcQ", name: "TRT World" },
-  { id: "_C8-9TS-2gk", name: "CNN-News18" },
-  { id: "0UrpSCv6A1Y", name: "WION" },
-  { id: "pqabxBKzZ6M", name: "DW News" },
-  { id: "seVDbrCyEt8", name: "i24 News" },
-  { id: "V1SZGB5oZeM", name: "Press TV (Iran)" },
-  { id: "jNhh-OLzWlE", name: "i24 Israel" },
-  { id: "dp8PhLsUcFE", name: "NBC News (USA)" },
-  { id: "bGkMOg1Ov7I", name: "RT News (Russia)" },
-  // Arabic News Channels
-  { id: "uPh_v39Cbow", name: "الجزيرة مباشر" },
-  { id: "NvuZuk9HWIQ", name: "العربية" },
-  { id: "yd_H1PwIB0E", name: "سكاي نيوز عربية" },
-  { id: "jJqcFN-hjGg", name: "العربية Live" },
-  { id: "UCB3algFg6U", name: "France 24 عربي" },
-  { id: "dsivequqb-Q", name: "BBC عربي" },
-  { id: "vBOG85PlrTw", name: "DW عربية" },
+  // English
+  { channelId: "UCoMdktPbSTixAyNGwb-UYkQ", name: "Sky News" },
+  { channelId: "UCNye-wNBqNL5ZzHSJj3l8Bg", name: "Al Jazeera EN" },
+  { channelId: "UCQfwfsi5VrQ8yKZ-UWmAEFg", name: "France 24 EN" },
+  { channelId: "UC16niRr50-MSBwiO3YDb3RA", name: "BBC News" },
+  { channelId: "UC7fWeaHhqgM4Lba7TTRFDKA", name: "TRT World" },
+  { channelId: "UCef1-8eOpJgud7szVPlZQAQ", name: "CNN-News18" },
+  { channelId: "UC_gUM8rL-Lrg6O3adPW9K1g", name: "WION" },
+  { channelId: "UCknLrEdhRCp1aegoMqRaCZg", name: "DW News" },
+  { channelId: "UCJg9wBPyKMNA5sRDnvzmkdg", name: "i24 News EN" },
+  { channelId: "UCUrHMEQjdPvOYgzVOmCCSbw", name: "Press TV" },
+  { channelId: "UCBi2mrWuNuyYy4gbM6fU18Q", name: "NBC News" },
+  // Arabic
+  { channelId: "UCfiwzLy-8yKzIbsmZTzxDgw", name: "الجزيرة مباشر" },
+  { channelId: "UCYMAnZ1rFgaPS6PaJ4PMiIA", name: "العربية" },
+  { channelId: "UCIJXOvggjKtCagMfxvcCzAA", name: "سكاي نيوز عربية" },
+  { channelId: "UCddiUEpeqJcYeBxX1IVBKvQ", name: "RT عربي" },
+  { channelId: "UCIwKT4JYoai2WidLzaRz1SA", name: "France 24 عربي" },
+  { channelId: "UCj0bEC3L7cNZrZBXFLGjJRA", name: "BBC عربي" },
+  { channelId: "UCHMr60HFkJO-qEUYHG8LTtA", name: "DW عربية" },
+  { channelId: "UCLsE0EPaHMHRLYOCchOhYNg", name: "الحدث" },
 ];
+
+const getEmbedUrl = (channelId: string, muted: boolean) =>
+  `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=${muted ? 1 : 0}`;
+
+const getThumbnailUrl = (channelId: string) =>
+  `https://yt3.googleusercontent.com/channel/${channelId}`;
 
 export const LiveNewsFeed = () => {
   const [muted, setMuted] = useState(true);
   const [activeChannel, setActiveChannel] = useState<number>(0);
   const [expandedChannel, setExpandedChannel] = useState<number | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const retryCountRef = useRef<Record<number, number>>({});
-
-  const handleIframeError = useCallback((channelIndex: number) => {
-    const count = (retryCountRef.current[channelIndex] || 0) + 1;
-    retryCountRef.current[channelIndex] = count;
-
-    if (count <= 3) {
-      // Retry same channel with a new key to force reload
-      setTimeout(() => setRetryKey((k) => k + 1), 2000);
-    } else {
-      // Skip to next available channel
-      retryCountRef.current[channelIndex] = 0;
-      const next = (channelIndex + 1) % channels.length;
-      setActiveChannel(next);
-    }
-  }, []);
 
   const handleManualRetry = useCallback(() => {
-    retryCountRef.current[activeChannel] = 0;
     setRetryKey((k) => k + 1);
-  }, [activeChannel]);
+  }, []);
 
   return (
     <>
@@ -73,7 +63,7 @@ export const LiveNewsFeed = () => {
           </button>
         </div>
 
-        {/* Active player - only one iframe at a time */}
+        {/* Active player */}
         <div className="relative rounded overflow-hidden border border-border bg-background mb-2">
           <div className="absolute top-0 left-0 right-0 z-10 px-2 py-1 bg-background/80 backdrop-blur-sm flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -99,21 +89,20 @@ export const LiveNewsFeed = () => {
           </div>
           <div className="aspect-video">
             <iframe
-              key={`player-${channels[activeChannel].id}-${muted}-${retryKey}`}
-              src={`https://www.youtube.com/embed/${channels[activeChannel].id}?autoplay=1&mute=${muted ? 1 : 0}`}
+              key={`player-${channels[activeChannel].channelId}-${muted}-${retryKey}`}
+              src={getEmbedUrl(channels[activeChannel].channelId, muted)}
               title={channels[activeChannel].name}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              onError={() => handleIframeError(activeChannel)}
             />
           </div>
         </div>
 
-        {/* Channel selector - thumbnails, no iframes */}
+        {/* Channel selector */}
         <div className="grid grid-cols-4 gap-1">
           {channels.map((ch, i) => (
             <button
-              key={ch.id}
+              key={ch.channelId}
               onClick={() => setActiveChannel(i)}
               className={`relative rounded overflow-hidden border transition-all text-left ${
                 activeChannel === i
@@ -121,13 +110,7 @@ export const LiveNewsFeed = () => {
                   : "border-border hover:border-muted-foreground/40"
               }`}
             >
-              <div className="aspect-video bg-background relative">
-                <img
-                  src={`https://img.youtube.com/vi/${ch.id}/mqdefault.jpg`}
-                  alt={ch.name}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
+              <div className="aspect-video bg-background relative flex items-center justify-center">
                 {activeChannel === i ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-primary/10">
                     <Radio className="h-3 w-3 text-primary animate-pulse" />
@@ -182,8 +165,8 @@ export const LiveNewsFeed = () => {
             </div>
             <div className="aspect-video">
               <iframe
-                key={`expanded-${channels[expandedChannel].id}-${muted}`}
-                src={`https://www.youtube.com/embed/${channels[expandedChannel].id}?autoplay=1&mute=${muted ? 1 : 0}`}
+                key={`expanded-${channels[expandedChannel].channelId}-${muted}-${retryKey}`}
+                src={getEmbedUrl(channels[expandedChannel].channelId, muted)}
                 title={channels[expandedChannel].name}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -193,7 +176,7 @@ export const LiveNewsFeed = () => {
             <div className="flex gap-1 px-3 py-2 overflow-x-auto border-t border-border bg-background">
               {channels.map((ch, i) => (
                 <button
-                  key={ch.id}
+                  key={ch.channelId}
                   onClick={() => setExpandedChannel(i)}
                   className={`flex-shrink-0 px-2 py-1 rounded font-mono text-[9px] transition-colors ${
                     expandedChannel === i
