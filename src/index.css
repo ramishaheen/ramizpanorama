@@ -187,6 +187,10 @@
   filter: brightness(0.6) contrast(1.2) saturate(0.3) hue-rotate(180deg) invert(1);
 }
 
+.satellite-mode .leaflet-tile-pane {
+  filter: brightness(0.85) contrast(1.1) saturate(0.8);
+}
+
 .leaflet-control-zoom a {
   background: hsl(220 18% 12%) !important;
   color: hsl(190 100% 50%) !important;
