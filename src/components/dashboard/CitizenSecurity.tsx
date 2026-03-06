@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, RefreshCw, AlertTriangle, ChevronDown, ChevronUp, X } from "lucide-react";
 import type { SecurityData, CountrySafety } from "@/hooks/useCitizenSecurity";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface CitizenSecurityProps {
   data: SecurityData | null;
@@ -123,6 +124,16 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
   const [expandedCode, setExpandedCode] = useState<string | null>(null);
   const [showAssessment, setShowAssessment] = useState(false);
   const [detailCountry, setDetailCountry] = useState<CountrySafety | null>(null);
+  const { t } = useLanguage();
+
+  // Escape key handler
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDetailCountry(null);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const toggleExpand = (code: string) => {
     setExpandedCode(prev => prev === code ? null : code);
@@ -134,9 +145,11 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
         <div className="flex items-center gap-2.5">
           <Shield className="h-4 w-4 text-primary" />
           <span className="font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
-            Citizen Security Indicators
+            {t(tr["section.citizen_security"].en, tr["section.citizen_security"].ar)}
           </span>
-          <span className="font-mono text-[10px] text-primary uppercase">AI-Powered</span>
+          <span className="font-mono text-[10px] text-primary uppercase">
+            {t(tr["section.ai_powered"].en, tr["section.ai_powered"].ar)}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {data?.overall_assessment && (

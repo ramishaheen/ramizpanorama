@@ -4,6 +4,7 @@ import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useWarCosts } from "@/hooks/useWarCosts";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface StatsBarProps {
   airspaceCount: number;
@@ -110,6 +111,7 @@ const MarqueeItem = ({ icon: Icon, label, price, change, changePercent }: {
 export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, rocketCount = 0, impactCount = 0, dataFresh }: StatsBarProps) => {
   const { oil, gold, btc, eth, loading } = useCommodityPrices();
   const warCosts = useWarCosts();
+  const { t } = useLanguage();
 
   const sectorIcons: Record<string, any> = {
     "Oil & Energy": Fuel,
@@ -124,12 +126,12 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
     <div className="space-y-0">
       {/* Stats cards */}
       <div className={`grid grid-cols-6 gap-1.5 px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
-        <StatCard icon={Plane} label="Airspace Alerts" value={airspaceCount} color="text-primary" pulse={dataFresh} />
-        <StatCard icon={Ship} label="Tracked Vessels" value={vesselCount} color="text-primary" pulse={dataFresh} />
-        <StatCard icon={Rocket} label="Missiles Active" value={rocketCount} color={rocketCount > 0 ? "text-critical" : "text-muted-foreground"} pulse={rocketCount > 0} />
-        <StatCard icon={Target} label="Impacts / Intercepts" value={impactCount} color="text-warning" pulse={dataFresh} />
-        <StatCard icon={AlertTriangle} label="Active Alerts" value={alertCount} color="text-warning" pulse={dataFresh} />
-        <StatCard icon={Activity} label="Risk Index" value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
+        <StatCard icon={Plane} label={t(tr["stat.airspace"].en, tr["stat.airspace"].ar)} value={airspaceCount} color="text-primary" pulse={dataFresh} />
+        <StatCard icon={Ship} label={t(tr["stat.vessels"].en, tr["stat.vessels"].ar)} value={vesselCount} color="text-primary" pulse={dataFresh} />
+        <StatCard icon={Rocket} label={t(tr["stat.missiles"].en, tr["stat.missiles"].ar)} value={rocketCount} color={rocketCount > 0 ? "text-critical" : "text-muted-foreground"} pulse={rocketCount > 0} />
+        <StatCard icon={Target} label={t(tr["stat.impacts"].en, tr["stat.impacts"].ar)} value={impactCount} color="text-warning" pulse={dataFresh} />
+        <StatCard icon={AlertTriangle} label={t(tr["stat.alerts"].en, tr["stat.alerts"].ar)} value={alertCount} color="text-warning" pulse={dataFresh} />
+        <StatCard icon={Activity} label={t(tr["stat.risk"].en, tr["stat.risk"].ar)} value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
       </div>
 
       {/* War cost cards */}
@@ -137,7 +139,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
         <div className={`grid grid-cols-8 gap-1.5 px-3 py-1 border-t border-border/50 bg-card/30 transition-shadow duration-500`}>
           <StatCard
             icon={DollarSign}
-            label="Daily War Cost"
+            label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}
             value={Math.round(warCosts.data.total_daily_cost_billions * 1000)}
             color="text-critical"
             pulse
@@ -146,7 +148,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
           />
           <StatCard
             icon={DollarSign}
-            label="Total Est. Cost"
+            label={t(tr["stat.total_cost"].en, tr["stat.total_cost"].ar)}
             value={Math.round(warCosts.data.cumulative_estimate_billions)}
             color="text-critical"
             prefix="$"
@@ -171,7 +173,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
       {warCosts.loading && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-t border-border/50">
           <div className="h-3 w-3 border border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-[9px] text-muted-foreground font-mono uppercase">Calculating war costs…</span>
+          <span className="text-[9px] text-muted-foreground font-mono uppercase">{t(tr["stat.calculating"].en, tr["stat.calculating"].ar)}</span>
         </div>
       )}
 

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, RefreshCw, ChevronDown, ChevronRight, TrendingUp, TrendingDown,
   Minus, Activity, AlertTriangle, Loader2, X
 } from "lucide-react";
 import { useSectorPredictions, type SectorPredictionsData } from "@/hooks/useSectorPredictions";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 const flagEmoji: Record<string, string> = {
   AE: "🇦🇪", JO: "🇯🇴", SA: "🇸🇦", BH: "🇧🇭",
@@ -45,6 +46,16 @@ export const SectorPredictions = () => {
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
   const [selectedSector, setSelectedSector] = useState<{ country: string; sector: any } | null>(null);
   const [detailCountry, setDetailCountry] = useState<{ name: string; code: string; overall_outlook: string; sectors: any[] } | null>(null);
+  const { t } = useLanguage();
+
+  // Escape key handler
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setSelectedSector(null); setDetailCountry(null); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <>
@@ -52,8 +63,8 @@ export const SectorPredictions = () => {
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <BarChart3 className="h-3 w-3 text-primary" />
-            AI Sector Predictions
-            <span className="text-[8px] text-primary font-mono">BY COUNTRY</span>
+            {t(tr["section.sector_predictions"].en, tr["section.sector_predictions"].ar)}
+            <span className="text-[8px] text-primary font-mono">{t(tr["section.by_country"].en, tr["section.by_country"].ar)}</span>
           </h3>
           <button
             onClick={refresh}

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Plane, Ship, Globe, Shield, X } from "lucide-react";
 import type { GeoAlert } from "@/data/mockData";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface NotificationPanelProps {
   alerts: GeoAlert[];
@@ -37,7 +38,16 @@ const severityText: Record<GeoAlert["severity"], string> = {
 
 export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
   const [selectedAlert, setSelectedAlert] = useState<GeoAlert | null>(null);
+  const { t } = useLanguage();
 
+  // Escape key handler
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedAlert(null);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
   const sorted = [...alerts].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
@@ -47,11 +57,11 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border">
           <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Intel Feed
+            {t(tr["section.intel_feed"].en, tr["section.intel_feed"].ar)}
           </h3>
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-            <span className="text-[9px] text-muted-foreground font-mono">LIVE</span>
+            <span className="text-[9px] text-muted-foreground font-mono">{t(tr["section.live"].en, tr["section.live"].ar)}</span>
           </div>
         </div>
 
