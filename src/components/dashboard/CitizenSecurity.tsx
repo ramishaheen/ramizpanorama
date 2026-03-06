@@ -54,24 +54,24 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-card/80 backdrop-blur-sm border-r border-border/50">
+    <div className="h-full flex flex-col bg-card/80 backdrop-blur-sm">
       {/* Header */}
       <div className="px-3 py-2 flex items-center justify-between border-b border-border/50 bg-background/60">
-        <div className="flex items-center gap-2">
-          <Shield className="h-3.5 w-3.5 text-primary" />
-          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-foreground">
+        <div className="flex items-center gap-1.5">
+          <Shield className="h-3 w-3 text-primary" />
+          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
             {t(tr["section.citizen_security"].en, tr["section.citizen_security"].ar)}
           </span>
-          <span className="font-mono text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase">
+          <span className="text-[8px] text-primary font-mono">
             {t(tr["section.ai_powered"].en, tr["section.ai_powered"].ar)}
           </span>
         </div>
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+          className="p-1 rounded hover:bg-secondary/60 transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-3 w-3 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
