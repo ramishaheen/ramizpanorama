@@ -62,7 +62,21 @@ const DEFAULT_LAYOUT: LayoutState = {
 function loadLayout(): LayoutState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return { ...DEFAULT_LAYOUT, ...JSON.parse(stored) };
+    if (stored) {
+      const parsed = { ...DEFAULT_LAYOUT, ...JSON.parse(stored) };
+      // Ensure new widgets are always present in sidebar orders
+      DEFAULT_RIGHT_ORDER.forEach((id) => {
+        if (!parsed.rightOrder.includes(id)) {
+          parsed.rightOrder.unshift(id);
+        }
+      });
+      DEFAULT_LEFT_ORDER.forEach((id) => {
+        if (!parsed.leftOrder.includes(id)) {
+          parsed.leftOrder.push(id);
+        }
+      });
+      return parsed;
+    }
   } catch {}
   return DEFAULT_LAYOUT;
 }
