@@ -222,9 +222,16 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`grid grid-cols-6 gap-1.5 px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`grid grid-cols-7 gap-1.5 px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <StatCard icon={Plane} label={t(tr["stat.airspace"].en, tr["stat.airspace"].ar)} value={airspaceCount} color="text-primary" pulse={dataFresh} />
         <StatCard icon={Ship} label={t(tr["stat.vessels"].en, tr["stat.vessels"].ar)} value={vesselCount} color="text-primary" pulse={dataFresh} />
+        <StatCard
+          icon={Bomb}
+          label="Total Launches"
+          value={totalRockets}
+          color="text-destructive"
+          tooltip={`🚀 TOTAL WAR LAUNCHES: ${totalRockets}\n\n── By Type ──\n${Object.entries(missileBreakdown).map(([type, c]) => `• ${type}: ${c.total}`).join("\n")}\n\n── By Status ──\n• Active: ${rocketCount}\n• Intercepted: ${rockets.filter(r => r.status === "intercepted").length}\n• Impact: ${rockets.filter(r => r.status === "impact").length}`}
+        />
         <StatCard
           icon={Rocket}
           label={t(tr["stat.missiles"].en, tr["stat.missiles"].ar)}
