@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
@@ -6,6 +6,8 @@ import type { LayerState } from "./LayerControls";
 import { MapStyleToggle, type MapStyle } from "./MapStyleToggle";
 import type { CountrySafety } from "@/hooks/useCitizenSecurity";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
+import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
+import { HolographicOverlay } from "./HolographicOverlay";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -30,16 +32,6 @@ const vesselColors: Record<MaritimeVessel["type"], string> = {
   FISHING: "#22c55e",
   UNKNOWN: "#888888",
 };
-
-const defaultIcon = L.icon({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
 
 const createVesselIcon = (type: MaritimeVessel["type"], heading: number) => {
   const color = vesselColors[type];
@@ -74,6 +66,27 @@ const createRocketIcon = (status: string) => {
   });
 };
 
+const userItemIcons: Record<string, { emoji: string; color: string }> = {
+  marker: { emoji: "📍", color: "#00d4ff" },
+  danger: { emoji: "⚠️", color: "#ef4444" },
+  intel: { emoji: "📋", color: "#ffb800" },
+  troop: { emoji: "🛡️", color: "#22c55e" },
+};
+
+const createUserItemIcon = (type: string) => {
+  const config = userItemIcons[type] || { emoji: "📍", color: "#00d4ff" };
+  return L.divIcon({
+    className: "user-item-icon",
+    html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;width:28px;height:28px;border-radius:50%;border:2px solid ${config.color};opacity:0.6;animation:pulse 2s ease-in-out infinite;"></div>
+      <div style="font-size:14px;filter:drop-shadow(0 0 8px ${config.color});">${config.emoji}</div>
+    </div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -16],
+  });
+};
+
 const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
   dark: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -85,7 +98,6 @@ const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
   },
 };
 
-// Shared popup options — always open above marker
 const popupOptions: L.PopupOptions = {
   autoPan: true,
   autoPanPadding: L.point(40, 40),
@@ -98,10 +110,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
+  const userItemsGroupRef = useRef<L.LayerGroup | null>(null);
   const bordersGroupRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyle>("dark");
 
+  // User map items state
+  const [activeMode, setActiveMode] = useState<MapToolMode>(null);
+  const [pendingItem, setPendingItem] = useState<Partial<UserMapItem> | null>(null);
+  const [userItems, setUserItems] = useState<UserMapItem[]>([]);
+
+  // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -113,72 +132,159 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     });
 
     const tile = TILE_LAYERS.dark;
-    tileLayerRef.current = L.tileLayer(tile.url, {
-      attribution: tile.attribution,
-    }).addTo(map);
+    tileLayerRef.current = L.tileLayer(tile.url, { attribution: tile.attribution }).addTo(map);
 
     bordersGroupRef.current = L.layerGroup().addTo(map);
     overlayGroupRef.current = L.layerGroup().addTo(map);
+    userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
     return () => {
       overlayGroupRef.current?.clearLayers();
       bordersGroupRef.current?.clearLayers();
+      userItemsGroupRef.current?.clearLayers();
       map.remove();
       mapRef.current = null;
       overlayGroupRef.current = null;
       bordersGroupRef.current = null;
+      userItemsGroupRef.current = null;
       tileLayerRef.current = null;
     };
   }, []);
+
+  // Click handler for placing items
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      if (!activeMode) return;
+      setPendingItem({
+        type: activeMode,
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+      });
+    };
+
+    map.on("click", handleClick);
+    
+    // Change cursor based on mode
+    const container = map.getContainer();
+    if (activeMode) {
+      container.style.cursor = "crosshair";
+    } else {
+      container.style.cursor = "";
+    }
+
+    return () => {
+      map.off("click", handleClick);
+      container.style.cursor = "";
+    };
+  }, [activeMode]);
+
+  const handleConfirmItem = useCallback((item: Partial<UserMapItem>) => {
+    const newItem: UserMapItem = {
+      id: `user-${Date.now()}`,
+      type: item.type || "marker",
+      lat: item.lat || 0,
+      lng: item.lng || 0,
+      label: item.label || "Untitled",
+      severity: item.severity,
+      radius: item.radius,
+      details: item.details,
+    };
+    setUserItems((prev) => [...prev, newItem]);
+    setPendingItem(null);
+  }, []);
+
+  const handleCancelItem = useCallback(() => {
+    setPendingItem(null);
+  }, []);
+
+  // Render user items on map
+  useEffect(() => {
+    const group = userItemsGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    userItems.forEach((item) => {
+      const config = userItemIcons[item.type || "marker"];
+
+      if (item.type === "danger" && item.radius) {
+        const color = severityColors[(item.severity as AirspaceAlert["severity"]) || "medium"];
+        L.circle([item.lat, item.lng], {
+          radius: (item.radius || 50) * 1000,
+          color,
+          fillColor: color,
+          fillOpacity: 0.1,
+          weight: 2,
+          dashArray: "6 4",
+        }).addTo(group);
+      }
+
+      // Pulse ring effect
+      L.circleMarker([item.lat, item.lng], {
+        radius: 16,
+        color: config.color,
+        fillColor: config.color,
+        fillOpacity: 0.05,
+        weight: 1,
+        opacity: 0.3,
+      }).addTo(group);
+
+      const marker = L.marker([item.lat, item.lng], {
+        icon: createUserItemIcon(item.type || "marker"),
+      });
+
+      marker.bindPopup(`
+        <div style="${popupStyle}">
+          <div style="color:${config.color};font-weight:700;margin-bottom:4px;">${item.label}</div>
+          <div style="font-size:9px;text-transform:uppercase;opacity:0.5;margin-bottom:4px;">${item.type}</div>
+          ${item.details ? `<div style="margin-bottom:4px;">${item.details}</div>` : ""}
+          ${item.severity ? `<div>Severity: <span style="color:${severityColors[(item.severity as AirspaceAlert["severity"]) || "medium"]}">${item.severity}</span></div>` : ""}
+          ${item.radius ? `<div>Radius: ${item.radius} km</div>` : ""}
+        </div>
+      `, popupOptions);
+
+      marker.addTo(group);
+    });
+  }, [userItems]);
 
   // Handle tile layer changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
-    if (tileLayerRef.current) {
-      map.removeLayer(tileLayerRef.current);
-    }
-
+    if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
     const tile = TILE_LAYERS[mapStyle];
-    tileLayerRef.current = L.tileLayer(tile.url, {
-      attribution: tile.attribution,
-    }).addTo(map);
-
-    // Move tile layer behind overlays
+    tileLayerRef.current = L.tileLayer(tile.url, { attribution: tile.attribution }).addTo(map);
     tileLayerRef.current.bringToBack();
   }, [mapStyle]);
 
+  // Render data layers
   useEffect(() => {
     const group = overlayGroupRef.current;
     if (!group) return;
-
     group.clearLayers();
 
     if (layers.airspace) {
-      airspaceAlerts
-        .filter((alert) => alert.active)
-        .forEach((alert) => {
-          const circle = L.circle([alert.lat, alert.lng], {
-            radius: alert.radius * 1000,
-            color: severityColors[alert.severity],
-            fillColor: severityColors[alert.severity],
-            fillOpacity: 0.12,
-            weight: 1.5,
-            dashArray: alert.type === "CLOSURE" ? undefined : "5 5",
-          });
-
-          circle.bindPopup(`
-            <div style="${popupStyle}">
-              <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">${alert.type} — ${alert.region}</div>
-              <div style="margin-bottom:4px;">${alert.description}</div>
-              <div style="font-size:9px;opacity:0.6;">${new Date(alert.timestamp).toLocaleString()}</div>
-            </div>
-          `, popupOptions);
-
-          circle.addTo(group);
+      airspaceAlerts.filter((a) => a.active).forEach((alert) => {
+        const circle = L.circle([alert.lat, alert.lng], {
+          radius: alert.radius * 1000,
+          color: severityColors[alert.severity],
+          fillColor: severityColors[alert.severity],
+          fillOpacity: 0.12,
+          weight: 1.5,
+          dashArray: alert.type === "CLOSURE" ? undefined : "5 5",
         });
+        circle.bindPopup(`
+          <div style="${popupStyle}">
+            <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">${alert.type} — ${alert.region}</div>
+            <div style="margin-bottom:4px;">${alert.description}</div>
+            <div style="font-size:9px;opacity:0.6;">${new Date(alert.timestamp).toLocaleString()}</div>
+          </div>
+        `, popupOptions);
+        circle.addTo(group);
+      });
     }
 
     if (layers.maritime) {
@@ -186,7 +292,6 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const marker = L.marker([vessel.lat, vessel.lng], {
           icon: createVesselIcon(vessel.type, vessel.heading),
         });
-
         marker.bindPopup(`
           <div style="${popupStyle}">
             <div style="color:${vesselColors[vessel.type]};font-weight:700;margin-bottom:4px;">${vessel.name}</div>
@@ -196,7 +301,6 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(vessel.timestamp).toLocaleString()}</div>
           </div>
         `, popupOptions);
-
         marker.addTo(group);
       });
     }
@@ -210,7 +314,6 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           fillOpacity: 0.7,
           weight: 2,
         });
-
         marker.bindPopup(`
           <div style="${popupStyle}">
             <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">[${alert.type}] ${alert.title}</div>
@@ -218,66 +321,38 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <div style="font-size:9px;opacity:0.6;">${alert.source} — ${new Date(alert.timestamp).toLocaleString()}</div>
           </div>
         `, popupOptions);
-
         marker.addTo(group);
       });
     }
 
-    // Rockets layer
     if (layers.rockets) {
       rockets.forEach((rocket) => {
         const isActive = rocket.status === "launched" || rocket.status === "in_flight";
         const color = rocketStatusColors[rocket.status] || "#ef4444";
 
-        // Draw trajectory line from origin to target
-        const trajectory = L.polyline(
+        L.polyline(
           [[rocket.originLat, rocket.originLng], [rocket.targetLat, rocket.targetLng]],
-          {
-            color: color,
-            weight: 1.5,
-            opacity: 0.4,
-            dashArray: "6 4",
-          }
-        );
-        trajectory.addTo(group);
+          { color, weight: 1.5, opacity: 0.4, dashArray: "6 4" }
+        ).addTo(group);
 
-        // Draw traveled path (origin to current)
         if (isActive) {
-          const traveledPath = L.polyline(
+          L.polyline(
             [[rocket.originLat, rocket.originLng], [rocket.currentLat, rocket.currentLng]],
-            {
-              color: color,
-              weight: 2.5,
-              opacity: 0.8,
-            }
-          );
-          traveledPath.addTo(group);
+            { color, weight: 2.5, opacity: 0.8 }
+          ).addTo(group);
         }
 
-        // Origin marker (small circle)
         L.circleMarker([rocket.originLat, rocket.originLng], {
-          radius: 4,
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.5,
-          weight: 1,
+          radius: 4, color, fillColor: color, fillOpacity: 0.5, weight: 1,
         }).addTo(group);
 
-        // Target marker (crosshair)
         L.circleMarker([rocket.targetLat, rocket.targetLng], {
-          radius: 6,
-          color: color,
-          fillColor: "transparent",
-          fillOpacity: 0,
-          weight: 2,
-          dashArray: "3 3",
+          radius: 6, color, fillColor: "transparent", fillOpacity: 0, weight: 2, dashArray: "3 3",
         }).addTo(group);
 
-        // Rocket current position marker
         const marker = L.marker([rocket.currentLat, rocket.currentLng], {
           icon: createRocketIcon(rocket.status),
         });
-
         marker.bindPopup(`
           <div style="${popupStyle}">
             <div style="color:${color};font-weight:700;margin-bottom:4px;">🚀 ${rocket.name} [${rocket.type}]</div>
@@ -286,7 +361,6 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(rocket.timestamp).toLocaleString()}</div>
           </div>
         `, popupOptions);
-
         marker.addTo(group);
       });
     }
@@ -294,11 +368,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     if (layers.heatmap) {
       [...airspaceAlerts, ...geoAlerts].forEach((item) => {
         L.circle([item.lat, item.lng], {
-          radius: 300000,
-          color: "transparent",
-          fillColor: severityColors[item.severity],
-          fillOpacity: 0.08,
-          weight: 0,
+          radius: 300000, color: "transparent", fillColor: severityColors[item.severity], fillOpacity: 0.08, weight: 0,
         }).addTo(group);
       });
     }
@@ -307,11 +377,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   // Safety-level country borders
   useEffect(() => {
     const group = bordersGroupRef.current;
-    if (!group || !safetyData?.length) {
-      group?.clearLayers();
-      return;
-    }
-
+    if (!group || !safetyData?.length) { group?.clearLayers(); return; }
     group.clearLayers();
 
     const codes = safetyData.map(c => c.code);
@@ -323,14 +389,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const code = feature?.properties?.code;
         const country = safetyMap[code];
         const color = country ? SAFETY_LEVEL_MAP_COLORS[country.level] || "#888" : "#888";
-        return {
-          color,
-          weight: 2,
-          opacity: 0.7,
-          fillColor: color,
-          fillOpacity: 0.1,
-          dashArray: "4 4",
-        };
+        return { color, weight: 2, opacity: 0.7, fillColor: color, fillOpacity: 0.1, dashArray: "4 4" };
       },
       onEachFeature: (feature, layer) => {
         const code = feature?.properties?.code;
@@ -351,9 +410,19 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     }).addTo(group);
   }, [safetyData]);
 
+  const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
+
   return (
     <div className={`relative h-full w-full ${mapStyle === "satellite" ? "satellite-mode" : ""}`}>
+      <HolographicOverlay alertCount={totalAlerts} />
       <MapStyleToggle style={mapStyle} onChange={setMapStyle} />
+      <MapToolbar
+        activeMode={activeMode}
+        onModeChange={setActiveMode}
+        pendingItem={pendingItem}
+        onConfirmItem={handleConfirmItem}
+        onCancelItem={handleCancelItem}
+      />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
     </div>
   );
