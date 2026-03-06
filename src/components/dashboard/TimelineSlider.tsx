@@ -99,6 +99,23 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
           </motion.div>
         ))}
       </div>
+
+      {/* Live TV Feed */}
+      <div className="mt-3 pt-3 border-t border-border">
+        <h4 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-critical animate-pulse" />
+          Live News Feed
+        </h4>
+        <div className="relative w-full aspect-video rounded overflow-hidden border border-border bg-background">
+          <iframe
+            src="https://www.youtube.com/embed/bNyUyrR0PHo?autoplay=1&mute=1"
+            title="Live News Feed"
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
     </div>
   );
 };
