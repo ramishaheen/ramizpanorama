@@ -127,7 +127,7 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
   if (alerts.length === 0) return null;
 
   return (
-    <div className="absolute top-0 left-0 right-0 z-[1000] flex flex-col items-center gap-1.5 pt-1 pointer-events-none">
+    <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center gap-1.5 pointer-events-none">
       <AnimatePresence>
         {alerts.map((alert, i) => (
           <motion.div
