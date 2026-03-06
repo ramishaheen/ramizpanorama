@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Wifi, Volume2, VolumeX, Languages, MessageCircle } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
@@ -15,6 +15,12 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
   const now = new Date();
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
+  const [showBalloon, setShowBalloon] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowBalloon(false), 10000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
@@ -49,11 +55,11 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
                 </span>
               )}
             </button>
-            {!chatOpen && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-bounce">
+            {!chatOpen && showBalloon && (
+              <div className="absolute bottom-full right-0 mb-2 z-50 animate-bounce">
                 <div className="relative bg-primary text-primary-foreground text-[9px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
                   Chat with me 💬
-                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45" />
+                  <div className="absolute -bottom-1 right-2 w-2 h-2 bg-primary rotate-45" />
                 </div>
               </div>
             )}
