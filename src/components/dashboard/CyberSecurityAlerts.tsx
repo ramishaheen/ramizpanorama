@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShieldAlert, Globe, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Wifi, WifiOff, X, Maximize2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCyberThreats, CyberThreat } from "@/hooks/useCyberThreats";
@@ -123,6 +123,14 @@ export const CyberSecurityAlerts = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { t } = useLanguage();
   const { threats: liveThreats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && modalOpen) setModalOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [modalOpen]);
 
   // Use live data if available, fallback to static
   const allAttacks = liveThreats.length > 0 ? liveThreats : FALLBACK_ATTACKS;
