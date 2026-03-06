@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, ExternalLink, MessageCircle } from "lucide-react";
+import { RefreshCw, ExternalLink, Languages } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,7 +12,10 @@ interface TelegramPost {
 
 export const TelegramFeed = () => {
   const [posts, setPosts] = useState<TelegramPost[]>([]);
+  const [translations, setTranslations] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
+  const [translating, setTranslating] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { t } = useLanguage();
 
@@ -24,6 +27,10 @@ export const TelegramFeed = () => {
       if (fnError) throw fnError;
       if (data?.posts) {
         setPosts(data.posts);
+        // Auto-translate new posts if translation is enabled
+        if (showTranslation) {
+          translatePosts(data.posts);
+        }
       }
     } catch (e) {
       console.error("Telegram feed error:", e);
@@ -31,11 +38,48 @@ export const TelegramFeed = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showTranslation]);
+
+  const translatePosts = useCallback(async (postsToTranslate: TelegramPost[]) => {
+    // Only translate posts we haven't translated yet
+    const untranslated = postsToTranslate.filter(p => !translations[p.id]);
+    if (untranslated.length === 0) return;
+
+    setTranslating(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("translate-posts", {
+        body: { texts: untranslated.map(p => p.text) },
+      });
+      if (fnError) throw fnError;
+      if (data?.translations) {
+        setTranslations(prev => {
+          const next = { ...prev };
+          untranslated.forEach((p, i) => {
+            next[p.id] = data.translations[i] || p.text;
+          });
+          return next;
+        });
+      }
+    } catch (e) {
+      console.error("Translation error:", e);
+    } finally {
+      setTranslating(false);
+    }
+  }, [translations]);
+
+  const toggleTranslation = useCallback(() => {
+    setShowTranslation(prev => {
+      const next = !prev;
+      if (next && posts.length > 0) {
+        translatePosts(posts);
+      }
+      return next;
+    });
+  }, [posts, translatePosts]);
 
   useEffect(() => {
     fetchPosts();
-    const interval = setInterval(fetchPosts, 60_000); // refresh every 60s
+    const interval = setInterval(fetchPosts, 60_000);
     return () => clearInterval(interval);
   }, [fetchPosts]);
 
@@ -60,13 +104,26 @@ export const TelegramFeed = () => {
             {t("Open ↗", "فتح ↗")}
           </a>
         </div>
-        <button
-          onClick={fetchPosts}
-          disabled={loading}
-          className="p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={toggleTranslation}
+            title={showTranslation ? "Show original" : "Translate to English"}
+            className={`p-1 transition-colors ${
+              showTranslation 
+                ? "text-[#29B6F6]" 
+                : "text-muted-foreground hover:text-primary"
+            }`}
+          >
+            <Languages className={`h-3 w-3 ${translating ? "animate-pulse" : ""}`} />
+          </button>
+          <button
+            onClick={fetchPosts}
+            disabled={loading}
+            className="p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {/* Posts */}
@@ -90,32 +147,46 @@ export const TelegramFeed = () => {
           </div>
         ) : (
           <div className="divide-y divide-border/40">
-            {posts.map((post) => (
-              <a
-                key={post.id}
-                href={`https://t.me/WarsLeaks/${post.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                dir="rtl"
-                className="block px-3 py-2.5 hover:bg-muted/30 transition-colors group text-right"
-              >
-                <p className="font-mono text-xs text-foreground leading-relaxed line-clamp-4 group-hover:text-[#29B6F6] transition-colors">
-                  {post.text}
-                </p>
-                <div className="flex items-center gap-3 mt-1.5 justify-start" dir="ltr">
-                  <span className="font-mono text-[9px] text-muted-foreground/60">
-                    {new Date(post.date).toLocaleString("en-GB", { 
-                      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" 
-                    })}
-                  </span>
-                  {post.views && (
-                    <span className="font-mono text-[9px] text-muted-foreground/40">
-                      👁 {post.views}
+            {posts.map((post) => {
+              const displayText = showTranslation && translations[post.id] 
+                ? translations[post.id] 
+                : post.text;
+              const isTranslated = showTranslation && translations[post.id];
+
+              return (
+                <a
+                  key={post.id}
+                  href={`https://t.me/WarsLeaks/${post.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  dir={isTranslated ? "ltr" : "rtl"}
+                  className={`block px-3 py-2.5 hover:bg-muted/30 transition-colors group ${
+                    isTranslated ? "text-left" : "text-right"
+                  }`}
+                >
+                  <p className="font-mono text-xs text-foreground leading-relaxed line-clamp-4 group-hover:text-[#29B6F6] transition-colors">
+                    {displayText}
+                  </p>
+                  <div className="flex items-center gap-3 mt-1.5 justify-start" dir="ltr">
+                    <span className="font-mono text-[9px] text-muted-foreground/60">
+                      {new Date(post.date).toLocaleString("en-GB", { 
+                        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" 
+                      })}
                     </span>
-                  )}
-                </div>
-              </a>
-            ))}
+                    {post.views && (
+                      <span className="font-mono text-[9px] text-muted-foreground/40">
+                        👁 {post.views}
+                      </span>
+                    )}
+                    {isTranslated && (
+                      <span className="font-mono text-[9px] text-[#29B6F6]/50">
+                        🌐 {t("translated", "مترجم")}
+                      </span>
+                    )}
+                  </div>
+                </a>
+              );
+            })}
           </div>
         )}
       </div>
