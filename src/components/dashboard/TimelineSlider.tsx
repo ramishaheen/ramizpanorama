@@ -28,7 +28,7 @@ const LiveNewsFeed = () => {
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-critical animate-pulse" />
-          Live News Feed
+          Live News Feeds
         </h4>
         <button
           onClick={() => setMuted(!muted)}
@@ -43,33 +43,31 @@ const LiveNewsFeed = () => {
         </button>
       </div>
 
-      {/* Channel Tabs */}
-      <div className="flex gap-1 mb-2">
+      {/* All Channels Grid */}
+      <div className="grid grid-cols-2 gap-1.5">
         {channels.map((ch, i) => (
-          <button
-            key={ch.id}
-            onClick={() => setSelectedChannel(i)}
-            className={`flex-1 px-2 py-1.5 rounded text-[10px] font-mono transition-colors border ${
-              i === selectedChannel
-                ? "border-primary bg-primary/10 text-primary font-semibold"
-                : "border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
-            }`}
-          >
-            {ch.name}
-          </button>
+          <div key={ch.id} className={`relative rounded overflow-hidden border bg-background ${
+            selectedChannel === i ? "border-primary" : "border-border"
+          }`}>
+            <button
+              onClick={() => setSelectedChannel(i)}
+              className="absolute top-0 left-0 right-0 z-10 px-1.5 py-0.5 bg-background/80 backdrop-blur-sm text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <span className={`h-1 w-1 rounded-full ${selectedChannel === i ? "bg-critical animate-pulse" : "bg-muted-foreground"}`} />
+              {ch.name}
+            </button>
+            <div className="aspect-video">
+              <iframe
+                key={`${ch.id}-${selectedChannel === i ? muted : true}`}
+                src={`https://www.youtube.com/embed/${ch.id}?autoplay=1&mute=${selectedChannel === i && !muted ? 0 : 1}`}
+                title={ch.name}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
         ))}
-      </div>
-
-      {/* Single Video Player */}
-      <div className="relative w-full aspect-video rounded overflow-hidden border border-border bg-background">
-        <iframe
-          key={`${channel.id}-${muted}`}
-          src={`https://www.youtube.com/embed/${channel.id}?autoplay=1&mute=${muted ? 1 : 0}`}
-          title={channel.name}
-          className="absolute inset-0 w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
       </div>
     </div>
   );

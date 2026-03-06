@@ -48,7 +48,7 @@ const Index = () => {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar */}
-        <div className="w-64 flex-shrink-0 border-r border-border flex flex-col overflow-hidden">
+        <div className="w-80 flex-shrink-0 border-r border-border flex flex-col overflow-y-auto">
           <div className="p-3 space-y-3">
             <RiskScoreGauge score={riskScore} />
             <LayerControls layers={layers} onToggle={toggleLayer} />
@@ -59,7 +59,7 @@ const Index = () => {
         </div>
 
         {/* Map */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <IntelMap
             airspaceAlerts={airspaceAlerts}
             vessels={vessels}
