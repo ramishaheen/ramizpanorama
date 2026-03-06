@@ -91,8 +91,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }
     if (!mapContainerRef.current || mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [25, 50],
-      zoom: 3,
+      center: [28, 48],
+      zoom: 5,
       zoomControl: true,
       attributionControl: true,
     });
