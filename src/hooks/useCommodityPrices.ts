@@ -202,6 +202,7 @@ export const useCommodityPrices = (): CommodityPrices => {
     return () => {
       clearInterval(commodityInterval);
       clearInterval(cryptoInterval);
+      clearInterval(liveInterval);
     };
   }, [refreshKey]);
 
