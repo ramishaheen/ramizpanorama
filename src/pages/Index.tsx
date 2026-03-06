@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, ReactNode } from "react";
 import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
@@ -16,6 +16,25 @@ import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
+import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+
+const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "layers", "timeline"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
@@ -30,9 +49,65 @@ const Index = () => {
     rockets: true,
     heatmap: false,
   });
+  const [leftOrder, setLeftOrder] = useState(DEFAULT_LEFT_ORDER);
+  const [rightOrder, setRightOrder] = useState(DEFAULT_RIGHT_ORDER);
 
   const toggleLayer = (layer: keyof LayerState) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleLeftDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLeftOrder((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }, []);
+
+  const handleRightDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setRightOrder((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }, []);
+
+  const leftWidgets: Record<string, ReactNode> = {
+    risk: <RiskScoreGauge score={riskScore} />,
+    commodities: <CommodityTracker />,
+    news: <LiveNewsFeed />,
+    predictions: <AIPredictions />,
+    layers: <LayerControls layers={layers} onToggle={toggleLayer} />,
+    timeline: <TimelineSlider events={timeline} />,
+  };
+
+  const rightWidgets: Record<string, ReactNode> = {
+    notifications: (
+      <div className="flex-1 min-h-0 flex flex-col" style={{ maxHeight: "45%" }}>
+        <NotificationPanel alerts={geoAlerts} />
+      </div>
+    ),
+    "war-updates": (
+      <div className="flex-1 min-h-0 flex flex-col">
+        <WarUpdatesPanel
+          data={warUpdates.data}
+          loading={warUpdates.loading}
+          error={warUpdates.error}
+          onRefresh={warUpdates.refresh}
+        />
+      </div>
+    ),
   };
 
   if (loading) {
@@ -61,17 +136,18 @@ const Index = () => {
       />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left sidebar */}
+        {/* Left sidebar - draggable */}
         <div className="w-[420px] flex-shrink-0 border-r border-border flex flex-col overflow-y-auto">
           <div className="p-3 space-y-3">
-            <RiskScoreGauge score={riskScore} />
-            <CommodityTracker />
-            <LiveNewsFeed />
-            <AIPredictions />
-            <LayerControls layers={layers} onToggle={toggleLayer} />
-          </div>
-          <div className="p-3 pt-0">
-            <TimelineSlider events={timeline} />
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
+              <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
+                {leftOrder.map((id) => (
+                  <DraggableWidget key={id} id={id}>
+                    {leftWidgets[id]}
+                  </DraggableWidget>
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
 
@@ -95,19 +171,17 @@ const Index = () => {
           />
         </div>
 
-        {/* Right sidebar - notifications + war updates */}
+        {/* Right sidebar - draggable */}
         <div className="w-80 flex-shrink-0 border-l border-border overflow-hidden flex flex-col">
-          <div className="flex-1 min-h-0 flex flex-col" style={{ maxHeight: "45%" }}>
-            <NotificationPanel alerts={geoAlerts} />
-          </div>
-          <div className="flex-1 min-h-0 flex flex-col">
-            <WarUpdatesPanel
-              data={warUpdates.data}
-              loading={warUpdates.loading}
-              error={warUpdates.error}
-              onRefresh={warUpdates.refresh}
-            />
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+            <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+              {rightOrder.map((id) => (
+                <DraggableWidget key={id} id={id}>
+                  {rightWidgets[id]}
+                </DraggableWidget>
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 
