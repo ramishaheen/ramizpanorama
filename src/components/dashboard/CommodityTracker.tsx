@@ -216,7 +216,130 @@ const OilSpreadIndicator = ({ brent, wti, isArabic }: { brent: PriceData; wti: P
   );
 };
 
-export const CommodityTracker = () => {
+const WAR_PREMIUM_BASELINE = 65; // Pre-conflict fair value $/bbl
+const WAR_PREMIUM_THRESHOLDS = [
+  { min: 0, max: 20, label: "MINIMAL", labelAr: "أدنى", color: "text-success", bg: "bg-success/10 border-success/30", premiumRange: [0, 3] },
+  { min: 20, max: 40, label: "LOW", labelAr: "منخفض", color: "text-success", bg: "bg-success/10 border-success/30", premiumRange: [2, 6] },
+  { min: 40, max: 60, label: "ELEVATED", labelAr: "مرتفع", color: "text-warning", bg: "bg-warning/10 border-warning/30", premiumRange: [5, 12] },
+  { min: 60, max: 80, label: "HIGH", labelAr: "عالي", color: "text-destructive", bg: "bg-destructive/10 border-destructive/30", premiumRange: [10, 22] },
+  { min: 80, max: 101, label: "EXTREME", labelAr: "أقصى", color: "text-destructive", bg: "bg-destructive/20 border-destructive/50", premiumRange: [18, 35] },
+];
+
+const WarRiskPremium = ({ oilPrice, riskScore, isArabic }: { oilPrice: number; riskScore: number; isArabic: boolean }) => {
+  const threshold = WAR_PREMIUM_THRESHOLDS.find(t => riskScore >= t.min && riskScore < t.max) || WAR_PREMIUM_THRESHOLDS[0];
+
+  // Premium scales within the range based on exact risk score position
+  const position = (riskScore - threshold.min) / (threshold.max - threshold.min);
+  const premium = parseFloat((threshold.premiumRange[0] + position * (threshold.premiumRange[1] - threshold.premiumRange[0])).toFixed(2));
+  const premiumPercent = oilPrice > 0 ? parseFloat(((premium / oilPrice) * 100).toFixed(1)) : 0;
+  const fairValue = parseFloat((oilPrice - premium).toFixed(2));
+  const annualCostBillions = parseFloat(((premium * 100_000_000 * 365) / 1e9).toFixed(1)); // ~100M bbl/day global
+
+  return (
+    <div className="border-t border-border/40 pt-2 mt-1 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <ShieldAlert className="h-3 w-3 text-destructive" />
+          <span className="font-mono text-[9px] font-semibold text-muted-foreground uppercase">
+            {isArabic ? "علاوة مخاطر الحرب" : "War Risk Premium"}
+          </span>
+        </div>
+        <motion.span
+          className={`font-mono text-[8px] font-black px-1.5 py-0.5 rounded border ${threshold.bg} ${threshold.color} uppercase`}
+          animate={{ opacity: riskScore >= 60 ? [1, 0.5, 1] : 1 }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          {isArabic ? threshold.labelAr : threshold.label}
+        </motion.span>
+      </div>
+
+      {/* Premium amount */}
+      <div className="grid grid-cols-3 gap-1.5">
+        <div className="bg-muted/20 rounded px-2 py-1.5 text-center">
+          <span className="font-mono text-[7px] text-muted-foreground/60 uppercase block">
+            {isArabic ? "العلاوة" : "Premium"}
+          </span>
+          <span className={`font-mono text-sm font-black ${threshold.color}`}>
+            +${premium.toFixed(2)}
+          </span>
+          <span className="font-mono text-[7px] text-muted-foreground block">/bbl</span>
+        </div>
+        <div className="bg-muted/20 rounded px-2 py-1.5 text-center">
+          <span className="font-mono text-[7px] text-muted-foreground/60 uppercase block">
+            {isArabic ? "القيمة العادلة" : "Fair Value"}
+          </span>
+          <span className="font-mono text-xs font-bold text-foreground">
+            ${fairValue.toFixed(2)}
+          </span>
+          <span className="font-mono text-[7px] text-muted-foreground block">/bbl</span>
+        </div>
+        <div className="bg-muted/20 rounded px-2 py-1.5 text-center">
+          <span className="font-mono text-[7px] text-muted-foreground/60 uppercase block">
+            {isArabic ? "% من السعر" : "% of Price"}
+          </span>
+          <span className={`font-mono text-xs font-bold ${threshold.color}`}>
+            {premiumPercent}%
+          </span>
+          <span className="font-mono text-[7px] text-muted-foreground block">
+            {isArabic ? "علاوة" : "premium"}
+          </span>
+        </div>
+      </div>
+
+      {/* Premium bar */}
+      <div className="relative">
+        <div className="flex items-center gap-1 mb-0.5">
+          <span className="font-mono text-[7px] text-muted-foreground/50">{isArabic ? "مؤشر المخاطر" : "Risk Index"}: {riskScore}/100</span>
+        </div>
+        <div className="relative h-2 bg-muted/20 rounded-full overflow-hidden">
+          {/* Gradient bar segments */}
+          <div className="absolute inset-0 flex">
+            <div className="h-full bg-success/40" style={{ width: "20%" }} />
+            <div className="h-full bg-success/30" style={{ width: "20%" }} />
+            <div className="h-full bg-warning/40" style={{ width: "20%" }} />
+            <div className="h-full bg-destructive/30" style={{ width: "20%" }} />
+            <div className="h-full bg-destructive/50" style={{ width: "20%" }} />
+          </div>
+          {/* Pointer */}
+          <motion.div
+            className="absolute top-0 h-full w-1 bg-foreground rounded-full shadow-lg"
+            initial={{ left: 0 }}
+            animate={{ left: `${Math.min(98, riskScore)}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
+        </div>
+        <div className="flex justify-between font-mono text-[6px] text-muted-foreground/40 mt-0.5">
+          <span>0</span>
+          <span>20</span>
+          <span>40</span>
+          <span>60</span>
+          <span>80</span>
+          <span>100</span>
+        </div>
+      </div>
+
+      {/* Annual global cost */}
+      <div className={`flex items-center justify-between px-2 py-1.5 rounded border ${threshold.bg}`}>
+        <div className="flex items-center gap-1.5">
+          <AlertTriangle className="h-3 w-3 text-muted-foreground" />
+          <span className="font-mono text-[8px] text-muted-foreground uppercase">
+            {isArabic ? "التكلفة العالمية السنوية" : "Global Annual Cost"}
+          </span>
+        </div>
+        <span className={`font-mono text-[10px] font-black ${threshold.color}`}>
+          ~${annualCostBillions}B/yr
+        </span>
+      </div>
+      <p className="font-mono text-[6px] text-muted-foreground/30 text-center">
+        {isArabic
+          ? "العلاوة = فارق السعر الحالي عن القيمة العادلة بدون توتر جيوسياسي (~$65/برميل)"
+          : `Premium = current price above conflict-free fair value (~$${WAR_PREMIUM_BASELINE}/bbl) × risk factor`}
+      </p>
+    </div>
+  );
+};
+
+export const CommodityTracker = ({ riskScore = 50 }: { riskScore?: number }) => {
   const prices = useCommodityPrices();
   const { t, isArabic } = useLanguage();
 
@@ -231,12 +354,13 @@ export const CommodityTracker = () => {
           <RefreshCw className="h-3 w-3 animate-spin text-primary" />
         )}
       </div>
-      <ScrollArea className="h-[320px] pr-2">
+      <ScrollArea className="h-[420px] pr-2">
         <div>
           {commodityConfig.map((cfg) => (
             <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} history={prices.history[cfg.key] || []} isArabic={isArabic} />
           ))}
           <OilSpreadIndicator brent={prices.brent} wti={prices.oil} isArabic={isArabic} />
+          <WarRiskPremium oilPrice={prices.brent.price} riskScore={riskScore} isArabic={isArabic} />
         </div>
       </ScrollArea>
       <p className="font-mono text-[7px] text-muted-foreground/50 mt-1.5 text-right">
