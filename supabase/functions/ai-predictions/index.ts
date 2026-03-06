@@ -21,43 +21,35 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages,
-        }),
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        return data.choices?.[0]?.message?.content || "";
-      }
-
-      // For 429/402, throw specific errors (don't fallback)
       if (response.status === 429) throw new Error("RATE_LIMIT");
       if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
 
-      console.warn("Lovable AI failed, falling back to MiniMax:", response.status);
-      await response.text(); // consume body
+      const text = await response.text();
+      if (!response.ok || !text) {
+        console.warn("Lovable AI failed, status:", response.status, "body length:", text?.length);
+        throw new Error("Lovable AI returned empty or error");
+      }
+
+      const data = JSON.parse(text);
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) throw new Error("Lovable AI returned no content");
+      return content;
     } catch (e) {
       if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) throw e;
       console.warn("Lovable AI error, falling back to MiniMax:", e);
     }
   }
 
-  // Fallback to MiniMax
   const MINIMAX_API_KEY = Deno.env.get("MINIMAX_API_KEY");
   if (!MINIMAX_API_KEY) throw new Error("No AI provider available");
 
   const response = await fetch(MINIMAX_BASE_URL, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${MINIMAX_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "abab6.5s-chat",
-      messages,
-    }),
+    headers: { Authorization: `Bearer ${MINIMAX_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "abab6.5-chat", messages }),
   });
 
   if (!response.ok) {

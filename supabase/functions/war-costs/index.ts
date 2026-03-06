@@ -119,7 +119,7 @@ CRITICAL: country_costs totals MUST sum to cumulative_estimate_billions. Each co
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Today is ${today}, day ${daysSinceOct2023} of the conflict. Provide precise per-second war costs with current event modifiers for all Middle East countries affected.` },
@@ -143,7 +143,9 @@ CRITICAL: country_costs totals MUST sum to cumulative_estimate_billions. Each co
       throw new Error("AI gateway error");
     }
 
-    const data = await response.json();
+    const rawText = await response.text();
+    if (!rawText) throw new Error("AI returned empty response");
+    const data = JSON.parse(rawText);
     const content = data.choices?.[0]?.message?.content || "";
 
     let costs;
