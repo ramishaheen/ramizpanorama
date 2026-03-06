@@ -13,10 +13,10 @@ interface Channel {
 const channels: Channel[] = [
   // Middle East - Arabic
   { videoId: "bNyUyrR0PHo", name: "الجزيرة", region: "🇶🇦 Arabic", directUrl: "https://www.aljazeera.net/live" },
-  { videoId: "lqeoIFe91JE", name: "العربية", region: "🇸🇦 Arabic", directUrl: "https://www.alarabiya.net/live-stream" },
-  { videoId: "5CJS9t1xvUg", name: "سكاي نيوز عربية", region: "🇦🇪 Arabic", directUrl: "https://www.skynewsarabia.com/livestream-%D8%A7%D9%84%D8%A8%D8%AB-%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B4%D8%B1" },
-  { videoId: "n7eQejkXbnM", name: "الحدث", region: "🇸🇦 Arabic", directUrl: "https://www.alhadath.net/live-stream" },
-  { videoId: "MtDYtXIPOtY", name: "BBC عربي", region: "🇬🇧 Arabic", directUrl: "https://www.bbc.com/arabic/live" },
+  { videoId: "n7eQejkXbnM", name: "العربية", region: "🇸🇦 Arabic", directUrl: "https://www.alarabiya.net/live-stream" },
+  { videoId: "yd_H1PwIB0E", name: "سكاي نيوز عربية", region: "🇦🇪 Arabic", directUrl: "https://www.skynewsarabia.com/livestream-%D8%A7%D9%84%D8%A8%D8%AB-%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B4%D8%B1" },
+  { videoId: "jJqcFN-hjGg", name: "الحدث", region: "🇸🇦 Arabic", directUrl: "https://www.alhadath.net/live-stream" },
+  { videoId: "HxI2TxhhS9A", name: "BBC عربي", region: "🇬🇧 Arabic", directUrl: "https://www.bbc.com/arabic/live" },
   { videoId: "3ursYA8HMeo", name: "France 24 عربي", region: "🇫🇷 Arabic", directUrl: "https://www.france24.com/ar/%D8%A7%D9%84%D8%A8%D8%AB-%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B4%D8%B1" },
   { videoId: "AGkp2AL8e7o", name: "DW عربية", region: "🇩🇪 Arabic", directUrl: "https://www.dw.com/ar/live-tv/channel-arabic" },
   { videoId: "tPMMTMYJVdg", name: "RT عربي", region: "🇷🇺 Arabic", directUrl: "https://arabic.rt.com/live/" },
@@ -25,8 +25,10 @@ const channels: Channel[] = [
   // Iraq / Kurdish
   { videoId: "rTI9BoYHj4Y", name: "Rudaw", region: "🇮🇶 Kurdistan", directUrl: "https://www.rudaw.net/english/onair/tv/live" },
   // Israel & Iran
-  { videoId: "aVg6hG8lwQk", name: "i24 News EN", region: "🇮🇱 Israel", directUrl: "https://www.i24news.tv/en/live" },
+  { videoId: "wSxvg-bRH0M", name: "i24 News EN", region: "🇮🇱 Israel", directUrl: "https://www.i24news.tv/en/live" },
   { videoId: "2-eEd2RJjEg", name: "Press TV", region: "🇮🇷 Iran", directUrl: "https://www.presstv.ir/live" },
+  // Middle East Multi-cam
+  { videoId: "gmtlJ_m2r5A", name: "ME Live Cams", region: "🌍 Multi", directUrl: "https://www.youtube.com/watch?v=gmtlJ_m2r5A" },
   // English - International
   { videoId: "SgftwJdAA3M", name: "Al Jazeera EN", region: "🇶🇦 English", directUrl: "https://www.aljazeera.com/live" },
   { videoId: "zhJEr9Fhu7U", name: "Sky News", region: "🇬🇧 English", directUrl: "https://news.sky.com/watch-live" },
@@ -38,14 +40,14 @@ const channels: Channel[] = [
   { videoId: "49ZrOhhMSOA", name: "CNN", region: "🇺🇸 USA", directUrl: "https://edition.cnn.com/live-tv" },
   { videoId: "enKWyZH6dVI", name: "NBC News", region: "🇺🇸 USA", directUrl: "https://www.nbcnews.com/now" },
   { videoId: "zy9cCJ7rzAg", name: "MSNBC", region: "🇺🇸 USA", directUrl: "https://www.msnbc.com/live" },
-  { videoId: "R_lRjToLD3U", name: "Fox News", region: "🇺🇸 USA", directUrl: "https://www.foxnews.com/video/5614615980001" },
-  { videoId: "AgPuZmdNh20", name: "ABC News", region: "🇺🇸 USA", directUrl: "https://abcnews.go.com/live" },
-  { videoId: "Ma1lqWb7RSY", name: "CBS News", region: "🇺🇸 USA", directUrl: "https://www.cbsnews.com/live/" },
+  { videoId: "qjqNRR8EAg8", name: "Fox / LiveNOW", region: "🇺🇸 USA", directUrl: "https://www.foxnews.com/video/5614615980001" },
+  { videoId: "gN0PZCe-kwQ", name: "ABC News", region: "🇺🇸 USA", directUrl: "https://abcnews.go.com/live" },
+  { videoId: "uiBRZvo0sUw", name: "CBS News", region: "🇺🇸 USA", directUrl: "https://www.cbsnews.com/live/" },
   // Asia
-  { videoId: "rfDx1HMvXbQ", name: "CNN-News18", region: "🇮🇳 India", directUrl: "https://www.news18.com/livetv/" },
-  { videoId: "H6XNNpj8nrI", name: "WION", region: "🇮🇳 India", directUrl: "https://www.wionews.com/live-tv" },
-  { videoId: "MN8p-Vrn6G0", name: "NDTV", region: "🇮🇳 India", directUrl: "https://www.ndtv.com/live" },
-  { videoId: "NZSkW2eM1ZI", name: "India Today", region: "🇮🇳 India", directUrl: "https://www.indiatoday.in/livetv" },
+  { videoId: "G00J-78EmgY", name: "CNN-News18", region: "🇮🇳 India", directUrl: "https://www.news18.com/livetv/" },
+  { videoId: "YabMvo8Qrt8", name: "WION", region: "🇮🇳 India", directUrl: "https://www.wionews.com/live-tv" },
+  { videoId: "uoK1dFpMo98", name: "NDTV", region: "🇮🇳 India", directUrl: "https://www.ndtv.com/live" },
+  { videoId: "u1qyHABteS8", name: "India Today", region: "🇮🇳 India", directUrl: "https://www.indiatoday.in/livetv" },
   { videoId: "f0lYkdA-Gtw", name: "NHK World", region: "🇯🇵 Japan", directUrl: "https://www3.nhk.or.jp/nhkworld/en/live/" },
   // Europe
   { videoId: "pykpO5kQJ98", name: "Euronews", region: "🇪🇺 Europe", directUrl: "https://www.euronews.com/live" },
