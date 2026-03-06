@@ -19,6 +19,7 @@ import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
+import { TotalLaunchesWidget } from "@/components/dashboard/TotalLaunchesWidget";
 import {
   DndContext,
   closestCenter,
@@ -169,6 +170,7 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
+      <TotalLaunchesWidget rockets={rockets} />
       <MissileAlertBanner rockets={rockets} muted={alertMuted} />
       <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} />
       <StatsBar
