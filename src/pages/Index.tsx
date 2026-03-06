@@ -63,7 +63,7 @@ const Index = () => {
         </div>
 
         {/* Map */}
-        <div className="flex-1 relative min-w-0 max-w-[40%] max-h-[55vh] self-center mx-auto">
+        <div className="flex-1 relative min-w-0 h-full">
           <IntelMap
             airspaceAlerts={airspaceAlerts}
             vessels={vessels}
