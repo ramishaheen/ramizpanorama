@@ -4,6 +4,8 @@ import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
 import { MapStyleToggle, type MapStyle } from "./MapStyleToggle";
+import type { CountrySafety } from "@/hooks/useCitizenSecurity";
+import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -11,6 +13,7 @@ interface IntelMapProps {
   geoAlerts: GeoAlert[];
   rockets: Rocket[];
   layers: LayerState;
+  safetyData?: CountrySafety[];
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
@@ -80,10 +83,11 @@ const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
   },
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
+  const bordersGroupRef = useRef<L.LayerGroup | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyle>("dark");
 
@@ -102,14 +106,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }
       attribution: tile.attribution,
     }).addTo(map);
 
+    bordersGroupRef.current = L.layerGroup().addTo(map);
     overlayGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
     return () => {
       overlayGroupRef.current?.clearLayers();
+      bordersGroupRef.current?.clearLayers();
       map.remove();
       mapRef.current = null;
       overlayGroupRef.current = null;
+      bordersGroupRef.current = null;
       tileLayerRef.current = null;
     };
   }, []);
@@ -285,6 +292,53 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }
       });
     }
   }, [airspaceAlerts, vessels, geoAlerts, rockets, layers]);
+
+  // Safety-level country borders
+  useEffect(() => {
+    const group = bordersGroupRef.current;
+    if (!group || !safetyData?.length) {
+      group?.clearLayers();
+      return;
+    }
+
+    group.clearLayers();
+
+    const codes = safetyData.map(c => c.code);
+    const geoJSON = getCountryGeoJSON(codes);
+    const safetyMap = Object.fromEntries(safetyData.map(c => [c.code, c]));
+
+    L.geoJSON(geoJSON, {
+      style: (feature) => {
+        const code = feature?.properties?.code;
+        const country = safetyMap[code];
+        const color = country ? SAFETY_LEVEL_MAP_COLORS[country.level] || "#888" : "#888";
+        return {
+          color,
+          weight: 2,
+          opacity: 0.7,
+          fillColor: color,
+          fillOpacity: 0.1,
+          dashArray: "4 4",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const code = feature?.properties?.code;
+        const country = safetyMap[code];
+        if (country) {
+          layer.bindPopup(`
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:180px;">
+              <div style="color:${SAFETY_LEVEL_MAP_COLORS[country.level]};font-weight:700;margin-bottom:4px;">
+                ${country.name} — ${country.level}
+              </div>
+              <div>Safety Score: <b>${country.safety_score}/100</b></div>
+              <div style="margin-top:4px;font-size:9px;opacity:0.7;">${country.status}</div>
+              ${country.threats?.length ? `<div style="margin-top:4px;font-size:9px;opacity:0.6;">Threats: ${country.threats.join(", ")}</div>` : ""}
+            </div>
+          `);
+        }
+      },
+    }).addTo(group);
+  }, [safetyData]);
 
   return (
     <div className={`relative h-full w-full ${mapStyle === "satellite" ? "satellite-mode" : ""}`}>

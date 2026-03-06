@@ -11,9 +11,11 @@ import { LiveNewsFeed } from "@/components/dashboard/LiveNewsFeed";
 import { Disclaimer } from "@/components/dashboard/Disclaimer";
 import { CitizenSecurity } from "@/components/dashboard/CitizenSecurity";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
+import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 
 const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
+  const citizenSecurity = useCitizenSecurity();
 
   const [layers, setLayers] = useState<LayerState>({
     airspace: true,
@@ -72,9 +74,15 @@ const Index = () => {
               geoAlerts={geoAlerts}
               rockets={rockets}
               layers={layers}
+              safetyData={citizenSecurity.data?.countries}
             />
           </div>
-          <CitizenSecurity />
+          <CitizenSecurity
+            data={citizenSecurity.data}
+            loading={citizenSecurity.loading}
+            error={citizenSecurity.error}
+            onRefresh={citizenSecurity.refresh}
+          />
         </div>
 
         {/* Right sidebar - notifications */}
