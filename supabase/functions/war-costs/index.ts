@@ -30,7 +30,7 @@ CRITICAL PRECISION REQUIREMENTS:
 - Oil price impact: current crude prices vs pre-conflict baseline ($85/bbl)
 - Suez/Red Sea: shipping rerouting adds $1M+ per large vessel per trip
 - Tourism: Israel -70%, Lebanon -80%, Jordan -40%, Egypt -25% vs pre-conflict
-- Defense: Israel $250-300M/day military ops, US $50M+/day support operations
+- Defense: Israel $250-300M/day military ops, US $50M+/day support, Iran proxy funding $20-50M/day, regional arms buildup $100M+/day across Gulf states, Egypt, Jordan. Total ME defense surge is $500-800M+/day MINIMUM
 
 LIVE EVENT MODIFIERS - Apply these multipliers based on current situation:
 - Active military operations: 1.5x base rate for affected sectors

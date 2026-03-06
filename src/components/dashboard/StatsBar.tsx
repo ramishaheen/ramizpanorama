@@ -183,6 +183,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
           />
           {warCosts.data.sectors.map((sector) => {
             const SectorIcon = sectorIcons[sector.name] || DollarSign;
+            const sectorBillions = sector.daily_cost_millions / 1000;
             return (
               <StatCard
                 key={sector.name}
@@ -194,12 +195,14 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
                     dailyCostMillions={sector.daily_cost_millions}
                     startTimestamp={timestamp}
                     prefix="$"
-                    suffix="M"
+                    suffix="B/day"
                     color="text-warning"
-                    decimals={2}
+                    decimals={3}
+                    isBillions
+                    cumulativeBase={sectorBillions}
                   />
                 }
-                tooltip={`🔴 LIVE — ${sector.name}\nDaily rate: $${sector.daily_cost_millions}M/day\nPer second: $${(sector.daily_cost_millions * 1000000 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${c.daily_cost_millions}M/day total`).join("\n")}` : ""}`}
+                tooltip={`🔴 LIVE — ${sector.name}\nDaily rate: $${sectorBillions.toFixed(2)}B/day ($${sector.daily_cost_millions}M)\nPer second: $${(sector.daily_cost_millions * 1000000 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${(c.daily_cost_millions / 1000).toFixed(2)}B/day`).join("\n")}` : ""}`}
               />
             );
           })}
