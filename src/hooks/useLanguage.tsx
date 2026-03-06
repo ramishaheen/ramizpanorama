@@ -19,7 +19,7 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useState<Lang>("ar");
 
   const toggle = useCallback(() => setLang((l) => (l === "en" ? "ar" : "en")), []);
   const isArabic = lang === "ar";
