@@ -48,7 +48,7 @@ const Index = () => {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar */}
-        <div className="w-80 flex-shrink-0 border-r border-border flex flex-col overflow-y-auto">
+        <div className="w-[420px] flex-shrink-0 border-r border-border flex flex-col overflow-y-auto">
           <div className="p-3 space-y-3">
             <RiskScoreGauge score={riskScore} />
             <LayerControls layers={layers} onToggle={toggleLayer} />
