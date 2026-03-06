@@ -194,6 +194,27 @@ Deno.serve(async (req) => {
             timestamp: now,
           }).eq("id", rocket.id);
           actions.push(`Rocket ${rocket.id} ${finalStatus}`);
+
+          // Record outcome in daily history
+          const todayDate = new Date().toISOString().slice(0, 10);
+          const { data: histRow } = await supabase
+            .from("launch_history")
+            .select("*")
+            .eq("date", todayDate)
+            .maybeSingle();
+
+          if (histRow) {
+            const update: Record<string, unknown> = { updated_at: now };
+            if (finalStatus === "intercepted") update.intercepted = histRow.intercepted + 1;
+            else update.impact = histRow.impact + 1;
+            await supabase.from("launch_history").update(update).eq("id", histRow.id);
+          } else {
+            await supabase.from("launch_history").insert({
+              date: todayDate,
+              intercepted: finalStatus === "intercepted" ? 1 : 0,
+              impact: finalStatus === "impact" ? 1 : 0,
+            });
+          }
         } else {
           const newLat = lerp(rocket.origin_lat, rocket.target_lat, progress);
           const newLng = lerp(rocket.origin_lng, rocket.target_lng, progress);
