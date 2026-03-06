@@ -142,7 +142,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   };
 
   // Scenario multipliers: conservative=0.7, base=1.0, severe=1.4
-  const scenarioMultiplier = scenario === "conservative" ? 0.7 : scenario === "severe" ? 1.4 : 1.0;
+  const scenarioMultiplier = scenario === "conservative" ? 1 : scenario === "severe" ? 4 : 2;
 
   const scenarioCumulative = useMemo(() => {
     if (!warCosts.data) return 0;
