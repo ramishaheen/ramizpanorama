@@ -5,6 +5,8 @@ interface SectorCost {
   name: string;
   daily_cost_millions: number;
   description: string;
+  live_modifier?: "normal" | "elevated" | "critical";
+  cost_per_second?: number;
 }
 
 interface CountryCost {
