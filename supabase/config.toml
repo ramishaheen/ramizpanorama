@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.sector-predictions]
 verify_jwt = false
+
+[functions.war-chat]
+verify_jwt = false
+
+[functions.war-costs]
+verify_jwt = false

@@ -156,11 +156,11 @@ export const WarChatPanel = ({ open, onClose }: WarChatPanelProps) => {
           className="fixed top-12 left-2 z-[9999] w-[380px] h-[calc(100vh-64px)] max-h-[700px] flex flex-col bg-card border border-border rounded-lg shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card/90">
-            <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-primary" />
-              <span className="text-xs font-mono font-bold text-foreground tracking-wide">WAR ANALYST AI</span>
-              <span className="text-[8px] px-1.5 py-0.5 rounded bg-critical/20 text-critical font-mono uppercase">Expert</span>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card/90">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-primary" />
+                <span className="text-xs font-mono font-bold text-foreground tracking-wide">WAR COST ENGINE</span>
+                <span className="text-[8px] px-1.5 py-0.5 rounded bg-critical/20 text-critical font-mono uppercase">Agent</span>
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -187,17 +187,19 @@ export const WarChatPanel = ({ open, onClose }: WarChatPanelProps) => {
                   <Bot className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-mono font-bold text-foreground">WAR OS ANALYST</p>
+                  <p className="text-xs font-mono font-bold text-foreground">WAR COST INTELLIGENCE ENGINE</p>
                   <p className="text-[10px] text-muted-foreground mt-1 max-w-[260px]">
-                    Ask me about the Iran-Israel conflict, military operations, economic costs, humanitarian impact, or geopolitical analysis.
+                    I can analyze live dashboard data, calculate war costs by country/sector/scenario, and answer any question about the conflict.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                   {[
-                    "Current war cost breakdown",
-                    "Iron Dome effectiveness",
-                    "Red Sea shipping impact",
-                    "Regional defense spending",
+                    "Show current system status & alerts",
+                    "Calculate total war cost for all countries",
+                    "Israel vs Iran cost breakdown (3 scenarios)",
+                    "What's the economic impact on Arab countries?",
+                    "Red Sea shipping disruption cost analysis",
+                    "Defense spending: Iron Dome vs Arrow costs",
                   ].map((q) => (
                     <button
                       key={q}
@@ -270,7 +272,7 @@ export const WarChatPanel = ({ open, onClose }: WarChatPanelProps) => {
               </button>
             </div>
             <p className="text-[8px] text-muted-foreground/50 font-mono mt-1 text-center">
-              OSINT analysis only • No operational intelligence
+              WAR COST ENGINE • Live dashboard agent • OSINT only
             </p>
           </div>
         </motion.div>
