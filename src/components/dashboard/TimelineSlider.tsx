@@ -41,30 +41,21 @@ const LiveNewsFeed = () => {
         </button>
       </div>
 
-      {/* Channel Switcher */}
-      <div className="relative mb-2">
-        <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="w-full flex items-center justify-between px-2 py-1.5 rounded border border-border bg-secondary/30 text-[10px] font-mono text-foreground hover:bg-secondary/60 transition-colors"
-        >
-          <span className="truncate">{channel.name}</span>
-          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
-        </button>
-        {dropdownOpen && (
-          <div className="absolute z-50 w-full mt-1 rounded border border-border bg-card shadow-lg">
-            {channels.map((ch, i) => (
-              <button
-                key={ch.id}
-                onClick={() => { setSelectedChannel(i); setDropdownOpen(false); }}
-                className={`w-full text-left px-2 py-1.5 text-[10px] font-mono transition-colors hover:bg-secondary/60 ${
-                  i === selectedChannel ? "text-primary bg-secondary/40" : "text-muted-foreground"
-                } ${i === 0 ? "rounded-t" : ""} ${i === channels.length - 1 ? "rounded-b" : ""}`}
-              >
-                {ch.name}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Channel Tabs */}
+      <div className="flex gap-1 mb-2">
+        {channels.map((ch, i) => (
+          <button
+            key={ch.id}
+            onClick={() => setSelectedChannel(i)}
+            className={`flex-1 px-2 py-1.5 rounded text-[10px] font-mono transition-colors border ${
+              i === selectedChannel
+                ? "border-primary bg-primary/10 text-primary font-semibold"
+                : "border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60"
+            }`}
+          >
+            {ch.name}
+          </button>
+        ))}
       </div>
 
       {/* Single Video Player */}
