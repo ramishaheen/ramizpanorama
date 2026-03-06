@@ -13,7 +13,7 @@ interface Channel {
 const channels: Channel[] = [
   // Middle East - Arabic
   { channelId: "UCfiwzLy-8yKzIbsmZTzxDgw", name: "الجزيرة", region: "🇶🇦 Arabic" },
-  { channelId: "UCYMAnZ1rFgaPS6PaJ4PMiIA", name: "العربية", region: "🇸🇦 Arabic" },
+  { channelId: "UCYMAnZ1rFgaPS6PaJ4PMiIA", name: "العربية", region: "🇸🇦 Arabic", directUrl: "https://www.alarabiya.net/live-stream" },
   { channelId: "UCIJXOvggjKtCagMfxvcCzAA", name: "سكاي نيوز عربية", region: "🇦🇪 Arabic" },
   { channelId: "UCLsE0EPaHMHRLYOCchOhYNg", name: "الحدث", region: "🇸🇦 Arabic" },
   { channelId: "UCj0bEC3L7cNZrZBXFLGjJRA", name: "BBC عربي", region: "🇬🇧 Arabic" },
