@@ -109,7 +109,17 @@ Respond ONLY with valid JSON in this exact format:
       });
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Sanitize: remove control characters (except \n, \r, \t) that break JSON.parse
+    const sanitized = jsonMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' ');
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(sanitized);
+    } catch {
+      // Try stripping trailing commas as a fallback
+      const fixed = sanitized.replace(/,\s*([\]}])/g, '$1');
+      parsed = JSON.parse(fixed);
+    }
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
