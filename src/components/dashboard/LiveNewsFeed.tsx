@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Volume2, VolumeX, X, Play, Radio, RefreshCw } from "lucide-react";
+import { Volume2, VolumeX, X, Play, Radio, RefreshCw, ExternalLink } from "lucide-react";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface Channel {
@@ -7,12 +7,13 @@ interface Channel {
   name: string;
   region: string;
   logo?: string;
+  directUrl?: string; // fallback embed URL when YouTube live isn't available
 }
 
 const channels: Channel[] = [
   // Middle East - Arabic
   { channelId: "UCfiwzLy-8yKzIbsmZTzxDgw", name: "الجزيرة", region: "🇶🇦 Arabic" },
-  { channelId: "UCYMAnZ1rFgaPS6PaJ4PMiIA", name: "العربية", region: "🇸🇦 Arabic" },
+  { channelId: "UCYMAnZ1rFgaPS6PaJ4PMiIA", name: "العربية", region: "🇸🇦 Arabic", directUrl: "https://www.alarabiya.net/live-stream" },
   { channelId: "UCIJXOvggjKtCagMfxvcCzAA", name: "سكاي نيوز عربية", region: "🇦🇪 Arabic" },
   { channelId: "UCLsE0EPaHMHRLYOCchOhYNg", name: "الحدث", region: "🇸🇦 Arabic" },
   { channelId: "UCj0bEC3L7cNZrZBXFLGjJRA", name: "BBC عربي", region: "🇬🇧 Arabic" },
@@ -53,8 +54,12 @@ const channels: Channel[] = [
 
 const REGIONS = [...new Set(channels.map((c) => c.region))];
 
-const getEmbedUrl = (channelId: string, muted: boolean) =>
-  `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1&mute=${muted ? 1 : 0}`;
+const getEmbedUrl = (channel: Channel, muted: boolean) => {
+  // YouTube live embed is the default
+  return `https://www.youtube.com/embed/live_stream?channel=${channel.channelId}&autoplay=1&mute=${muted ? 1 : 0}`;
+};
+
+const getDirectUrl = (channel: Channel) => channel.directUrl || null;
 
 export const LiveNewsFeed = () => {
   const [muted, setMuted] = useState(true);
@@ -115,17 +120,31 @@ export const LiveNewsFeed = () => {
               <span className="text-[8px] font-mono text-muted-foreground">{channels[activeChannel].region}</span>
               <span className="text-[8px] font-mono text-primary uppercase">{t(tr["section.live"].en, tr["section.live"].ar)}</span>
             </div>
-            <button
-              onClick={() => setExpandedChannel(activeChannel)}
-              className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
-            >
-              {t(tr["action.expand"] ? tr["action.expand"].en : "Expand", tr["action.expand"] ? tr["action.expand"].ar : "توسيع")}
-            </button>
+            <div className="flex items-center gap-1.5">
+              {getDirectUrl(channels[activeChannel]) && (
+                <a
+                  href={getDirectUrl(channels[activeChannel])!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase flex items-center gap-0.5"
+                  title={t("Open direct stream", "فتح البث المباشر")}
+                >
+                  <ExternalLink className="h-2.5 w-2.5" />
+                  {t("Direct", "مباشر")}
+                </a>
+              )}
+              <button
+                onClick={() => setExpandedChannel(activeChannel)}
+                className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
+              >
+                {t(tr["action.expand"] ? tr["action.expand"].en : "Expand", tr["action.expand"] ? tr["action.expand"].ar : "توسيع")}
+              </button>
+            </div>
           </div>
           <div className="aspect-video">
             <iframe
               key={`player-${channels[activeChannel].channelId}-${muted}-${retryKey}`}
-              src={getEmbedUrl(channels[activeChannel].channelId, muted)}
+              src={getEmbedUrl(channels[activeChannel], muted)}
               title={channels[activeChannel].name}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -250,7 +269,7 @@ export const LiveNewsFeed = () => {
             <div className="aspect-video">
               <iframe
                 key={`expanded-${channels[expandedChannel].channelId}-${muted}-${retryKey}`}
-                src={getEmbedUrl(channels[expandedChannel].channelId, muted)}
+                src={getEmbedUrl(channels[expandedChannel], muted)}
                 title={channels[expandedChannel].name}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
