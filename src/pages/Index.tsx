@@ -1,4 +1,5 @@
 import { useState, useCallback, ReactNode } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
@@ -52,6 +53,7 @@ const Index = () => {
   });
   const [leftOrder, setLeftOrder] = useState(DEFAULT_LEFT_ORDER);
   const [rightOrder, setRightOrder] = useState(DEFAULT_RIGHT_ORDER);
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
 
   const toggleLayer = (layer: keyof LayerState) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -136,19 +138,36 @@ const Index = () => {
       />
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left sidebar - draggable */}
-        <div className="w-[420px] flex-shrink-0 border-r border-border flex flex-col overflow-y-auto">
-          <div className="p-3 space-y-3">
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
-              <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
-                {leftOrder.map((id) => (
-                  <DraggableWidget key={id} id={id}>
-                    {leftWidgets[id]}
-                  </DraggableWidget>
-                ))}
-              </SortableContext>
-            </DndContext>
-          </div>
+        {/* Left sidebar - collapsible */}
+        <div className={`flex-shrink-0 border-r border-border flex flex-col transition-all duration-300 ease-in-out ${leftCollapsed ? "w-10" : "w-[420px]"}`}>
+          {/* Toggle button */}
+          <button
+            onClick={() => setLeftCollapsed(prev => !prev)}
+            className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+            title={leftCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {leftCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+
+          {!leftCollapsed && (
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-3 space-y-3">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
+                  <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
+                    {leftOrder.map((id) => (
+                      <DraggableWidget key={id} id={id}>
+                        {leftWidgets[id]}
+                      </DraggableWidget>
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Map + Citizen Security */}
