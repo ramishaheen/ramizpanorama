@@ -14,6 +14,7 @@ import { Disclaimer } from "@/components/dashboard/Disclaimer";
 import { CommodityTracker } from "@/components/dashboard/CommodityTracker";
 import { SectorPredictions } from "@/components/dashboard/SectorPredictions";
 import { CitizenSecurity } from "@/components/dashboard/CitizenSecurity";
+import { CyberSecurityAlerts } from "@/components/dashboard/CyberSecurityAlerts";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
@@ -38,7 +39,7 @@ import {
 
 const STORAGE_KEY = "waros-layout";
 const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
+const DEFAULT_RIGHT_ORDER = ["cyber", "notifications", "war-updates"];
 
 interface LayoutState {
   leftOrder: string[];
@@ -191,6 +192,7 @@ const Index = () => {
   };
 
   const rightWidgets: Record<string, ReactNode> = {
+    cyber: <CyberSecurityAlerts />,
     notifications: (
       <div className="min-h-0 flex flex-col">
         <NotificationPanel alerts={geoAlerts} />
