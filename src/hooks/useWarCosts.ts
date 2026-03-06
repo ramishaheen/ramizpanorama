@@ -27,6 +27,11 @@ export interface WarCostsData {
   methodology?: string;
   timestamp: string;
   error?: string;
+  scenarios?: {
+    conservative_billions: number;
+    base_billions: number;
+    severe_billions: number;
+  };
 }
 
 export function useWarCosts() {
