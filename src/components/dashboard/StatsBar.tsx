@@ -114,13 +114,13 @@ const MarqueeItem = ({ icon: Icon, label, price, change, changePercent }: {
 
   return (
     <span className="inline-flex items-center gap-1.5 mx-6 whitespace-nowrap">
-      <Icon className="h-3 w-3 text-warning" />
-      <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase">{label}</span>
-      <span className="text-[11px] font-mono font-bold text-foreground">
+      <Icon className="h-3.5 w-3.5 text-warning" />
+      <span className="text-xs font-mono font-semibold text-muted-foreground uppercase">{label}</span>
+      <span className="text-[13px] font-mono font-bold text-foreground">
         ${price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
       </span>
-      <TrendIcon className={`h-3 w-3 ${changeColor}`} />
-      <span className={`text-[10px] font-mono font-semibold ${changeColor}`}>
+      <TrendIcon className={`h-3.5 w-3.5 ${changeColor}`} />
+      <span className={`text-xs font-mono font-semibold ${changeColor}`}>
         {isUp ? "+" : ""}{changePercent}%
       </span>
     </span>
@@ -263,7 +263,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
       {!loading && (
         <div className="relative overflow-hidden bg-card/60 border-y border-border py-1">
           <div className="marquee-track flex">
-            <div className="marquee-content flex animate-marquee">
+            <div className="marquee-content flex animate-marquee-reverse">
               <MarqueeItem icon={Fuel} label="WTI Crude" price={oil.price} change={oil.change} changePercent={oil.changePercent} />
               <MarqueeItem icon={CircleDollarSign} label="Gold XAU" price={gold.price} change={gold.change} changePercent={gold.changePercent} />
               <MarqueeItem icon={Bitcoin} label="BTC" price={btc.price} change={btc.change} changePercent={btc.changePercent} />
@@ -273,7 +273,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
               <MarqueeItem icon={Bitcoin} label="BTC" price={btc.price} change={btc.change} changePercent={btc.changePercent} />
               <MarqueeItem icon={CircleDollarSign} label="ETH" price={eth.price} change={eth.change} changePercent={eth.changePercent} />
             </div>
-            <div className="marquee-content flex animate-marquee" aria-hidden="true">
+            <div className="marquee-content flex animate-marquee-reverse" aria-hidden="true">
               <MarqueeItem icon={Fuel} label="WTI Crude" price={oil.price} change={oil.change} changePercent={oil.changePercent} />
               <MarqueeItem icon={CircleDollarSign} label="Gold XAU" price={gold.price} change={gold.change} changePercent={gold.changePercent} />
               <MarqueeItem icon={Bitcoin} label="BTC" price={btc.price} change={btc.change} changePercent={btc.changePercent} />

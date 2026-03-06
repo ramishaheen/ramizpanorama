@@ -161,6 +161,11 @@
   100% { transform: translateX(-100%); }
 }
 
+@keyframes marquee-reverse {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0); }
+}
+
 .marquee-track {
   display: flex;
   width: max-content;
@@ -170,7 +175,12 @@
   animation: marquee 40s linear infinite;
 }
 
-.marquee-track:hover .animate-marquee {
+.animate-marquee-reverse {
+  animation: marquee-reverse 40s linear infinite;
+}
+
+.marquee-track:hover .animate-marquee,
+.marquee-track:hover .animate-marquee-reverse {
   animation-duration: 120s;
 }
 
