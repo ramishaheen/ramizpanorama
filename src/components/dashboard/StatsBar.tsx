@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 
@@ -7,6 +7,8 @@ interface StatsBarProps {
   vesselCount: number;
   alertCount: number;
   riskScore: number;
+  rocketCount?: number;
+  impactCount?: number;
   dataFresh?: boolean;
 }
 
@@ -50,15 +52,17 @@ const MarqueeItem = ({ icon: Icon, label, price, change, changePercent }: {
   );
 };
 
-export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, dataFresh }: StatsBarProps) => {
+export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, rocketCount = 0, impactCount = 0, dataFresh }: StatsBarProps) => {
   const { oil, gold, btc, eth, loading } = useCommodityPrices();
 
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`grid grid-cols-4 gap-2 px-4 py-2 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`grid grid-cols-6 gap-2 px-4 py-2 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <StatCard icon={Plane} label="Airspace Alerts" value={airspaceCount} color="text-primary" pulse={dataFresh} />
         <StatCard icon={Ship} label="Tracked Vessels" value={vesselCount} color="text-primary" pulse={dataFresh} />
+        <StatCard icon={Rocket} label="Missiles Active" value={rocketCount} color={rocketCount > 0 ? "text-critical" : "text-muted-foreground"} pulse={rocketCount > 0} />
+        <StatCard icon={Target} label="Impacts / Intercepts" value={impactCount} color="text-warning" pulse={dataFresh} />
         <StatCard icon={AlertTriangle} label="Active Alerts" value={alertCount} color="text-warning" pulse={dataFresh} />
         <StatCard icon={Activity} label="Risk Index" value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
       </div>
