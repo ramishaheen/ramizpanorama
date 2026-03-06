@@ -1,9 +1,10 @@
-import { Plane, Ship, AlertTriangle, Radio, Eye, EyeOff } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff } from "lucide-react";
 
 export interface LayerState {
   airspace: boolean;
   maritime: boolean;
   alerts: boolean;
+  rockets: boolean;
   heatmap: boolean;
 }
 
@@ -16,6 +17,7 @@ const layerConfig = [
   { key: "airspace" as const, label: "Airspace", icon: Plane, color: "text-primary" },
   { key: "maritime" as const, label: "Maritime", icon: Ship, color: "text-primary" },
   { key: "alerts" as const, label: "Alerts", icon: AlertTriangle, color: "text-warning" },
+  { key: "rockets" as const, label: "Rockets", icon: Rocket, color: "text-critical" },
   { key: "heatmap" as const, label: "Heatmap", icon: Radio, color: "text-critical" },
 ];
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import type { AirspaceAlert, MaritimeVessel, GeoAlert, RiskScore, TimelineEvent } from "@/data/mockData";
+import type { AirspaceAlert, MaritimeVessel, GeoAlert, RiskScore, TimelineEvent, Rocket } from "@/data/mockData";
 
 export function useLiveDashboard() {
   const [dataFresh, setDataFresh] = useState(false);
@@ -20,17 +20,19 @@ export function useLiveDashboard() {
     trend: "stable", lastUpdated: new Date().toISOString(),
   });
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [rockets, setRockets] = useState<Rocket[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Initial fetch
   useEffect(() => {
     async function fetchAll() {
-      const [aRes, vRes, gRes, rRes, tRes] = await Promise.all([
+      const [aRes, vRes, gRes, rRes, tRes, rkRes] = await Promise.all([
         supabase.from("airspace_alerts").select("*"),
         supabase.from("vessels").select("*"),
         supabase.from("geo_alerts").select("*"),
         supabase.from("risk_scores").select("*").order("last_updated", { ascending: false }).limit(1),
         supabase.from("timeline_events").select("*").order("timestamp", { ascending: true }),
+        supabase.from("rockets").select("*"),
       ]);
 
       if (aRes.data) setAirspaceAlerts(aRes.data.map(mapAirspace));
@@ -38,6 +40,7 @@ export function useLiveDashboard() {
       if (gRes.data) setGeoAlerts(gRes.data.map(mapGeoAlert));
       if (rRes.data?.[0]) setRiskScore(mapRisk(rRes.data[0]));
       if (tRes.data) setTimeline(tRes.data.map(mapTimeline));
+      if (rkRes.data) setRockets(rkRes.data.map(mapRocket));
       setLoading(false);
     }
     fetchAll();
@@ -79,6 +82,11 @@ export function useLiveDashboard() {
           if (data) { setTimeline(data.map(mapTimeline)); flashFresh(); }
         });
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "rockets" }, () => {
+        supabase.from("rockets").select("*").then(({ data }) => {
+          if (data) { setRockets(data.map(mapRocket)); flashFresh(); }
+        });
+      })
       .subscribe();
 
     return () => {
@@ -100,7 +108,7 @@ export function useLiveDashboard() {
     };
   }, []);
 
-  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading, dataFresh };
+  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh };
 }
 
 // Mappers from DB rows to app types
@@ -168,5 +176,24 @@ function mapTimeline(row: any): TimelineEvent {
     type: row.type,
     title: row.title,
     severity: row.severity,
+  };
+}
+
+function mapRocket(row: any): Rocket {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    originLat: row.origin_lat,
+    originLng: row.origin_lng,
+    currentLat: row.current_lat,
+    currentLng: row.current_lng,
+    targetLat: row.target_lat,
+    targetLng: row.target_lng,
+    status: row.status,
+    severity: row.severity,
+    speed: row.speed,
+    altitude: row.altitude,
+    timestamp: row.timestamp,
   };
 }

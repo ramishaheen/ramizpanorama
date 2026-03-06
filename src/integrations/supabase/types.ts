@@ -125,6 +125,57 @@ export type Database = {
         }
         Relationships: []
       }
+      rockets: {
+        Row: {
+          altitude: number
+          current_lat: number
+          current_lng: number
+          id: string
+          name: string
+          origin_lat: number
+          origin_lng: number
+          severity: Database["public"]["Enums"]["severity_level"]
+          speed: number
+          status: Database["public"]["Enums"]["rocket_status"]
+          target_lat: number
+          target_lng: number
+          timestamp: string
+          type: string
+        }
+        Insert: {
+          altitude?: number
+          current_lat: number
+          current_lng: number
+          id: string
+          name?: string
+          origin_lat: number
+          origin_lng: number
+          severity?: Database["public"]["Enums"]["severity_level"]
+          speed?: number
+          status?: Database["public"]["Enums"]["rocket_status"]
+          target_lat: number
+          target_lng: number
+          timestamp?: string
+          type?: string
+        }
+        Update: {
+          altitude?: number
+          current_lat?: number
+          current_lng?: number
+          id?: string
+          name?: string
+          origin_lat?: number
+          origin_lng?: number
+          severity?: Database["public"]["Enums"]["severity_level"]
+          speed?: number
+          status?: Database["public"]["Enums"]["rocket_status"]
+          target_lat?: number
+          target_lng?: number
+          timestamp?: string
+          type?: string
+        }
+        Relationships: []
+      }
       timeline_events: {
         Row: {
           id: string
@@ -199,6 +250,7 @@ export type Database = {
       airspace_alert_type: "NOTAM" | "TFR" | "CLOSURE"
       geo_alert_type: "DIPLOMATIC" | "MILITARY" | "ECONOMIC" | "HUMANITARIAN"
       risk_trend: "rising" | "falling" | "stable"
+      rocket_status: "launched" | "in_flight" | "intercepted" | "impact"
       severity_level: "low" | "medium" | "high" | "critical"
       timeline_event_type: "airspace" | "maritime" | "alert" | "diplomatic"
       vessel_type: "MILITARY" | "CARGO" | "TANKER" | "FISHING" | "UNKNOWN"
@@ -332,6 +384,7 @@ export const Constants = {
       airspace_alert_type: ["NOTAM", "TFR", "CLOSURE"],
       geo_alert_type: ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"],
       risk_trend: ["rising", "falling", "stable"],
+      rocket_status: ["launched", "in_flight", "intercepted", "impact"],
       severity_level: ["low", "medium", "high", "critical"],
       timeline_event_type: ["airspace", "maritime", "alert", "diplomatic"],
       vessel_type: ["MILITARY", "CARGO", "TANKER", "FISHING", "UNKNOWN"],
