@@ -159,7 +159,7 @@ export const WarChatPanel = ({ open, onClose }: WarChatPanelProps) => {
             <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card/90">
               <div className="flex items-center gap-2">
                 <Bot className="h-4 w-4 text-primary" />
-                <span className="text-xs font-mono font-bold text-foreground tracking-wide">WAR COST ENGINE</span>
+                <span className="text-xs font-mono font-bold text-foreground tracking-wide">WarOS-RamiZPanorma</span>
                 <span className="text-[8px] px-1.5 py-0.5 rounded bg-critical/20 text-critical font-mono uppercase">Agent</span>
             </div>
             <div className="flex items-center gap-1">
@@ -187,7 +187,7 @@ export const WarChatPanel = ({ open, onClose }: WarChatPanelProps) => {
                   <Bot className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-mono font-bold text-foreground">WAR COST INTELLIGENCE ENGINE</p>
+                  <p className="text-xs font-mono font-bold text-foreground">WarOS-RamiZPanorma</p>
                   <p className="text-[10px] text-muted-foreground mt-1 max-w-[260px]">
                     I can analyze live dashboard data, calculate war costs by country/sector/scenario, and answer any question about the conflict.
                   </p>
@@ -272,7 +272,7 @@ export const WarChatPanel = ({ open, onClose }: WarChatPanelProps) => {
               </button>
             </div>
             <p className="text-[8px] text-muted-foreground/50 font-mono mt-1 text-center">
-              WAR COST ENGINE • Live dashboard agent • OSINT only
+              WarOS-RamiZPanorma • Live dashboard agent • OSINT only
             </p>
           </div>
         </motion.div>
