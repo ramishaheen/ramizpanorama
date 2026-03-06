@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider, useLanguage } from "@/hooks/useLanguage";
 import { SplashScreen } from "@/components/SplashScreen";
 import Index from "./pages/Index";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const AppContent = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/install" element={<Install />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
