@@ -343,8 +343,26 @@ export const CommodityTracker = ({ riskScore = 50 }: { riskScore?: number }) => 
   const prices = useCommodityPrices();
   const { t, isArabic } = useLanguage();
 
+  const now = new Date();
+  const dateStr = now.toLocaleDateString(isArabic ? "ar-SA" : "en-US", {
+    weekday: "short", year: "numeric", month: "short", day: "numeric",
+  });
+
   return (
     <div className="bg-card border border-border rounded-lg p-3">
+      {/* Date header */}
+      <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-border/30">
+        <div className="flex items-center gap-1.5">
+          <Clock className="h-3 w-3 text-muted-foreground" />
+          <span className="font-mono text-[9px] font-semibold text-foreground">{dateStr}</span>
+        </div>
+        {prices.lastUpdated && (
+          <span className="font-mono text-[7px] text-muted-foreground">
+            {t("Updated", "تحديث")}: {new Date(prices.lastUpdated).toLocaleTimeString(isArabic ? "ar-SA" : "en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          </span>
+        )}
+      </div>
+
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
@@ -369,8 +387,8 @@ export const CommodityTracker = ({ riskScore = 50 }: { riskScore?: number }) => 
         </div>
       </ScrollArea>
       <p className="font-mono text-[7px] text-muted-foreground/50 mt-1.5 text-right">
-        {t("Oil, Gold & commodities simulated • Crypto via CoinGecko • FX & ETF simulated • Updates every 15–30s",
-          "النفط والذهب والسلع محاكاة • العملات الرقمية عبر CoinGecko • العملات وصناديق ETF محاكاة • تحديث كل 15-30 ثانية")}
+        {t("Live via Alpha Vantage • Crypto via CoinGecko • Micro-ticks simulated • Updates on refresh",
+          "بيانات حية عبر Alpha Vantage • عملات رقمية عبر CoinGecko • تحديثات دقيقة محاكاة • تحديث عند الضغط")}
       </p>
     </div>
   );
