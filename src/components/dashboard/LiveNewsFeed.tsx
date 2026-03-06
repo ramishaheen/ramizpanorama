@@ -280,7 +280,11 @@ export const LiveNewsFeed = () => {
                         {ch.name}
                       </span>
                     </div>
-                    {activeChannel === globalIdx ? (
+                    {failedVideos.has(ch.videoId) ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-destructive/20">
+                        <AlertTriangle className="h-3 w-3 text-destructive" />
+                      </div>
+                    ) : activeChannel === globalIdx ? (
                       <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
                         <Radio className="h-3 w-3 text-primary animate-pulse" />
                       </div>
