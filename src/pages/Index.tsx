@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, ReactNode } from "react";
-import { PanelLeftClose, PanelLeftOpen, GripVertical } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical } from "lucide-react";
 import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
@@ -56,6 +56,7 @@ const Index = () => {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [leftWidth, setLeftWidth] = useState(420);
   const [rightWidth, setRightWidth] = useState(320);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleResizeLeft = useCallback((e: React.MouseEvent) => {
@@ -248,31 +249,52 @@ const Index = () => {
         </div>
 
         {/* Right resize handle */}
-        <div
-          onMouseDown={handleResizeRight}
-          className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
-        </div>
+        {!rightCollapsed && (
+          <div
+            onMouseDown={handleResizeRight}
+            className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+          </div>
+        )}
 
-        {/* Right sidebar - resizable */}
-        <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
-          <div className="flex-1 overflow-y-auto intel-feed-scroll">
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
-              <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                {rightOrder.map((id) => (
-                  <DraggableWidget key={id} id={id}>
-                    {rightWidgets[id]}
-                  </DraggableWidget>
-                ))}
-              </SortableContext>
-            </DndContext>
+        {/* Right sidebar - resizable & collapsible */}
+        {!rightCollapsed ? (
+          <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
+            <button
+              onClick={() => setRightCollapsed(true)}
+              className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+              title="Collapse sidebar"
+            >
+              <PanelRightClose className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <div className="flex-1 overflow-y-auto intel-feed-scroll">
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+                <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+                  {rightOrder.map((id) => (
+                    <DraggableWidget key={id} id={id}>
+                      {rightWidgets[id]}
+                    </DraggableWidget>
+                  ))}
+                </SortableContext>
+              </DndContext>
+            </div>
+            <div className="flex-shrink-0 border-t border-border p-2 space-y-2">
+              <LayerControls layers={layers} onToggle={toggleLayer} />
+              <TimelineSlider events={timeline} />
+            </div>
           </div>
-          <div className="flex-shrink-0 border-t border-border p-2 space-y-2">
-            <LayerControls layers={layers} onToggle={toggleLayer} />
-            <TimelineSlider events={timeline} />
+        ) : (
+          <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
+            <button
+              onClick={() => setRightCollapsed(false)}
+              className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+              title="Expand sidebar"
+            >
+              <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
+            </button>
           </div>
-        </div>
+        )}
       </div>
 
       <Disclaimer />
