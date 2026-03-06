@@ -35,7 +35,7 @@ import {
 } from "@dnd-kit/sortable";
 
 const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "layers", "timeline"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
@@ -94,7 +94,7 @@ const Index = () => {
 
   const rightWidgets: Record<string, ReactNode> = {
     notifications: (
-      <div className="min-h-0 flex flex-col" style={{ maxHeight: "28%" }}>
+      <div className="min-h-0 flex flex-col" style={{ maxHeight: "20%" }}>
         <NotificationPanel alerts={geoAlerts} />
       </div>
     ),
@@ -108,8 +108,6 @@ const Index = () => {
         />
       </div>
     ),
-    layers: <LayerControls layers={layers} onToggle={toggleLayer} />,
-    timeline: <TimelineSlider events={timeline} />,
   };
 
   if (loading) {
@@ -173,17 +171,25 @@ const Index = () => {
           />
         </div>
 
-        {/* Right sidebar - draggable */}
-        <div className="w-80 flex-shrink-0 border-l border-border overflow-y-auto flex flex-col intel-feed-scroll">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
-            <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-              {rightOrder.map((id) => (
-                <DraggableWidget key={id} id={id}>
-                  {rightWidgets[id]}
-                </DraggableWidget>
-              ))}
-            </SortableContext>
-          </DndContext>
+        {/* Right sidebar */}
+        <div className="w-80 flex-shrink-0 border-l border-border flex flex-col">
+          {/* Scrollable draggable area */}
+          <div className="flex-1 overflow-y-auto intel-feed-scroll">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+              <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+                {rightOrder.map((id) => (
+                  <DraggableWidget key={id} id={id}>
+                    {rightWidgets[id]}
+                  </DraggableWidget>
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+          {/* Pinned bottom: Layers + Timeline */}
+          <div className="flex-shrink-0 border-t border-border p-2 space-y-2">
+            <LayerControls layers={layers} onToggle={toggleLayer} />
+            <TimelineSlider events={timeline} />
+          </div>
         </div>
       </div>
 
