@@ -140,19 +140,19 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
           <StatCard
             icon={DollarSign}
             label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}
-            value={Math.round(warCosts.data.total_daily_cost_billions * 1000)}
+            value={`${warCosts.data.total_daily_cost_billions.toFixed(1)}B`}
             color="text-critical"
             pulse
             prefix="$"
-            tooltip={`AI-estimated daily cost: $${warCosts.data.total_daily_cost_billions}B\n\nCalculated by summing per-sector losses:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day`).join("\n")}`}
+            tooltip={`AI-estimated daily cost: $${warCosts.data.total_daily_cost_billions}B/day\n\nPer-sector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day`).join("\n")}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}`}
           />
           <StatCard
             icon={DollarSign}
             label={t(tr["stat.total_cost"].en, tr["stat.total_cost"].ar)}
-            value={Math.round(warCosts.data.cumulative_estimate_billions)}
+            value={`${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}`}
             color="text-critical"
             prefix="$"
-            tooltip={`AI cumulative estimate: $${warCosts.data.cumulative_estimate_billions}B\n\nHow AI calculates this:\n• Aggregates daily sector losses across Oil, Aviation, Tourism, Shipping, Real Estate & Defense\n• Multiplies daily rate × estimated conflict duration\n• Factors in supply chain disruption multipliers\n• Accounts for indirect GDP impact & investor flight\n\nSector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day — ${s.description}`).join("\n")}\n\nLast analyzed: ${new Date(warCosts.data.timestamp).toLocaleString()}`}
+            tooltip={`Cumulative cost since Oct 2023: $${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}\n\nSector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day — ${s.description}`).join("\n")}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}\n\nLast analyzed: ${new Date(warCosts.data.timestamp).toLocaleString()}`}
           />
           {warCosts.data.sectors.map((sector) => {
             const SectorIcon = sectorIcons[sector.name] || DollarSign;
