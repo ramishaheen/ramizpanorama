@@ -10,7 +10,7 @@ import { Disclaimer } from "@/components/dashboard/Disclaimer";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 
 const Index = () => {
-  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading } = useLiveDashboard();
+  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading, dataFresh } = useLiveDashboard();
 
   const [layers, setLayers] = useState<LayerState>({
     airspace: true,
@@ -36,12 +36,13 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <DashboardHeader />
+      <DashboardHeader dataFresh={dataFresh} />
       <StatsBar
         airspaceCount={airspaceAlerts.filter(a => a.active).length}
         vesselCount={vessels.length}
         alertCount={geoAlerts.length}
         riskScore={riskScore.overall}
+        dataFresh={dataFresh}
       />
 
       <div className="flex-1 flex overflow-hidden">

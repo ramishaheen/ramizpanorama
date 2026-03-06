@@ -1,9 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, RiskScore, TimelineEvent } from "@/data/mockData";
 
 export function useLiveDashboard() {
+  const [dataFresh, setDataFresh] = useState(false);
+  const freshTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const flashFresh = useCallback(() => {
+    setDataFresh(true);
+    clearTimeout(freshTimer.current);
+    freshTimer.current = setTimeout(() => setDataFresh(false), 1200);
+  }, []);
   const [airspaceAlerts, setAirspaceAlerts] = useState<AirspaceAlert[]>([]);
   const [vessels, setVessels] = useState<MaritimeVessel[]>([]);
   const [geoAlerts, setGeoAlerts] = useState<GeoAlert[]>([]);
@@ -41,19 +49,18 @@ export function useLiveDashboard() {
       .channel("dashboard-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "airspace_alerts" }, () => {
         supabase.from("airspace_alerts").select("*").then(({ data }) => {
-          if (data) setAirspaceAlerts(data.map(mapAirspace));
+          if (data) { setAirspaceAlerts(data.map(mapAirspace)); flashFresh(); }
         });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "vessels" }, () => {
         supabase.from("vessels").select("*").then(({ data }) => {
-          if (data) setVessels(data.map(mapVessel));
+          if (data) { setVessels(data.map(mapVessel)); flashFresh(); }
         });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "geo_alerts" }, (payload) => {
         supabase.from("geo_alerts").select("*").then(({ data }) => {
-          if (data) setGeoAlerts(data.map(mapGeoAlert));
+          if (data) { setGeoAlerts(data.map(mapGeoAlert)); flashFresh(); }
         });
-        // Toast for new critical alerts
         if (payload.eventType === "INSERT" && payload.new?.severity === "critical") {
           toast({
             variant: "destructive",
@@ -64,12 +71,12 @@ export function useLiveDashboard() {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "risk_scores" }, () => {
         supabase.from("risk_scores").select("*").order("last_updated", { ascending: false }).limit(1).then(({ data }) => {
-          if (data?.[0]) setRiskScore(mapRisk(data[0]));
+          if (data?.[0]) { setRiskScore(mapRisk(data[0])); flashFresh(); }
         });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "timeline_events" }, () => {
         supabase.from("timeline_events").select("*").order("timestamp", { ascending: true }).then(({ data }) => {
-          if (data) setTimeline(data.map(mapTimeline));
+          if (data) { setTimeline(data.map(mapTimeline)); flashFresh(); }
         });
       })
       .subscribe();
@@ -77,7 +84,7 @@ export function useLiveDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [flashFresh]);
 
   // Auto-simulate live intel every 15 seconds
   useEffect(() => {
@@ -93,7 +100,7 @@ export function useLiveDashboard() {
     };
   }, []);
 
-  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading };
+  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading, dataFresh };
 }
 
 // Mappers from DB rows to app types

@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
 import { Shield, Wifi } from "lucide-react";
 
-export const DashboardHeader = () => {
+export const DashboardHeader = ({ dataFresh }: { dataFresh?: boolean }) => {
   const now = new Date();
   return (
-    <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/80 backdrop-blur">
+    <header className={`flex items-center justify-between px-4 py-2 border-b border-border bg-card/80 backdrop-blur transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_30px_hsl(190_100%_50%/0.08)] border-primary/40" : ""}`}>
       <div className="flex items-center gap-3">
         <Shield className="h-5 w-5 text-primary" />
         <div>
