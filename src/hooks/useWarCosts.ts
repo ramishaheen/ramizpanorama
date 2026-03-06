@@ -15,6 +15,7 @@ interface CountryCost {
   total_cost_billions: number;
   daily_cost_millions: number;
   breakdown: string;
+  trend?: "rising" | "falling" | "stable";
 }
 
 export interface WarCostsData {
