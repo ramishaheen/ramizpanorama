@@ -93,7 +93,7 @@ export const SectorPredictions = () => {
         )}
 
         {data && !data.error && (
-          <div className="space-y-1 max-h-[200px] overflow-y-auto intel-feed-scroll">
+          <div className="flex-1 overflow-y-auto p-2 intel-feed-scroll space-y-1">
             {data.countries?.map((country) => (
               <div key={country.code} className={`rounded border ${outlookBg[country.overall_outlook] || "bg-muted/10 border-border"}`}>
                 <button
