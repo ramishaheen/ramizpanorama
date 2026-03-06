@@ -271,8 +271,8 @@ const Index = () => {
                   safetyData={citizenSecurity.data?.countries}
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 border-t border-border">
-                <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row border-t border-border sm:h-[220px]">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <CitizenSecurity
                     data={citizenSecurity.data}
                     loading={citizenSecurity.loading}
@@ -280,7 +280,7 @@ const Index = () => {
                     onRefresh={citizenSecurity.refresh}
                   />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden border-t sm:border-t-0 sm:border-l border-border/50">
                   <SectorPredictions />
                 </div>
               </div>
@@ -416,8 +416,8 @@ const Index = () => {
               safetyData={citizenSecurity.data?.countries}
             />
           </div>
-          <div className="flex flex-row gap-2 border-t border-border">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-row border-t border-border h-[220px]">
+            <div className="flex-1 min-w-0 overflow-hidden">
               <CitizenSecurity
                 data={citizenSecurity.data}
                 loading={citizenSecurity.loading}
@@ -425,7 +425,7 @@ const Index = () => {
                 onRefresh={citizenSecurity.refresh}
               />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 overflow-hidden border-l border-border/50">
               <SectorPredictions />
             </div>
           </div>
