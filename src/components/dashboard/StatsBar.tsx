@@ -74,7 +74,7 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip }: {
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>{card}</TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-[300px] text-[10px] font-mono leading-relaxed whitespace-pre-line bg-card border-border">
+        <TooltipContent side="bottom" className="max-w-[420px] max-h-[400px] overflow-y-auto text-[10px] font-mono leading-relaxed whitespace-pre-line bg-card border-border">
           {tooltip}
         </TooltipContent>
       </Tooltip>
@@ -144,7 +144,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
             color="text-critical"
             pulse
             prefix="$"
-            tooltip={`AI-estimated daily cost: $${warCosts.data.total_daily_cost_billions}B/day\n\nPer-sector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day`).join("\n")}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}`}
+            tooltip={`AI-estimated daily cost: $${warCosts.data.total_daily_cost_billions}B/day\n\nPer-sector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day`).join("\n")}${warCosts.data.country_costs?.length ? `\n\n── Per-Country Daily Cost ──\n${warCosts.data.country_costs.map(c => `🏳 ${c.country}: $${c.daily_cost_millions}M/day`).join("\n")}` : ""}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}`}
           />
           <StatCard
             icon={DollarSign}
@@ -152,7 +152,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
             value={`${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}`}
             color="text-critical"
             prefix="$"
-            tooltip={`Cumulative cost since Oct 2023: $${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}\n\nSector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day — ${s.description}`).join("\n")}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}\n\nLast analyzed: ${new Date(warCosts.data.timestamp).toLocaleString()}`}
+            tooltip={`Cumulative cost since Oct 2023: $${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}\n\n── Per-Country Total Cost ──\n${warCosts.data.country_costs?.map(c => `🏳 ${c.country}: $${c.total_cost_billions}B\n   ${c.breakdown}`).join("\n\n") || "Loading..."}\n\n── Sector Breakdown ──\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day — ${s.description}`).join("\n")}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}\n\nLast analyzed: ${new Date(warCosts.data.timestamp).toLocaleString()}`}
           />
           {warCosts.data.sectors.map((sector) => {
             const SectorIcon = sectorIcons[sector.name] || DollarSign;
@@ -164,7 +164,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
                 value={Math.round(sector.daily_cost_millions)}
                 color="text-warning"
                 prefix="$"
-                tooltip={`${sector.name}: $${sector.daily_cost_millions}M/day\n${sector.description}`}
+                tooltip={`${sector.name}: $${sector.daily_cost_millions}M/day\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${c.daily_cost_millions}M/day total`).join("\n")}` : ""}`}
               />
             );
           })}
