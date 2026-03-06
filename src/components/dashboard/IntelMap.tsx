@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
+import { MapStyleToggle, type MapStyle } from "./MapStyleToggle";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -68,10 +69,23 @@ const createRocketIcon = (status: string) => {
   });
 };
 
+const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
+  dark: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "&copy; OSM",
+  },
+  satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "&copy; Esri",
+  },
+};
+
 export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [mapStyle, setMapStyle] = useState<MapStyle>("dark");
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -83,8 +97,9 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }
       attributionControl: true,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OSM",
+    const tile = TILE_LAYERS.dark;
+    tileLayerRef.current = L.tileLayer(tile.url, {
+      attribution: tile.attribution,
     }).addTo(map);
 
     overlayGroupRef.current = L.layerGroup().addTo(map);
@@ -95,8 +110,27 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }
       map.remove();
       mapRef.current = null;
       overlayGroupRef.current = null;
+      tileLayerRef.current = null;
     };
   }, []);
+
+  // Handle tile layer changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    const tile = TILE_LAYERS[mapStyle];
+    tileLayerRef.current = L.tileLayer(tile.url, {
+      attribution: tile.attribution,
+    }).addTo(map);
+
+    // Move tile layer behind overlays
+    tileLayerRef.current.bringToBack();
+  }, [mapStyle]);
 
   useEffect(() => {
     const group = overlayGroupRef.current;
@@ -252,5 +286,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }
     }
   }, [airspaceAlerts, vessels, geoAlerts, rockets, layers]);
 
-  return <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />;
+  return (
+    <div className={`relative h-full w-full ${mapStyle === "satellite" ? "satellite-mode" : ""}`}>
+      <MapStyleToggle style={mapStyle} onChange={setMapStyle} />
+      <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
+    </div>
+  );
 };
