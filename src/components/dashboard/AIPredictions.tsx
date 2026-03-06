@@ -6,6 +6,7 @@ interface Prediction {
   sector: string;
   ticker: string | null;
   direction: "UP" | "DOWN" | "VOLATILE";
+  recommendation: "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL";
   confidence: "LOW" | "MEDIUM" | "HIGH";
   timeframe: "SHORT" | "MEDIUM";
   rationale: string;
@@ -147,9 +148,22 @@ export const AIPredictions = () => {
                       {pred.timeframe === "SHORT" ? "24-48h" : "1-2w"}
                     </span>
                   </div>
-                  <p className="text-[9px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
-                    {pred.rationale}
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {pred.recommendation && (
+                      <span className={`text-[8px] font-mono font-bold px-1 py-0.5 rounded ${
+                        pred.recommendation === "STRONG BUY" ? "bg-success/20 text-success" :
+                        pred.recommendation === "BUY" ? "bg-success/10 text-success/80" :
+                        pred.recommendation === "HOLD" ? "bg-warning/15 text-warning" :
+                        pred.recommendation === "SELL" ? "bg-critical/10 text-critical/80" :
+                        "bg-critical/20 text-critical"
+                      }`}>
+                        {pred.recommendation}
+                      </span>
+                    )}
+                    <p className="text-[9px] text-muted-foreground leading-snug line-clamp-2 flex-1">
+                      {pred.rationale}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}

@@ -59,6 +59,7 @@ IMPORTANT RULES:
       "sector": "string",
       "ticker": "string or null",
       "direction": "UP/DOWN/VOLATILE",
+      "recommendation": "STRONG BUY/BUY/HOLD/SELL/STRONG SELL",
       "confidence": "LOW/MEDIUM/HIGH",
       "timeframe": "SHORT/MEDIUM",
       "rationale": "brief explanation"
