@@ -150,7 +150,7 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
               damping: 25,
               boxShadow: { duration: 1.5, repeat: Infinity },
             }}
-            className="pointer-events-auto w-[600px] max-w-[90vw] border border-destructive/70 bg-destructive/15 backdrop-blur-xl rounded-lg overflow-hidden"
+            className="pointer-events-auto w-[600px] max-w-[90vw] border border-destructive/70 bg-destructive/15 backdrop-blur-xl rounded-lg overflow-hidden text-white"
           >
             <motion.div
               className="h-1 bg-destructive"
@@ -167,7 +167,7 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
                     <Rocket className="h-5 w-5 text-destructive" />
                   </motion.div>
                   <motion.span
-                    className="font-mono text-sm font-black text-destructive uppercase tracking-widest"
+                    className="font-mono text-base font-black text-white uppercase tracking-widest drop-shadow-lg"
                     animate={{ opacity: [1, 0.5, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
                   >
@@ -188,19 +188,19 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
                   </button>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3 font-mono text-[10px]">
+              <div className="grid grid-cols-3 gap-3 font-mono text-[11px]">
                 <div>
-                  <span className="text-muted-foreground/60 uppercase block mb-0.5">{t(tr["missile.designation"].en, tr["missile.designation"].ar)}</span>
-                  <span className="text-foreground font-bold text-xs">{alert.name}</span>
-                  <span className="text-destructive/80 ml-1">({alert.type})</span>
+                  <span className="text-white/60 uppercase block mb-0.5 font-bold">{t(tr["missile.designation"].en, tr["missile.designation"].ar)}</span>
+                  <span className="text-white font-black text-sm">{alert.name}</span>
+                  <span className="text-red-300 ml-1 font-bold">({alert.type})</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground/60 uppercase block mb-0.5">{t(tr["missile.origin"].en, tr["missile.origin"].ar)}</span>
-                  <span className="text-foreground font-semibold">{alert.origin}</span>
+                  <span className="text-white/60 uppercase block mb-0.5 font-bold">{t(tr["missile.origin"].en, tr["missile.origin"].ar)}</span>
+                  <span className="text-white font-bold text-sm">{alert.origin}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground/60 uppercase block mb-0.5">{t(tr["missile.target"].en, tr["missile.target"].ar)}</span>
-                  <span className="text-warning font-semibold">{alert.target}</span>
+                  <span className="text-white/60 uppercase block mb-0.5 font-bold">{t(tr["missile.target"].en, tr["missile.target"].ar)}</span>
+                  <span className="text-yellow-300 font-bold text-sm">{alert.target}</span>
                 </div>
               </div>
               <motion.div
