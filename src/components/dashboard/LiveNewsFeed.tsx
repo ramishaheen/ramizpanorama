@@ -98,7 +98,8 @@ export const LiveNewsFeed = () => {
           </div>
         </div>
 
-        {/* Channel selector */}
+        {/* Channel selector - scrollable */}
+        <div className="max-h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         <div className="grid grid-cols-4 gap-1">
           {channels.map((ch, i) => (
             <button
@@ -129,6 +130,7 @@ export const LiveNewsFeed = () => {
               </div>
             </button>
           ))}
+        </div>
         </div>
       </div>
 
