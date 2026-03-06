@@ -174,10 +174,14 @@ const Index = () => {
       <StatsBar
         airspaceCount={airspaceAlerts.filter(a => a.active).length}
         vesselCount={vessels.length}
-        alertCount={geoAlerts.length}
+        alertCount={geoAlerts.length + airspaceAlerts.filter(a => a.active).length}
         riskScore={riskScore.overall}
         rocketCount={rockets.filter(r => r.status === 'launched' || r.status === 'in_flight').length}
         impactCount={rockets.filter(r => r.status === 'impact' || r.status === 'intercepted').length}
+        totalRockets={rockets.length}
+        rockets={rockets}
+        geoAlerts={geoAlerts}
+        airspaceAlerts={airspaceAlerts}
         dataFresh={dataFresh}
       />
 

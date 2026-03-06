@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info, Crosshair, Bomb } from "lucide-react";
 import { motion, useSpring, useTransform } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useWarCosts } from "@/hooks/useWarCosts";
@@ -8,6 +8,7 @@ import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 import { LiveCostCounter } from "./LiveCostCounter";
 import { ScenarioToggle, type Scenario } from "./ScenarioToggle";
 import { CountryCostRow } from "./CountryCostRow";
+import type { Rocket as RocketType, GeoAlert, AirspaceAlert } from "@/data/mockData";
 
 interface StatsBarProps {
   airspaceCount: number;
@@ -16,6 +17,10 @@ interface StatsBarProps {
   riskScore: number;
   rocketCount?: number;
   impactCount?: number;
+  totalRockets?: number;
+  rockets?: RocketType[];
+  geoAlerts?: GeoAlert[];
+  airspaceAlerts?: AirspaceAlert[];
   dataFresh?: boolean;
 }
 
@@ -127,11 +132,68 @@ const MarqueeItem = ({ icon: Icon, label, price, change, changePercent }: {
   );
 };
 
-export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, rocketCount = 0, impactCount = 0, dataFresh }: StatsBarProps) => {
+export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, rocketCount = 0, impactCount = 0, totalRockets = 0, rockets = [], geoAlerts = [], airspaceAlerts = [], dataFresh }: StatsBarProps) => {
   const { oil, brent, gold, silver, gas, copper, wheat, usdils, usdsar, ita, btc, eth, loading } = useCommodityPrices();
   const warCosts = useWarCosts();
   const { t } = useLanguage();
   const [scenario, setScenario] = useState<Scenario>("base");
+
+  // Build missile breakdown by type
+  const missileBreakdown = useMemo(() => {
+    const byType: Record<string, { active: number; intercepted: number; impact: number; total: number }> = {};
+    for (const r of rockets) {
+      if (!byType[r.type]) byType[r.type] = { active: 0, intercepted: 0, impact: 0, total: 0 };
+      byType[r.type].total++;
+      if (r.status === "launched" || r.status === "in_flight") byType[r.type].active++;
+      else if (r.status === "intercepted") byType[r.type].intercepted++;
+      else if (r.status === "impact") byType[r.type].impact++;
+    }
+    return byType;
+  }, [rockets]);
+
+  const missileTooltip = useMemo(() => {
+    const lines = [`🚀 MISSILE TRACKER — ${totalRockets} Total Launches\n`];
+    lines.push(`Active: ${rocketCount} | Intercepted: ${rockets.filter(r => r.status === "intercepted").length} | Impact: ${rockets.filter(r => r.status === "impact").length}\n`);
+    lines.push("── By Type ──");
+    for (const [type, counts] of Object.entries(missileBreakdown)) {
+      lines.push(`• ${type}: ${counts.total} total (${counts.active} active, ${counts.intercepted} intercepted, ${counts.impact} impact)`);
+    }
+    return lines.join("\n");
+  }, [missileBreakdown, totalRockets, rocketCount, rockets]);
+
+  const impactTooltip = useMemo(() => {
+    const intercepted = rockets.filter(r => r.status === "intercepted");
+    const impacts = rockets.filter(r => r.status === "impact");
+    const lines = [`💥 IMPACT & INTERCEPT REPORT\n`];
+    lines.push(`Intercepted: ${intercepted.length} | Impact: ${impacts.length}\n`);
+    lines.push("── Intercepts ──");
+    for (const r of intercepted) lines.push(`✓ ${r.name || r.type} — intercepted`);
+    lines.push("\n── Impacts ──");
+    for (const r of impacts) lines.push(`✕ ${r.name || r.type} — impact`);
+    return lines.join("\n");
+  }, [rockets]);
+
+  const alertTooltip = useMemo(() => {
+    const geoByType: Record<string, number> = {};
+    const geoBySev: Record<string, number> = {};
+    for (const a of geoAlerts) {
+      geoByType[a.type] = (geoByType[a.type] || 0) + 1;
+      geoBySev[a.severity] = (geoBySev[a.severity] || 0) + 1;
+    }
+    const airByType: Record<string, number> = {};
+    for (const a of airspaceAlerts.filter(x => x.active)) {
+      airByType[a.type] = (airByType[a.type] || 0) + 1;
+    }
+    const lines = [`⚠ ACTIVE ALERTS — ${alertCount} Total\n`];
+    lines.push(`Geo Alerts: ${geoAlerts.length} | Airspace: ${airspaceAlerts.filter(a => a.active).length}\n`);
+    lines.push("── Geo Alerts by Type ──");
+    for (const [type, count] of Object.entries(geoByType)) lines.push(`• ${type}: ${count}`);
+    lines.push("\n── Geo Alerts by Severity ──");
+    for (const [sev, count] of Object.entries(geoBySev)) lines.push(`• ${sev.toUpperCase()}: ${count}`);
+    lines.push("\n── Airspace Alerts ──");
+    for (const [type, count] of Object.entries(airByType)) lines.push(`• ${type}: ${count}`);
+    return lines.join("\n");
+  }, [geoAlerts, airspaceAlerts, alertCount]);
 
   const sectorIcons: Record<string, any> = {
     "Oil & Energy": Fuel,
@@ -142,7 +204,6 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
     "Defense Spending": Shield,
   };
 
-  // Scenario multipliers: conservative=0.7, base=1.0, severe=1.4
   const scenarioMultiplier = scenario === "conservative" ? 1 : scenario === "severe" ? 4 : 2;
 
   const scenarioCumulative = useMemo(() => {
@@ -164,9 +225,30 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
       <div className={`grid grid-cols-6 gap-1.5 px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <StatCard icon={Plane} label={t(tr["stat.airspace"].en, tr["stat.airspace"].ar)} value={airspaceCount} color="text-primary" pulse={dataFresh} />
         <StatCard icon={Ship} label={t(tr["stat.vessels"].en, tr["stat.vessels"].ar)} value={vesselCount} color="text-primary" pulse={dataFresh} />
-        <StatCard icon={Rocket} label={t(tr["stat.missiles"].en, tr["stat.missiles"].ar)} value={rocketCount} color={rocketCount > 0 ? "text-critical" : "text-muted-foreground"} pulse={rocketCount > 0} />
-        <StatCard icon={Target} label={t(tr["stat.impacts"].en, tr["stat.impacts"].ar)} value={impactCount} color="text-warning" pulse={dataFresh} />
-        <StatCard icon={AlertTriangle} label={t(tr["stat.alerts"].en, tr["stat.alerts"].ar)} value={alertCount} color="text-warning" pulse={dataFresh} />
+        <StatCard
+          icon={Rocket}
+          label={t(tr["stat.missiles"].en, tr["stat.missiles"].ar)}
+          value={rocketCount}
+          color={rocketCount > 0 ? "text-critical" : "text-muted-foreground"}
+          pulse={rocketCount > 0}
+          tooltip={missileTooltip}
+        />
+        <StatCard
+          icon={Target}
+          label={t(tr["stat.impacts"].en, tr["stat.impacts"].ar)}
+          value={impactCount}
+          color="text-warning"
+          pulse={dataFresh}
+          tooltip={impactTooltip}
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label={t(tr["stat.alerts"].en, tr["stat.alerts"].ar)}
+          value={alertCount}
+          color="text-warning"
+          pulse={dataFresh}
+          tooltip={alertTooltip}
+        />
         <StatCard icon={Activity} label={t(tr["stat.risk"].en, tr["stat.risk"].ar)} value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
       </div>
 
