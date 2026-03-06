@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.war-costs]
 verify_jwt = false
+
+[functions.commodity-prices]
+verify_jwt = false
