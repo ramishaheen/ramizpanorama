@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.commodity-prices]
 verify_jwt = false
+
+[functions.telegram-feed]
+verify_jwt = false
+
+[functions.translate-posts]
+verify_jwt = false
