@@ -7,6 +7,7 @@ interface Channel {
   name: string;
   region: string;
   logo?: string;
+  directUrl?: string; // fallback embed URL when YouTube live isn't available
 }
 
 const channels: Channel[] = [
