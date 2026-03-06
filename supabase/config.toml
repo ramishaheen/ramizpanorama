@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.citizen-security]
 verify_jwt = false
+
+[functions.war-updates]
+verify_jwt = false

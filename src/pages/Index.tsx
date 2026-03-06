@@ -13,10 +13,13 @@ import { Disclaimer } from "@/components/dashboard/Disclaimer";
 import { CitizenSecurity } from "@/components/dashboard/CitizenSecurity";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
+import { useWarUpdates } from "@/hooks/useWarUpdates";
+import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 
 const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
   const citizenSecurity = useCitizenSecurity();
+  const warUpdates = useWarUpdates();
 
   const [layers, setLayers] = useState<LayerState>({
     airspace: true,
@@ -89,9 +92,19 @@ const Index = () => {
           />
         </div>
 
-        {/* Right sidebar - notifications */}
-        <div className="w-80 flex-shrink-0 border-l border-border overflow-hidden">
-          <NotificationPanel alerts={geoAlerts} />
+        {/* Right sidebar - notifications + war updates */}
+        <div className="w-80 flex-shrink-0 border-l border-border overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col" style={{ maxHeight: "45%" }}>
+            <NotificationPanel alerts={geoAlerts} />
+          </div>
+          <div className="flex-1 min-h-0 flex flex-col">
+            <WarUpdatesPanel
+              data={warUpdates.data}
+              loading={warUpdates.loading}
+              error={warUpdates.error}
+              onRefresh={warUpdates.refresh}
+            />
+          </div>
         </div>
       </div>
 
