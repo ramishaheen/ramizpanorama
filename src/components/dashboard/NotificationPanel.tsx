@@ -55,8 +55,8 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
           </div>
         </div>
 
-        {/* Custom scrollable area with visible scrollbar */}
-        <div className="flex-1 overflow-y-auto min-h-0 intel-feed-scroll">
+        {/* Show latest alerts with scrollable area (~5 rows visible) */}
+        <div className="overflow-y-auto min-h-0 intel-feed-scroll" style={{ maxHeight: "200px" }}>
           <div className="p-1.5 space-y-0.5">
             <AnimatePresence>
               {sorted.map((alert, i) => (
