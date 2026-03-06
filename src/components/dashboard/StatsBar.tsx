@@ -3,6 +3,7 @@ import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useWarCosts } from "@/hooks/useWarCosts";
 import { useEffect, useRef, useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StatsBarProps {
   airspaceCount: number;
@@ -47,22 +48,37 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color, pulse, prefix }: { icon: any; label: string; value: number | string; color: string; pulse?: boolean; prefix?: string }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className={`flex items-center gap-1.5 px-2 py-1 bg-card border rounded-md transition-all duration-500 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
-  >
-    <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
-    <div>
-      <div className="flex items-center gap-0.5">
-        {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
-        <AnimatedNumber value={value} color={color} />
+const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip }: { icon: any; label: string; value: number | string; color: string; pulse?: boolean; prefix?: string; tooltip?: string }) => {
+  const card = (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex items-center gap-1.5 px-2 py-1 bg-card border rounded-md transition-all duration-500 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
+    >
+      <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
+      <div>
+        <div className="flex items-center gap-0.5">
+          {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
+          <AnimatedNumber value={value} color={color} />
+        </div>
+        <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
       </div>
-      <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+
+  if (!tooltip) return card;
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{card}</TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[300px] text-[10px] font-mono leading-relaxed whitespace-pre-line bg-card border-border">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 const MarqueeItem = ({ icon: Icon, label, price, change, changePercent }: {
   icon: any;
@@ -125,6 +141,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
             color="text-critical"
             pulse
             prefix="$"
+            tooltip={`AI-estimated daily cost: $${warCosts.data.total_daily_cost_billions}B\n\nCalculated by summing per-sector losses:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day`).join("\n")}`}
           />
           <StatCard
             icon={DollarSign}
@@ -132,6 +149,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
             value={Math.round(warCosts.data.cumulative_estimate_billions)}
             color="text-critical"
             prefix="$"
+            tooltip={`AI cumulative estimate: $${warCosts.data.cumulative_estimate_billions}B\n\nHow AI calculates this:\n• Aggregates daily sector losses across Oil, Aviation, Tourism, Shipping, Real Estate & Defense\n• Multiplies daily rate × estimated conflict duration\n• Factors in supply chain disruption multipliers\n• Accounts for indirect GDP impact & investor flight\n\nSector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day — ${s.description}`).join("\n")}\n\nLast analyzed: ${new Date(warCosts.data.timestamp).toLocaleString()}`}
           />
           {warCosts.data.sectors.map((sector) => {
             const SectorIcon = sectorIcons[sector.name] || DollarSign;
@@ -143,6 +161,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
                 value={Math.round(sector.daily_cost_millions)}
                 color="text-warning"
                 prefix="$"
+                tooltip={`${sector.name}: $${sector.daily_cost_millions}M/day\n${sector.description}`}
               />
             );
           })}
