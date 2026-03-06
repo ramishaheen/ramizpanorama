@@ -48,6 +48,7 @@ const createVesselIcon = (type: MaritimeVessel["type"], heading: number) => {
     html: `<div style="transform:rotate(${heading}deg);color:${color};font-size:16px;text-shadow:0 0 6px ${color}">▲</div>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
+    popupAnchor: [0, -12],
   });
 };
 
@@ -69,6 +70,7 @@ const createRocketIcon = (status: string) => {
     </div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
+    popupAnchor: [0, -14],
   });
 };
 
@@ -82,6 +84,15 @@ const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
     attribution: "&copy; Esri",
   },
 };
+
+// Shared popup options — always open above marker
+const popupOptions: L.PopupOptions = {
+  autoPan: true,
+  autoPanPadding: L.point(40, 40),
+  offset: L.point(0, -4),
+};
+
+const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
 export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -159,12 +170,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           });
 
           circle.bindPopup(`
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;">
+            <div style="${popupStyle}">
               <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">${alert.type} — ${alert.region}</div>
               <div style="margin-bottom:4px;">${alert.description}</div>
               <div style="font-size:9px;opacity:0.6;">${new Date(alert.timestamp).toLocaleString()}</div>
             </div>
-          `);
+          `, popupOptions);
 
           circle.addTo(group);
         });
@@ -177,14 +188,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         });
 
         marker.bindPopup(`
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:180px;">
+          <div style="${popupStyle}">
             <div style="color:${vesselColors[vessel.type]};font-weight:700;margin-bottom:4px;">${vessel.name}</div>
             <div>Flag: ${vessel.flag} | Type: ${vessel.type}</div>
             <div>Speed: ${vessel.speed}kts | HDG: ${vessel.heading}°</div>
             ${vessel.destination ? `<div>Dest: ${vessel.destination}</div>` : ""}
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(vessel.timestamp).toLocaleString()}</div>
           </div>
-        `);
+        `, popupOptions);
 
         marker.addTo(group);
       });
@@ -201,12 +212,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         });
 
         marker.bindPopup(`
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;">
+          <div style="${popupStyle}">
             <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">[${alert.type}] ${alert.title}</div>
             <div style="margin-bottom:4px;">${alert.summary}</div>
             <div style="font-size:9px;opacity:0.6;">${alert.source} — ${new Date(alert.timestamp).toLocaleString()}</div>
           </div>
-        `);
+        `, popupOptions);
 
         marker.addTo(group);
       });
@@ -268,13 +279,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         });
 
         marker.bindPopup(`
-          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;">
+          <div style="${popupStyle}">
             <div style="color:${color};font-weight:700;margin-bottom:4px;">🚀 ${rocket.name} [${rocket.type}]</div>
             <div>Status: <span style="color:${color};font-weight:600;">${rocket.status.toUpperCase()}</span></div>
             <div>Speed: ${rocket.speed} km/h | Alt: ${rocket.altitude} km</div>
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(rocket.timestamp).toLocaleString()}</div>
           </div>
-        `);
+        `, popupOptions);
 
         marker.addTo(group);
       });
@@ -326,7 +337,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const country = safetyMap[code];
         if (country) {
           layer.bindPopup(`
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:180px;">
+            <div style="${popupStyle}min-width:180px;">
               <div style="color:${SAFETY_LEVEL_MAP_COLORS[country.level]};font-weight:700;margin-bottom:4px;">
                 ${country.name} — ${country.level}
               </div>
@@ -334,7 +345,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
               <div style="margin-top:4px;font-size:9px;opacity:0.7;">${country.status}</div>
               ${country.threats?.length ? `<div style="margin-top:4px;font-size:9px;opacity:0.6;">Threats: ${country.threats.join(", ")}</div>` : ""}
             </div>
-          `);
+          `, popupOptions);
         }
       },
     }).addTo(group);

@@ -161,7 +161,7 @@ const Index = () => {
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center space-y-3">
           <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Loading intel…</p>
+          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">جاري تحميل المعلومات…</p>
         </div>
       </div>
     );
