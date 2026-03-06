@@ -266,21 +266,7 @@ export const CyberSecurityAlerts = () => {
       )}
 
       {/* Country filter */}
-      <div className="flex gap-1 mb-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border">
-        {FILTER_OPTIONS.map((opt) => (
-          <button
-            key={opt.flag}
-            onClick={() => setFilter(opt.flag)}
-            className={`flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[7px] transition-colors whitespace-nowrap ${
-              filter === opt.flag
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary/50 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {opt.flag !== "all" && opt.flag} {opt.label}
-          </button>
-        ))}
-      </div>
+      {filterButtons()}
 
       {/* Loading skeleton */}
       {loading && allAttacks.length === 0 && (
@@ -295,65 +281,76 @@ export const CyberSecurityAlerts = () => {
         </div>
       )}
 
-      {/* Attack list */}
+      {/* Attack list (compact) */}
       <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent space-y-1.5">
-        {filtered.map((attack) => (
-          <div
-            key={attack.id}
-            className={`border rounded p-2 transition-all cursor-pointer hover:bg-secondary/30 ${SEVERITY_COLORS[attack.severity] || SEVERITY_COLORS.medium}`}
-            onClick={() => setExpandedId(expandedId === attack.id ? null : attack.id)}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${SEVERITY_DOT[attack.severity] || SEVERITY_DOT.medium} ${attack.severity === "critical" ? "animate-pulse" : ""}`} />
-                  <span className="text-[8px] font-mono font-bold uppercase">{attack.severity}</span>
-                  <span className="text-[7px] font-mono text-muted-foreground">{attack.date}</span>
-                </div>
-                <div className="flex items-center gap-1 mb-0.5">
-                  <span className="text-[10px]">{ATTACK_TYPE_ICON[attack.type] || "⚡"}</span>
-                  <span className="text-[8px] font-mono font-bold text-foreground truncate">{attack.type}</span>
-                </div>
-                <p className="text-[8px] font-mono text-foreground/90 leading-tight">{attack.description}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-[7px] font-mono text-muted-foreground">
-                    {attack.attackerFlag} {attack.attacker}
-                  </span>
-                  <span className="text-[7px] text-muted-foreground">→</span>
-                  <span className="text-[7px] font-mono text-muted-foreground">
-                    {attack.targetFlag} {attack.target}
-                  </span>
-                </div>
-              </div>
-              <div className="flex-shrink-0">
-                {expandedId === attack.id ? (
-                  <ChevronUp className="h-3 w-3 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                )}
-              </div>
-            </div>
+        {filtered.map((attack) => renderAttackCard(attack))}
+      </div>
+    </div>
 
-            {expandedId === attack.id && (
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <p className="text-[8px] font-mono text-foreground/80 leading-relaxed">{attack.details}</p>
-                {attack.source && (
-                  <a
-                    href={attack.source}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 mt-1.5 text-[7px] font-mono text-primary hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-2.5 w-2.5" />
-                    {t("Source", "المصدر")}
-                  </a>
-                )}
+    {/* Fullscreen modal */}
+    {modalOpen && (
+      <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex flex-col" onClick={() => setModalOpen(false)}>
+        <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto p-4" onClick={(e) => e.stopPropagation()}>
+          {/* Modal header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="h-6 w-6 text-critical" />
+              <h2 className="text-lg font-bold text-foreground font-mono uppercase tracking-wider">
+                {t("Cybersecurity Operations Center", "مركز عمليات الأمن السيبراني")}
+              </h2>
+              {isLive && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/20 text-green-400 text-[10px] font-mono">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                  LIVE FEED
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+                <span className="text-critical font-bold">{criticalCount} CRITICAL</span>
+                <span className="text-warning font-bold">{highCount} HIGH</span>
+                <span>{allAttacks.length} {t("TOTAL OPS", "إجمالي العمليات")}</span>
+              </div>
+              <button
+                onClick={refresh}
+                disabled={loading}
+                className="p-1.5 rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
+              </button>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-1.5 rounded bg-secondary/50 hover:bg-destructive/50 transition-colors"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal status */}
+          {lastUpdated && (
+            <div className="flex items-center gap-2 mb-3 text-[10px] font-mono text-muted-foreground">
+              <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-muted-foreground"}`} />
+              {isLive ? "LIVE" : "CACHED"} • {t("Last updated", "آخر تحديث")}: {new Date(lastUpdated).toLocaleString()}
+              {sources.length > 0 && ` • ${t("Sources", "المصادر")}: ${sources.join(", ")}`}
+            </div>
+          )}
+
+          {/* Modal filters */}
+          {filterButtons(true)}
+
+          {/* Modal attack list */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent space-y-2 pr-2">
+            {filtered.map((attack) => renderAttackCard(attack, true))}
+            {filtered.length === 0 && (
+              <div className="text-center text-muted-foreground font-mono text-sm py-12">
+                {t("No operations found for this filter", "لا توجد عمليات لهذا الفلتر")}
               </div>
             )}
           </div>
-        ))}
+        </div>
       </div>
-    </div>
+    )}
+    </>
   );
 };
