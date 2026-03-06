@@ -184,7 +184,7 @@ export const LiveNewsFeed = () => {
               const globalIdx = getGlobalIndex(i);
               return (
                 <button
-                  key={ch.channelId}
+                  key={ch.videoId}
                   onClick={() => setActiveChannel(globalIdx)}
                   className={`relative rounded overflow-hidden border transition-all text-left ${
                     activeChannel === globalIdx
@@ -277,7 +277,7 @@ export const LiveNewsFeed = () => {
             <div className="flex gap-1 px-3 py-2 overflow-x-auto border-t border-border bg-background">
               {channels.map((ch, i) => (
                 <button
-                  key={ch.channelId}
+                  key={ch.videoId}
                   onClick={() => setExpandedChannel(i)}
                   className={`flex-shrink-0 px-2 py-1 rounded font-mono text-[9px] transition-colors ${
                     expandedChannel === i
