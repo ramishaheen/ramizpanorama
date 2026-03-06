@@ -92,6 +92,33 @@ export type Database = {
         }
         Relationships: []
       }
+      launch_history: {
+        Row: {
+          date: string
+          id: string
+          impact: number
+          intercepted: number
+          launches: number
+          updated_at: string
+        }
+        Insert: {
+          date: string
+          id?: string
+          impact?: number
+          intercepted?: number
+          launches?: number
+          updated_at?: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          impact?: number
+          intercepted?: number
+          launches?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       risk_scores: {
         Row: {
           airspace: number
