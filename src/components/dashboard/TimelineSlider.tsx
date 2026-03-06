@@ -14,10 +14,10 @@ const channels = [
   { id: "0PJ2Sj4PVpg", name: "France 24" },
   { id: "w_Ma8oQLmSM", name: "BBC News" },
   { id: "XWq5kBlakcQ", name: "TRT World" },
-  { id: "jL8swKObohs", name: "CNN" },
-  { id: "GE_SfNVNyqk", name: "WION" },
-  { id: "V6Gd7YhkbyA", name: "DW News" },
-  { id: "eMyXsBM1pWo", name: "i24 News" },
+  { id: "_C8-9TS-2gk", name: "CNN-News18" },
+  { id: "0UrpSCv6A1Y", name: "WION" },
+  { id: "pqabxBKzZ6M", name: "DW News" },
+  { id: "seVDbrCyEt8", name: "i24 News" },
 ];
 
 const LiveNewsFeed = () => {
