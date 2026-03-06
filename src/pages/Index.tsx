@@ -271,12 +271,19 @@ const Index = () => {
                   safetyData={citizenSecurity.data?.countries}
                 />
               </div>
-              <CitizenSecurity
-                data={citizenSecurity.data}
-                loading={citizenSecurity.loading}
-                error={citizenSecurity.error}
-                onRefresh={citizenSecurity.refresh}
-              />
+              <div className="flex flex-col sm:flex-row gap-2 border-t border-border">
+                <div className="flex-1 min-w-0">
+                  <CitizenSecurity
+                    data={citizenSecurity.data}
+                    loading={citizenSecurity.loading}
+                    error={citizenSecurity.error}
+                    onRefresh={citizenSecurity.refresh}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <SectorPredictions />
+                </div>
+              </div>
             </div>
           )}
 
