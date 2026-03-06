@@ -187,7 +187,7 @@ export const WarChatPanel = ({ open, onClose }: WarChatPanelProps) => {
                   <Bot className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-mono font-bold text-foreground">SENTINEL WAR ANALYST</p>
+                  <p className="text-xs font-mono font-bold text-foreground">WAR OS ANALYST</p>
                   <p className="text-[10px] text-muted-foreground mt-1 max-w-[260px]">
                     Ask me about the Iran-Israel conflict, military operations, economic costs, humanitarian impact, or geopolitical analysis.
                   </p>
