@@ -20,6 +20,7 @@ import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
+import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
@@ -223,6 +224,7 @@ const Index = () => {
         />
       </div>
     ),
+    telegram: <TelegramFeed />,
   };
 
   if (loading) {
