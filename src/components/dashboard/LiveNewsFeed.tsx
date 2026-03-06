@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Volume2, VolumeX, X, Maximize2 } from "lucide-react";
+import { Volume2, VolumeX, X, Play, Radio } from "lucide-react";
 
 const channels = [
   { id: "9Auq9mYxFEe", name: "Sky News" },
@@ -19,6 +19,7 @@ const channels = [
 
 export const LiveNewsFeed = () => {
   const [muted, setMuted] = useState(true);
+  const [activeChannel, setActiveChannel] = useState<number>(0);
   const [expandedChannel, setExpandedChannel] = useState<number | null>(null);
 
   return (
@@ -42,29 +43,68 @@ export const LiveNewsFeed = () => {
           </button>
         </div>
 
+        {/* Active player - only one iframe at a time */}
+        <div className="relative rounded overflow-hidden border border-border bg-background mb-2">
+          <div className="absolute top-0 left-0 right-0 z-10 px-2 py-1 bg-background/80 backdrop-blur-sm flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-critical animate-pulse" />
+              <span className="text-[9px] font-mono font-bold text-foreground">{channels[activeChannel].name}</span>
+              <span className="text-[8px] font-mono text-primary uppercase">LIVE</span>
+            </div>
+            <button
+              onClick={() => setExpandedChannel(activeChannel)}
+              className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
+            >
+              Fullscreen
+            </button>
+          </div>
+          <div className="aspect-video">
+            <iframe
+              key={`player-${channels[activeChannel].id}-${muted}`}
+              src={`https://www.youtube.com/embed/${channels[activeChannel].id}?autoplay=1&mute=${muted ? 1 : 0}`}
+              title={channels[activeChannel].name}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
+          </div>
+        </div>
+
+        {/* Channel selector - thumbnails, no iframes */}
         <div className="grid grid-cols-4 gap-1">
           {channels.map((ch, i) => (
-            <div
+            <button
               key={ch.id}
-              className="relative rounded overflow-hidden border border-border bg-background cursor-pointer group"
-              onClick={() => setExpandedChannel(i)}
+              onClick={() => setActiveChannel(i)}
+              className={`relative rounded overflow-hidden border transition-all text-left ${
+                activeChannel === i
+                  ? "border-primary ring-1 ring-primary/30"
+                  : "border-border hover:border-muted-foreground/40"
+              }`}
             >
-              <div className="absolute top-0 left-0 right-0 z-10 px-1.5 py-0.5 bg-background/80 backdrop-blur-sm text-[7px] font-mono text-muted-foreground flex items-center gap-1">
-                <span className="h-1 w-1 rounded-full bg-critical animate-pulse" />
-                <span className="truncate">{ch.name}</span>
-              </div>
-              <div className="absolute inset-0 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-background/40">
-                <Maximize2 className="h-4 w-4 text-primary" />
-              </div>
-              <div className="aspect-video">
-                <iframe
-                  src={`https://www.youtube.com/embed/${ch.id}?autoplay=1&mute=1`}
-                  title={ch.name}
-                  className="w-full h-full pointer-events-none"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              <div className="aspect-video bg-background relative">
+                <img
+                  src={`https://img.youtube.com/vi/${ch.id}/mqdefault.jpg`}
+                  alt={ch.name}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
                 />
+                {activeChannel === i ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-primary/10">
+                    <Radio className="h-3 w-3 text-primary animate-pulse" />
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/30 opacity-0 hover:opacity-100 transition-opacity">
+                    <Play className="h-3 w-3 text-foreground" />
+                  </div>
+                )}
               </div>
-            </div>
+              <div className="px-1 py-0.5 bg-background/90 flex items-center gap-1">
+                {activeChannel === i && (
+                  <span className="h-1 w-1 rounded-full bg-critical animate-pulse flex-shrink-0" />
+                )}
+                <span className="text-[7px] font-mono text-muted-foreground truncate">{ch.name}</span>
+              </div>
+            </button>
           ))}
         </div>
       </div>
@@ -110,7 +150,6 @@ export const LiveNewsFeed = () => {
                 allowFullScreen
               />
             </div>
-            {/* Channel switcher */}
             <div className="flex gap-1 px-3 py-2 overflow-x-auto border-t border-border bg-background">
               {channels.map((ch, i) => (
                 <button
