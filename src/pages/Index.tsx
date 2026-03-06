@@ -19,7 +19,7 @@ import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
-import { TotalLaunchesWidget } from "@/components/dashboard/TotalLaunchesWidget";
+import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import {
   DndContext,
   closestCenter,
