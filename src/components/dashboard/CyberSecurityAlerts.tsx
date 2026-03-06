@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShieldAlert, Globe, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { ShieldAlert, Globe, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Wifi, WifiOff, X, Maximize2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCyberThreats, CyberThreat } from "@/hooks/useCyberThreats";
 
@@ -120,6 +120,7 @@ const FILTER_OPTIONS: { flag: FilterCountry; label: string }[] = [
 export const CyberSecurityAlerts = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterCountry>("all");
+  const [modalOpen, setModalOpen] = useState(false);
   const { t } = useLanguage();
   const { threats: liveThreats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
 
@@ -134,8 +135,88 @@ export const CyberSecurityAlerts = () => {
   const criticalCount = allAttacks.filter((a) => a.severity === "critical").length;
   const highCount = allAttacks.filter((a) => a.severity === "high").length;
 
+  const renderAttackCard = (attack: CyberThreat, large = false) => (
+    <div
+      key={attack.id}
+      className={`border rounded p-${large ? "3" : "2"} transition-all cursor-pointer hover:bg-secondary/30 ${SEVERITY_COLORS[attack.severity] || SEVERITY_COLORS.medium}`}
+      onClick={() => setExpandedId(expandedId === attack.id ? null : attack.id)}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${SEVERITY_DOT[attack.severity] || SEVERITY_DOT.medium} ${attack.severity === "critical" ? "animate-pulse" : ""}`} />
+            <span className={`${large ? "text-xs" : "text-[8px]"} font-mono font-bold uppercase`}>{attack.severity}</span>
+            <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground`}>{attack.date}</span>
+          </div>
+          <div className="flex items-center gap-1 mb-0.5">
+            <span className={large ? "text-sm" : "text-[10px]"}>{ATTACK_TYPE_ICON[attack.type] || "⚡"}</span>
+            <span className={`${large ? "text-xs" : "text-[8px]"} font-mono font-bold text-foreground truncate`}>{attack.type}</span>
+          </div>
+          <p className={`${large ? "text-xs" : "text-[8px]"} font-mono text-foreground/90 leading-tight`}>{attack.description}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground`}>
+              {attack.attackerFlag} {attack.attacker}
+            </span>
+            <span className={`${large ? "text-[10px]" : "text-[7px]"} text-muted-foreground`}>→</span>
+            <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground`}>
+              {attack.targetFlag} {attack.target}
+            </span>
+          </div>
+        </div>
+        <div className="flex-shrink-0">
+          {expandedId === attack.id ? (
+            <ChevronUp className={`${large ? "h-4 w-4" : "h-3 w-3"} text-muted-foreground`} />
+          ) : (
+            <ChevronDown className={`${large ? "h-4 w-4" : "h-3 w-3"} text-muted-foreground`} />
+          )}
+        </div>
+      </div>
+
+      {expandedId === attack.id && (
+        <div className="mt-2 pt-2 border-t border-border/50">
+          <p className={`${large ? "text-xs" : "text-[8px]"} font-mono text-foreground/80 leading-relaxed`}>{attack.details}</p>
+          {attack.source && (
+            <a
+              href={attack.source}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-0.5 mt-1.5 ${large ? "text-xs" : "text-[7px]"} font-mono text-primary hover:underline`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className={large ? "h-3.5 w-3.5" : "h-2.5 w-2.5"} />
+              {t("Source", "المصدر")}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const filterButtons = (large = false) => (
+    <div className="flex gap-1 mb-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-border flex-wrap">
+      {FILTER_OPTIONS.map((opt) => (
+        <button
+          key={opt.flag}
+          onClick={() => setFilter(opt.flag)}
+          className={`flex-shrink-0 px-${large ? "2.5" : "1.5"} py-${large ? "1" : "0.5"} rounded font-mono ${large ? "text-xs" : "text-[7px]"} transition-colors whitespace-nowrap ${
+            filter === opt.flag
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary/50 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {opt.flag !== "all" && opt.flag} {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="bg-card border border-border rounded-lg p-3">
+    <>
+    <div className="bg-card border border-border rounded-lg p-3" onDoubleClick={() => setModalOpen(true)}>
+      <div className="flex items-center gap-1 mb-0.5">
+        <Maximize2 className="h-2 w-2 text-muted-foreground/50" />
+        <span className="text-[6px] font-mono text-muted-foreground/50">{t("Double-click to expand", "انقر مرتين للتوسيع")}</span>
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
