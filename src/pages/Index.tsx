@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { IntelMap } from "@/components/dashboard/IntelMap";
@@ -41,7 +42,8 @@ const Index = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden relative">
+      <MissileAlertBanner rockets={rockets} />
       <DashboardHeader dataFresh={dataFresh} />
       <StatsBar
         airspaceCount={airspaceAlerts.filter(a => a.active).length}
