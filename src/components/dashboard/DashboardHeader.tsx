@@ -31,23 +31,33 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
           </div>
 
           {/* AI Chat trigger */}
-          <button
-            onClick={() => setChatOpen((v) => !v)}
-            className={`relative flex items-center justify-center h-7 w-7 rounded-full border transition-all duration-300 ${
-              chatOpen
-                ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_hsl(190_100%_50%/0.3)]"
-                : "border-border hover:border-primary/50 text-muted-foreground hover:text-primary hover:bg-primary/5"
-            }`}
-            title="War Analyst AI Chat"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
+          <div className="relative">
+            <button
+              onClick={() => setChatOpen((v) => !v)}
+              className={`relative flex items-center justify-center h-7 w-7 rounded-full border transition-all duration-300 ${
+                chatOpen
+                  ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_hsl(190_100%_50%/0.3)]"
+                  : "border-border hover:border-primary/50 text-muted-foreground hover:text-primary hover:bg-primary/5"
+              }`}
+              title="War Analyst AI Chat"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              {!chatOpen && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+              )}
+            </button>
             {!chatOpen && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-              </span>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-bounce">
+                <div className="relative bg-primary text-primary-foreground text-[9px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
+                  Chat with me 💬
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45" />
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {/* Language toggle */}
