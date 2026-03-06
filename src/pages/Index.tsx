@@ -39,7 +39,7 @@ import {
 
 const STORAGE_KEY = "waros-layout";
 const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "telegram"];
 
 interface LayoutState {
   leftOrder: string[];
