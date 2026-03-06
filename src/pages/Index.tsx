@@ -94,7 +94,7 @@ const Index = () => {
 
   const rightWidgets: Record<string, ReactNode> = {
     notifications: (
-      <div className="min-h-0 flex flex-col" style={{ maxHeight: "20%" }}>
+      <div className="min-h-0 flex flex-col">
         <NotificationPanel alerts={geoAlerts} />
       </div>
     ),
