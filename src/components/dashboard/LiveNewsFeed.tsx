@@ -15,6 +15,15 @@ const channels = [
   { id: "jNhh-OLzWlE", name: "i24 Israel" },
   { id: "dp8PhLsUcFE", name: "NBC News (USA)" },
   { id: "bGkMOg1Ov7I", name: "RT News (Russia)" },
+  // Arabic News Channels
+  { id: "bNyUQ2gCA0o", name: "الجزيرة مباشر" },
+  { id: "HAyYBCYqP4o", name: "العربية" },
+  { id: "4VnJ5LJXRdM", name: "سكاي نيوز عربية" },
+  { id: "bQurIhVQoFk", name: "RT Arabic" },
+  { id: "LLKfTMvf4ZI", name: "France 24 عربي" },
+  { id: "A6aOGXVME04", name: "BBC عربي" },
+  { id: "1TKaC3ZDdVQ", name: "DW عربية" },
+  { id: "YcWXaKF7WII", name: "الحدث" },
 ];
 
 export const LiveNewsFeed = () => {
