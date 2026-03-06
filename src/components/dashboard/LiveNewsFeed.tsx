@@ -59,17 +59,66 @@ const getEmbedUrl = (channel: Channel, muted: boolean) => {
 
 const getDirectUrl = (channel: Channel) => channel.directUrl || null;
 
+// Check if a YouTube video ID is valid/embeddable using oEmbed
+const checkVideoValid = async (videoId: string): Promise<boolean> => {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
 export const LiveNewsFeed = () => {
   const [muted, setMuted] = useState(true);
   const [activeChannel, setActiveChannel] = useState<number>(0);
   const [expandedChannel, setExpandedChannel] = useState<number | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [filterRegion, setFilterRegion] = useState<string | null>(null);
+  const [failedVideos, setFailedVideos] = useState<Set<string>>(new Set());
+  const checkedVideos = useRef<Set<string>>(new Set());
   const { t } = useLanguage();
 
+  // Auto-check active channel's video validity
+  useEffect(() => {
+    const channel = channels[activeChannel];
+    if (!channel || checkedVideos.current.has(channel.videoId)) return;
+    checkedVideos.current.add(channel.videoId);
+
+    checkVideoValid(channel.videoId).then((valid) => {
+      if (!valid) {
+        setFailedVideos((prev) => new Set(prev).add(channel.videoId));
+      }
+    });
+  }, [activeChannel]);
+
+  // Also check expanded channel
+  useEffect(() => {
+    if (expandedChannel === null) return;
+    const channel = channels[expandedChannel];
+    if (!channel || checkedVideos.current.has(channel.videoId)) return;
+    checkedVideos.current.add(channel.videoId);
+
+    checkVideoValid(channel.videoId).then((valid) => {
+      if (!valid) {
+        setFailedVideos((prev) => new Set(prev).add(channel.videoId));
+      }
+    });
+  }, [expandedChannel]);
+
   const handleManualRetry = useCallback(() => {
+    // Clear failed status for current channel so it re-checks
+    const ch = channels[activeChannel];
+    checkedVideos.current.delete(ch.videoId);
+    setFailedVideos((prev) => {
+      const next = new Set(prev);
+      next.delete(ch.videoId);
+      return next;
+    });
     setRetryKey((k) => k + 1);
-  }, []);
+  }, [activeChannel]);
 
   const filteredChannels = filterRegion
     ? channels.filter((c) => c.region === filterRegion)
