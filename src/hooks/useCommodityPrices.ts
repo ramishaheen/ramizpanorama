@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 export interface PriceData { price: number; change: number; changePercent: number }
 
@@ -9,11 +9,15 @@ export interface CommodityPrices {
   btc: PriceData;
   eth: PriceData;
   loading: boolean;
+  history: Record<string, number[]>;
 }
+
+const MAX_HISTORY = 20;
 
 const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true";
 
 export const useCommodityPrices = (): CommodityPrices => {
+  const historyRef = useRef<Record<string, number[]>>({ oil: [], gold: [], gas: [], btc: [], eth: [] });
   const [prices, setPrices] = useState<CommodityPrices>({
     oil: { price: 82.45, change: 1.23, changePercent: 1.51 },
     gold: { price: 2685.30, change: 18.40, changePercent: 0.69 },
@@ -21,7 +25,14 @@ export const useCommodityPrices = (): CommodityPrices => {
     btc: { price: 0, change: 0, changePercent: 0 },
     eth: { price: 0, change: 0, changePercent: 0 },
     loading: true,
+    history: { oil: [], gold: [], gas: [], btc: [], eth: [] },
   });
+
+  const pushHistory = useCallback((key: string, price: number) => {
+    const h = historyRef.current[key];
+    h.push(price);
+    if (h.length > MAX_HISTORY) h.shift();
+  }, []);
 
   useEffect(() => {
     // Oil & gold: simulated (no free public API without key)
@@ -38,21 +49,30 @@ export const useCommodityPrices = (): CommodityPrices => {
         const newGold = Math.max(2500, Math.min(2900, prev.gold.price + goldDelta));
         const newGas = Math.max(2.0, Math.min(5.5, prev.gas.price + gasDelta));
         const p = (v: number) => parseFloat(v.toFixed(2));
+        pushHistory("oil", p(newOil));
+        pushHistory("gold", p(newGold));
+        pushHistory("gas", p(newGas));
         return {
           ...prev,
           oil: { price: p(newOil), change: p(oilDelta), changePercent: p((oilDelta / newOil) * 100) },
           gold: { price: p(newGold), change: p(goldDelta), changePercent: p((goldDelta / newGold) * 100) },
           gas: { price: p(newGas), change: p(gasDelta), changePercent: p((gasDelta / newGas) * 100) },
+          history: { ...historyRef.current },
         };
       });
     };
 
     // Initial oil/gold
+    // Seed initial history
+    pushHistory("oil", parseFloat(baseOil.toFixed(2)));
+    pushHistory("gold", parseFloat(baseGold.toFixed(2)));
+    pushHistory("gas", parseFloat(baseGas.toFixed(2)));
     setPrices((prev) => ({
       ...prev,
       oil: { price: parseFloat(baseOil.toFixed(2)), change: 1.23, changePercent: 1.51 },
       gold: { price: parseFloat(baseGold.toFixed(2)), change: 18.40, changePercent: 0.69 },
       gas: { price: parseFloat(baseGas.toFixed(2)), change: 0.08, changePercent: 2.39 },
+      history: { ...historyRef.current },
     }));
 
     const commodityInterval = setInterval(updateCommodities, 15_000);
@@ -69,6 +89,8 @@ export const useCommodityPrices = (): CommodityPrices => {
         const ethPrice = data.ethereum?.usd ?? 0;
         const ethChange = data.ethereum?.usd_24h_change ?? 0;
 
+        pushHistory("btc", Math.round(btcPrice));
+        pushHistory("eth", parseFloat(ethPrice.toFixed(2)));
         setPrices((prev) => ({
           ...prev,
           btc: {
@@ -82,6 +104,7 @@ export const useCommodityPrices = (): CommodityPrices => {
             changePercent: parseFloat(ethChange.toFixed(2)),
           },
           loading: false,
+          history: { ...historyRef.current },
         }));
       } catch (err) {
         console.error("Failed to fetch crypto prices:", err);
