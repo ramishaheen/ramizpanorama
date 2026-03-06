@@ -115,6 +115,15 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
             allowFullScreen
           />
         </div>
+        <div className="relative w-full aspect-video rounded overflow-hidden border border-border bg-background mt-2">
+          <iframe
+            src="https://www.youtube.com/embed/n7eQejkXbnM?autoplay=1&mute=1"
+            title="Live News Feed 2"
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
       </div>
     </div>
   );
