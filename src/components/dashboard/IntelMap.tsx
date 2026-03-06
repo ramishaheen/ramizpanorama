@@ -8,6 +8,7 @@ import type { CountrySafety } from "@/hooks/useCitizenSecurity";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
+import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -423,6 +424,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onConfirmItem={handleConfirmItem}
         onCancelItem={handleCancelItem}
       />
+      <TotalLaunchesWidget rockets={rockets} />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
     </div>
   );
