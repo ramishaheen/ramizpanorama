@@ -229,7 +229,7 @@ const Index = () => {
         )}
 
         {/* Map + Citizen Security */}
-        <div className="flex-1 relative min-w-0 h-full flex flex-col">
+        <div className="flex-1 relative min-w-0 h-full flex flex-col z-0">
           <div className="flex-1 relative min-h-0">
             <IntelMap
               airspaceAlerts={airspaceAlerts}
