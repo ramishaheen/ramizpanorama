@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, ReactNode } from "react";
+import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers } from "lucide-react";
 import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -36,8 +36,41 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
+const STORAGE_KEY = "waros-layout";
 const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
+
+interface LayoutState {
+  leftOrder: string[];
+  rightOrder: string[];
+  leftWidth: number;
+  rightWidth: number;
+  leftCollapsed: boolean;
+  rightCollapsed: boolean;
+}
+
+const DEFAULT_LAYOUT: LayoutState = {
+  leftOrder: DEFAULT_LEFT_ORDER,
+  rightOrder: DEFAULT_RIGHT_ORDER,
+  leftWidth: 420,
+  rightWidth: 320,
+  leftCollapsed: false,
+  rightCollapsed: false,
+};
+
+function loadLayout(): LayoutState {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return { ...DEFAULT_LAYOUT, ...JSON.parse(stored) };
+  } catch {}
+  return DEFAULT_LAYOUT;
+}
+
+function saveLayout(layout: LayoutState) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
+  } catch {}
+}
 
 const MOBILE_TABS = [
   { id: "map", label: "Map", icon: Map },
@@ -62,14 +95,21 @@ const Index = () => {
     rockets: true,
     heatmap: false,
   });
-  const [leftOrder, setLeftOrder] = useState(DEFAULT_LEFT_ORDER);
-  const [rightOrder, setRightOrder] = useState(DEFAULT_RIGHT_ORDER);
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  const [leftWidth, setLeftWidth] = useState(420);
-  const [rightWidth, setRightWidth] = useState(320);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+
+  const initialLayout = loadLayout();
+  const [leftOrder, setLeftOrder] = useState(initialLayout.leftOrder);
+  const [rightOrder, setRightOrder] = useState(initialLayout.rightOrder);
+  const [leftCollapsed, setLeftCollapsed] = useState(initialLayout.leftCollapsed);
+  const [leftWidth, setLeftWidth] = useState(initialLayout.leftWidth);
+  const [rightWidth, setRightWidth] = useState(initialLayout.rightWidth);
+  const [rightCollapsed, setRightCollapsed] = useState(initialLayout.rightCollapsed);
   const [mobileTab, setMobileTab] = useState<MobileTab>("map");
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Persist layout changes
+  useEffect(() => {
+    saveLayout({ leftOrder, rightOrder, leftWidth, rightWidth, leftCollapsed, rightCollapsed });
+  }, [leftOrder, rightOrder, leftWidth, rightWidth, leftCollapsed, rightCollapsed]);
 
   const handleResizeLeft = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
