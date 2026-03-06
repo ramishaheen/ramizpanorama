@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info } from "lucide-react";
 import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useWarCosts } from "@/hooks/useWarCosts";
@@ -53,16 +53,17 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip }: {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-1.5 px-2 py-1 bg-card border rounded-md transition-all duration-500 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
+      className={`flex items-center gap-1.5 px-2 py-1 bg-card border rounded-md transition-all duration-500 relative ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
     >
       <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
-      <div>
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-0.5">
           {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
           <AnimatedNumber value={value} color={color} />
         </div>
         <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
       </div>
+      {tooltip && <Info className="h-2.5 w-2.5 text-muted-foreground/40 flex-shrink-0" />}
     </motion.div>
   );
 

@@ -44,6 +44,7 @@ export const SectorPredictions = () => {
   const { data, loading, error, refresh } = useSectorPredictions();
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
   const [selectedSector, setSelectedSector] = useState<{ country: string; sector: any } | null>(null);
+  const [detailCountry, setDetailCountry] = useState<{ name: string; code: string; overall_outlook: string; sectors: any[] } | null>(null);
 
   return (
     <>
@@ -83,6 +84,7 @@ export const SectorPredictions = () => {
               <div key={country.code} className={`rounded border ${outlookBg[country.overall_outlook] || "bg-muted/10 border-border"}`}>
                 <button
                   onClick={() => setExpandedCountry(prev => prev === country.code ? null : country.code)}
+                  onDoubleClick={(e) => { e.stopPropagation(); setDetailCountry(country); }}
                   className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left"
                 >
                   <span className="text-sm">{flagEmoji[country.code] || "🏳️"}</span>
@@ -135,6 +137,66 @@ export const SectorPredictions = () => {
           </p>
         )}
       </div>
+
+      {/* Country overview popup on double-click */}
+      <AnimatePresence>
+        {detailCountry && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setDetailCountry(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className={`relative w-[460px] max-w-[90vw] bg-card border border-border rounded-lg shadow-2xl overflow-hidden`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl">{flagEmoji[detailCountry.code] || "🏳️"}</span>
+                  <div>
+                    <h2 className="font-mono text-sm font-bold text-foreground">{detailCountry.name}</h2>
+                    <span className={`font-mono text-[10px] font-bold uppercase ${outlookColors[detailCountry.overall_outlook]}`}>
+                      Outlook: {detailCountry.overall_outlook}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => setDetailCountry(null)} className="p-1 rounded hover:bg-destructive/20">
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="px-4 py-3 space-y-2 max-h-[60vh] overflow-y-auto">
+                <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block">All Sectors ({detailCountry.sectors?.length})</span>
+                {detailCountry.sectors?.map((sector, i) => (
+                  <div
+                    key={i}
+                    className="px-3 py-2 rounded border border-border/50 bg-background/30 cursor-pointer hover:bg-secondary/30 transition-colors"
+                    onClick={() => { setDetailCountry(null); setSelectedSector({ country: detailCountry.name, sector }); }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono text-[10px] font-bold text-foreground">{sector.name}</span>
+                      <div className="flex items-center gap-2">
+                        {trendIcons[sector.trend]}
+                        <span className={`font-mono text-[8px] font-bold uppercase ${impactColors[sector.impact]}`}>{sector.impact}</span>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground leading-snug">{sector.prediction}</p>
+                  </div>
+                ))}
+                <div className="text-[8px] text-muted-foreground/40 font-mono pt-2 border-t border-border/30">
+                  Double-click country row to open • Click sector for details
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sector detail popup */}
       <AnimatePresence>
