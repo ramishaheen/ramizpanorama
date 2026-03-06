@@ -47,6 +47,23 @@ export interface RiskScore {
   lastUpdated: string;
 }
 
+export interface Rocket {
+  id: string;
+  name: string;
+  type: string;
+  originLat: number;
+  originLng: number;
+  currentLat: number;
+  currentLng: number;
+  targetLat: number;
+  targetLng: number;
+  status: 'launched' | 'in_flight' | 'intercepted' | 'impact';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  speed: number;
+  altitude: number;
+  timestamp: string;
+}
+
 export interface TimelineEvent {
   id: string;
   timestamp: string;

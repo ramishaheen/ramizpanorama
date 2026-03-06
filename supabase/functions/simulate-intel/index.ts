@@ -16,12 +16,36 @@ const titles: Record<string, string[]> = {
   HUMANITARIAN: ["Aid convoy delayed", "Refugee movement detected", "Medical supply shortage reported", "Evacuation corridor requested"],
 };
 
+const rocketNames = [
+  "SCUD-B", "Iskander-M", "DF-21D", "Fateh-110", "Houthi Burkan-3",
+  "KN-23", "Shahab-3", "BrahMos", "Tochka-U", "Qiam-1",
+  "Zulfiqar", "Emad", "Ghadr-110", "Sejjil-2", "Musudan",
+];
+
+const rocketTypes = ["BALLISTIC", "CRUISE", "HYPERSONIC", "ICBM", "SAM"];
+
+// Known conflict hotspot launch/target pairs
+const rocketScenarios = [
+  { origin: { lat: 15.4, lng: 44.2 }, target: { lat: 24.5, lng: 39.6 }, name: "Yemen → Saudi Arabia" },
+  { origin: { lat: 33.3, lng: 44.4 }, target: { lat: 32.0, lng: 35.8 }, name: "Iraq → Levant" },
+  { origin: { lat: 35.7, lng: 51.4 }, target: { lat: 25.3, lng: 55.3 }, name: "Iran → Gulf" },
+  { origin: { lat: 39.0, lng: 125.7 }, target: { lat: 35.9, lng: 128.6 }, name: "DPRK → Korean Peninsula" },
+  { origin: { lat: 48.5, lng: 37.5 }, target: { lat: 50.4, lng: 30.5 }, name: "Eastern Front → West" },
+  { origin: { lat: 31.5, lng: 34.5 }, target: { lat: 33.8, lng: 35.8 }, name: "Levant → Lebanon" },
+  { origin: { lat: 33.5, lng: 36.3 }, target: { lat: 32.0, lng: 35.8 }, name: "Syria → Levant" },
+  { origin: { lat: 27.0, lng: 49.6 }, target: { lat: 24.7, lng: 46.7 }, name: "Gulf → Riyadh" },
+];
+
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function rand(min: number, max: number) {
   return Math.round((Math.random() * (max - min) + min) * 10) / 10;
+}
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
 }
 
 Deno.serve(async (req) => {
@@ -48,7 +72,7 @@ Deno.serve(async (req) => {
   }).eq("id", vesselId);
   actions.push(`Updated vessel ${vesselId}`);
 
-  // 2. Add a new geo alert (rotate IDs to avoid unbounded growth)
+  // 2. Add a new geo alert
   const geoType = pick(geoTypes);
   const region = pick(regions);
   const alertId = `ga-live-${Date.now()}`;
@@ -78,7 +102,7 @@ Deno.serve(async (req) => {
   });
   actions.push(`Inserted timeline event ${teId}`);
 
-  // 4. Update risk score with small fluctuations
+  // 4. Update risk score
   const { data: currentRisk } = await supabase
     .from("risk_scores")
     .select("*")
@@ -89,7 +113,6 @@ Deno.serve(async (req) => {
   if (currentRisk) {
     const nudge = () => Math.max(0, Math.min(100, currentRisk.overall + Math.floor(Math.random() * 11) - 5));
     const newOverall = nudge();
-    const trends = ["rising", "falling", "stable"] as const;
     await supabase.from("risk_scores").update({
       overall: newOverall,
       airspace: Math.max(0, Math.min(100, currentRisk.airspace + Math.floor(Math.random() * 9) - 4)),
@@ -102,7 +125,91 @@ Deno.serve(async (req) => {
     actions.push("Updated risk scores");
   }
 
-  // 5. Prune old live alerts (keep last 20)
+  // 5. Simulate rockets — advance existing in-flight rockets and maybe launch new ones
+  const { data: existingRockets } = await supabase.from("rockets").select("*");
+
+  // Advance in-flight rockets
+  if (existingRockets) {
+    for (const rocket of existingRockets) {
+      if (rocket.status === "launched" || rocket.status === "in_flight") {
+        // Calculate progress based on distance
+        const dx = rocket.target_lat - rocket.origin_lat;
+        const dy = rocket.target_lng - rocket.origin_lng;
+        const totalDist = Math.sqrt(dx * dx + dy * dy);
+        const cx = rocket.current_lat - rocket.origin_lat;
+        const cy = rocket.current_lng - rocket.origin_lng;
+        const currentDist = Math.sqrt(cx * cx + cy * cy);
+        let progress = totalDist > 0 ? currentDist / totalDist : 1;
+        progress = Math.min(progress + rand(0.15, 0.35), 1);
+
+        if (progress >= 0.95) {
+          // Rocket reached target — randomly intercepted or impact
+          const finalStatus = Math.random() > 0.4 ? "intercepted" : "impact";
+          await supabase.from("rockets").update({
+            current_lat: rocket.target_lat,
+            current_lng: rocket.target_lng,
+            status: finalStatus,
+            altitude: 0,
+            timestamp: now,
+          }).eq("id", rocket.id);
+          actions.push(`Rocket ${rocket.id} ${finalStatus}`);
+        } else {
+          const newLat = lerp(rocket.origin_lat, rocket.target_lat, progress);
+          const newLng = lerp(rocket.origin_lng, rocket.target_lng, progress);
+          // Altitude follows a parabolic arc
+          const alt = 4 * 250 * progress * (1 - progress); // peak ~250km
+          await supabase.from("rockets").update({
+            current_lat: newLat,
+            current_lng: newLng,
+            status: "in_flight",
+            altitude: Math.round(alt),
+            speed: rand(800, 3500),
+            timestamp: now,
+          }).eq("id", rocket.id);
+          actions.push(`Advanced rocket ${rocket.id} to ${Math.round(progress * 100)}%`);
+        }
+      }
+    }
+  }
+
+  // Launch new rocket (30% chance each cycle, max 6 active)
+  const activeCount = existingRockets?.filter(r => r.status === "launched" || r.status === "in_flight").length ?? 0;
+  if (Math.random() < 0.3 && activeCount < 6) {
+    const scenario = pick(rocketScenarios);
+    const rocketId = `rkt-${Date.now()}`;
+    await supabase.from("rockets").insert({
+      id: rocketId,
+      name: pick(rocketNames),
+      type: pick(rocketTypes),
+      origin_lat: scenario.origin.lat + rand(-1, 1),
+      origin_lng: scenario.origin.lng + rand(-1, 1),
+      current_lat: scenario.origin.lat + rand(-0.5, 0.5),
+      current_lng: scenario.origin.lng + rand(-0.5, 0.5),
+      target_lat: scenario.target.lat + rand(-1, 1),
+      target_lng: scenario.target.lng + rand(-1, 1),
+      status: "launched",
+      severity: pick(["high", "critical"] as const),
+      speed: rand(600, 2000),
+      altitude: rand(10, 50),
+      timestamp: now,
+    });
+    actions.push(`Launched rocket ${rocketId}`);
+  }
+
+  // Prune finished rockets (keep last 10)
+  const { data: finishedRockets } = await supabase
+    .from("rockets")
+    .select("id")
+    .in("status", ["intercepted", "impact"])
+    .order("timestamp", { ascending: false });
+
+  if (finishedRockets && finishedRockets.length > 10) {
+    const toDelete = finishedRockets.slice(10).map(r => r.id);
+    await supabase.from("rockets").delete().in("id", toDelete);
+    actions.push(`Pruned ${toDelete.length} finished rockets`);
+  }
+
+  // 6. Prune old live alerts (keep last 20)
   const { data: oldAlerts } = await supabase
     .from("geo_alerts")
     .select("id")
@@ -131,4 +238,3 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
-

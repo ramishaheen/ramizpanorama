@@ -10,12 +10,13 @@ import { Disclaimer } from "@/components/dashboard/Disclaimer";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 
 const Index = () => {
-  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, loading, dataFresh } = useLiveDashboard();
+  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
 
   const [layers, setLayers] = useState<LayerState>({
     airspace: true,
     maritime: true,
     alerts: true,
+    rockets: true,
     heatmap: false,
   });
 
@@ -63,6 +64,7 @@ const Index = () => {
             airspaceAlerts={airspaceAlerts}
             vessels={vessels}
             geoAlerts={geoAlerts}
+            rockets={rockets}
             layers={layers}
           />
         </div>

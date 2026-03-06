@@ -1,13 +1,14 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { AirspaceAlert, MaritimeVessel, GeoAlert } from "@/data/mockData";
+import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
   vessels: MaritimeVessel[];
   geoAlerts: GeoAlert[];
+  rockets: Rocket[];
   layers: LayerState;
 }
 
@@ -46,7 +47,28 @@ const createVesselIcon = (type: MaritimeVessel["type"], heading: number) => {
   });
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, layers }: IntelMapProps) => {
+const rocketStatusColors: Record<string, string> = {
+  launched: "#ff6b00",
+  in_flight: "#ef4444",
+  intercepted: "#22c55e",
+  impact: "#ff0000",
+};
+
+const createRocketIcon = (status: string) => {
+  const color = rocketStatusColors[status] || "#ef4444";
+  const isActive = status === "launched" || status === "in_flight";
+  return L.divIcon({
+    className: "rocket-icon",
+    html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+      ${isActive ? `<div style="position:absolute;width:24px;height:24px;border-radius:50%;background:${color};opacity:0.3;animation:pulse 1.5s ease-in-out infinite;"></div>` : ''}
+      <div style="font-size:16px;filter:drop-shadow(0 0 6px ${color});${isActive ? 'animation:pulse 1s ease-in-out infinite;' : ''}">🚀</div>
+    </div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
@@ -149,6 +171,74 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, layers }: IntelMa
       });
     }
 
+    // Rockets layer
+    if (layers.rockets) {
+      rockets.forEach((rocket) => {
+        const isActive = rocket.status === "launched" || rocket.status === "in_flight";
+        const color = rocketStatusColors[rocket.status] || "#ef4444";
+
+        // Draw trajectory line from origin to target
+        const trajectory = L.polyline(
+          [[rocket.originLat, rocket.originLng], [rocket.targetLat, rocket.targetLng]],
+          {
+            color: color,
+            weight: 1.5,
+            opacity: 0.4,
+            dashArray: "6 4",
+          }
+        );
+        trajectory.addTo(group);
+
+        // Draw traveled path (origin to current)
+        if (isActive) {
+          const traveledPath = L.polyline(
+            [[rocket.originLat, rocket.originLng], [rocket.currentLat, rocket.currentLng]],
+            {
+              color: color,
+              weight: 2.5,
+              opacity: 0.8,
+            }
+          );
+          traveledPath.addTo(group);
+        }
+
+        // Origin marker (small circle)
+        L.circleMarker([rocket.originLat, rocket.originLng], {
+          radius: 4,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.5,
+          weight: 1,
+        }).addTo(group);
+
+        // Target marker (crosshair)
+        L.circleMarker([rocket.targetLat, rocket.targetLng], {
+          radius: 6,
+          color: color,
+          fillColor: "transparent",
+          fillOpacity: 0,
+          weight: 2,
+          dashArray: "3 3",
+        }).addTo(group);
+
+        // Rocket current position marker
+        const marker = L.marker([rocket.currentLat, rocket.currentLng], {
+          icon: createRocketIcon(rocket.status),
+        });
+
+        marker.bindPopup(`
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;">
+            <div style="color:${color};font-weight:700;margin-bottom:4px;">🚀 ${rocket.name} [${rocket.type}]</div>
+            <div>Status: <span style="color:${color};font-weight:600;">${rocket.status.toUpperCase()}</span></div>
+            <div>Speed: ${rocket.speed} km/h | Alt: ${rocket.altitude} km</div>
+            <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(rocket.timestamp).toLocaleString()}</div>
+          </div>
+        `);
+
+        marker.addTo(group);
+      });
+    }
+
     if (layers.heatmap) {
       [...airspaceAlerts, ...geoAlerts].forEach((item) => {
         L.circle([item.lat, item.lng], {
@@ -160,7 +250,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, layers }: IntelMa
         }).addTo(group);
       });
     }
-  }, [airspaceAlerts, vessels, geoAlerts, layers]);
+  }, [airspaceAlerts, vessels, geoAlerts, rockets, layers]);
 
   return <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />;
 };
