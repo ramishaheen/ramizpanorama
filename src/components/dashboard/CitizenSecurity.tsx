@@ -151,68 +151,85 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             onClick={() => setDetailCountry(null)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-[440px] max-w-[90vw] bg-card border border-border rounded-lg shadow-2xl overflow-hidden border-l-4"
-              style={{ borderLeftColor: levelColors[detailCountry.level] || "hsl(215 15% 50%)" }}
+              exit={{ opacity: 0, scale: 0.92, y: 16 }}
+              transition={{ type: "spring", damping: 28, stiffness: 350 }}
+              className="relative w-[420px] max-w-[92vw] max-h-[70vh] bg-card border border-border/80 rounded-lg overflow-hidden"
+              style={{
+                borderLeftWidth: 3,
+                borderLeftColor: levelColors[detailCountry.level] || "hsl(215 15% 50%)",
+                boxShadow: `0 20px 60px -15px rgba(0,0,0,0.5), 0 0 20px ${levelColors[detailCountry.level] || "hsl(215 15% 50%)"}20`,
+              }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80">
+              {/* Popup header */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/60 bg-background/90">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-2xl">{flagEmoji[detailCountry.code] || "🏳️"}</span>
+                  <span className="text-xl">{flagEmoji[detailCountry.code] || "🏳️"}</span>
                   <div>
-                    <h2 className="font-mono text-sm font-bold text-foreground">{detailCountry.name}</h2>
-                    <span
-                      className="font-mono text-[10px] font-semibold uppercase tracking-wider"
-                      style={{ color: levelColors[detailCountry.level] }}
-                    >
-                      {detailCountry.level} — {t("Score", "الدرجة")}: {detailCountry.safety_score}/100
-                    </span>
+                    <h2 className="font-mono text-xs font-bold text-foreground">{detailCountry.name}</h2>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-mono text-[9px] font-bold uppercase tracking-wider"
+                        style={{ color: levelColors[detailCountry.level] }}
+                      >
+                        {detailCountry.level}
+                      </span>
+                      <span className="font-mono text-[9px] text-muted-foreground">
+                        {t("Score", "الدرجة")}: <span className="font-bold" style={{ color: getScoreColor(detailCountry.safety_score) }}>{detailCountry.safety_score}</span>/100
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <button onClick={() => setDetailCountry(null)} className="p-1 rounded hover:bg-destructive/20">
-                  <X className="h-4 w-4 text-muted-foreground" />
+                <button onClick={() => setDetailCountry(null)} className="p-1 rounded hover:bg-destructive/10 transition-colors">
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               </div>
 
-              <div className="px-4 py-3 space-y-3 max-h-[60vh] overflow-y-auto">
+              {/* Popup content */}
+              <div className="px-4 py-3 space-y-3 overflow-y-auto max-h-[calc(70vh-52px)] intel-feed-scroll">
+                {/* Score bar */}
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1">{t(tr["citizen.safety_score"].en, tr["citizen.safety_score"].ar)}</span>
-                  <div className="w-full h-2.5 bg-background/50 rounded-full">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${detailCountry.safety_score}%`, backgroundColor: getScoreColor(detailCountry.safety_score) }}
+                  <span className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground/70 block mb-1">{t(tr["citizen.safety_score"].en, tr["citizen.safety_score"].ar)}</span>
+                  <div className="w-full h-2 bg-background/50 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${detailCountry.safety_score}%` }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: getScoreColor(detailCountry.safety_score), boxShadow: `0 0 8px ${getScoreColor(detailCountry.safety_score)}40` }}
                     />
                   </div>
                 </div>
 
+                {/* Status */}
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1">{t(tr["citizen.current_status"].en, tr["citizen.current_status"].ar)}</span>
-                  <p className="text-[11px] text-foreground leading-relaxed">{detailCountry.status}</p>
+                  <span className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground/70 block mb-1">{t(tr["citizen.current_status"].en, tr["citizen.current_status"].ar)}</span>
+                  <p className="text-[10px] text-foreground/90 leading-relaxed">{detailCountry.status}</p>
                 </div>
 
+                {/* Threats */}
                 {detailCountry.threats?.length > 0 && (
                   <div>
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1.5">{t(tr["citizen.active_threats"].en, tr["citizen.active_threats"].ar)}</span>
-                    <ul className="space-y-1.5">
+                    <span className="font-mono text-[8px] uppercase tracking-wider text-muted-foreground/70 block mb-1.5">{t(tr["citizen.active_threats"].en, tr["citizen.active_threats"].ar)}</span>
+                    <ul className="space-y-1">
                       {detailCountry.threats.map((threat, i) => (
                         <li key={i} className="flex items-start gap-2 px-2 py-1.5 rounded bg-destructive/5 border border-destructive/10">
-                          <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0 text-destructive" />
-                          <span className="text-[10px] text-foreground leading-snug">{threat}</span>
+                          <AlertTriangle className="h-2.5 w-2.5 mt-0.5 flex-shrink-0 text-destructive/70" />
+                          <span className="text-[9px] text-foreground/80 leading-snug">{threat}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
 
-                <div className="text-[8px] text-muted-foreground/40 font-mono pt-2 border-t border-border/30">
-                  {t("Press Escape to close • AI-powered analysis", "اضغط Escape للإغلاق • تحليل بالذكاء الاصطناعي")}
+                <div className="text-[7px] text-muted-foreground/30 font-mono pt-2 border-t border-border/20">
+                  {t("ESC to close • AI-powered analysis", "ESC للإغلاق • تحليل بالذكاء الاصطناعي")}
                 </div>
               </div>
             </motion.div>
