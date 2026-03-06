@@ -7,58 +7,32 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MINIMAX_BASE_URL = "https://api.minimax.io/v1/chat/completions";
-
 async function callAI(messages: Array<{ role: string; content: string }>) {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("No AI provider available");
 
-  if (LOVABLE_API_KEY) {
-    try {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
-      });
-
-      if (response.status === 429) throw new Error("RATE_LIMIT");
-      if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
-
-      const text = await response.text();
-      if (!response.ok || !text) {
-        console.warn("Lovable AI failed, status:", response.status, "body length:", text?.length);
-        throw new Error("Lovable AI returned empty or error");
-      }
-
-      const data = JSON.parse(text);
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new Error("Lovable AI returned no content");
-      return content;
-    } catch (e) {
-      if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) throw e;
-      console.warn("Lovable AI error, falling back to MiniMax:", e);
-    }
-  }
-
-  const MINIMAX_API_KEY = Deno.env.get("MINIMAX_API_KEY");
-  if (!MINIMAX_API_KEY) throw new Error("No AI provider available");
-
-  const response = await fetch(MINIMAX_BASE_URL, {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${MINIMAX_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "abab6.5-chat", messages }),
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
   });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("MiniMax error:", response.status, errText);
-    throw new Error("MiniMax AI error");
+  if (response.status === 429) throw new Error("RATE_LIMIT");
+  if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
+
+  const text = await response.text();
+  if (!response.ok || !text) {
+    console.error("Lovable AI failed, status:", response.status, "body:", text?.slice(0, 200));
+    throw new Error("AI_UNAVAILABLE");
   }
 
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
+  const data = JSON.parse(text);
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("AI_UNAVAILABLE");
+  return content;
 }
 
 serve(async (req) => {
@@ -169,6 +143,16 @@ Assess citizen safety now.`
     if (e instanceof Error && e.message === "PAYMENT_REQUIRED") {
       return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
         status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (e instanceof Error && e.message === "AI_UNAVAILABLE") {
+      return new Response(JSON.stringify({
+        countries: [],
+        overall_assessment: "AI analysis temporarily unavailable. Will retry automatically.",
+        last_analyzed: new Date().toISOString(),
+        error: "AI temporarily unavailable"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     console.error("Citizen security error:", e);
