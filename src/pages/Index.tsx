@@ -11,6 +11,7 @@ import { AIPredictions } from "@/components/dashboard/AIPredictions";
 import { LiveNewsFeed } from "@/components/dashboard/LiveNewsFeed";
 import { Disclaimer } from "@/components/dashboard/Disclaimer";
 import { CommodityTracker } from "@/components/dashboard/CommodityTracker";
+import { SectorPredictions } from "@/components/dashboard/SectorPredictions";
 import { CitizenSecurity } from "@/components/dashboard/CitizenSecurity";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
@@ -33,7 +34,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "layers", "timeline"];
+const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors", "layers", "timeline"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 const Index = () => {
@@ -88,13 +89,14 @@ const Index = () => {
     commodities: <CommodityTracker />,
     news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
+    sectors: <SectorPredictions />,
     layers: <LayerControls layers={layers} onToggle={toggleLayer} />,
     timeline: <TimelineSlider events={timeline} />,
   };
 
   const rightWidgets: Record<string, ReactNode> = {
     notifications: (
-      <div className="min-h-0 flex flex-col" style={{ maxHeight: "40%" }}>
+      <div className="min-h-0 flex flex-col" style={{ maxHeight: "28%" }}>
         <NotificationPanel alerts={geoAlerts} />
       </div>
     ),
