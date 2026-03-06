@@ -39,7 +39,7 @@ import {
 
 const STORAGE_KEY = "waros-layout";
 const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
-const DEFAULT_RIGHT_ORDER = ["cyber", "notifications", "war-updates"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 interface LayoutState {
   leftOrder: string[];
@@ -449,6 +449,7 @@ const Index = () => {
             <div className="flex-shrink-0 border-t border-border p-2 space-y-2">
               <LayerControls layers={layers} onToggle={toggleLayer} />
               <TimelineSlider events={timeline} />
+              <CyberSecurityAlerts />
             </div>
           </div>
         ) : (
