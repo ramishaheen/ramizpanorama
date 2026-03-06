@@ -58,13 +58,17 @@ export const SectorPredictions = () => {
 
   return (
     <>
-      <div className="bg-card border border-border rounded-lg p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+      <div className="h-full flex flex-col bg-card/80 backdrop-blur-sm">
+        <div className="px-3 py-2 flex items-center justify-between border-b border-border/50 bg-background/60">
+          <div className="flex items-center gap-1.5">
             <BarChart3 className="h-3 w-3 text-primary" />
-            {t(tr["section.sector_predictions"].en, tr["section.sector_predictions"].ar)}
-            <span className="text-[8px] text-primary font-mono">{t(tr["section.by_country"].en, tr["section.by_country"].ar)}</span>
-          </h3>
+            <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {t(tr["section.sector_predictions"].en, tr["section.sector_predictions"].ar)}
+            </span>
+            <span className="text-[8px] text-primary font-mono">
+              {t(tr["section.by_country"].en, tr["section.by_country"].ar)}
+            </span>
+          </div>
           <button
             onClick={refresh}
             disabled={loading}
