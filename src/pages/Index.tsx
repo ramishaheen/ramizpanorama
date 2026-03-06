@@ -338,7 +338,7 @@ const Index = () => {
           <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
             <button
               onClick={() => setLeftCollapsed(true)}
-              className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+              className="flex items-center justify-end pr-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
               title="Collapse sidebar"
             >
               <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
