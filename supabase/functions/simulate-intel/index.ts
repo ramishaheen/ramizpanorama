@@ -235,6 +235,26 @@ Deno.serve(async (req) => {
       timestamp: now,
     });
     actions.push(`Launched rocket ${rocketId}`);
+
+    // Record launch in daily history
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const { data: existing } = await supabase
+      .from("launch_history")
+      .select("*")
+      .eq("date", todayDate)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("launch_history").update({
+        launches: existing.launches + 1,
+        updated_at: now,
+      }).eq("id", existing.id);
+    } else {
+      await supabase.from("launch_history").insert({
+        date: todayDate,
+        launches: 1,
+      });
+    }
   }
 
   // Prune finished rockets (keep last 10)
