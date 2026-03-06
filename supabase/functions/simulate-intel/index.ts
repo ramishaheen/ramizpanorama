@@ -5,15 +5,53 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const regions = ["Eastern Mediterranean", "South China Sea", "Baltic Sea", "Red Sea", "Persian Gulf", "Black Sea", "Indo-Pacific", "Arctic"];
+const regions = ["Eastern Mediterranean", "Red Sea", "Persian Gulf", "Strait of Hormuz", "Gulf of Aden", "Sinai Peninsula", "Golan Heights", "Southern Lebanon", "Gaza Strip", "West Bank", "Northern Iraq", "Syrian Desert", "Yemen Coast", "Saudi Border", "Iranian Plateau", "Bab el-Mandeb", "Suez Canal Zone", "Jordan Valley", "Negev Desert", "Khuzestan"];
 const geoTypes = ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"] as const;
 const severities = ["low", "medium", "high", "critical"] as const;
-const vesselNames = ["USS EISENHOWER", "LIAONING", "ADMIRAL KUZNETSOV", "EVER GIVEN II", "PACIFIC TRADER", "HAIYANG SHIYOU", "HMS QUEEN ELIZABETH", "JS IZUMO"];
+const vesselNames = ["USS EISENHOWER", "USS GERALD FORD", "USS BATAAN", "INS MAGEN", "IRGCN SHAHID SOLEIMANI", "HMS DIAMOND", "FS ALSACE", "HMAS HOBART", "COSCO SHIPPING ROSE", "EVER GIVEN II", "PACIFIC TRADER", "IRANIAN TANKER SUEZ", "HOUTHI PATROL 7", "SAUDI COAST GUARD 12"];
 const titles: Record<string, string[]> = {
-  MILITARY: ["Troop movements detected", "Naval formation change observed", "Airborne assets repositioned", "Submarine activity detected"],
-  DIPLOMATIC: ["Emergency talks initiated", "Ambassador recalled", "Sanctions announced", "Treaty negotiations resumed"],
-  ECONOMIC: ["Trade route disruption reported", "Oil price spike warning", "Supply chain alert issued", "Energy corridor threat detected"],
-  HUMANITARIAN: ["Aid convoy delayed", "Refugee movement detected", "Medical supply shortage reported", "Evacuation corridor requested"],
+  MILITARY: [
+    "IDF airstrikes reported in southern Lebanon",
+    "IRGC naval drill detected near Strait of Hormuz",
+    "Houthi anti-ship missile launch detected",
+    "Iron Dome interceptions reported in northern Israel",
+    "Hezbollah drone incursion detected",
+    "US B-52 strategic patrol over Persian Gulf",
+    "Israeli submarine movement near Iranian waters",
+    "SAM battery activation detected in Syria",
+    "Arrow-3 system test intercept confirmed",
+    "Turkish military repositioning near Iraqi border",
+  ],
+  DIPLOMATIC: [
+    "UN Security Council emergency session on Iran",
+    "Qatar mediating ceasefire talks",
+    "US envoy arrives in Riyadh for de-escalation",
+    "EU sanctions package against IRGC entities",
+    "Egyptian-brokered humanitarian corridor proposed",
+    "Jordan recalls ambassador from Tehran",
+    "Saudi-Iran back-channel talks reported",
+    "Abraham Accords partner summit convened",
+  ],
+  ECONOMIC: [
+    "Oil prices spike on Strait of Hormuz threat",
+    "Red Sea shipping rerouting adds $1M per vessel",
+    "Israeli shekel under pressure amid escalation",
+    "Suez Canal traffic reduced 40%",
+    "Gulf state sovereign funds reallocating",
+    "Iranian rial hits record low",
+    "Insurance premiums surge for Middle East shipping",
+    "Tourism cancellations across Levant region",
+  ],
+  HUMANITARIAN: [
+    "UNRWA reports mass displacement in Gaza",
+    "Red Cross aid convoy blocked at Lebanese border",
+    "WHO reports hospital capacity exceeded in Beirut",
+    "Refugee flow detected toward Jordan border",
+    "Water infrastructure damaged in northern Gaza",
+    "Civilian evacuation ordered in southern Lebanon",
+    "Medical supply shortage in Yemen's Hodeidah",
+    "UNHCR emergency shelter deployment in Iraq",
+  ],
 };
 
 const rocketNames = [
@@ -63,9 +101,12 @@ Deno.serve(async (req) => {
 
   // 1. Randomly update a vessel position
   const vesselId = `v-00${Math.ceil(Math.random() * 8)}`;
+  // Middle East bounding box: lat 12-42, lng 24-63
+  const meLat = rand(12, 42);
+  const meLng = rand(24, 63);
   await supabase.from("vessels").update({
-    lat: rand(-60, 60),
-    lng: rand(-180, 180),
+    lat: meLat,
+    lng: meLng,
     heading: rand(0, 360),
     speed: rand(5, 25),
     timestamp: now,
@@ -83,10 +124,10 @@ Deno.serve(async (req) => {
     title: pick(titles[geoType]),
     summary: `Live intelligence update for ${region}. Automated monitoring detected activity change.`,
     severity: pick(severities),
-    source: "SentinelOS Auto-Monitor",
+    source: "WarOS-RamiZPanorma Auto-Monitor",
     timestamp: now,
-    lat: rand(-50, 60),
-    lng: rand(-150, 150),
+    lat: rand(12, 42),
+    lng: rand(24, 63),
   });
   actions.push(`Inserted geo alert ${alertId}`);
 
