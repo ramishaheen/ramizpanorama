@@ -1,20 +1,30 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin, DollarSign, Wheat, Shield, CircleDot } from "lucide-react";
 import { useCommodityPrices, type PriceData } from "@/hooks/useCommodityPrices";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const commodityConfig = [
-  { key: "oil", label: "Crude Oil", labelAr: "النفط الخام", unit: "$/bbl", icon: Fuel, color: "hsl(25 90% 50%)" },
+  { key: "oil", label: "WTI Crude", labelAr: "خام غرب تكساس", unit: "$/bbl", icon: Fuel, color: "hsl(25 90% 50%)" },
+  { key: "brent", label: "Brent Crude", labelAr: "خام برنت", unit: "$/bbl", icon: Fuel, color: "hsl(15 80% 55%)" },
   { key: "gold", label: "Gold", labelAr: "الذهب", unit: "$/oz", icon: Gem, color: "hsl(45 100% 55%)" },
+  { key: "silver", label: "Silver", labelAr: "الفضة", unit: "$/oz", icon: Gem, color: "hsl(210 15% 70%)" },
   { key: "gas", label: "Nat Gas", labelAr: "الغاز الطبيعي", unit: "$/MMBtu", icon: Flame, color: "hsl(200 80% 55%)" },
+  { key: "copper", label: "Copper", labelAr: "النحاس", unit: "$/lb", icon: CircleDot, color: "hsl(20 70% 55%)" },
+  { key: "wheat", label: "Wheat", labelAr: "القمح", unit: "¢/bu", icon: Wheat, color: "hsl(40 70% 55%)" },
+  { key: "usdils", label: "USD/ILS", labelAr: "دولار/شيكل", unit: "", icon: DollarSign, color: "hsl(210 60% 55%)" },
+  { key: "usdsar", label: "USD/SAR", labelAr: "دولار/ريال", unit: "", icon: DollarSign, color: "hsl(120 40% 50%)" },
+  { key: "ita", label: "Defense ETF", labelAr: "صندوق الدفاع", unit: "USD", icon: Shield, color: "hsl(0 60% 55%)" },
   { key: "btc", label: "Bitcoin", labelAr: "بيتكوين", unit: "USD", icon: Bitcoin, color: "hsl(35 100% 55%)" },
   { key: "eth", label: "Ethereum", labelAr: "إيثريوم", unit: "USD", icon: Gem, color: "hsl(230 60% 60%)" },
 ] as const;
 
 const formatPrice = (price: number, key: string) => {
   if (key === "btc") return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (key === "gold") return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (key === "gold" || key === "wheat") return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (key === "usdsar") return price.toFixed(4);
+  if (key === "usdils") return price.toFixed(3);
   return price.toFixed(2);
 };
 
@@ -95,7 +105,7 @@ const PriceRow = ({ config, data, history, isArabic }: { config: typeof commodit
         <Icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: config.color }} />
         <div>
           <span className="font-mono text-[10px] font-semibold text-foreground">{isArabic ? config.labelAr : config.label}</span>
-          <span className="font-mono text-[8px] text-muted-foreground ml-1">{config.unit}</span>
+          {config.unit && <span className="font-mono text-[8px] text-muted-foreground ml-1">{config.unit}</span>}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -137,13 +147,16 @@ export const CommodityTracker = () => {
           <RefreshCw className="h-3 w-3 animate-spin text-primary" />
         )}
       </div>
-      <div>
-        {commodityConfig.map((cfg) => (
-          <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} history={prices.history[cfg.key] || []} isArabic={isArabic} />
-        ))}
-      </div>
+      <ScrollArea className="h-[260px] pr-2">
+        <div>
+          {commodityConfig.map((cfg) => (
+            <PriceRow key={cfg.key} config={cfg} data={prices[cfg.key]} history={prices.history[cfg.key] || []} isArabic={isArabic} />
+          ))}
+        </div>
+      </ScrollArea>
       <p className="font-mono text-[7px] text-muted-foreground/50 mt-1.5 text-right">
-        {t(tr["commodity.simulated"].en, tr["commodity.simulated"].ar)}
+        {t("Oil, Gold & commodities simulated • Crypto via CoinGecko • FX & ETF simulated • Updates every 15–30s",
+          "النفط والذهب والسلع محاكاة • العملات الرقمية عبر CoinGecko • العملات وصناديق ETF محاكاة • تحديث كل 15-30 ثانية")}
       </p>
     </div>
   );

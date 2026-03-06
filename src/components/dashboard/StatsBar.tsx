@@ -128,7 +128,7 @@ const MarqueeItem = ({ icon: Icon, label, price, change, changePercent }: {
 };
 
 export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, rocketCount = 0, impactCount = 0, dataFresh }: StatsBarProps) => {
-  const { oil, gold, btc, eth, loading } = useCommodityPrices();
+  const { oil, brent, gold, silver, gas, copper, wheat, usdils, usdsar, ita, btc, eth, loading } = useCommodityPrices();
   const warCosts = useWarCosts();
   const { t } = useLanguage();
   const [scenario, setScenario] = useState<Scenario>("base");
@@ -265,21 +265,29 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
           <div className="marquee-track flex">
             <div className="marquee-content flex animate-marquee-reverse">
               <MarqueeItem icon={Fuel} label="WTI Crude" price={oil.price} change={oil.change} changePercent={oil.changePercent} />
+              <MarqueeItem icon={Fuel} label="Brent" price={brent.price} change={brent.change} changePercent={brent.changePercent} />
               <MarqueeItem icon={CircleDollarSign} label="Gold XAU" price={gold.price} change={gold.change} changePercent={gold.changePercent} />
-              <MarqueeItem icon={Bitcoin} label="BTC" price={btc.price} change={btc.change} changePercent={btc.changePercent} />
-              <MarqueeItem icon={CircleDollarSign} label="ETH" price={eth.price} change={eth.change} changePercent={eth.changePercent} />
-              <MarqueeItem icon={Fuel} label="WTI Crude" price={oil.price} change={oil.change} changePercent={oil.changePercent} />
-              <MarqueeItem icon={CircleDollarSign} label="Gold XAU" price={gold.price} change={gold.change} changePercent={gold.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="Silver" price={silver.price} change={silver.change} changePercent={silver.changePercent} />
+              <MarqueeItem icon={Fuel} label="Nat Gas" price={gas.price} change={gas.change} changePercent={gas.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="Copper" price={copper.price} change={copper.change} changePercent={copper.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="Wheat" price={wheat.price} change={wheat.change} changePercent={wheat.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="USD/ILS" price={usdils.price} change={usdils.change} changePercent={usdils.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="USD/SAR" price={usdsar.price} change={usdsar.change} changePercent={usdsar.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="DEF ETF" price={ita.price} change={ita.change} changePercent={ita.changePercent} />
               <MarqueeItem icon={Bitcoin} label="BTC" price={btc.price} change={btc.change} changePercent={btc.changePercent} />
               <MarqueeItem icon={CircleDollarSign} label="ETH" price={eth.price} change={eth.change} changePercent={eth.changePercent} />
             </div>
             <div className="marquee-content flex animate-marquee-reverse" aria-hidden="true">
               <MarqueeItem icon={Fuel} label="WTI Crude" price={oil.price} change={oil.change} changePercent={oil.changePercent} />
+              <MarqueeItem icon={Fuel} label="Brent" price={brent.price} change={brent.change} changePercent={brent.changePercent} />
               <MarqueeItem icon={CircleDollarSign} label="Gold XAU" price={gold.price} change={gold.change} changePercent={gold.changePercent} />
-              <MarqueeItem icon={Bitcoin} label="BTC" price={btc.price} change={btc.change} changePercent={btc.changePercent} />
-              <MarqueeItem icon={CircleDollarSign} label="ETH" price={eth.price} change={eth.change} changePercent={eth.changePercent} />
-              <MarqueeItem icon={Fuel} label="WTI Crude" price={oil.price} change={oil.change} changePercent={oil.changePercent} />
-              <MarqueeItem icon={CircleDollarSign} label="Gold XAU" price={gold.price} change={gold.change} changePercent={gold.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="Silver" price={silver.price} change={silver.change} changePercent={silver.changePercent} />
+              <MarqueeItem icon={Fuel} label="Nat Gas" price={gas.price} change={gas.change} changePercent={gas.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="Copper" price={copper.price} change={copper.change} changePercent={copper.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="Wheat" price={wheat.price} change={wheat.change} changePercent={wheat.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="USD/ILS" price={usdils.price} change={usdils.change} changePercent={usdils.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="USD/SAR" price={usdsar.price} change={usdsar.change} changePercent={usdsar.changePercent} />
+              <MarqueeItem icon={CircleDollarSign} label="DEF ETF" price={ita.price} change={ita.change} changePercent={ita.changePercent} />
               <MarqueeItem icon={Bitcoin} label="BTC" price={btc.price} change={btc.change} changePercent={btc.changePercent} />
               <MarqueeItem icon={CircleDollarSign} label="ETH" price={eth.price} change={eth.change} changePercent={eth.changePercent} />
             </div>
