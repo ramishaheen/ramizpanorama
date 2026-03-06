@@ -20,6 +20,7 @@ import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
+import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
@@ -39,7 +40,7 @@ import {
 
 const STORAGE_KEY = "waros-layout";
 const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "telegram"];
 
 interface LayoutState {
   leftOrder: string[];
@@ -223,6 +224,7 @@ const Index = () => {
         />
       </div>
     ),
+    telegram: <TelegramFeed />,
   };
 
   if (loading) {
