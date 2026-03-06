@@ -32,7 +32,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
               WAR<span className="text-primary">OS</span>
             </h1>
             <p className="text-[9px] text-muted-foreground tracking-widest uppercase">
-              RamiZPanorma
+              RamiZpanorama
             </p>
           </div>
 
