@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { RiskScore } from "@/data/mockData";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RiskScoreGaugeProps {
   score: RiskScore;
@@ -110,9 +111,37 @@ export const RiskScoreGauge = ({ score }: RiskScoreGaugeProps) => {
   return (
     <div className={`rounded-lg border p-4 ${getSeverityBg(score.overall)} ${getSeverityGlow(score.overall)}`}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          {t(tr["section.risk_gauge"].en, tr["section.risk_gauge"].ar)}
-        </h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            {t(tr["section.risk_gauge"].en, tr["section.risk_gauge"].ar)}
+          </h3>
+          <TooltipProvider delayDuration={200}>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <button className="p-0.5 rounded hover:bg-muted/40 transition-colors">
+                  <Info className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[260px] p-3 space-y-1.5">
+                <p className="font-semibold text-xs text-foreground">
+                  {t("AI Risk Index", "مؤشر المخاطر الذكي")}
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  {t(
+                    "A dynamic 0–100 score computed from four real-time signals: airspace restrictions (NOTAMs, TFRs), naval fleet concentration, diplomatic activity & escalation signals, and news sentiment analysis. Higher values indicate greater geopolitical risk.",
+                    "مؤشر ديناميكي من 0 إلى 100 يُحسب من أربع إشارات آنية: القيود الجوية (NOTAMs, TFRs)، تركّز الأساطيل البحرية، النشاط الدبلوماسي وإشارات التصعيد، وتحليل المشاعر الإخبارية. القيم الأعلى تشير إلى مخاطر جيوسياسية أكبر."
+                  )}
+                </p>
+                <div className="grid grid-cols-2 gap-1 pt-1 border-t border-border/50">
+                  <span className="text-[9px] font-mono text-success">0–39: {t("Low", "منخفض")}</span>
+                  <span className="text-[9px] font-mono text-primary">40–59: {t("Moderate", "متوسط")}</span>
+                  <span className="text-[9px] font-mono text-warning">60–79: {t("Elevated", "مرتفع")}</span>
+                  <span className="text-[9px] font-mono text-critical">80–100: {t("Critical", "حرج")}</span>
+                </div>
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
+        </div>
         <div className="flex items-center gap-1">
           <TrendIcon trend={score.trend} />
           <span className="text-xs text-muted-foreground capitalize">{score.trend}</span>
