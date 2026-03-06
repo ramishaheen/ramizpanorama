@@ -120,12 +120,25 @@ export const LiveNewsFeed = () => {
               <span className="text-[8px] font-mono text-muted-foreground">{channels[activeChannel].region}</span>
               <span className="text-[8px] font-mono text-primary uppercase">{t(tr["section.live"].en, tr["section.live"].ar)}</span>
             </div>
-            <button
-              onClick={() => setExpandedChannel(activeChannel)}
-              className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
-            >
-              {t(tr["action.expand"] ? tr["action.expand"].en : "Expand", tr["action.expand"] ? tr["action.expand"].ar : "توسيع")}
-            </button>
+            <div className="flex items-center gap-1.5">
+              {getDirectUrl(channels[activeChannel]) && (
+                <a
+                  href={getDirectUrl(channels[activeChannel])!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase flex items-center gap-0.5"
+                  title={t("Open direct stream", "فتح البث المباشر")}
+                >
+                  <ExternalLink className="h-2.5 w-2.5" />
+                  {t("Direct", "مباشر")}
+                </a>
+              )}
+              <button
+                onClick={() => setExpandedChannel(activeChannel)}
+                className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
+              >
+                {t(tr["action.expand"] ? tr["action.expand"].en : "Expand", tr["action.expand"] ? tr["action.expand"].ar : "توسيع")}
+              </button>
           </div>
           <div className="aspect-video">
             <iframe
