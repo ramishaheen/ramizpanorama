@@ -115,11 +115,25 @@ export const TotalLaunchesWidget = ({ rockets }: TotalLaunchesWidgetProps) => {
     return map;
   }, [rockets]);
 
-  const weeklyData = useMemo(() => aggregateWeekly(historicalData), []);
-  const monthlyData = useMemo(() => aggregateMonthly(historicalData), []);
-  const grandTotal = useMemo(() => historicalData.reduce((s, d) => s + d.launches, 0), []);
-  const grandIntercepted = useMemo(() => historicalData.reduce((s, d) => s + d.intercepted, 0), []);
-  const grandImpact = useMemo(() => historicalData.reduce((s, d) => s + d.impact, 0), []);
+  // Merge live "today" data into historical, replacing mock for today
+  const mergedHistorical = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const withoutToday = historicalData.filter(d => d.date !== todayStr);
+    const todayEntry = {
+      date: todayStr,
+      launches: total,
+      intercepted,
+      impact,
+      month: new Date().toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+    };
+    return [...withoutToday, todayEntry];
+  }, [total, intercepted, impact]);
+
+  const weeklyData = useMemo(() => aggregateWeekly(mergedHistorical), [mergedHistorical]);
+  const monthlyData = useMemo(() => aggregateMonthly(mergedHistorical), [mergedHistorical]);
+  const grandTotal = useMemo(() => mergedHistorical.reduce((s, d) => s + d.launches, 0), [mergedHistorical]);
+  const grandIntercepted = useMemo(() => mergedHistorical.reduce((s, d) => s + d.intercepted, 0), [mergedHistorical]);
+  const grandImpact = useMemo(() => mergedHistorical.reduce((s, d) => s + d.impact, 0), [mergedHistorical]);
   const interceptRate = grandTotal > 0 ? ((grandIntercepted / grandTotal) * 100).toFixed(1) : "0";
 
   const tooltip = `🚀 TOTAL WAR LAUNCHES: ${grandTotal.toLocaleString()}\n\n── By Type (today) ──\n${Object.entries(byType).map(([t, c]) => `• ${t}: ${c}`).join("\n")}\n\n── By Status (today) ──\n• Active: ${active}\n• Intercepted: ${intercepted}\n• Impact: ${impact}\n\n── Historical (Oct 2023 – present) ──\n• Total: ${grandTotal.toLocaleString()}\n• Intercepted: ${grandIntercepted.toLocaleString()} (${interceptRate}%)\n• Impact: ${grandImpact.toLocaleString()}`;
