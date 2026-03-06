@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { Volume2, VolumeX, X, Play, Radio, RefreshCw } from "lucide-react";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface Channel {
   channelId: string;
@@ -61,6 +62,7 @@ export const LiveNewsFeed = () => {
   const [expandedChannel, setExpandedChannel] = useState<number | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [filterRegion, setFilterRegion] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const handleManualRetry = useCallback(() => {
     setRetryKey((k) => k + 1);
@@ -80,13 +82,13 @@ export const LiveNewsFeed = () => {
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-critical animate-pulse" />
-            Live News ({channels.length} channels)
+            {t(tr["section.news"].en, tr["section.news"].ar)} ({channels.length} {t(tr["news.channels"].en, tr["news.channels"].ar)})
           </h4>
           <div className="flex items-center gap-1">
             <button
               onClick={handleManualRetry}
               className="p-1 rounded hover:bg-secondary/60 transition-colors"
-              title="Retry stream"
+              title={t("Retry stream", "إعادة المحاولة")}
             >
               <RefreshCw className="h-3 w-3 text-muted-foreground" />
             </button>
@@ -111,13 +113,13 @@ export const LiveNewsFeed = () => {
               <span className="h-1.5 w-1.5 rounded-full bg-critical animate-pulse" />
               <span className="text-[9px] font-mono font-bold text-foreground">{channels[activeChannel].name}</span>
               <span className="text-[8px] font-mono text-muted-foreground">{channels[activeChannel].region}</span>
-              <span className="text-[8px] font-mono text-primary uppercase">LIVE</span>
+              <span className="text-[8px] font-mono text-primary uppercase">{t(tr["section.live"].en, tr["section.live"].ar)}</span>
             </div>
             <button
               onClick={() => setExpandedChannel(activeChannel)}
               className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors uppercase"
             >
-              Expand
+              {t(tr["action.expand"] ? tr["action.expand"].en : "Expand", tr["action.expand"] ? tr["action.expand"].ar : "توسيع")}
             </button>
           </div>
           <div className="aspect-video">
@@ -141,7 +143,7 @@ export const LiveNewsFeed = () => {
                 : "bg-secondary/50 text-muted-foreground hover:text-foreground"
             }`}
           >
-            All ({channels.length})
+            {t(tr["news.all"].en, tr["news.all"].ar)} ({channels.length})
           </button>
           {REGIONS.map((region) => (
             <button
@@ -224,7 +226,7 @@ export const LiveNewsFeed = () => {
                 <span className="font-mono text-[10px] text-muted-foreground">
                   {channels[expandedChannel].region}
                 </span>
-                <span className="font-mono text-[10px] text-primary uppercase">LIVE</span>
+                <span className="font-mono text-[10px] text-primary uppercase">{t(tr["section.live"].en, tr["section.live"].ar)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button

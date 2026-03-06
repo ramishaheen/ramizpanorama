@@ -41,11 +41,12 @@ const getScoreColor = (score: number) => {
   return "hsl(0 80% 35%)";
 };
 
-const CountryCard = ({ country, isExpanded, onToggle, onDoubleClick }: {
+const CountryCard = ({ country, isExpanded, onToggle, onDoubleClick, t }: {
   country: CountrySafety;
   isExpanded: boolean;
   onToggle: () => void;
   onDoubleClick: () => void;
+  t: (en: string, ar: string) => string;
 }) => {
   const scoreColor = getScoreColor(country.safety_score);
   const lvlColor = levelColors[country.level] || "hsl(215 15% 50%)";
@@ -76,7 +77,6 @@ const CountryCard = ({ country, isExpanded, onToggle, onDoubleClick }: {
           </div>
         </div>
 
-        {/* Score bar */}
         <div className="w-full h-1.5 bg-background/50 rounded-full mb-1.5">
           <div
             className="h-full rounded-full transition-all duration-500"
@@ -103,7 +103,7 @@ const CountryCard = ({ country, isExpanded, onToggle, onDoubleClick }: {
         {isExpanded && country.threats?.length > 0 && (
           <div className="mt-2 pt-2 border-t border-border/50">
             <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70 block mb-1.5">
-              Active Threats
+              {t(tr["citizen.active_threats"].en, tr["citizen.active_threats"].ar)}
             </span>
             <ul className="space-y-1">
               {country.threats.map((threat, i) => (
@@ -126,7 +126,6 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
   const [detailCountry, setDetailCountry] = useState<CountrySafety | null>(null);
   const { t } = useLanguage();
 
-  // Escape key handler
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setDetailCountry(null);
@@ -157,7 +156,7 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
               onClick={() => setShowAssessment(prev => !prev)}
               className="px-2 py-0.5 text-muted-foreground hover:text-primary transition-colors font-mono text-[10px] uppercase border border-border rounded"
             >
-              {showAssessment ? "Hide" : "Intel"}
+              {showAssessment ? t(tr["action.hide"].en, tr["action.hide"].ar) : t(tr["action.intel"].en, tr["action.intel"].ar)}
             </button>
           )}
           <button
@@ -180,11 +179,10 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
       {loading && !data ? (
         <div className="px-4 py-4 flex items-center justify-center gap-2">
           <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-          <span className="font-mono text-[11px] text-muted-foreground">Analyzing regional security…</span>
+          <span className="font-mono text-[11px] text-muted-foreground">{t(tr["citizen.analyzing"].en, tr["citizen.analyzing"].ar)}</span>
         </div>
       ) : data?.countries?.length ? (
         <div className="px-4 py-3">
-          {/* Horizontal scrollable cards */}
           <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
             {data.countries.map((country) => (
               <CountryCard
@@ -193,11 +191,11 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
                 isExpanded={expandedCode === country.code}
                 onToggle={() => toggleExpand(country.code)}
                 onDoubleClick={() => setDetailCountry(country)}
+                t={t}
               />
             ))}
           </div>
 
-          {/* Collapsible overall assessment */}
           {showAssessment && data.overall_assessment && (
             <div className="mt-2 relative">
               <div className="font-mono text-[10px] text-muted-foreground leading-relaxed border-t border-border pt-2 pr-6">
@@ -213,7 +211,8 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
           )}
         </div>
       ) : null}
-      {/* Country detail popup on double-click */}
+
+      {/* Country detail popup */}
       <AnimatePresence>
         {detailCountry && (
           <motion.div
@@ -232,7 +231,6 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
               style={{ borderLeftColor: levelColors[detailCountry.level] || "hsl(215 15% 50%)" }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80">
                 <div className="flex items-center gap-2.5">
                   <span className="text-2xl">{flagEmoji[detailCountry.code] || "🏳️"}</span>
@@ -242,7 +240,7 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
                       className="font-mono text-[10px] font-semibold uppercase tracking-wider"
                       style={{ color: levelColors[detailCountry.level] }}
                     >
-                      {detailCountry.level} — Score: {detailCountry.safety_score}/100
+                      {detailCountry.level} — {t("Score", "الدرجة")}: {detailCountry.safety_score}/100
                     </span>
                   </div>
                 </div>
@@ -251,11 +249,9 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
                 </button>
               </div>
 
-              {/* Body */}
               <div className="px-4 py-3 space-y-3 max-h-[60vh] overflow-y-auto">
-                {/* Safety score bar */}
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1">Safety Score</span>
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1">{t(tr["citizen.safety_score"].en, tr["citizen.safety_score"].ar)}</span>
                   <div className="w-full h-2.5 bg-background/50 rounded-full">
                     <div
                       className="h-full rounded-full transition-all duration-500"
@@ -264,16 +260,14 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
                   </div>
                 </div>
 
-                {/* Status */}
                 <div>
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1">Current Status</span>
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1">{t(tr["citizen.current_status"].en, tr["citizen.current_status"].ar)}</span>
                   <p className="text-[11px] text-foreground leading-relaxed">{detailCountry.status}</p>
                 </div>
 
-                {/* Threats */}
                 {detailCountry.threats?.length > 0 && (
                   <div>
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1.5">Active Threats</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground block mb-1.5">{t(tr["citizen.active_threats"].en, tr["citizen.active_threats"].ar)}</span>
                     <ul className="space-y-1.5">
                       {detailCountry.threats.map((threat, i) => (
                         <li key={i} className="flex items-start gap-2 px-2 py-1.5 rounded bg-destructive/5 border border-destructive/10">
@@ -285,9 +279,8 @@ export const CitizenSecurity = ({ data, loading, error, onRefresh }: CitizenSecu
                   </div>
                 )}
 
-
                 <div className="text-[8px] text-muted-foreground/40 font-mono pt-2 border-t border-border/30">
-                  Double-click country card to open • AI-powered analysis
+                  {t("Double-click country card to open • AI-powered analysis", "انقر مزدوجًا على بطاقة الدولة لفتحها • تحليل بالذكاء الاصطناعي")}
                 </div>
               </div>
             </motion.div>

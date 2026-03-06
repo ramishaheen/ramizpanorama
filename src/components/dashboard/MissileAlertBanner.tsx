@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Rocket, X, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Rocket as RocketType } from "@/data/mockData";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface MissileAlertBannerProps {
   rockets: RocketType[];
@@ -21,21 +22,15 @@ interface AlertItem {
 function playMissileAlertSound() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-    // Main siren oscillator — sweeps between two frequencies
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(440, ctx.currentTime);
-
-    // Siren sweep pattern (3 cycles over ~3 seconds)
     for (let i = 0; i < 3; i++) {
       const t = ctx.currentTime + i * 1.0;
       osc.frequency.linearRampToValueAtTime(880, t + 0.5);
       osc.frequency.linearRampToValueAtTime(440, t + 1.0);
     }
-
-    // Pulsing volume envelope
     gain.gain.setValueAtTime(0, ctx.currentTime);
     for (let i = 0; i < 6; i++) {
       const t = ctx.currentTime + i * 0.5;
@@ -43,35 +38,28 @@ function playMissileAlertSound() {
       gain.gain.linearRampToValueAtTime(0.08, t + 0.25);
     }
     gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 3.0);
-
-    // Secondary alarm beep for urgency
     const beepOsc = ctx.createOscillator();
     const beepGain = ctx.createGain();
     beepOsc.type = "square";
     beepOsc.frequency.setValueAtTime(1200, ctx.currentTime);
     beepGain.gain.setValueAtTime(0, ctx.currentTime);
-
     for (let i = 0; i < 10; i++) {
       const t = ctx.currentTime + i * 0.3;
       beepGain.gain.setValueAtTime(0.06, t);
       beepGain.gain.setValueAtTime(0, t + 0.1);
     }
-
     osc.connect(gain).connect(ctx.destination);
     beepOsc.connect(beepGain).connect(ctx.destination);
-
     osc.start();
     beepOsc.start();
     osc.stop(ctx.currentTime + 3.2);
     beepOsc.stop(ctx.currentTime + 3.2);
-
     setTimeout(() => ctx.close(), 4000);
   } catch (e) {
     console.warn("Could not play alert sound:", e);
   }
 }
 
-// Approximate region name from lat/lng
 function getRegionName(lat: number, lng: number): string {
   if (lat > 29 && lat < 38 && lng > 35 && lng < 46) return "Levant / Iraq";
   if (lat > 24 && lat < 32 && lng > 46 && lng < 56) return "Persian Gulf";
@@ -87,6 +75,7 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
   const soundEnabled = !externalMuted;
   const seenIdsRef = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
+  const { t } = useLanguage();
 
   const triggerAlert = useCallback((newRockets: RocketType[]) => {
     const now = Date.now();
@@ -98,10 +87,8 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
       target: getRegionName(r.targetLat, r.targetLng),
       timestamp: now,
     }));
-
     newRockets.forEach((r) => seenIdsRef.current.add(r.id));
     setAlerts((prev) => [...newAlerts, ...prev].slice(0, 5));
-
     if (soundEnabled) {
       playMissileAlertSound();
     }
@@ -113,21 +100,17 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
       initializedRef.current = true;
       return;
     }
-
     const newLaunches = rockets.filter(
       (r) =>
         (r.status === "launched" || r.status === "in_flight") &&
         !seenIdsRef.current.has(r.id)
     );
-
     if (newLaunches.length > 0) {
       triggerAlert(newLaunches);
     }
-
     rockets.forEach((r) => seenIdsRef.current.add(r.id));
   }, [rockets, triggerAlert]);
 
-  // Auto-dismiss after 10 seconds
   useEffect(() => {
     if (alerts.length === 0) return;
     const timer = setInterval(() => {
@@ -169,15 +152,12 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
             }}
             className="pointer-events-auto w-[600px] max-w-[90vw] border border-destructive/70 bg-destructive/15 backdrop-blur-xl rounded-lg overflow-hidden"
           >
-            {/* Red flashing top bar */}
             <motion.div
               className="h-1 bg-destructive"
               animate={{ opacity: [1, 0.3, 1] }}
               transition={{ duration: 0.6, repeat: Infinity }}
             />
-
             <div className="px-4 py-2.5">
-              {/* Header */}
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <motion.div
@@ -191,12 +171,12 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
                     animate={{ opacity: [1, 0.5, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
                   >
-                    ⚠ MISSILE LAUNCH DETECTED
+                    {t(tr["missile.detected"].en, tr["missile.detected"].ar)}
                   </motion.span>
                 </div>
                 <div className="flex items-center gap-1">
                   {i === 0 && !soundEnabled && (
-                    <span className="p-1" title="Alerts muted from header">
+                    <span className="p-1" title={t("Alerts muted", "التنبيهات مكتومة")}>
                       <VolumeX className="h-3.5 w-3.5 text-muted-foreground/50" />
                     </span>
                   )}
@@ -208,25 +188,21 @@ export const MissileAlertBanner = ({ rockets, muted: externalMuted }: MissileAle
                   </button>
                 </div>
               </div>
-
-              {/* Details */}
               <div className="grid grid-cols-3 gap-3 font-mono text-[10px]">
                 <div>
-                  <span className="text-muted-foreground/60 uppercase block mb-0.5">Designation</span>
+                  <span className="text-muted-foreground/60 uppercase block mb-0.5">{t(tr["missile.designation"].en, tr["missile.designation"].ar)}</span>
                   <span className="text-foreground font-bold text-xs">{alert.name}</span>
                   <span className="text-destructive/80 ml-1">({alert.type})</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground/60 uppercase block mb-0.5">Origin</span>
+                  <span className="text-muted-foreground/60 uppercase block mb-0.5">{t(tr["missile.origin"].en, tr["missile.origin"].ar)}</span>
                   <span className="text-foreground font-semibold">{alert.origin}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground/60 uppercase block mb-0.5">Target Region</span>
+                  <span className="text-muted-foreground/60 uppercase block mb-0.5">{t(tr["missile.target"].en, tr["missile.target"].ar)}</span>
                   <span className="text-warning font-semibold">{alert.target}</span>
                 </div>
               </div>
-
-              {/* Progress bar (auto-dismiss countdown) */}
               <motion.div
                 className="mt-2 h-0.5 bg-destructive/40 rounded-full origin-left"
                 initial={{ scaleX: 1 }}

@@ -2,14 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import type { TimelineEvent } from "@/data/mockData";
+import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface TimelineSliderProps {
   events: TimelineEvent[];
   onTimeChange?: (time: Date) => void;
 }
-
-
-
 
 const severityDot: Record<string, string> = {
   low: "bg-success",
@@ -28,6 +26,7 @@ const typeBorder: Record<string, string> = {
 export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) => {
   const [currentIndex, setCurrentIndex] = useState(events.length - 1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const { t, isArabic } = useLanguage();
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const idx = parseInt(e.target.value);
@@ -35,11 +34,13 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
     onTimeChange?.(new Date(events[idx].timestamp));
   };
 
+  const locale = isArabic ? 'ar-SA' : 'en-US';
+
   return (
     <div className="bg-card border border-border rounded-lg p-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Timeline
+          {t(tr["section.timeline"].en, tr["section.timeline"].ar)}
         </h3>
         <div className="flex items-center gap-1">
           <button
@@ -74,13 +75,13 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
 
       <div className="flex items-center justify-between mt-1 mb-3">
         <span className="text-[9px] font-mono text-muted-foreground">
-          {new Date(events[0]?.timestamp).toLocaleTimeString('en-US', { hour12: false })}
+          {new Date(events[0]?.timestamp).toLocaleTimeString(locale, { hour12: false })}
         </span>
         <span className="text-[10px] font-mono text-primary font-semibold">
-          {events[currentIndex] && new Date(events[currentIndex].timestamp).toLocaleTimeString('en-US', { hour12: false })} UTC
+          {events[currentIndex] && new Date(events[currentIndex].timestamp).toLocaleTimeString(locale, { hour12: false })} UTC
         </span>
         <span className="text-[9px] font-mono text-muted-foreground">
-          {new Date(events[events.length - 1]?.timestamp).toLocaleTimeString('en-US', { hour12: false })}
+          {new Date(events[events.length - 1]?.timestamp).toLocaleTimeString(locale, { hour12: false })}
         </span>
       </div>
 
@@ -94,7 +95,7 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
           >
             <span className={`h-1.5 w-1.5 rounded-full ${severityDot[event.severity]} ${i === 0 ? 'animate-pulse' : ''}`} />
             <span className="text-[10px] font-mono text-muted-foreground w-12">
-              {new Date(event.timestamp).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+              {new Date(event.timestamp).toLocaleTimeString(locale, { hour12: false, hour: '2-digit', minute: '2-digit' })}
             </span>
             <span className={`text-[10px] ${i === 0 ? 'text-foreground' : 'text-muted-foreground'} truncate`}>
               {event.title}

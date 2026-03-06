@@ -94,14 +94,14 @@ export function useLiveDashboard() {
     };
   }, [flashFresh]);
 
-  // Auto-simulate live intel every 15 seconds
+  // Auto-simulate live intel every 60 seconds
   useEffect(() => {
     const simulate = () => {
       supabase.functions.invoke("simulate-intel").catch(console.error);
     };
-    // Initial trigger after 3s
-    const initialTimeout = setTimeout(simulate, 3000);
-    const interval = setInterval(simulate, 15000);
+    // Initial trigger after 5s
+    const initialTimeout = setTimeout(simulate, 5000);
+    const interval = setInterval(simulate, 60000);
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(interval);
