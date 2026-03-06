@@ -6,6 +6,7 @@ import { RiskScoreGauge } from "@/components/dashboard/RiskScoreGauge";
 import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
 import { TimelineSlider } from "@/components/dashboard/TimelineSlider";
 import { LayerControls, type LayerState } from "@/components/dashboard/LayerControls";
+import { AIPredictions } from "@/components/dashboard/AIPredictions";
 import { Disclaimer } from "@/components/dashboard/Disclaimer";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 
@@ -52,6 +53,7 @@ const Index = () => {
           <div className="p-3 space-y-3">
             <RiskScoreGauge score={riskScore} />
             <LayerControls layers={layers} onToggle={toggleLayer} />
+            <AIPredictions />
           </div>
           <div className="p-3 pt-0">
             <TimelineSlider events={timeline} />
