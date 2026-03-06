@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, Wifi, Volume2, VolumeX, Languages, MessageCircle } from "lucide-react";
+import { Wifi, Volume2, VolumeX, Languages, MessageCircle } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
+import warosLogo from "@/assets/waros-logo.png";
 
 interface DashboardHeaderProps {
   dataFresh?: boolean;
@@ -19,13 +20,13 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
     <>
       <header className={`flex items-center justify-between px-4 py-2 border-b border-border bg-card/80 backdrop-blur transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_30px_hsl(190_100%_50%/0.08)] border-primary/40" : ""}`}>
         <div className="flex items-center gap-3">
-          <Shield className="h-5 w-5 text-primary" />
+          <img src={warosLogo} alt="War OS Logo" className="h-8 w-8" />
           <div>
             <h1 className="text-sm font-bold tracking-wide text-foreground">
-              SENTINEL<span className="text-primary">OS</span>
+              WAR<span className="text-primary">OS</span>
             </h1>
             <p className="text-[9px] text-muted-foreground tracking-widest uppercase">
-              {t(translations["dashboard.title"].en, translations["dashboard.title"].ar)}
+              RamiZPanorma
             </p>
           </div>
 
