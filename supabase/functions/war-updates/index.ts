@@ -3,22 +3,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const MINIMAX_BASE_URL = "https://api.minimax.io/v1/chat/completions";
+
+async function callAI(messages: Array<{ role: string; content: string }>) {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+  if (LOVABLE_API_KEY) {
+    try {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || "";
+      }
+      if (response.status === 429) throw new Error("RATE_LIMIT");
+      if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
+      console.warn("Lovable AI failed, falling back to MiniMax:", response.status);
+      await response.text();
+    } catch (e) {
+      if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) throw e;
+      console.warn("Lovable AI error, falling back to MiniMax:", e);
+    }
+  }
+
+  const MINIMAX_API_KEY = Deno.env.get("MINIMAX_API_KEY");
+  if (!MINIMAX_API_KEY) throw new Error("No AI provider available");
+
+  const response = await fetch(MINIMAX_BASE_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${MINIMAX_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "abab6.5s-chat", messages, temperature: 0.7, max_tokens: 3000 }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("MiniMax error:", response.status, errText);
+    throw new Error("MiniMax AI error");
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'API key not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const { context } = await req.json().catch(() => ({ context: '' }));
-
     const now = new Date().toISOString();
 
     const prompt = `You are a military intelligence analyst providing REAL-TIME war situation updates for the Iran-Middle East conflict zone. Current time: ${now}
@@ -56,36 +96,11 @@ Respond ONLY with valid JSON in this exact format:
   "last_updated": "${now}"
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are a military intelligence analyst. Output only valid JSON. Be realistic and specific.' },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 3000,
-      }),
-    });
+    const content = await callAI([
+      { role: 'system', content: 'You are a military intelligence analyst. Output only valid JSON. Be realistic and specific.' },
+      { role: 'user', content: prompt },
+    ]);
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('AI gateway error:', errText);
-      return new Response(JSON.stringify({ error: 'AI service unavailable' }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const aiData = await response.json();
-    const content = aiData.choices?.[0]?.message?.content || '';
-
-    // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return new Response(JSON.stringify({ error: 'Failed to parse AI response' }), {
@@ -99,9 +114,19 @@ Respond ONLY with valid JSON in this exact format:
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error) {
-    console.error('War updates error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (e) {
+    if (e instanceof Error && e.message === "RATE_LIMIT") {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+        status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (e instanceof Error && e.message === "PAYMENT_REQUIRED") {
+      return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+        status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    console.error('War updates error:', e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
