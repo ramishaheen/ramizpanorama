@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 import { LiveCostCounter } from "./LiveCostCounter";
 import { ScenarioToggle, type Scenario } from "./ScenarioToggle";
+import { CountryCostRow } from "./CountryCostRow";
 
 interface StatsBarProps {
   airspaceCount: number;
@@ -241,6 +242,14 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
               );
             })}
           </div>
+          {warCosts.data.country_costs && warCosts.data.country_costs.length > 0 && (
+            <CountryCostRow
+              countries={warCosts.data.country_costs}
+              timestamp={timestamp}
+              scenarioMultiplier={scenarioMultiplier}
+              scenario={scenario}
+            />
+          )}
         </div>
       )}
       {warCosts.loading && (
