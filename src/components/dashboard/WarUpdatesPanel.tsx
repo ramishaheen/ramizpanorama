@@ -51,51 +51,45 @@ const UpdateCard = ({ update }: { update: WarUpdate }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
-      className={`border-l-2 ${severityBorder[update.severity]} bg-card/50 rounded-r-md p-2.5 cursor-pointer hover:bg-secondary/50 transition-colors`}
+      className={`border-l-2 ${severityBorder[update.severity]} bg-card/40 rounded-r px-2 py-1 cursor-pointer hover:bg-secondary/50 transition-colors`}
       onClick={() => setExpanded(!expanded)}
     >
-      <div className="flex items-start gap-2">
-        <div className={`mt-0.5 ${severityText[update.severity]}`}>
+      <div className="flex items-center gap-1.5">
+        <div className={`flex-shrink-0 ${severityText[update.severity]}`}>
           {categoryIcons[update.category] || <AlertTriangle className="h-3 w-3" />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
+          <div className="flex items-center gap-1">
             <span className={`text-[8px] font-mono uppercase tracking-wider ${severityText[update.severity]}`}>
               {update.category}
             </span>
-            <span className="text-[8px] text-muted-foreground font-mono">
-              {update.region}
-            </span>
+            <span className="text-[8px] text-muted-foreground/60 font-mono truncate">{update.region}</span>
           </div>
-          <p className="text-[11px] font-semibold text-foreground leading-tight mb-0.5">
+          <p className="text-[10px] font-medium text-foreground leading-tight truncate">
             {update.headline}
           </p>
-          <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <p className="text-[10px] text-muted-foreground leading-relaxed mt-1 mb-1.5">
-                  {update.body}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <div className="flex items-center justify-between">
-            <span className="text-[8px] text-muted-foreground/60 font-mono">{update.source}</span>
-            {expanded ? (
-              <ChevronUp className="h-2.5 w-2.5 text-muted-foreground/50" />
-            ) : (
-              <ChevronDown className="h-2.5 w-2.5 text-muted-foreground/50" />
-            )}
-          </div>
+        </div>
+        <div className="flex-shrink-0">
+          {expanded ? <ChevronUp className="h-2.5 w-2.5 text-muted-foreground/50" /> : <ChevronDown className="h-2.5 w-2.5 text-muted-foreground/50" />}
         </div>
       </div>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <p className="text-[9px] text-muted-foreground leading-relaxed mt-1 pl-4.5">
+              {update.body}
+            </p>
+            <span className="text-[7px] text-muted-foreground/50 font-mono pl-4.5 block mt-0.5">{update.source}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -106,7 +100,7 @@ export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesP
   return (
     <div className="flex flex-col h-full border-t border-border">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-destructive/5">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-destructive/5">
         <div className="flex items-center gap-2">
           <Newspaper className="h-3.5 w-3.5 text-destructive" />
           <h3 className="text-[11px] font-semibold uppercase tracking-widest text-foreground">
@@ -172,7 +166,7 @@ export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesP
         </div>
       ) : (
         <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1.5">
+          <div className="p-1.5 space-y-0.5">
             {data?.updates?.map((update) => (
               <UpdateCard key={update.id} update={update} />
             ))}
