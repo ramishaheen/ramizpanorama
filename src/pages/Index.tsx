@@ -9,6 +9,7 @@ import { LayerControls, type LayerState } from "@/components/dashboard/LayerCont
 import { AIPredictions } from "@/components/dashboard/AIPredictions";
 import { LiveNewsFeed } from "@/components/dashboard/LiveNewsFeed";
 import { Disclaimer } from "@/components/dashboard/Disclaimer";
+import { CitizenSecurity } from "@/components/dashboard/CitizenSecurity";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 
 const Index = () => {
@@ -62,15 +63,18 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Map */}
-        <div className="flex-1 relative min-w-0 h-full">
-          <IntelMap
-            airspaceAlerts={airspaceAlerts}
-            vessels={vessels}
-            geoAlerts={geoAlerts}
-            rockets={rockets}
-            layers={layers}
-          />
+        {/* Map + Citizen Security */}
+        <div className="flex-1 relative min-w-0 h-full flex flex-col">
+          <div className="flex-1 relative min-h-0">
+            <IntelMap
+              airspaceAlerts={airspaceAlerts}
+              vessels={vessels}
+              geoAlerts={geoAlerts}
+              rockets={rockets}
+              layers={layers}
+            />
+          </div>
+          <CitizenSecurity />
         </div>
 
         {/* Right sidebar - notifications */}
