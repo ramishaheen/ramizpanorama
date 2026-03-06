@@ -357,56 +357,57 @@ const Index = () => {
         dataFresh={dataFresh}
       />
 
-      <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-        {/* Left sidebar - resizable & collapsible */}
-        {!leftCollapsed ? (
-          <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
-            <button
-              onClick={() => setLeftCollapsed(true)}
-              className="flex items-center justify-end pr-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-3 space-y-3">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
-                  <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
-                    {leftOrder.map((id) => (
-                      <DraggableWidget key={id} id={id}>
-                        {leftWidgets[id]}
-                      </DraggableWidget>
-                    ))}
-                  </SortableContext>
-                </DndContext>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Main 3-column row */}
+        <div className="flex-1 flex overflow-hidden" ref={containerRef}>
+          {/* Left sidebar - resizable & collapsible */}
+          {!leftCollapsed ? (
+            <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
+              <button
+                onClick={() => setLeftCollapsed(true)}
+                className="flex items-center justify-end pr-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-3 space-y-3">
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
+                    <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
+                      {leftOrder.map((id) => (
+                        <DraggableWidget key={id} id={id}>
+                          {leftWidgets[id]}
+                        </DraggableWidget>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
-            <button
-              onClick={() => setLeftCollapsed(false)}
-              className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-              title="Expand sidebar"
+          ) : (
+            <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
+              <button
+                onClick={() => setLeftCollapsed(false)}
+                className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                title="Expand sidebar"
+              >
+                <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+          )}
+
+          {/* Left resize handle */}
+          {!leftCollapsed && (
+            <div
+              onMouseDown={handleResizeLeft}
+              className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
             >
-              <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-        )}
+              <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+            </div>
+          )}
 
-        {/* Left resize handle */}
-        {!leftCollapsed && (
-          <div
-            onMouseDown={handleResizeLeft}
-            className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
-          </div>
-        )}
-
-        {/* Map + Citizen Security */}
-        <div className="flex-1 relative min-w-0 h-full flex flex-col z-0">
-          <div className="flex-1 relative min-h-0">
+          {/* Map (center) */}
+          <div className="flex-1 relative min-w-0 h-full z-0">
             <IntelMap
               airspaceAlerts={airspaceAlerts}
               vessels={vessels}
@@ -416,71 +417,74 @@ const Index = () => {
               safetyData={citizenSecurity.data?.countries}
             />
           </div>
-          <div className="flex flex-row border-t border-border h-[220px]">
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <CitizenSecurity
-                data={citizenSecurity.data}
-                loading={citizenSecurity.loading}
-                error={citizenSecurity.error}
-                onRefresh={citizenSecurity.refresh}
-              />
-            </div>
-            <div className="flex-1 min-w-0 overflow-hidden border-l border-border/50">
-              <SectorPredictions />
-            </div>
-          </div>
-        </div>
 
-        {/* Right resize handle */}
-        {!rightCollapsed && (
-          <div
-            onMouseDown={handleResizeRight}
-            className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
-          </div>
-        )}
-
-        {/* Right sidebar - resizable & collapsible */}
-        {!rightCollapsed ? (
-          <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
-            <button
-              onClick={() => setRightCollapsed(true)}
-              className="flex items-center justify-start pl-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-              title="Collapse sidebar"
+          {/* Right resize handle */}
+          {!rightCollapsed && (
+            <div
+              onMouseDown={handleResizeRight}
+              className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
             >
-              <PanelRightClose className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
-              <div className="direction-ltr">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
-                  <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                    {rightOrder.map((id) => (
-                      <DraggableWidget key={id} id={id}>
-                        {rightWidgets[id]}
-                      </DraggableWidget>
-                    ))}
-                  </SortableContext>
-                </DndContext>
-                <div className="p-2 space-y-2">
-                  <LayerControls layers={layers} onToggle={toggleLayer} />
-                  <TimelineSlider events={timeline} />
-                  <CyberSecurityAlerts />
+              <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+            </div>
+          )}
+
+          {/* Right sidebar - resizable & collapsible */}
+          {!rightCollapsed ? (
+            <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
+              <button
+                onClick={() => setRightCollapsed(true)}
+                className="flex items-center justify-start pl-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                title="Collapse sidebar"
+              >
+                <PanelRightClose className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
+                <div className="direction-ltr">
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+                    <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+                      {rightOrder.map((id) => (
+                        <DraggableWidget key={id} id={id}>
+                          {rightWidgets[id]}
+                        </DraggableWidget>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                  <div className="p-2 space-y-2">
+                    <LayerControls layers={layers} onToggle={toggleLayer} />
+                    <TimelineSlider events={timeline} />
+                    <CyberSecurityAlerts />
+                  </div>
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
+              <button
+                onClick={() => setRightCollapsed(false)}
+                className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                title="Expand sidebar"
+              >
+                <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom row — Citizen Security + Sector Predictions — spans full width, respects sidebars */}
+        <div className="flex-shrink-0 border-t border-border h-[220px] flex flex-row">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <CitizenSecurity
+              data={citizenSecurity.data}
+              loading={citizenSecurity.loading}
+              error={citizenSecurity.error}
+              onRefresh={citizenSecurity.refresh}
+            />
           </div>
-        ) : (
-          <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
-            <button
-              onClick={() => setRightCollapsed(false)}
-              className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-              title="Expand sidebar"
-            >
-              <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
-            </button>
+          <div className="w-px bg-border/50 flex-shrink-0" />
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <SectorPredictions />
           </div>
-        )}
+        </div>
       </div>
 
       <Disclaimer />
