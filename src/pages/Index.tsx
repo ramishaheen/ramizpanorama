@@ -1,6 +1,5 @@
-import { useState, useCallback, ReactNode } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { useState, useCallback, useRef, ReactNode } from "react";
+import { PanelLeftClose, PanelLeftOpen, GripVertical } from "lucide-react";
 import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
@@ -55,6 +54,49 @@ const Index = () => {
   const [leftOrder, setLeftOrder] = useState(DEFAULT_LEFT_ORDER);
   const [rightOrder, setRightOrder] = useState(DEFAULT_RIGHT_ORDER);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(420);
+  const [rightWidth, setRightWidth] = useState(320);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleResizeLeft = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = leftWidth;
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      setLeftWidth(Math.max(200, Math.min(600, startWidth + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [leftWidth]);
+
+  const handleResizeRight = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = rightWidth;
+    const onMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX;
+      setRightWidth(Math.max(200, Math.min(500, startWidth + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [rightWidth]);
 
   const toggleLayer = (layer: keyof LayerState) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -138,91 +180,99 @@ const Index = () => {
         dataFresh={dataFresh}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {/* Left sidebar - resizable & collapsible */}
-          {!leftCollapsed && (
-            <>
-              <ResizablePanel defaultSize={22} minSize={12} maxSize={40} className="flex flex-col border-r border-border">
-                <button
-                  onClick={() => setLeftCollapsed(true)}
-                  className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                  title="Collapse sidebar"
-                >
-                  <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-                </button>
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-3 space-y-3">
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
-                      <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
-                        {leftOrder.map((id) => (
-                          <DraggableWidget key={id} id={id}>
-                            {leftWidgets[id]}
-                          </DraggableWidget>
-                        ))}
-                      </SortableContext>
-                    </DndContext>
-                  </div>
-                </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-            </>
-          )}
-
-          {/* Collapsed left sidebar toggle */}
-          {leftCollapsed && (
-            <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
-              <button
-                onClick={() => setLeftCollapsed(false)}
-                className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                title="Expand sidebar"
-              >
-                <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
-              </button>
+      <div className="flex-1 flex overflow-hidden" ref={containerRef}>
+        {/* Left sidebar - resizable & collapsible */}
+        {!leftCollapsed ? (
+          <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
+            <button
+              onClick={() => setLeftCollapsed(true)}
+              className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-3 space-y-3">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
+                  <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
+                    {leftOrder.map((id) => (
+                      <DraggableWidget key={id} id={id}>
+                        {leftWidgets[id]}
+                      </DraggableWidget>
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              </div>
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
+            <button
+              onClick={() => setLeftCollapsed(false)}
+              className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+              title="Expand sidebar"
+            >
+              <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+        )}
 
-          {/* Map + Citizen Security */}
-          <ResizablePanel defaultSize={leftCollapsed ? 78 : 56} minSize={30} className="flex flex-col">
-            <div className="flex-1 relative min-h-0">
-              <IntelMap
-                airspaceAlerts={airspaceAlerts}
-                vessels={vessels}
-                geoAlerts={geoAlerts}
-                rockets={rockets}
-                layers={layers}
-                safetyData={citizenSecurity.data?.countries}
-              />
-            </div>
-            <CitizenSecurity
-              data={citizenSecurity.data}
-              loading={citizenSecurity.loading}
-              error={citizenSecurity.error}
-              onRefresh={citizenSecurity.refresh}
+        {/* Left resize handle */}
+        {!leftCollapsed && (
+          <div
+            onMouseDown={handleResizeLeft}
+            className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+          </div>
+        )}
+
+        {/* Map + Citizen Security */}
+        <div className="flex-1 relative min-w-0 h-full flex flex-col">
+          <div className="flex-1 relative min-h-0">
+            <IntelMap
+              airspaceAlerts={airspaceAlerts}
+              vessels={vessels}
+              geoAlerts={geoAlerts}
+              rockets={rockets}
+              layers={layers}
+              safetyData={citizenSecurity.data?.countries}
             />
-          </ResizablePanel>
+          </div>
+          <CitizenSecurity
+            data={citizenSecurity.data}
+            loading={citizenSecurity.loading}
+            error={citizenSecurity.error}
+            onRefresh={citizenSecurity.refresh}
+          />
+        </div>
 
-          <ResizableHandle withHandle />
+        {/* Right resize handle */}
+        <div
+          onMouseDown={handleResizeRight}
+          className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+        </div>
 
-          {/* Right sidebar - resizable */}
-          <ResizablePanel defaultSize={22} minSize={12} maxSize={35} className="flex flex-col border-l border-border">
-            <div className="flex-1 overflow-y-auto intel-feed-scroll">
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
-                <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                  {rightOrder.map((id) => (
-                    <DraggableWidget key={id} id={id}>
-                      {rightWidgets[id]}
-                    </DraggableWidget>
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </div>
-            <div className="flex-shrink-0 border-t border-border p-2 space-y-2">
-              <LayerControls layers={layers} onToggle={toggleLayer} />
-              <TimelineSlider events={timeline} />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+        {/* Right sidebar - resizable */}
+        <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
+          <div className="flex-1 overflow-y-auto intel-feed-scroll">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+              <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+                {rightOrder.map((id) => (
+                  <DraggableWidget key={id} id={id}>
+                    {rightWidgets[id]}
+                  </DraggableWidget>
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+          <div className="flex-shrink-0 border-t border-border p-2 space-y-2">
+            <LayerControls layers={layers} onToggle={toggleLayer} />
+            <TimelineSlider events={timeline} />
+          </div>
+        </div>
       </div>
 
       <Disclaimer />
