@@ -39,8 +39,8 @@ import {
 } from "@dnd-kit/sortable";
 
 const STORAGE_KEY = "waros-layout";
-const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "sectors"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "telegram"];
+const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "telegram"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 interface LayoutState {
   leftOrder: string[];
@@ -204,7 +204,7 @@ const Index = () => {
     commodities: <CommodityTracker riskScore={riskScore.overall} />,
     news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
-    sectors: <SectorPredictions />,
+    telegram: <TelegramFeed />,
   };
 
   const rightWidgets: Record<string, ReactNode> = {
@@ -224,7 +224,6 @@ const Index = () => {
         />
       </div>
     ),
-    telegram: <TelegramFeed />,
   };
 
   if (loading) {
@@ -272,12 +271,19 @@ const Index = () => {
                   safetyData={citizenSecurity.data?.countries}
                 />
               </div>
-              <CitizenSecurity
-                data={citizenSecurity.data}
-                loading={citizenSecurity.loading}
-                error={citizenSecurity.error}
-                onRefresh={citizenSecurity.refresh}
-              />
+              <div className="flex flex-col sm:flex-row gap-2 border-t border-border">
+                <div className="flex-1 min-w-0">
+                  <CitizenSecurity
+                    data={citizenSecurity.data}
+                    loading={citizenSecurity.loading}
+                    error={citizenSecurity.error}
+                    onRefresh={citizenSecurity.refresh}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <SectorPredictions />
+                </div>
+              </div>
             </div>
           )}
 
@@ -410,12 +416,19 @@ const Index = () => {
               safetyData={citizenSecurity.data?.countries}
             />
           </div>
-          <CitizenSecurity
-            data={citizenSecurity.data}
-            loading={citizenSecurity.loading}
-            error={citizenSecurity.error}
-            onRefresh={citizenSecurity.refresh}
-          />
+          <div className="flex flex-row gap-2 border-t border-border">
+            <div className="flex-1 min-w-0">
+              <CitizenSecurity
+                data={citizenSecurity.data}
+                loading={citizenSecurity.loading}
+                error={citizenSecurity.error}
+                onRefresh={citizenSecurity.refresh}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <SectorPredictions />
+            </div>
+          </div>
         </div>
 
         {/* Right resize handle */}
