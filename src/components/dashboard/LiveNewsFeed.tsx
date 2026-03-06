@@ -3,12 +3,11 @@ import { Volume2, VolumeX, X, Play, Radio, RefreshCw, ExternalLink } from "lucid
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface Channel {
-  videoId: string; // YouTube video ID for the live stream
-  channelId?: string; // YouTube channel ID (kept as backup reference)
+  videoId: string;
   name: string;
   region: string;
   logo?: string;
-  directUrl?: string; // fallback direct URL when YouTube embed fails
+  directUrl?: string;
 }
 
 const channels: Channel[] = [
