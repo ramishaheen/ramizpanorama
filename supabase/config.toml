@@ -1,1 +1,7 @@
 project_id = "jkppfmbgzfpuyihuixjs"
+
+[functions.ai-predictions]
+verify_jwt = false
+
+[functions.simulate-intel]
+verify_jwt = false
