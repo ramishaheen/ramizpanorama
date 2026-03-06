@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Volume2, VolumeX, X, Play, Radio, RefreshCw } from "lucide-react";
+import { Volume2, VolumeX, X, Play, Radio, RefreshCw, ExternalLink } from "lucide-react";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface Channel {
