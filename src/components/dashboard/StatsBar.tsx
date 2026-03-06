@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info, Crosshair, Bomb } from "lucide-react";
 import { motion, useSpring, useTransform } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useWarCosts } from "@/hooks/useWarCosts";
@@ -8,6 +8,7 @@ import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 import { LiveCostCounter } from "./LiveCostCounter";
 import { ScenarioToggle, type Scenario } from "./ScenarioToggle";
 import { CountryCostRow } from "./CountryCostRow";
+import type { Rocket as RocketType, GeoAlert, AirspaceAlert } from "@/data/mockData";
 
 interface StatsBarProps {
   airspaceCount: number;
@@ -16,6 +17,10 @@ interface StatsBarProps {
   riskScore: number;
   rocketCount?: number;
   impactCount?: number;
+  totalRockets?: number;
+  rockets?: RocketType[];
+  geoAlerts?: GeoAlert[];
+  airspaceAlerts?: AirspaceAlert[];
   dataFresh?: boolean;
 }
 
