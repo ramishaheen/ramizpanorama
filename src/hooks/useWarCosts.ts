@@ -11,6 +11,9 @@ export interface WarCostsData {
   total_daily_cost_billions: number;
   sectors: SectorCost[];
   cumulative_estimate_billions: number;
+  cumulative_unit?: "B" | "T";
+  daily_unit?: "B";
+  methodology?: string;
   timestamp: string;
   error?: string;
 }
@@ -38,7 +41,7 @@ export function useWarCosts() {
 
   useEffect(() => {
     fetchCosts();
-    const interval = setInterval(fetchCosts, 180_000); // refresh every 3 min
+    const interval = setInterval(fetchCosts, 180_000);
     return () => clearInterval(interval);
   }, [fetchCosts]);
 

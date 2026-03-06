@@ -15,16 +15,26 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `You are an economic analyst specializing in conflict economics in the Middle East. Estimate the current economic costs of the Iran-related conflict on Middle East industries.
+    const today = new Date().toISOString().split("T")[0];
 
-Return ONLY valid JSON with this exact structure (no markdown, no code blocks):
+    const systemPrompt = `You are a senior economic analyst specializing in conflict economics and the Middle East region. Your task is to provide realistic, well-researched estimates of the economic costs of the ongoing Iran-Israel/Middle East conflict that escalated in October 2023.
+
+IMPORTANT GUIDELINES FOR ACCURACY:
+- Use real-world data points: oil price spikes, Suez/Red Sea shipping disruption costs, tourism revenue drops, defense spending increases, GDP impact estimates from IMF/World Bank reports.
+- The cumulative cost should reflect TOTAL economic damage since October 2023 to today (${today}), across the ENTIRE Middle East region — not just direct military spending.
+- Consider: Houthi Red Sea attacks cost global trade ~$50-80B+ in rerouting; Israel's war costs alone are ~$250M+/day; regional tourism dropped 30-60%; oil volatility premium adds billions; infrastructure destruction in Gaza estimated at $30-50B+; Lebanon conflict damage; Iran sanctions tightening.
+- The cumulative number should realistically be in the hundreds of billions USD range.
+- Daily costs should be realistic — think about ALL sectors combined across the whole region.
+- Always include the UNIT clearly: use "M" for millions, "B" for billions in descriptions.
+
+Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
 {
-  "total_daily_cost_billions": number (estimated total daily economic cost in billions USD),
+  "total_daily_cost_billions": number (total daily economic cost in billions USD, e.g. 1.5 means $1.5B/day),
   "sectors": [
     {
       "name": "Oil & Energy",
       "daily_cost_millions": number,
-      "description": "brief 10-word max explanation"
+      "description": "brief explanation with $ amounts"
     },
     {
       "name": "Aviation & Airspace",
@@ -52,11 +62,14 @@ Return ONLY valid JSON with this exact structure (no markdown, no code blocks):
       "description": "brief explanation"
     }
   ],
-  "cumulative_estimate_billions": number (estimated total cost since conflict start),
-  "timestamp": "ISO timestamp"
+  "cumulative_estimate_billions": number (total since Oct 2023 to ${today}, realistically hundreds of billions),
+  "cumulative_unit": "B" or "T" (use "B" for billions, "T" if it exceeds 1 trillion),
+  "daily_unit": "B",
+  "methodology": "One sentence on how you calculated this",
+  "timestamp": "${new Date().toISOString()}"
 }
 
-Be realistic with estimates based on known economic data about Middle East conflicts, oil disruptions, shipping rerouting costs, tourism drops, and defense expenditures.`;
+Be realistic. Cross-reference known figures: Israel alone has spent $100B+, Red Sea disruption $50B+, regional GDP losses, infrastructure destruction, refugee costs, etc.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -68,7 +81,7 @@ Be realistic with estimates based on known economic data about Middle East confl
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: "Estimate current war costs on Middle East industries now." },
+          { role: "user", content: `Today is ${today}. Provide your best estimate of the current economic costs of the Middle East conflict across all sectors and countries in the region. Be thorough and realistic.` },
         ],
       }),
     });
@@ -94,8 +107,17 @@ Be realistic with estimates based on known economic data about Middle East confl
 
     let costs;
     try {
+      // Remove markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      costs = JSON.parse(jsonMatch[1].trim());
+      // Sanitize hidden control characters
+      const sanitized = jsonMatch[1].trim().replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' ');
+      try {
+        costs = JSON.parse(sanitized);
+      } catch {
+        // Fix trailing commas
+        const fixed = sanitized.replace(/,\s*([\]}])/g, '$1');
+        costs = JSON.parse(fixed);
+      }
     } catch {
       costs = { error: "Failed to parse AI response", raw: content };
     }
