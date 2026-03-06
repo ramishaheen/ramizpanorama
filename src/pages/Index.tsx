@@ -54,8 +54,8 @@ const Index = () => {
           <div className="p-3 space-y-3">
             <RiskScoreGauge score={riskScore} />
             <LiveNewsFeed />
-            <LayerControls layers={layers} onToggle={toggleLayer} />
             <AIPredictions />
+            <LayerControls layers={layers} onToggle={toggleLayer} />
           </div>
           <div className="p-3 pt-0">
             <TimelineSlider events={timeline} />
