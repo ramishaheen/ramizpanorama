@@ -145,6 +145,16 @@ Assess citizen safety now.`
         status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (e instanceof Error && e.message === "AI_UNAVAILABLE") {
+      return new Response(JSON.stringify({
+        countries: [],
+        overall_assessment: "AI analysis temporarily unavailable. Will retry automatically.",
+        last_analyzed: new Date().toISOString(),
+        error: "AI temporarily unavailable"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     console.error("Citizen security error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
