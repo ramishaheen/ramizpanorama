@@ -189,13 +189,37 @@ export const LiveNewsFeed = () => {
             </div>
           </div>
           <div className="aspect-video">
-            <iframe
-              key={`player-${channels[activeChannel].videoId}-${muted}-${retryKey}`}
-              src={getEmbedUrl(channels[activeChannel], muted)}
-              title={channels[activeChannel].name}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            />
+            {failedVideos.has(channels[activeChannel].videoId) && channels[activeChannel].directUrl ? (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 gap-2 p-4">
+                <AlertTriangle className="h-6 w-6 text-warning" />
+                <p className="text-[10px] font-mono text-muted-foreground text-center">
+                  {t("Stream unavailable on YouTube", "البث غير متاح على يوتيوب")}
+                </p>
+                <a
+                  href={channels[activeChannel].directUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded bg-primary text-primary-foreground text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-primary/90 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {t("Watch on official site", "شاهد على الموقع الرسمي")}
+                </a>
+                <button
+                  onClick={handleManualRetry}
+                  className="text-[8px] font-mono text-muted-foreground hover:text-foreground transition-colors mt-1"
+                >
+                  {t("↻ Retry YouTube", "↻ أعد المحاولة")}
+                </button>
+              </div>
+            ) : (
+              <iframe
+                key={`player-${channels[activeChannel].videoId}-${muted}-${retryKey}`}
+                src={getEmbedUrl(channels[activeChannel], muted)}
+                title={channels[activeChannel].name}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+            )}
           </div>
         </div>
 
@@ -314,14 +338,38 @@ export const LiveNewsFeed = () => {
               </div>
             </div>
             <div className="aspect-video">
-              <iframe
-                key={`expanded-${channels[expandedChannel].videoId}-${muted}-${retryKey}`}
-                src={getEmbedUrl(channels[expandedChannel], muted)}
-                title={channels[expandedChannel].name}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {failedVideos.has(channels[expandedChannel].videoId) && channels[expandedChannel].directUrl ? (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 gap-3 p-6">
+                  <AlertTriangle className="h-10 w-10 text-warning" />
+                  <p className="text-sm font-mono text-muted-foreground text-center">
+                    {t("Stream unavailable on YouTube", "البث غير متاح على يوتيوب")}
+                  </p>
+                  <a
+                    href={channels[expandedChannel].directUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm font-mono font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    {t("Watch on official site", "شاهد على الموقع الرسمي")}
+                  </a>
+                  <button
+                    onClick={handleManualRetry}
+                    className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors mt-1"
+                  >
+                    {t("↻ Retry YouTube", "↻ أعد المحاولة")}
+                  </button>
+                </div>
+              ) : (
+                <iframe
+                  key={`expanded-${channels[expandedChannel].videoId}-${muted}-${retryKey}`}
+                  src={getEmbedUrl(channels[expandedChannel], muted)}
+                  title={channels[expandedChannel].name}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
             </div>
             <div className="flex gap-1 px-3 py-2 overflow-x-auto border-t border-border bg-background">
               {channels.map((ch, i) => (
