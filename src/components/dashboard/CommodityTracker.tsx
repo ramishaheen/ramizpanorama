@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin, DollarSign, Wheat, Shield, CircleDot, ArrowLeftRight, Activity, AlertTriangle, ShieldAlert } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin, DollarSign, Wheat, Shield, CircleDot, ArrowLeftRight, Activity, AlertTriangle, ShieldAlert, Clock } from "lucide-react";
 import { useCommodityPrices, type PriceData } from "@/hooks/useCommodityPrices";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
