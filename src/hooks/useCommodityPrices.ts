@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface PriceData { price: number; change: number; changePercent: number }
 
@@ -18,6 +19,7 @@ export interface CommodityPrices {
   loading: boolean;
   history: Record<string, number[]>;
   refresh: () => void;
+  lastUpdated: string | null;
 }
 
 const KEYS = ["oil", "brent", "gold", "silver", "gas", "copper", "wheat", "usdils", "usdsar", "ita", "btc", "eth"];
@@ -29,26 +31,32 @@ const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin
 const initHistory = (): Record<string, number[]> =>
   Object.fromEntries(KEYS.map(k => [k, []]));
 
+const DEFAULT_PRICES: Record<string, PriceData> = {
+  oil: { price: 82.45, change: 1.23, changePercent: 1.51 },
+  brent: { price: 87.20, change: 0.95, changePercent: 1.10 },
+  gold: { price: 2685.30, change: 18.40, changePercent: 0.69 },
+  silver: { price: 31.50, change: 0.22, changePercent: 0.70 },
+  gas: { price: 3.42, change: 0.08, changePercent: 2.39 },
+  copper: { price: 4.15, change: -0.03, changePercent: -0.72 },
+  wheat: { price: 612.50, change: 5.25, changePercent: 0.86 },
+  usdils: { price: 3.72, change: 0.02, changePercent: 0.54 },
+  usdsar: { price: 3.75, change: 0.00, changePercent: 0.00 },
+  ita: { price: 128.45, change: 1.12, changePercent: 0.88 },
+};
+
 export const useCommodityPrices = (): CommodityPrices => {
   const historyRef = useRef<Record<string, number[]>>(initHistory());
   const refreshKeyRef = useRef(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [prices, setPrices] = useState<CommodityPrices>({
-    oil: { price: 82.45, change: 1.23, changePercent: 1.51 },
-    brent: { price: 87.20, change: 0.95, changePercent: 1.10 },
-    gold: { price: 2685.30, change: 18.40, changePercent: 0.69 },
-    silver: { price: 31.50, change: 0.22, changePercent: 0.70 },
-    gas: { price: 3.42, change: 0.08, changePercent: 2.39 },
-    copper: { price: 4.15, change: -0.03, changePercent: -0.72 },
-    wheat: { price: 612.50, change: 5.25, changePercent: 0.86 },
-    usdils: { price: 3.72, change: 0.02, changePercent: 0.54 },
-    usdsar: { price: 3.75, change: 0.00, changePercent: 0.00 },
-    ita: { price: 128.45, change: 1.12, changePercent: 0.88 },
+    ...DEFAULT_PRICES as any,
     btc: { price: 0, change: 0, changePercent: 0 },
     eth: { price: 0, change: 0, changePercent: 0 },
     loading: true,
     history: initHistory(),
     refresh: () => {},
+    lastUpdated: null,
   });
 
   const pushHistory = useCallback((key: string, price: number) => {
@@ -58,44 +66,55 @@ export const useCommodityPrices = (): CommodityPrices => {
     if (h.length > MAX_HISTORY) h.shift();
   }, []);
 
+  const p = (v: number) => parseFloat(v.toFixed(2));
+
+  // Fetch live commodity prices from Alpha Vantage via edge function
+  const fetchLivePrices = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("commodity-prices");
+      if (error) throw error;
+      if (!data?.prices) return;
+
+      const live = data.prices as Record<string, { price: number; change: number; changePercent: number }>;
+
+      setPrices(prev => {
+        const updated = { ...prev };
+        for (const [key, val] of Object.entries(live)) {
+          if (val && val.price > 0 && key in DEFAULT_PRICES) {
+            pushHistory(key, val.price);
+            (updated as any)[key] = {
+              price: p(val.price),
+              change: p(val.change),
+              changePercent: p(val.changePercent),
+            };
+          }
+        }
+        updated.history = { ...historyRef.current };
+        return updated;
+      });
+
+      setLastUpdated(data.timestamp || new Date().toISOString());
+      console.log("[CommodityTracker] Live prices loaded from Alpha Vantage", Object.keys(live));
+    } catch (err) {
+      console.warn("[CommodityTracker] Alpha Vantage fetch failed, using simulation:", err);
+    }
+  }, [pushHistory]);
+
   useEffect(() => {
     setPrices(prev => ({ ...prev, loading: true }));
-    const baseOil = 78 + Math.random() * 12;
-    const baseBrent = baseOil + 3 + Math.random() * 3;
-    const baseGold = 2600 + Math.random() * 200;
-    const baseSilver = 28 + Math.random() * 6;
-    const baseGas = 2.8 + Math.random() * 1.5;
-    const baseCopper = 3.8 + Math.random() * 0.8;
-    const baseWheat = 560 + Math.random() * 120;
-    const baseILS = 3.60 + Math.random() * 0.25;
-    const baseSAR = 3.7499 + Math.random() * 0.005;
-    const baseITA = 120 + Math.random() * 20;
 
-    const p = (v: number) => parseFloat(v.toFixed(2));
-
-    // Seed initial
-    const seeds: Record<string, number> = {
-      oil: p(baseOil), brent: p(baseBrent), gold: p(baseGold), silver: p(baseSilver),
-      gas: p(baseGas), copper: p(baseCopper), wheat: p(baseWheat),
-      usdils: p(baseILS), usdsar: p(baseSAR), ita: p(baseITA),
-    };
-    Object.entries(seeds).forEach(([k, v]) => pushHistory(k, v));
-
+    // Seed initial values
+    Object.entries(DEFAULT_PRICES).forEach(([k, v]) => pushHistory(k, v.price));
     setPrices(prev => ({
       ...prev,
-      oil: { price: seeds.oil, change: 1.23, changePercent: 1.51 },
-      brent: { price: seeds.brent, change: 0.95, changePercent: 1.10 },
-      gold: { price: seeds.gold, change: 18.40, changePercent: 0.69 },
-      silver: { price: seeds.silver, change: 0.22, changePercent: 0.70 },
-      gas: { price: seeds.gas, change: 0.08, changePercent: 2.39 },
-      copper: { price: seeds.copper, change: -0.03, changePercent: -0.72 },
-      wheat: { price: seeds.wheat, change: 5.25, changePercent: 0.86 },
-      usdils: { price: seeds.usdils, change: 0.02, changePercent: 0.54 },
-      usdsar: { price: seeds.usdsar, change: 0.00, changePercent: 0.00 },
-      ita: { price: seeds.ita, change: 1.12, changePercent: 0.88 },
+      ...DEFAULT_PRICES as any,
       history: { ...historyRef.current },
     }));
 
+    // Fetch live prices immediately
+    fetchLivePrices();
+
+    // Simulate minor ticks between live updates
     const updateCommodities = () => {
       setPrices(prev => {
         const sim = (val: number, min: number, max: number, vol: number) => {
@@ -104,16 +123,16 @@ export const useCommodityPrices = (): CommodityPrices => {
           return { price: p(nv), delta: p(delta) };
         };
 
-        const oil = sim(prev.oil.price, 70, 110, 1.2);
-        const brent = sim(prev.brent.price, 73, 115, 1.3);
-        const gold = sim(prev.gold.price, 2400, 3000, 8);
-        const silver = sim(prev.silver.price, 24, 38, 0.3);
-        const gas = sim(prev.gas.price, 2.0, 6.5, 0.08);
-        const copper = sim(prev.copper.price, 3.4, 5.0, 0.04);
-        const wheat = sim(prev.wheat.price, 480, 800, 6);
-        const usdils = sim(prev.usdils.price, 3.40, 4.10, 0.015);
-        const usdsar = sim(prev.usdsar.price, 3.745, 3.760, 0.001);
-        const ita = sim(prev.ita.price, 100, 160, 1.5);
+        const oil = sim(prev.oil.price, 50, 130, 0.3);
+        const brent = sim(prev.brent.price, 53, 135, 0.35);
+        const gold = sim(prev.gold.price, 1800, 3500, 2);
+        const silver = sim(prev.silver.price, 20, 45, 0.08);
+        const gas = sim(prev.gas.price, 1.5, 8.0, 0.02);
+        const copper = sim(prev.copper.price, 3.0, 6.0, 0.01);
+        const wheat = sim(prev.wheat.price, 400, 900, 1.5);
+        const usdils = sim(prev.usdils.price, 3.20, 4.30, 0.003);
+        const usdsar = sim(prev.usdsar.price, 3.740, 3.770, 0.0003);
+        const ita = sim(prev.ita.price, 80, 180, 0.4);
 
         const items = { oil, brent, gold, silver, gas, copper, wheat, usdils, usdsar, ita };
         Object.entries(items).forEach(([k, v]) => pushHistory(k, v.price));
@@ -190,5 +209,5 @@ export const useCommodityPrices = (): CommodityPrices => {
     setRefreshKey(refreshKeyRef.current);
   }, []);
 
-  return { ...prices, refresh };
+  return { ...prices, refresh, lastUpdated };
 };
