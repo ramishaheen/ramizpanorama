@@ -1,6 +1,7 @@
 import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
+import { useEffect, useRef, useState } from "react";
 
 interface StatsBarProps {
   airspaceCount: number;
@@ -12,6 +13,39 @@ interface StatsBarProps {
   dataFresh?: boolean;
 }
 
+const AnimatedNumber = ({ value, color }: { value: number | string; color: string }) => {
+  const num = typeof value === "number" ? value : parseFloat(value) || 0;
+  const spring = useSpring(num, { stiffness: 80, damping: 20 });
+  const display = useTransform(spring, (v) => Math.round(v));
+  const [displayVal, setDisplayVal] = useState(num);
+  const [flash, setFlash] = useState(false);
+  const prevRef = useRef(num);
+
+  useEffect(() => {
+    if (prevRef.current !== num) {
+      setFlash(true);
+      setTimeout(() => setFlash(false), 600);
+      prevRef.current = num;
+    }
+    spring.set(num);
+  }, [num, spring]);
+
+  useEffect(() => {
+    const unsub = display.on("change", (v) => setDisplayVal(v));
+    return unsub;
+  }, [display]);
+
+  return (
+    <motion.div
+      className={`text-lg font-mono font-bold ${color} transition-colors duration-300`}
+      animate={flash ? { scale: [1, 1.2, 1] } : {}}
+      transition={{ duration: 0.4 }}
+    >
+      {displayVal}
+    </motion.div>
+  );
+};
+
 const StatCard = ({ icon: Icon, label, value, color, pulse }: { icon: any; label: string; value: number | string; color: string; pulse?: boolean }) => (
   <motion.div
     initial={{ opacity: 0, y: 10 }}
@@ -20,7 +54,7 @@ const StatCard = ({ icon: Icon, label, value, color, pulse }: { icon: any; label
   >
     <Icon className={`h-4 w-4 ${color} ${pulse ? "animate-pulse" : ""}`} />
     <div>
-      <div className={`text-lg font-mono font-bold ${color}`}>{value}</div>
+      <AnimatedNumber value={value} color={color} />
       <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
     </div>
   </motion.div>
