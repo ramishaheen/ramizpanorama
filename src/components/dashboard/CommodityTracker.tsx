@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Fuel, Gem, Flame, Bitcoin } from "lucide-react";
 import { useCommodityPrices, type PriceData } from "@/hooks/useCommodityPrices";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,7 +17,9 @@ const formatPrice = (price: number, key: string) => {
   return price.toFixed(2);
 };
 
-const Sparkline = ({ data, color, width = 60, height = 20 }: { data: number[]; color: string; width?: number; height?: number }) => {
+const Sparkline = ({ data, color, label, width = 60, height = 20 }: { data: number[]; color: string; label: string; width?: number; height?: number }) => {
+  const [hovered, setHovered] = useState(false);
+
   if (data.length < 2) return <div style={{ width, height }} />;
 
   const min = Math.min(...data);
@@ -30,38 +33,54 @@ const Sparkline = ({ data, color, width = 60, height = 20 }: { data: number[]; c
     return `${x},${y}`;
   });
 
-  const isUp = data[data.length - 1] >= data[0];
   const strokeColor = color;
-  const fillId = `spark-${color.replace(/[^a-z0-9]/gi, "")}`;
+  const fillId = `spark-${label.replace(/[^a-z0-9]/gi, "")}`;
 
   return (
-    <svg width={width} height={height} className="flex-shrink-0">
-      <defs>
-        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={strokeColor} stopOpacity={0.3} />
-          <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
-        </linearGradient>
-      </defs>
-      <polygon
-        points={`${points[0].split(",")[0]},${height} ${points.join(" ")} ${points[points.length - 1].split(",")[0]},${height}`}
-        fill={`url(#${fillId})`}
-      />
-      <polyline
-        points={points.join(" ")}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={1.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Latest point dot */}
-      <circle
-        cx={parseFloat(points[points.length - 1].split(",")[0])}
-        cy={parseFloat(points[points.length - 1].split(",")[1])}
-        r={1.8}
-        fill={strokeColor}
-      />
-    </svg>
+    <div
+      className="relative flex-shrink-0"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <svg width={width} height={height}>
+        <defs>
+          <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity={0.3} />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <polygon
+          points={`${points[0].split(",")[0]},${height} ${points.join(" ")} ${points[points.length - 1].split(",")[0]},${height}`}
+          fill={`url(#${fillId})`}
+        />
+        <polyline
+          points={points.join(" ")}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={1.2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx={parseFloat(points[points.length - 1].split(",")[0])}
+          cy={parseFloat(points[points.length - 1].split(",")[1])}
+          r={1.8}
+          fill={strokeColor}
+        />
+      </svg>
+      {hovered && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-popover border border-border shadow-lg whitespace-nowrap z-50">
+          <div className="font-mono text-[8px] text-muted-foreground uppercase tracking-wider mb-0.5">{label} Range ({data.length} ticks)</div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[9px] text-success font-bold">H: ${max.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+            <span className="font-mono text-[9px] text-destructive font-bold">L: ${min.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+          </div>
+          <div className="font-mono text-[8px] text-muted-foreground">
+            Spread: ${(max - min).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -82,7 +101,7 @@ const PriceRow = ({ config, data, history }: { config: typeof commodityConfig[nu
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Sparkline data={history} color={config.color} />
+        <Sparkline data={history} color={config.color} label={config.label} />
         <AnimatePresence mode="popLayout">
           <motion.span
             key={data.price}
