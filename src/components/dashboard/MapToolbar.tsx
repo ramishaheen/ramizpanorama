@@ -72,7 +72,7 @@ export const MapToolbar = ({
   };
 
   return (
-    <div className="absolute top-12 left-2 z-[1000] flex flex-col gap-1.5">
+    <div className="absolute bottom-3 left-2 z-[1000] flex flex-col gap-1.5">
       {/* Tool buttons */}
       <div className="flex flex-col gap-1 rounded-md border border-border/50 bg-card/90 backdrop-blur-md p-1 shadow-lg"
            style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.1)" }}>
