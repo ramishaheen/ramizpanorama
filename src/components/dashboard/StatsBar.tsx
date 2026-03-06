@@ -50,7 +50,18 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liveContent }: { icon: any; label: string; value?: number | string; color: string; pulse?: boolean; prefix?: string; tooltip?: string; liveContent?: React.ReactNode }) => {
+const StatusDot = ({ status }: { status?: "normal" | "elevated" | "critical" }) => {
+  if (!status || status === "normal") return null;
+  const dotColor = status === "critical" ? "bg-red-500" : "bg-amber-500";
+  return (
+    <span className="relative flex h-2 w-2 flex-shrink-0">
+      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${dotColor} opacity-75`} />
+      <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`} />
+    </span>
+  );
+};
+
+const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liveContent, liveModifier }: { icon: any; label: string; value?: number | string; color: string; pulse?: boolean; prefix?: string; tooltip?: string; liveContent?: React.ReactNode; liveModifier?: "normal" | "elevated" | "critical" }) => {
   const card = (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -69,6 +80,7 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
         </div>
         <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
       </div>
+      <StatusDot status={liveModifier} />
       {tooltip && <Info className="h-2.5 w-2.5 text-muted-foreground/40 flex-shrink-0" />}
     </motion.div>
   );
@@ -202,7 +214,8 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
                     cumulativeBase={sectorBillions}
                   />
                 }
-                tooltip={`🔴 LIVE — ${sector.name}\nDaily rate: $${sectorBillions.toFixed(2)}B/day ($${sector.daily_cost_millions}M)\nPer second: $${(sector.daily_cost_millions * 1000000 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${(c.daily_cost_millions / 1000).toFixed(2)}B/day`).join("\n")}` : ""}`}
+                liveModifier={sector.live_modifier}
+                tooltip={`🔴 LIVE — ${sector.name}${sector.live_modifier && sector.live_modifier !== "normal" ? ` [${sector.live_modifier.toUpperCase()}]` : ""}\nDaily rate: $${sectorBillions.toFixed(2)}B/day ($${sector.daily_cost_millions}M)\nPer second: $${(sector.daily_cost_millions * 1000000 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${(c.daily_cost_millions / 1000).toFixed(2)}B/day`).join("\n")}` : ""}`}
               />
             );
           })}
