@@ -26,6 +26,8 @@ const channels: Channel[] = [
   { videoId: "rTI9BoYHj4Y", name: "Rudaw", region: "🇮🇶 Kurdistan", directUrl: "https://www.rudaw.net/english/onair/tv/live" },
   // Israel & Iran
   { videoId: "wSxvg-bRH0M", name: "i24 News EN", region: "🇮🇱 Israel", directUrl: "https://www.i24news.tv/en/live" },
+  { videoId: "HdjBN2iJPrU", name: "ILTV Israel", region: "🇮🇱 Israel", directUrl: "https://www.youtube.com/@IsraelEnglishNews" },
+  { videoId: "7wb8Zs9mJIU", name: "Firstpost ME", region: "🇮🇱 Israel", directUrl: "https://www.firstpost.com/livetv" },
   { videoId: "2-eEd2RJjEg", name: "Press TV", region: "🇮🇷 Iran", directUrl: "https://www.presstv.ir/live" },
   // Middle East Multi-cam
   { videoId: "gmtlJ_m2r5A", name: "ME Live Cams", region: "🌍 Multi", directUrl: "https://www.youtube.com/watch?v=gmtlJ_m2r5A" },
@@ -43,6 +45,8 @@ const channels: Channel[] = [
   { videoId: "qjqNRR8EAg8", name: "Fox / LiveNOW", region: "🇺🇸 USA", directUrl: "https://www.foxnews.com/video/5614615980001" },
   { videoId: "gN0PZCe-kwQ", name: "ABC News", region: "🇺🇸 USA", directUrl: "https://abcnews.go.com/live" },
   { videoId: "uiBRZvo0sUw", name: "CBS News", region: "🇺🇸 USA", directUrl: "https://www.cbsnews.com/live/" },
+  { videoId: "y31Ppl12omY", name: "Newsmax", region: "🇺🇸 USA", directUrl: "https://www.newsmax.com/live" },
+  { videoId: "FErQVDzgBLo", name: "Newsmax TV", region: "🇺🇸 USA", directUrl: "https://www.newsmax.com/live" },
   // Asia
   { videoId: "G00J-78EmgY", name: "CNN-News18", region: "🇮🇳 India", directUrl: "https://www.news18.com/livetv/" },
   { videoId: "YabMvo8Qrt8", name: "WION", region: "🇮🇳 India", directUrl: "https://www.wionews.com/live-tv" },
