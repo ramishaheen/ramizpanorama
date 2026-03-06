@@ -47,7 +47,7 @@ IMPORTANT RULES:
 - Include specific ticker symbols when possible
 - Rate confidence as LOW/MEDIUM/HIGH
 - Include both SHORT-TERM (24-48h) and MEDIUM-TERM (1-2 weeks) predictions
-- Cover: Oil & Energy, Defense/Aerospace, Currencies, Gold/Commodities, Shipping/Logistics, Regional Markets
+- Cover: Oil & Energy, Defense/Aerospace, Currencies, Gold/Commodities, Shipping/Logistics, Regional Markets, Cryptocurrency (BTC, ETH, and other relevant crypto assets)
 - Be concise, use bullet points
 - Add a risk disclaimer at the end
 - Return your response as valid JSON with this structure:
