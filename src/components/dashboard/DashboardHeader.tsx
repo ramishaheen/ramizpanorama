@@ -24,7 +24,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
 
   return (
     <>
-      <header className={`flex items-center justify-between px-4 py-2 border-b border-border bg-card/80 backdrop-blur transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_30px_hsl(190_100%_50%/0.08)] border-primary/40" : ""}`}>
+      <header className={`flex items-center justify-between px-2 sm:px-4 py-2 border-b border-border bg-card/80 backdrop-blur transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_30px_hsl(190_100%_50%/0.08)] border-primary/40" : ""}`}>
         <div className="flex items-center gap-3">
           <img src={warosLogo} alt="War OS Logo" className="h-8 w-8" />
           <div>
@@ -65,7 +65,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {/* Language toggle */}
           <button
             onClick={toggle}
@@ -106,7 +106,13 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
               {t(translations["status.online"].en, translations["status.online"].ar)}
             </span>
           </div>
-          <div className="text-right">
+          <div className="hidden sm:flex items-center gap-1.5">
+            <Wifi className="h-3 w-3 text-success animate-pulse" />
+            <span className="text-[10px] font-mono text-success">
+              {t(translations["status.online"].en, translations["status.online"].ar)}
+            </span>
+          </div>
+          <div className="text-right hidden sm:block">
             <div className="text-[10px] font-mono text-foreground">
               {now.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: '2-digit' })}
             </div>

@@ -222,7 +222,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`grid grid-cols-6 gap-1.5 px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`grid grid-cols-3 sm:grid-cols-6 gap-1.5 px-2 sm:px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <StatCard icon={Plane} label={t(tr["stat.airspace"].en, tr["stat.airspace"].ar)} value={airspaceCount} color="text-primary" pulse={dataFresh} />
         <StatCard icon={Ship} label={t(tr["stat.vessels"].en, tr["stat.vessels"].ar)} value={vesselCount} color="text-primary" pulse={dataFresh} />
         <StatCard
@@ -259,7 +259,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
             <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">War Cost Estimate</span>
             <ScenarioToggle active={scenario} onChange={setScenario} />
           </div>
-          <div className={`grid grid-cols-8 gap-1.5 px-3 py-1 transition-shadow duration-500`}>
+          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 px-2 sm:px-3 py-1 transition-shadow duration-500`}>
             <StatCard
               icon={DollarSign}
               label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}
