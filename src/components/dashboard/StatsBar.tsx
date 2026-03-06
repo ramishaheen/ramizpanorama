@@ -1,10 +1,11 @@
 import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info } from "lucide-react";
-import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
+import { motion, useSpring, useTransform } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useWarCosts } from "@/hooks/useWarCosts";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
+import { LiveCostCounter } from "./LiveCostCounter";
 
 interface StatsBarProps {
   airspaceCount: number;
@@ -49,7 +50,7 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip }: { icon: any; label: string; value: number | string; color: string; pulse?: boolean; prefix?: string; tooltip?: string }) => {
+const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liveContent }: { icon: any; label: string; value?: number | string; color: string; pulse?: boolean; prefix?: string; tooltip?: string; liveContent?: React.ReactNode }) => {
   const card = (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -59,8 +60,12 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip }: {
       <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-0.5">
-          {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
-          <AnimatedNumber value={value} color={color} />
+          {liveContent ? liveContent : (
+            <>
+              {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
+              {value !== undefined && <AnimatedNumber value={value} color={color} />}
+            </>
+          )}
         </div>
         <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
       </div>
@@ -122,6 +127,8 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
     "Defense Spending": Shield,
   };
 
+  const timestamp = warCosts.data?.timestamp || new Date().toISOString();
+
   return (
     <div className="space-y-0">
       {/* Stats cards */}
@@ -134,25 +141,45 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
         <StatCard icon={Activity} label={t(tr["stat.risk"].en, tr["stat.risk"].ar)} value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
       </div>
 
-      {/* War cost cards */}
+      {/* War cost cards - LIVE TICKING */}
       {warCosts.data && !warCosts.error && (
         <div className={`grid grid-cols-8 gap-1.5 px-3 py-1 border-t border-border/50 bg-card/30 transition-shadow duration-500`}>
           <StatCard
             icon={DollarSign}
             label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}
-            value={`${warCosts.data.total_daily_cost_billions.toFixed(1)}B`}
             color="text-critical"
             pulse
-            prefix="$"
-            tooltip={`AI-estimated daily cost: $${warCosts.data.total_daily_cost_billions}B/day\n\nPer-sector breakdown:\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day`).join("\n")}${warCosts.data.country_costs?.length ? `\n\n── Per-Country Daily Cost ──\n${warCosts.data.country_costs.map(c => `🏳 ${c.country}: $${c.daily_cost_millions}M/day`).join("\n")}` : ""}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}`}
+            liveContent={
+              <LiveCostCounter
+                dailyCostMillions={warCosts.data.total_daily_cost_billions * 1000}
+                startTimestamp={timestamp}
+                prefix="$"
+                suffix="B/day"
+                color="text-critical"
+                decimals={3}
+                isBillions
+                cumulativeBase={warCosts.data.total_daily_cost_billions}
+              />
+            }
+            tooltip={`🔴 LIVE — AI-estimated daily cost: $${warCosts.data.total_daily_cost_billions}B/day\nCost accumulates in real-time based on per-second rate.\n\n── Per-Sector Daily Rate ──\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day ($${(s.daily_cost_millions / 86400).toFixed(2)}/sec)`).join("\n")}${warCosts.data.country_costs?.length ? `\n\n── Per-Country Daily Cost ──\n${warCosts.data.country_costs.map(c => `🏳 ${c.country}: $${c.daily_cost_millions}M/day ($${(c.daily_cost_millions / 86400 * 1000000).toFixed(0)}/sec)`).join("\n")}` : ""}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}`}
           />
           <StatCard
             icon={DollarSign}
             label={t(tr["stat.total_cost"].en, tr["stat.total_cost"].ar)}
-            value={`${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}`}
             color="text-critical"
-            prefix="$"
-            tooltip={`Cumulative cost since Oct 2023: $${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}\n\n── Per-Country Total Cost ──\n${warCosts.data.country_costs?.map(c => `🏳 ${c.country}: $${c.total_cost_billions}B\n   ${c.breakdown}`).join("\n\n") || "Loading..."}\n\n── Sector Breakdown ──\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day — ${s.description}`).join("\n")}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}\n\nLast analyzed: ${new Date(warCosts.data.timestamp).toLocaleString()}`}
+            liveContent={
+              <LiveCostCounter
+                dailyCostMillions={warCosts.data.total_daily_cost_billions * 1000}
+                startTimestamp={timestamp}
+                prefix="$"
+                suffix="B"
+                color="text-critical"
+                decimals={4}
+                isBillions
+                cumulativeBase={warCosts.data.cumulative_estimate_billions}
+              />
+            }
+            tooltip={`🔴 LIVE — Cumulative cost since Oct 2023: $${warCosts.data.cumulative_estimate_billions}${warCosts.data.cumulative_unit || "B"}\nTicking up at $${(warCosts.data.total_daily_cost_billions * 1000000000 / 86400).toFixed(0)}/second\n\n── Per-Country Total Cost (LIVE) ──\n${warCosts.data.country_costs?.map(c => `🏳 ${c.country}: $${c.total_cost_billions}B (+$${(c.daily_cost_millions * 1000000 / 86400).toFixed(0)}/sec)\n   ${c.breakdown}`).join("\n\n") || "Loading..."}\n\n── Sector Breakdown ──\n${warCosts.data.sectors.map(s => `• ${s.name}: $${s.daily_cost_millions}M/day — ${s.description}`).join("\n")}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}\n\nLast analyzed: ${new Date(warCosts.data.timestamp).toLocaleString()}`}
           />
           {warCosts.data.sectors.map((sector) => {
             const SectorIcon = sectorIcons[sector.name] || DollarSign;
@@ -161,10 +188,18 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
                 key={sector.name}
                 icon={SectorIcon}
                 label={sector.name}
-                value={Math.round(sector.daily_cost_millions)}
                 color="text-warning"
-                prefix="$"
-                tooltip={`${sector.name}: $${sector.daily_cost_millions}M/day\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${c.daily_cost_millions}M/day total`).join("\n")}` : ""}`}
+                liveContent={
+                  <LiveCostCounter
+                    dailyCostMillions={sector.daily_cost_millions}
+                    startTimestamp={timestamp}
+                    prefix="$"
+                    suffix="M"
+                    color="text-warning"
+                    decimals={2}
+                  />
+                }
+                tooltip={`🔴 LIVE — ${sector.name}\nDaily rate: $${sector.daily_cost_millions}M/day\nPer second: $${(sector.daily_cost_millions * 1000000 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${c.daily_cost_millions}M/day total`).join("\n")}` : ""}`}
               />
             );
           })}

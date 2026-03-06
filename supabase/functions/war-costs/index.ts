@@ -16,113 +16,109 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const today = new Date().toISOString().split("T")[0];
+    const daysSinceOct2023 = Math.floor((Date.now() - new Date("2023-10-07").getTime()) / 86400000);
 
-    const systemPrompt = `You are a senior economic analyst specializing in conflict economics and the Middle East region. Provide realistic, well-researched estimates of the economic costs of the ongoing Iran-Israel/Middle East conflict that escalated in October 2023.
+    const systemPrompt = `You are a senior economic analyst specializing in conflict economics and the Middle East region. Provide PRECISE, well-researched estimates of the economic costs of the ongoing Iran-Israel/Middle East conflict that escalated in October 2023.
 
-GUIDELINES:
-- Use real-world data: oil spikes, Red Sea/Suez disruption, tourism drops, defense spending, GDP impact from IMF/World Bank.
-- Cumulative cost = TOTAL since Oct 2023 to ${today} across the ENTIRE region.
-- Reference points: Israel war costs ~$250M+/day, Red Sea rerouting $50-80B+, Gaza infrastructure $30-50B+, regional tourism -30-60%, Lebanon damage, Iran sanctions.
-- Include per-country breakdown for ALL major affected Middle East countries.
+TODAY IS: ${today} (Day ${daysSinceOct2023} of the conflict)
+
+CRITICAL PRECISION REQUIREMENTS:
+- Calculate costs DOWN TO THE DOLLAR PER SECOND for each sector
+- Daily cost = 24h accumulation. Show exact daily_cost_millions with 2 decimal places
+- Cumulative = total since Oct 7 2023. Must reflect ${daysSinceOct2023} days of conflict
+- Factor in RECENT EVENTS: any escalations, ceasefires, new fronts, sanctions changes
+- Oil price impact: current crude prices vs pre-conflict baseline ($85/bbl)
+- Suez/Red Sea: shipping rerouting adds $1M+ per large vessel per trip
+- Tourism: Israel -70%, Lebanon -80%, Jordan -40%, Egypt -25% vs pre-conflict
+- Defense: Israel $250-300M/day military ops, US $50M+/day support operations
+
+LIVE EVENT MODIFIERS - Apply these multipliers based on current situation:
+- Active military operations: 1.5x base rate for affected sectors
+- Ceasefire periods: 0.6x base rate
+- New sanctions: +15% to affected country costs
+- Shipping attacks: +$2-5M/day to Shipping & Trade
+- Oil price spikes: proportional increase to Oil & Energy sector
+- Infrastructure strikes: +$10-50M one-time to Real Estate & Construction
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
-  "total_daily_cost_billions": number,
+  "total_daily_cost_billions": number (2 decimal places),
+  "cost_per_second_usd": number (exact USD per second across all sectors),
   "sectors": [
-    { "name": "Oil & Energy", "daily_cost_millions": number, "description": "brief with $ amounts" },
-    { "name": "Aviation & Airspace", "daily_cost_millions": number, "description": "brief" },
-    { "name": "Tourism & Hospitality", "daily_cost_millions": number, "description": "brief" },
-    { "name": "Shipping & Trade", "daily_cost_millions": number, "description": "brief" },
-    { "name": "Real Estate & Construction", "daily_cost_millions": number, "description": "brief" },
-    { "name": "Defense Spending", "daily_cost_millions": number, "description": "brief" }
+    { "name": "Oil & Energy", "daily_cost_millions": number, "cost_per_second": number, "description": "brief with current oil price impact, $ amounts", "live_modifier": "normal|elevated|critical" },
+    { "name": "Aviation & Airspace", "daily_cost_millions": number, "cost_per_second": number, "description": "brief with route diversions", "live_modifier": "normal|elevated|critical" },
+    { "name": "Tourism & Hospitality", "daily_cost_millions": number, "cost_per_second": number, "description": "brief with occupancy rates", "live_modifier": "normal|elevated|critical" },
+    { "name": "Shipping & Trade", "daily_cost_millions": number, "cost_per_second": number, "description": "brief with Red Sea/Suez impact", "live_modifier": "normal|elevated|critical" },
+    { "name": "Real Estate & Construction", "daily_cost_millions": number, "cost_per_second": number, "description": "brief with reconstruction needs", "live_modifier": "normal|elevated|critical" },
+    { "name": "Defense Spending", "daily_cost_millions": number, "cost_per_second": number, "description": "brief with military ops tempo", "live_modifier": "normal|elevated|critical" }
   ],
   "country_costs": [
     {
-      "country": "Israel",
-      "code": "IL",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "2-3 sentence explanation: military ops, Iron Dome, GDP loss, reconstruction"
+      "country": "Israel", "code": "IL",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "2-3 sentences: military ops cost, Iron Dome expenditure per interception, GDP loss percentage, reconstruction estimates"
     },
     {
-      "country": "Palestine/Gaza",
-      "code": "PS",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "infrastructure destruction, humanitarian crisis, GDP collapse"
+      "country": "Palestine/Gaza", "code": "PS",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "infrastructure destruction totals, humanitarian crisis cost, GDP collapse percentage, reconstruction estimate"
     },
     {
-      "country": "Lebanon",
-      "code": "LB",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "Hezbollah conflict damage, displacement, economic disruption"
+      "country": "Lebanon", "code": "LB",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "Hezbollah conflict damage, displacement costs, economic disruption, infrastructure"
     },
     {
-      "country": "Iran",
-      "code": "IR",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "sanctions, proxy funding, direct strike costs, oil revenue impact"
+      "country": "Iran", "code": "IR",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "sanctions impact, proxy funding, direct strike costs, oil revenue changes"
     },
     {
-      "country": "Yemen/Houthis",
-      "code": "YE",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "Red Sea blockade costs, US/UK strikes, humanitarian impact"
+      "country": "Yemen/Houthis", "code": "YE",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "Red Sea blockade costs, US/UK strikes damage, humanitarian impact"
     },
     {
-      "country": "Saudi Arabia",
-      "code": "SA",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "defense spending, oil market volatility, tourism & NEOM delays"
+      "country": "Saudi Arabia", "code": "SA",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "defense spending increase, oil market volatility impact, tourism & NEOM delays"
     },
     {
-      "country": "UAE",
-      "code": "AE",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "shipping rerouting, insurance premiums, investment slowdown"
+      "country": "UAE", "code": "AE",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "shipping rerouting costs, insurance premium increases, investment slowdown"
     },
     {
-      "country": "Jordan",
-      "code": "JO",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "tourism collapse, refugee costs, trade disruption"
+      "country": "Jordan", "code": "JO",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "tourism collapse percentage, refugee costs, trade disruption"
     },
     {
-      "country": "Egypt",
-      "code": "EG",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "Suez Canal revenue loss, tourism drop, security spending"
+      "country": "Egypt", "code": "EG",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "Suez Canal revenue loss exact figures, tourism drop, security spending"
     },
     {
-      "country": "Iraq",
-      "code": "IQ",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "militia activity, oil infrastructure risk, US base attacks"
+      "country": "Iraq", "code": "IQ",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "militia activity costs, oil infrastructure risk premium, US base attacks"
     },
     {
-      "country": "Syria",
-      "code": "SY",
-      "total_cost_billions": number,
-      "daily_cost_millions": number,
-      "breakdown": "Israeli strikes, Iranian presence costs, displacement"
+      "country": "Syria", "code": "SY",
+      "total_cost_billions": number, "daily_cost_millions": number, "cost_per_second": number,
+      "breakdown": "Israeli strikes damage, Iranian presence costs, displacement costs"
     }
   ],
-  "cumulative_estimate_billions": number,
+  "cumulative_estimate_billions": number (precise to 2 decimals),
   "cumulative_unit": "B",
   "daily_unit": "B",
-  "methodology": "One sentence on calculation approach",
+  "conflict_day": ${daysSinceOct2023},
+  "active_events_affecting_costs": ["list of current events modifying cost rates"],
+  "methodology": "One sentence on calculation approach including per-second precision",
   "timestamp": "${new Date().toISOString()}"
 }
 
-Be realistic and thorough. The country_costs totals should roughly sum to cumulative_estimate_billions.`;
+Be PRECISE. The country_costs totals should sum to cumulative_estimate_billions. Each sector cost_per_second = daily_cost_millions * 1000000 / 86400.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -134,7 +130,7 @@ Be realistic and thorough. The country_costs totals should roughly sum to cumula
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Today is ${today}. Estimate current war costs across the Middle East with detailed per-country breakdown.` },
+          { role: "user", content: `Today is ${today}, day ${daysSinceOct2023} of the conflict. Provide precise per-second war costs with current event modifiers for all Middle East countries affected.` },
         ],
       }),
     });
