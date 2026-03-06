@@ -14,6 +14,10 @@ const channels = [
   { id: "0PJ2Sj4PVpg", name: "France 24" },
   { id: "w_Ma8oQLmSM", name: "BBC News" },
   { id: "XWq5kBlakcQ", name: "TRT World" },
+  { id: "jL8swKObohs", name: "CNN" },
+  { id: "GE_SfNVNyqk", name: "WION" },
+  { id: "V6Gd7YhkbyA", name: "DW News" },
+  { id: "eMyXsBM1pWo", name: "i24 News" },
 ];
 
 const LiveNewsFeed = () => {
@@ -44,7 +48,7 @@ const LiveNewsFeed = () => {
       </div>
 
       {/* All Channels Grid */}
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-3 gap-1">
         {channels.map((ch, i) => (
           <div key={ch.id} className={`relative rounded overflow-hidden border bg-background ${
             selectedChannel === i ? "border-primary" : "border-border"
