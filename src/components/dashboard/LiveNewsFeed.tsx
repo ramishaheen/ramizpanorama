@@ -139,6 +139,7 @@ export const LiveNewsFeed = () => {
               >
                 {t(tr["action.expand"] ? tr["action.expand"].en : "Expand", tr["action.expand"] ? tr["action.expand"].ar : "توسيع")}
               </button>
+            </div>
           </div>
           <div className="aspect-video">
             <iframe
