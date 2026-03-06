@@ -10,6 +10,7 @@ import { LayerControls, type LayerState } from "@/components/dashboard/LayerCont
 import { AIPredictions } from "@/components/dashboard/AIPredictions";
 import { LiveNewsFeed } from "@/components/dashboard/LiveNewsFeed";
 import { Disclaimer } from "@/components/dashboard/Disclaimer";
+import { CommodityTracker } from "@/components/dashboard/CommodityTracker";
 import { CitizenSecurity } from "@/components/dashboard/CitizenSecurity";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
@@ -64,6 +65,7 @@ const Index = () => {
         <div className="w-[420px] flex-shrink-0 border-r border-border flex flex-col overflow-y-auto">
           <div className="p-3 space-y-3">
             <RiskScoreGauge score={riskScore} />
+            <CommodityTracker />
             <LiveNewsFeed />
             <AIPredictions />
             <LayerControls layers={layers} onToggle={toggleLayer} />
