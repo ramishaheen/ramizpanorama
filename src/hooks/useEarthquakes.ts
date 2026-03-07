@@ -1,0 +1,48 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+export interface Earthquake {
+  id: string;
+  lat: number;
+  lng: number;
+  depth: number;
+  magnitude: number;
+  place: string;
+  time: number;
+  type: string;
+  tsunami: boolean;
+  alert: string | null;
+  felt: number | null;
+  significance: number;
+  url: string;
+}
+
+export function useEarthquakes() {
+  const [data, setData] = useState<Earthquake[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetch_ = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("usgs-earthquakes");
+      if (fnError) throw fnError;
+      if (fnData?.error) throw new Error(fnData.error);
+      setData(fnData.earthquakes || []);
+    } catch (e) {
+      console.error("Earthquake fetch error:", e);
+      setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetch_();
+    const interval = setInterval(fetch_, 300_000); // every 5 min
+    return () => clearInterval(interval);
+  }, [fetch_]);
+
+  return { data, loading, error, refresh: fetch_ };
+}
