@@ -13,6 +13,8 @@ import { Satellite } from "lucide-react";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 import { useConflictEvents, type ConflictEvent } from "@/hooks/useConflictEvents";
+import { UP42Panel } from "./UP42Panel";
+import type { UP42Feature } from "@/hooks/useUP42Catalog";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -181,9 +183,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const earthquakeGroupRef = useRef<L.LayerGroup | null>(null);
   const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
   const conflictGroupRef = useRef<L.LayerGroup | null>(null);
+  const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
+  const [up42Features, setUp42Features] = useState<UP42Feature[]>([]);
+  const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
@@ -216,8 +221,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     earthquakeGroupRef.current = L.layerGroup().addTo(map);
     wildfireGroupRef.current = L.layerGroup().addTo(map);
     conflictGroupRef.current = L.layerGroup().addTo(map);
+    up42GroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+
+    // Track map bounds for UP42 search
+    const updateBounds = () => {
+      const b = map.getBounds();
+      setMapBounds({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+    };
+    map.on("moveend", updateBounds);
+    updateBounds();
 
     return () => {
       overlayGroupRef.current?.clearLayers();
@@ -225,6 +239,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       earthquakeGroupRef.current?.clearLayers();
       wildfireGroupRef.current?.clearLayers();
       conflictGroupRef.current?.clearLayers();
+      up42GroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -235,6 +250,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       earthquakeGroupRef.current = null;
       wildfireGroupRef.current = null;
       conflictGroupRef.current = null;
+      up42GroupRef.current = null;
       userItemsGroupRef.current = null;
       weatherTileRef.current = null;
     };
@@ -683,6 +699,42 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     }).addTo(group);
   }, [safetyData]);
 
+  // Render UP42 footprints on map
+  useEffect(() => {
+    const group = up42GroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    up42Features.forEach((feature) => {
+      if (!feature.geometry) return;
+      try {
+        const geoJson = L.geoJSON(feature.geometry as any, {
+          style: {
+            color: "#00d4ff",
+            fillColor: "#00d4ff",
+            fillOpacity: 0.08,
+            weight: 2,
+            dashArray: "4 2",
+          },
+        });
+        const props = feature.properties || {};
+        geoJson.bindPopup(`
+          <div style="${popupStyle}">
+            <div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">🛰 ${props.constellation || props.collection || "Satellite"}</div>
+            <div>Date: ${props.datetime?.split("T")[0] || "N/A"}</div>
+            ${props["eo:cloud_cover"] != null ? `<div>Cloud: ${Math.round(props["eo:cloud_cover"])}%</div>` : ""}
+            ${props["up42-system:asset_id"] ? `<div style="font-size:8px;opacity:0.5;margin-top:4px;">ID: ${props["up42-system:asset_id"]}</div>` : ""}
+          </div>
+        `, popupOptions);
+        geoJson.addTo(group);
+      } catch {}
+    });
+  }, [up42Features]);
+
+  const handleUP42FeaturesChange = useCallback((features: UP42Feature[]) => {
+    setUp42Features(features);
+  }, []);
+
   const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
   // Satellite count badge - fetch from edge function
@@ -718,6 +770,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onCancelItem={handleCancelItem}
       />
       <TotalLaunchesWidget rockets={rockets} />
+      <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
 
       {/* Satellite count badge */}
       {satCount > 0 && (
