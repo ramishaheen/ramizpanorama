@@ -25,6 +25,7 @@ interface IntelMapProps {
   layers: LayerState;
   safetyData?: CountrySafety[];
   flyToTarget?: { lat: number; lng: number; label: string } | null;
+  newsMarkers?: WarUpdate[];
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
