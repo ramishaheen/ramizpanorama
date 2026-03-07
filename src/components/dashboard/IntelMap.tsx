@@ -221,8 +221,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     earthquakeGroupRef.current = L.layerGroup().addTo(map);
     wildfireGroupRef.current = L.layerGroup().addTo(map);
     conflictGroupRef.current = L.layerGroup().addTo(map);
+    up42GroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+
+    // Track map bounds for UP42 search
+    const updateBounds = () => {
+      const b = map.getBounds();
+      setMapBounds({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+    };
+    map.on("moveend", updateBounds);
+    updateBounds();
 
     return () => {
       overlayGroupRef.current?.clearLayers();
@@ -230,6 +239,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       earthquakeGroupRef.current?.clearLayers();
       wildfireGroupRef.current?.clearLayers();
       conflictGroupRef.current?.clearLayers();
+      up42GroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -240,6 +250,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       earthquakeGroupRef.current = null;
       wildfireGroupRef.current = null;
       conflictGroupRef.current = null;
+      up42GroupRef.current = null;
       userItemsGroupRef.current = null;
       weatherTileRef.current = null;
     };
