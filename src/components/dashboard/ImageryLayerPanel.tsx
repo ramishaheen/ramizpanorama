@@ -410,7 +410,7 @@ export const ImageryLayerPanel = ({ layers, onToggle, onOpacityChange, onBaseCha
           </div>
           <div className="mt-2 pt-1.5 border-t border-border">
             <p className="text-[7px] font-mono text-muted-foreground/50 leading-tight">
-              Sources: NASA GIBS/MODIS, VIIRS, Sentinel-2/EOX, OpenAerialMap. Layers stack with configurable opacity.
+              Sources: NASA GIBS/MODIS/Landsat, VIIRS, Google Satellite, ESRI Wayback, Sentinel-2/EOX, USGS, OpenAerialMap, UP42. Layers stack with configurable opacity.
             </p>
           </div>
         </div>
