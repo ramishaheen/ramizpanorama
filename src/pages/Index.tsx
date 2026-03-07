@@ -105,6 +105,7 @@ const Index = () => {
   const warUpdates = useWarUpdates();
   const isMobile = useIsMobile();
 
+  const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [alertMuted, setAlertMuted] = useState(false);
   const [layers, setLayers] = useState<LayerState>({
     airspace: true,
