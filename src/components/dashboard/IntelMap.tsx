@@ -12,6 +12,7 @@ import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite } from "lucide-react";
+import { MapLegend } from "./MapLegend";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 import { useConflictEvents, type ConflictEvent } from "@/hooks/useConflictEvents";
@@ -179,6 +180,14 @@ const popupOptions: L.PopupOptions = {
 
 const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
+/** Bind popup that opens on hover instead of click */
+function bindHoverPopup(marker: L.Marker, content: string, opts?: L.PopupOptions) {
+  marker.bindPopup(content, { ...popupOptions, ...opts, className: "intel-popup" });
+  marker.on("mouseover", function (this: L.Marker) { this.openPopup(); });
+  marker.on("mouseout", function (this: L.Marker) { this.closePopup(); });
+  return marker;
+}
+
 const newsSeverityColors: Record<string, string> = {
   low: "#22c55e",
   medium: "#00d4ff",
@@ -298,8 +307,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const severityLabel = update.severity.toUpperCase();
       const color = special ? "#ff0040" : (newsSeverityColors[update.severity] || "#00d4ff");
       const badge = special ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ SPECIAL ALERT</div>` : "";
-      const marker = L.marker([update.lat, update.lng], { icon, zIndexOffset: special ? 1000 : 0 }).bindPopup(
-        `<div style="${popupStyle}">
+      const marker = L.marker([update.lat, update.lng], { icon, zIndexOffset: special ? 1000 : 0 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
           ${badge}
           <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${special ? "🚀" : "📰"} AI INTEL — ${update.region}</div>
           <div style="color:#fff;font-size:11px;margin-bottom:4px;">${update.headline}</div>
@@ -309,10 +318,22 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <span style="color:#888;font-size:9px;">${update.category}</span>
             <span style="color:#666;font-size:9px;">${update.source}</span>
           </div>
-        </div>`,
-        { className: "intel-popup" }
-      );
+        </div>`);
       group.addLayer(marker);
+
+      // Threat radius for special alerts
+      if (special) {
+        const radius = L.circle([update.lat, update.lng], {
+          radius: 50000,
+          color: "#ff0040",
+          fillColor: "#ff0040",
+          fillOpacity: 0.06,
+          weight: 1.5,
+          dashArray: "6 4",
+          className: "threat-radius-circle",
+        });
+        group.addLayer(radius);
+      }
     });
   }, [newsMarkers]);
 
@@ -350,8 +371,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ WARSLEAKS SPECIAL</div>`
         : `<div style="background:#a855f7;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">📡 WARSLEAKS</div>`;
 
-      const marker = L.marker([tm.lat, tm.lng], { icon, zIndexOffset: tm.special ? 1200 : 500 }).bindPopup(
-        `<div style="${popupStyle}">
+      const marker = L.marker([tm.lat, tm.lng], { icon, zIndexOffset: tm.special ? 1200 : 500 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
           ${badge}
           <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${emoji} ${tm.headline}</div>
           <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${tm.summary}</div>
@@ -360,10 +381,22 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <span style="color:#888;font-size:9px;">${tm.category}</span>
             <span style="color:#a855f7;font-size:9px;">WarsLeaks</span>
           </div>
-        </div>`,
-        { className: "intel-popup" }
-      );
+        </div>`);
       group.addLayer(marker);
+
+      // Threat radius for special WarsLeaks alerts
+      if (tm.special) {
+        const radius = L.circle([tm.lat, tm.lng], {
+          radius: 60000,
+          color: "#ff0040",
+          fillColor: "#ff0040",
+          fillOpacity: 0.05,
+          weight: 1.5,
+          dashArray: "6 4",
+          className: "threat-radius-circle",
+        });
+        group.addLayer(radius);
+      }
     });
   }, [telegramMarkers]);
 
@@ -960,6 +993,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         </div>
       )}
 
+      <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
     </div>
   );
