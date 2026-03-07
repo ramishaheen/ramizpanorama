@@ -3,45 +3,40 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-}
-
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("MINIMAX_API_KEY");
-  if (!apiKey) throw new Error("MINIMAX_API_KEY not configured");
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: "MiniMax-M2", messages }),
+      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
       signal: controller.signal,
     });
 
     if (response.status === 429) throw new Error("RATE_LIMIT");
     if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
 
-    const text = await response.text();
-    if (!response.ok || !text) {
-      console.error("MiniMax failed:", response.status, text?.slice(0, 200));
+    if (!response.ok) {
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
       throw new Error("AI_UNAVAILABLE");
     }
 
-    const data = JSON.parse(text);
+    const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("AI_UNAVAILABLE");
-    return stripThinkTags(content);
+    return content.trim();
   } finally {
     clearTimeout(timeout);
   }
@@ -79,130 +74,47 @@ serve(async (req) => {
     const militaryVessels = vesselsRes.data?.filter(v => v.type === "MILITARY") || [];
     const geoByType: Record<string, number> = {};
     geoRes.data?.forEach(a => { geoByType[a.type] = (geoByType[a.type] || 0) + 1; });
-
     const risk = riskRes.data?.[0];
 
-    const intelContext = `
-CURRENT INTELLIGENCE SNAPSHOT:
-═══════════════════════════════
+    const intelContext = `CURRENT INTELLIGENCE SNAPSHOT:
+MISSILE ACTIVITY: Total: ${rocketsRes.data?.length || 0}, Active: ${rocketsByStatus.launched + rocketsByStatus.in_flight}, Intercepted: ${rocketsByStatus.intercepted}, Impacts: ${rocketsByStatus.impact}
+AIRSPACE: ${airspaceRes.data?.length || 0} active alerts
+GEO ALERTS: ${geoRes.data?.length || 0} total
+MARITIME: ${militaryVessels.length} military vessels
+RISK: Overall ${risk?.overall || 'N/A'}/100, Trend: ${risk?.trend || 'N/A'}`;
 
-MISSILE ACTIVITY:
-- Total rockets tracked: ${rocketsRes.data?.length || 0}
-- Active (launched/in-flight): ${rocketsByStatus.launched + rocketsByStatus.in_flight}
-- Intercepted: ${rocketsByStatus.intercepted}
-- Impacts confirmed: ${rocketsByStatus.impact}
-- Types deployed: ${Object.entries(rocketTypes).map(([t, c]) => `${t}: ${c}`).join(", ") || "None"}
-- Recent launches: ${rocketsRes.data?.slice(0, 5).map(r => `${r.name} [${r.type}] ${r.status} at ${r.timestamp}`).join("; ") || "None"}
+    const systemPrompt = `You are a senior military intelligence analyst and conflict escalation specialist. Analyze the intelligence data and produce a WAR ESCALATION ASSESSMENT.
 
-AIRSPACE STATUS:
-- Active airspace alerts: ${airspaceRes.data?.length || 0}
-- Closures/Restrictions: ${airspaceRes.data?.map(a => `${a.type} over ${a.region} (${a.severity})`).join("; ") || "None"}
-
-GEOPOLITICAL ALERTS:
-- Total alerts: ${geoRes.data?.length || 0}
-- By type: ${Object.entries(geoByType).map(([t, c]) => `${t}: ${c}`).join(", ") || "None"}
-- Recent: ${geoRes.data?.slice(0, 5).map(a => `[${a.type}/${a.severity}] ${a.title}`).join("; ") || "None"}
-
-MILITARY MARITIME:
-- Military vessels in theater: ${militaryVessels.length}
-- Details: ${militaryVessels.slice(0, 5).map(v => `${v.name} (${v.flag}) heading ${v.heading}° at ${v.speed}kts`).join("; ") || "None"}
-- Total vessels tracked: ${vesselsRes.data?.length || 0}
-
-RISK SCORES:
-- Overall: ${risk?.overall || "N/A"}/100
-- Airspace Risk: ${risk?.airspace || "N/A"}/100
-- Maritime Risk: ${risk?.maritime || "N/A"}/100
-- Diplomatic Risk: ${risk?.diplomatic || "N/A"}/100
-- Sentiment: ${risk?.sentiment || "N/A"}/100
-- Trend: ${risk?.trend || "N/A"}
-
-RECENT TIMELINE EVENTS:
-${timelineRes.data?.slice(0, 10).map(e => `- [${e.type}/${e.severity}] ${e.title} (${e.timestamp})`).join("\n") || "None"}
-`;
-
-    const systemPrompt = `You are a senior military intelligence analyst and conflict escalation specialist. Your expertise covers:
-- Military force disposition and movement analysis
-- Escalation ladder theory (Herman Kahn framework)
-- Pattern recognition in conflict dynamics
-- Nuclear/WMD escalation indicators
-- Historical conflict analogy mapping
-
-Analyze the provided real-time intelligence data and produce a comprehensive WAR ESCALATION ASSESSMENT.
-
-CRITICAL RULES:
-1. Base ALL analysis strictly on the intelligence data provided
-2. Use the Kahn escalation ladder (1-44 rungs) as reference framework
-3. Provide specific percentage probabilities for each escalation scenario
-4. Include both escalation AND de-escalation indicators
-5. Map current situation to historical conflict analogies
-6. Identify specific trigger points that could cause rapid escalation
-7. Provide timeline estimates for each scenario
-
-Return your response as valid JSON with this EXACT structure:
+Return valid JSON with this structure:
 {
   "timestamp": "ISO timestamp",
-  "current_escalation_level": {
-    "kahn_rung": 1-44,
-    "label": "string describing current rung",
-    "description": "brief situation assessment"
-  },
+  "current_escalation_level": { "kahn_rung": 1-44, "label": "string", "description": "brief" },
   "overall_escalation_probability": 0-100,
   "trend": "ESCALATING" | "STABLE" | "DE-ESCALATING",
   "trend_velocity": "RAPID" | "MODERATE" | "SLOW",
-  "scenarios": [
-    {
-      "name": "scenario name",
-      "probability": 0-100,
-      "timeline": "e.g. 24-48 hours",
-      "description": "what happens in this scenario",
-      "triggers": ["specific trigger 1", "trigger 2"],
-      "severity": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "CATASTROPHIC"
-    }
-  ],
-  "escalation_indicators": [
-    {
-      "indicator": "what was observed",
-      "significance": "HIGH" | "MEDIUM" | "LOW",
-      "direction": "ESCALATORY" | "DE-ESCALATORY" | "AMBIGUOUS",
-      "detail": "brief explanation"
-    }
-  ],
-  "conflict_phases": [
-    {
-      "phase": "phase name",
-      "status": "ACTIVE" | "EMERGING" | "POTENTIAL" | "PASSED",
-      "probability": 0-100,
-      "timeline": "estimated timeline"
-    }
-  ],
-  "historical_analogy": {
-    "conflict": "historical conflict name",
-    "similarity_score": 0-100,
-    "current_parallel": "what stage of that conflict we're at",
-    "lesson": "key lesson from history"
-  },
-  "key_assessment": "2-3 sentence top-level assessment",
-  "next_24h_outlook": "brief outlook for next 24 hours",
-  "recommended_posture": "NORMAL" | "ELEVATED" | "HIGH" | "MAXIMUM"
+  "scenarios": [{ "name": "string", "probability": 0-100, "timeline": "string", "description": "string", "triggers": ["string"], "severity": "LOW|MEDIUM|HIGH|CRITICAL|CATASTROPHIC" }],
+  "escalation_indicators": [{ "indicator": "string", "significance": "HIGH|MEDIUM|LOW", "direction": "ESCALATORY|DE-ESCALATORY|AMBIGUOUS", "detail": "string" }],
+  "conflict_phases": [{ "phase": "string", "status": "ACTIVE|EMERGING|POTENTIAL|PASSED", "probability": 0-100, "timeline": "string" }],
+  "historical_analogy": { "conflict": "string", "similarity_score": 0-100, "current_parallel": "string", "lesson": "string" },
+  "key_assessment": "2-3 sentence assessment",
+  "next_24h_outlook": "brief outlook",
+  "recommended_posture": "NORMAL|ELEVATED|HIGH|MAXIMUM"
 }`;
 
     const content = await callAI([
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Analyze the following intelligence data and provide your war escalation assessment:\n\n${intelContext}` },
+      { role: "user", content: `Analyze this intelligence data:\n\n${intelContext}` },
     ]);
 
     let result;
     try {
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      result = JSON.parse(jsonMatch[1].trim());
+      const objMatch = (jsonMatch[1] || content).trim().match(/\{[\s\S]*\}/);
+      result = JSON.parse(objMatch ? objMatch[0] : (jsonMatch[1] || content).trim());
     } catch {
       result = {
-        overall_escalation_probability: 50,
-        trend: "STABLE",
-        key_assessment: content.slice(0, 300),
-        scenarios: [],
-        escalation_indicators: [],
-        conflict_phases: [],
+        overall_escalation_probability: 50, trend: "STABLE",
+        key_assessment: content.slice(0, 300), scenarios: [], escalation_indicators: [], conflict_phases: [],
       };
     }
 
@@ -211,7 +123,7 @@ Return your response as valid JSON with this EXACT structure:
     });
   } catch (e) {
     if (e instanceof Error && e.message === "RATE_LIMIT") {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

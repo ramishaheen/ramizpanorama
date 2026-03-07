@@ -3,17 +3,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const apiKey = Deno.env.get('MINIMAX_API_KEY');
+    const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
       return new Response(
         JSON.stringify({ success: false, error: 'AI provider not configured' }),
@@ -24,18 +20,18 @@ Deno.serve(async (req) => {
     const osintData = await fetchOSINTData();
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     let aiResponse;
     try {
-      aiResponse = await fetch('https://api.minimax.chat/v1/chat/completions', {
+      aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'MiniMax-M2',
+          model: 'google/gemini-2.5-flash',
           messages: [
             {
               role: 'system',
@@ -65,8 +61,6 @@ Return ONLY the JSON array, no markdown formatting.`
               content: `Here is recent OSINT cyber threat data to analyze and expand upon:\n\n${JSON.stringify(osintData, null, 2)}\n\nGenerate structured cyber incident reports based on this intelligence context.`
             }
           ],
-          temperature: 0.7,
-          max_tokens: 4000,
         }),
         signal: controller.signal,
       });
@@ -75,8 +69,18 @@ Return ONLY the JSON array, no markdown formatting.`
     }
 
     if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded' }), {
+          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted' }), {
+          status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const errText = await aiResponse.text();
-      console.error('MiniMax error:', errText);
+      console.error('AI gateway error:', aiResponse.status, errText);
       return new Response(
         JSON.stringify({ success: false, error: 'AI analysis failed' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -85,14 +89,13 @@ Return ONLY the JSON array, no markdown formatting.`
 
     const aiData = await aiResponse.json();
     const rawContent = aiData.choices?.[0]?.message?.content || '[]';
-    const content = stripThinkTags(rawContent);
     
     let threats;
     try {
-      const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const cleaned = rawContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       threats = JSON.parse(cleaned);
     } catch {
-      console.error('Failed to parse AI response:', content);
+      console.error('Failed to parse AI response:', rawContent?.slice(0, 300));
       threats = [];
     }
 
@@ -127,41 +130,29 @@ async function fetchOSINTData() {
     if (cisaRes.ok) {
       const cisaData = await cisaRes.json();
       results.cisaAlerts = (cisaData.vulnerabilities || []).slice(0, 10).map((v: any) => ({
-        cve: v.cveID,
-        vendor: v.vendorProject,
-        product: v.product,
-        name: v.vulnerabilityName,
-        dateAdded: v.dateAdded,
-        description: v.shortDescription,
+        cve: v.cveID, vendor: v.vendorProject, product: v.product,
+        name: v.vulnerabilityName, dateAdded: v.dateAdded, description: v.shortDescription,
       }));
       results.sources.push('CISA KEV Catalog');
     }
-  } catch (e) {
-    console.warn('CISA fetch failed:', e);
-  }
+  } catch (e) { console.warn('CISA fetch failed:', e); }
 
   try {
     const otxRes = await fetch('https://otx.alienvault.com/api/v1/pulses/activity?limit=10&page=1', {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000),
+      headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(5000),
     });
     if (otxRes.ok) {
       const otxData = await otxRes.json();
       const pulses = (otxData.results || []).slice(0, 10).map((p: any) => ({
-        name: p.name,
-        description: p.description?.substring(0, 200),
-        created: p.created,
-        tags: p.tags?.slice(0, 5),
-        targetedCountries: p.targeted_countries,
+        name: p.name, description: p.description?.substring(0, 200),
+        created: p.created, tags: p.tags?.slice(0, 5), targetedCountries: p.targeted_countries,
       }));
       if (pulses.length > 0) {
         results.cisaAlerts.push(...pulses);
         results.sources.push('AlienVault OTX');
       }
     }
-  } catch (e) {
-    console.warn('OTX fetch failed:', e);
-  }
+  } catch (e) { console.warn('OTX fetch failed:', e); }
 
   results.cisaAlerts.push({
     context: 'Middle East Cyber Warfare - March 2026',

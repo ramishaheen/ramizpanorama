@@ -3,45 +3,40 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-}
-
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("MINIMAX_API_KEY");
-  if (!apiKey) throw new Error("MINIMAX_API_KEY not configured");
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: "MiniMax-M2", messages }),
+      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
       signal: controller.signal,
     });
 
     if (response.status === 429) throw new Error("RATE_LIMIT");
     if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
 
-    const text = await response.text();
-    if (!response.ok || !text) {
-      console.error("MiniMax failed, status:", response.status, "body:", text?.slice(0, 200));
+    if (!response.ok) {
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
       throw new Error("AI_UNAVAILABLE");
     }
 
-    const data = JSON.parse(text);
+    const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("AI_UNAVAILABLE");
-    return stripThinkTags(content);
+    return content.trim();
   } finally {
     clearTimeout(timeout);
   }
@@ -65,44 +60,28 @@ serve(async (req) => {
     ]);
 
     const rocketSummary = rocketsRes.data?.map(r =>
-      `${r.name} [${r.type}] from (${r.origin_lat},${r.origin_lng}) → target (${r.target_lat},${r.target_lng}) status:${r.status} speed:${r.speed}km/h`
-    ).join("\n") || "None";
+      `${r.name} [${r.type}] status:${r.status}`
+    ).join("; ") || "None";
 
     const alertSummary = geoRes.data?.map(a =>
-      `[${a.severity}] ${a.type}: ${a.title} in ${a.region} — ${a.summary}`
-    ).join("\n") || "None";
+      `[${a.severity}] ${a.type}: ${a.title} in ${a.region}`
+    ).join("; ") || "None";
 
     const airspaceSummary = airspaceRes.data?.map(a =>
-      `${a.type} in ${a.region} (${a.severity}) — ${a.description}`
-    ).join("\n") || "None";
+      `${a.type} in ${a.region} (${a.severity})`
+    ).join("; ") || "None";
 
     const risk = riskRes.data?.[0] || {};
 
     const content = await callAI([
       {
         role: "system",
-        content: `You are a citizen safety analyst for the Middle East conflict zone. Based on real-time intelligence data including rocket/missile trajectories, geopolitical alerts, airspace closures, and risk scores, you assess citizen safety levels for specific countries.
+        content: `You are a citizen safety analyst for the Middle East conflict zone. Assess citizen safety levels for specific countries.
 
-IMPORTANT RULES:
-- Analyze proximity of rocket targets to each country
-- Consider airspace closures near each country
-- Factor in diplomatic and military alerts in each country's region
-- Rate each country on a scale: SAFE (green), CAUTION (yellow), ELEVATED (orange), DANGER (red), CRITICAL (dark red)
-- Provide a safety score 0-100 (100 = safest)
-- Give a brief one-line status for each country
-- Consider that rockets from Iran primarily threaten countries in their trajectory path
-
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON:
 {
   "countries": [
-    {
-      "code": "AE",
-      "name": "UAE",
-      "safety_score": 75,
-      "level": "CAUTION",
-      "status": "brief one-line description",
-      "threats": ["threat1", "threat2"]
-    }
+    { "code": "AE", "name": "UAE", "safety_score": 75, "level": "CAUTION", "status": "brief description", "threats": ["threat1"] }
   ],
   "overall_assessment": "one paragraph regional assessment",
   "last_analyzed": "ISO timestamp"
@@ -110,37 +89,22 @@ Return ONLY valid JSON with this exact structure:
       },
       {
         role: "user",
-        content: `Analyze citizen safety for these countries: UAE, Jordan, Saudi Arabia (KSA), Bahrain, Oman, Kuwait, Qatar, Yemen, Iraq, Lebanon.
+        content: `Analyze citizen safety for: UAE, Jordan, Saudi Arabia, Bahrain, Oman, Kuwait, Qatar, Yemen, Iraq, Lebanon.
 
-CURRENT INTELLIGENCE:
-
-ROCKETS/MISSILES IN THEATER:
-${rocketSummary}
-
-GEOPOLITICAL ALERTS:
-${alertSummary}
-
-AIRSPACE STATUS:
-${airspaceSummary}
-
-RISK SCORES:
-- Overall: ${risk.overall || 'N/A'}/100
-- Airspace: ${risk.airspace || 'N/A'}/100
-- Maritime: ${risk.maritime || 'N/A'}/100
-- Diplomatic: ${risk.diplomatic || 'N/A'}/100
-- Sentiment: ${risk.sentiment || 'N/A'}/100
-- Trend: ${risk.trend || 'N/A'}
-
-Assess citizen safety now.`
+ROCKETS: ${rocketSummary}
+GEO ALERTS: ${alertSummary}
+AIRSPACE: ${airspaceSummary}
+RISK: Overall ${risk.overall || 'N/A'}/100, Trend: ${risk.trend || 'N/A'}`
       }
     ]);
 
     let result;
     try {
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      result = JSON.parse(jsonMatch[1].trim());
+      const objMatch = (jsonMatch[1] || content).trim().match(/\{[\s\S]*\}/);
+      result = JSON.parse(objMatch ? objMatch[0] : (jsonMatch[1] || content).trim());
     } catch {
-      result = { countries: [], overall_assessment: "Analysis pending", error: "Failed to parse AI response" };
+      result = { countries: [], overall_assessment: "Analysis pending", error: "Failed to parse" };
     }
 
     return new Response(JSON.stringify(result), {
@@ -148,7 +112,7 @@ Assess citizen safety now.`
     });
   } catch (e) {
     if (e instanceof Error && e.message === "RATE_LIMIT") {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -159,13 +123,9 @@ Assess citizen safety now.`
     }
     if (e instanceof Error && e.message === "AI_UNAVAILABLE") {
       return new Response(JSON.stringify({
-        countries: [],
-        overall_assessment: "AI analysis temporarily unavailable. Will retry automatically.",
-        last_analyzed: new Date().toISOString(),
-        error: "AI temporarily unavailable"
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+        countries: [], overall_assessment: "AI analysis temporarily unavailable.",
+        last_analyzed: new Date().toISOString(), error: "AI temporarily unavailable"
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     console.error("Citizen security error:", e);
     return new Response(
