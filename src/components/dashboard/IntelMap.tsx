@@ -12,6 +12,7 @@ import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./
 import { Satellite } from "lucide-react";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
+import { useConflictEvents, type ConflictEvent } from "@/hooks/useConflictEvents";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -128,6 +129,41 @@ const createFireIcon = (frp: number) => {
   });
 };
 
+const conflictTypeEmojis: Record<string, string> = {
+  "Battles": "⚔️",
+  "Explosions/Remote violence": "💥",
+  "Violence against civilians": "🩸",
+  "Protests": "✊",
+  "Riots": "🔥",
+  "Strategic developments": "🎯",
+};
+
+const conflictTypeColors: Record<string, string> = {
+  "Battles": "#ef4444",
+  "Explosions/Remote violence": "#ff6b00",
+  "Violence against civilians": "#dc2626",
+  "Protests": "#eab308",
+  "Riots": "#f97316",
+  "Strategic developments": "#3b82f6",
+};
+
+const createConflictIcon = (eventType: string, severity: string) => {
+  const emoji = conflictTypeEmojis[eventType] || "⚔️";
+  const color = conflictTypeColors[eventType] || "#ef4444";
+  const isCritical = severity === "critical" || severity === "high";
+  const size = isCritical ? 16 : 13;
+  return L.divIcon({
+    className: "conflict-icon",
+    html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+      ${isCritical ? `<div style="position:absolute;width:22px;height:22px;border-radius:50%;border:1.5px solid ${color};opacity:0.4;animation:pulse 2s ease-in-out infinite;"></div>` : ''}
+      <div style="font-size:${size}px;filter:drop-shadow(0 0 4px ${color});">${emoji}</div>
+    </div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
+  });
+};
+
 const popupOptions: L.PopupOptions = {
   autoPan: true,
   autoPanPadding: L.point(40, 40),
@@ -144,6 +180,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const bordersGroupRef = useRef<L.LayerGroup | null>(null);
   const earthquakeGroupRef = useRef<L.LayerGroup | null>(null);
   const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
+  const conflictGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
@@ -151,6 +188,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
   const wildfires = useWildfires();
+  const conflictEvents = useConflictEvents();
 
   // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
@@ -177,6 +215,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     overlayGroupRef.current = L.layerGroup().addTo(map);
     earthquakeGroupRef.current = L.layerGroup().addTo(map);
     wildfireGroupRef.current = L.layerGroup().addTo(map);
+    conflictGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -185,6 +224,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       bordersGroupRef.current?.clearLayers();
       earthquakeGroupRef.current?.clearLayers();
       wildfireGroupRef.current?.clearLayers();
+      conflictGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -194,6 +234,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       bordersGroupRef.current = null;
       earthquakeGroupRef.current = null;
       wildfireGroupRef.current = null;
+      conflictGroupRef.current = null;
       userItemsGroupRef.current = null;
       weatherTileRef.current = null;
     };
