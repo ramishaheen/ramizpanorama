@@ -1039,6 +1039,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
+  const [showUrbanScene, setShowUrbanScene] = useState(false);
 
   return (
     <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
@@ -1059,7 +1060,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       <TotalLaunchesWidget rockets={rockets} />
       <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
 
-      {/* Satellite count badge + 3D Globe toggle */}
+      {/* 3D Mode buttons */}
       <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1.5">
         {satCount > 0 && (
           <button
@@ -1072,10 +1073,19 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <span className="text-[9px] font-mono text-muted-foreground uppercase">SAT 3D</span>
           </button>
         )}
+        <button
+          onClick={() => setShowUrbanScene(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+          title="Open 3D Urban Recon"
+        >
+          <Building2 className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">URBAN 3D</span>
+        </button>
       </div>
 
-      {/* 3D Satellite Globe overlay */}
+      {/* 3D overlays */}
       {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
+      {showUrbanScene && <UrbanScene3D onClose={() => setShowUrbanScene(false)} />}
 
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
