@@ -23,6 +23,7 @@ interface IntelMapProps {
   rockets: Rocket[];
   layers: LayerState;
   safetyData?: CountrySafety[];
+  flyToTarget?: { lat: number; lng: number; label: string } | null;
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
@@ -174,7 +175,7 @@ const popupOptions: L.PopupOptions = {
 
 const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
