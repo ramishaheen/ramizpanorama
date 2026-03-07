@@ -17,6 +17,7 @@ import { CyberSecurityAlerts } from "@/components/dashboard/CyberSecurityAlerts"
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
+import { useTelegramIntel } from "@/hooks/useTelegramIntel";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
