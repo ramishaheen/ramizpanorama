@@ -1,9 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const CACHE_TTL_HOURS = 24;
+
+function getSupabase() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+}
 
 async function callAI(messages: Array<{ role: string; content: string }>) {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -82,6 +92,29 @@ serve(async (req) => {
   }
 
   try {
+    const sb = getSupabase();
+
+    // Check cache — return cached markers if less than 24h old
+    const { data: cached } = await sb
+      .from("telegram_intel_cache")
+      .select("markers, fetched_at")
+      .eq("region_focus", "middle_east")
+      .order("fetched_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (cached) {
+      const age = Date.now() - new Date(cached.fetched_at).getTime();
+      const ttl = CACHE_TTL_HOURS * 60 * 60 * 1000;
+      if (age < ttl) {
+        console.log(`Returning cached markers (age: ${Math.round(age / 60000)}min)`);
+        return new Response(JSON.stringify({ markers: cached.markers, cached: true, age_minutes: Math.round(age / 60000) }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Cache expired or missing — fetch fresh data
     const posts = await fetchTelegramPosts();
 
     if (posts.length === 0) {
@@ -90,7 +123,6 @@ serve(async (req) => {
       });
     }
 
-    // Process posts in batches to handle larger volumes
     const BATCH_SIZE = 20;
     const batches: Array<Array<{ id: number; text: string; date: string }>> = [];
     for (let i = 0; i < posts.length; i += BATCH_SIZE) {
@@ -102,11 +134,19 @@ serve(async (req) => {
     for (const batch of batches) {
       const postsSummary = batch.map((p, i) => `[${i}] ${p.text.slice(0, 300)}`).join("\n---\n");
 
-      const prompt = `You are a military intelligence geo-analyst. Analyze these WarsLeaks Telegram posts and extract ALL that mention specific military events, attacks, missile launches, drone strikes, troop movements, naval incidents, protests, airstrikes, explosions, or geopolitical events that can be pinpointed to a location.
+      const prompt = `You are a military intelligence geo-analyst. Analyze these WarsLeaks Telegram posts and extract ALL that mention specific military events, attacks, missile launches, drone strikes, troop movements, naval incidents, protests, airstrikes, explosions, or geopolitical events.
 
-IMPORTANT: Extract as many geo-locatable events as possible. Even if location is vaguely mentioned (a country, region, or city), assign the best coordinates you can.
+PRIORITY REGIONS (extract ALL events from these):
+- JORDAN: Amman, Aqaba, Zarqa, Mafraq, border areas, al-Tanf
+- GULF COUNTRIES: Saudi Arabia, UAE, Bahrain, Qatar, Kuwait, Oman — all cities, bases, ports
+- IRAN: Tehran, Isfahan, Natanz, Bushehr, Bandar Abbas, Chabahar, Shiraz, Tabriz, IRGC bases
+- IRAQ: Baghdad, Basra, Erbil, Kirkuk, Ain al-Asad, al-Taji
+- ISRAEL/PALESTINE: Gaza, West Bank, Tel Aviv, Haifa, Golan, Negev, Rafah, Khan Younis
+- YEMEN: Sanaa, Aden, Hodeidah, Marib — Houthi-related
+- LEBANON: Beirut, South Lebanon, Bekaa
+- SYRIA: Damascus, Aleppo, Deir ez-Zor, Latakia, T4 airbase
 
-FOCUS REGIONS: Jordan, Iraq, Israel/Palestine, Gulf Area (UAE, Saudi Arabia, Bahrain, Qatar, Kuwait, Oman), Iran, Yemen, Lebanon, Syria, Turkey, Egypt, Libya, Sudan, Ukraine, Russia.
+Also include: Red Sea, Strait of Hormuz, Bab el-Mandeb, Suez Canal events.
 
 For each relevant post, provide:
 - lat/lng coordinates (be precise — use known city/base/border coordinates)
@@ -114,42 +154,28 @@ For each relevant post, provide:
 - A brief English summary (max 120 chars)
 - category: one of MISSILE, MILITARY, NAVAL, DRONE, AIRSTRIKE, EXPLOSION, PROTEST, DIPLOMATIC, HUMANITARIAN
 - severity: low, medium, high, or critical
-- Whether this is a "special" event (Iran-related, missiles, rockets, drones targeting Jordan/Gulf) → mark as special: true
+- Whether this is a "special" event (Iran-related, missiles, rockets, drones, Houthi attacks) → special: true
 
-Reference coordinates for accuracy:
-- Tehran: 35.69, 51.39 | Isfahan: 32.65, 51.68 | Bandar Abbas: 27.18, 56.27
-- Baghdad: 33.31, 44.37 | Basra: 30.51, 47.81 | Erbil: 36.19, 44.01
-- Amman: 31.95, 35.93 | Aqaba: 29.53, 35.01
-- Gaza: 31.50, 34.47 | Tel Aviv: 32.07, 34.78 | Haifa: 32.79, 34.99 | Rafah: 31.28, 34.24
-- Riyadh: 24.71, 46.67 | Dubai: 25.20, 55.27 | Doha: 25.29, 51.53
-- Sanaa: 15.37, 44.21 | Aden: 12.79, 45.02 | Hodeidah: 14.80, 42.95
+Reference coordinates:
+- Amman: 31.95, 35.93 | Aqaba: 29.53, 35.01 | Mafraq: 32.34, 36.21
+- Tehran: 35.69, 51.39 | Isfahan: 32.65, 51.68 | Bandar Abbas: 27.18, 56.27 | Natanz: 33.51, 51.92 | Bushehr: 28.97, 50.84 | Shiraz: 29.59, 52.58
+- Baghdad: 33.31, 44.37 | Basra: 30.51, 47.81 | Erbil: 36.19, 44.01 | Ain al-Asad: 33.79, 42.44
+- Riyadh: 24.71, 46.67 | Jeddah: 21.49, 39.19 | Dubai: 25.20, 55.27 | Abu Dhabi: 24.45, 54.65 | Doha: 25.29, 51.53 | Kuwait City: 29.38, 47.99 | Manama: 26.23, 50.59 | Muscat: 23.61, 58.59
+- Gaza: 31.50, 34.47 | Tel Aviv: 32.07, 34.78 | Haifa: 32.79, 34.99 | Rafah: 31.28, 34.24 | Khan Younis: 31.35, 34.30
+- Sanaa: 15.37, 44.21 | Aden: 12.79, 45.02 | Hodeidah: 14.80, 42.95 | Marib: 15.46, 45.33
 - Beirut: 33.89, 35.50 | Damascus: 33.51, 36.29 | Aleppo: 36.20, 37.15
-- Strait of Hormuz: 26.57, 56.25 | Bab el-Mandeb: 12.58, 43.33
-- Kyiv: 50.45, 30.52 | Kharkiv: 49.99, 36.23 | Crimea: 44.95, 34.10
-- Tripoli: 32.90, 13.18 | Benghazi: 32.12, 20.07
-- Khartoum: 15.59, 32.53 | Port Sudan: 19.62, 37.22
+- Strait of Hormuz: 26.57, 56.25 | Bab el-Mandeb: 12.58, 43.33 | Suez Canal: 30.46, 32.35
 
 Return ONLY valid JSON array. If no posts are geo-locatable, return: []
 
-[
-  {
-    "postIndex": 0,
-    "lat": 33.31,
-    "lng": 44.37,
-    "headline": "Explosion near Baghdad Green Zone",
-    "summary": "Reports of a large explosion heard near the Green Zone in central Baghdad",
-    "category": "EXPLOSION",
-    "severity": "high",
-    "special": false
-  }
-]
+[{"postIndex": 0, "lat": 33.31, "lng": 44.37, "headline": "Explosion near Baghdad", "summary": "Reports of explosion near Green Zone", "category": "EXPLOSION", "severity": "high", "special": false}]
 
 POSTS:
 ${postsSummary}`;
 
       try {
         const aiResponse = await callAI([
-          { role: "system", content: "You are a precise military intelligence geo-analyst. Return ONLY valid JSON, no markdown. Extract ALL geo-locatable events." },
+          { role: "system", content: "You are a precise military intelligence geo-analyst. Return ONLY valid JSON, no markdown. Extract ALL geo-locatable events especially from Jordan, Gulf countries, and Iran." },
           { role: "user", content: prompt },
         ]);
 
@@ -181,11 +207,20 @@ ${postsSummary}`;
           });
       } catch (e) {
         console.error("Batch AI error:", e);
-        // Continue with other batches even if one fails
       }
     }
 
-    return new Response(JSON.stringify({ markers: allMarkers }), {
+    // Store in cache — delete old entries first, then insert fresh
+    await sb.from("telegram_intel_cache").delete().eq("region_focus", "middle_east");
+    await sb.from("telegram_intel_cache").insert({
+      markers: allMarkers,
+      region_focus: "middle_east",
+      fetched_at: new Date().toISOString(),
+    });
+
+    console.log(`Cached ${allMarkers.length} markers for 24h`);
+
+    return new Response(JSON.stringify({ markers: allMarkers, cached: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
