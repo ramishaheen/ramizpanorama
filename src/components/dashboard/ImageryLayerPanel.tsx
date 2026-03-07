@@ -139,6 +139,31 @@ export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
     maxZoom: 18,
     category: "satellite",
   },
+  // UP42 Imagery
+  {
+    id: "up42-basemap",
+    name: "UP42 Satellite (Purchased)",
+    shortName: "UP42",
+    url: "https://api.up42.com/v2/assets/wmts/1.0.0/WMTSCapabilities/{z}/{x}/{y}.png",
+    attribution: "&copy; UP42 / Airbus",
+    type: "base",
+    opacity: 1,
+    enabled: false,
+    maxZoom: 20,
+    category: "satellite",
+  },
+  {
+    id: "up42-overlay",
+    name: "UP42 Imagery Overlay",
+    shortName: "UP42 OVR",
+    url: "https://api.up42.com/v2/assets/wmts/1.0.0/WMTSCapabilities/{z}/{x}/{y}.png",
+    attribution: "&copy; UP42 / Airbus",
+    type: "overlay",
+    opacity: 0.8,
+    enabled: false,
+    maxZoom: 20,
+    category: "satellite",
+  },
 ];
 
 interface ImageryLayerPanelProps {
