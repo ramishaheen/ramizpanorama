@@ -162,24 +162,23 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("MINIMAX_API_KEY");
+    if (!apiKey) throw new Error("MINIMAX_API_KEY not configured");
 
-    // Fetch live dashboard data to inject as context
     const liveData = await fetchLiveData();
 
     const systemWithData = SYSTEM_PROMPT + (liveData
       ? `\n\n==================================================\nLIVE_SYSTEM_DATA (current dashboard state)\n==================================================\n${JSON.stringify(liveData, null, 2)}`
       : "\n\n[LIVE_SYSTEM_DATA unavailable — answer from knowledge only]");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.minimax.chat/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "MiniMax-M2",
         messages: [
           { role: "system", content: systemWithData },
           ...messages,
@@ -200,7 +199,7 @@ serve(async (req) => {
         });
       }
       const errText = await response.text();
-      console.error("AI error:", response.status, errText);
+      console.error("MiniMax error:", response.status, errText);
       throw new Error("AI gateway error");
     }
 

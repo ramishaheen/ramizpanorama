@@ -3,36 +3,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function stripThinkTags(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
+    const apiKey = Deno.env.get('MINIMAX_API_KEY');
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ success: false, error: 'AI gateway not configured' }),
+        JSON.stringify({ success: false, error: 'AI provider not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fetch from multiple free OSINT sources
     const osintData = await fetchOSINTData();
 
-    // Use AI to analyze and structure the threat data
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a cybersecurity intelligence analyst specializing in Middle East cyber warfare. 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    let aiResponse;
+    try {
+      aiResponse = await fetch('https://api.minimax.chat/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'MiniMax-M2',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a cybersecurity intelligence analyst specializing in Middle East cyber warfare. 
 Given OSINT data about recent cyber incidents, generate a structured JSON array of the latest cyber operations 
 involving Israel, USA, Iran, and Arab countries (UAE, Saudi Arabia, Qatar, Jordan, Bahrain, etc).
 
@@ -52,20 +59,24 @@ Each entry must have these fields:
 Generate 8-12 realistic, plausible cyber incidents based on the OSINT context provided. 
 Make them technically detailed and realistic. Focus on the Iran-Israel-US cyber front.
 Return ONLY the JSON array, no markdown formatting.`
-          },
-          {
-            role: 'user',
-            content: `Here is recent OSINT cyber threat data to analyze and expand upon:\n\n${JSON.stringify(osintData, null, 2)}\n\nGenerate structured cyber incident reports based on this intelligence context.`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
-    });
+            },
+            {
+              role: 'user',
+              content: `Here is recent OSINT cyber threat data to analyze and expand upon:\n\n${JSON.stringify(osintData, null, 2)}\n\nGenerate structured cyber incident reports based on this intelligence context.`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error('AI Gateway error:', errText);
+      console.error('MiniMax error:', errText);
       return new Response(
         JSON.stringify({ success: false, error: 'AI analysis failed' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -73,9 +84,9 @@ Return ONLY the JSON array, no markdown formatting.`
     }
 
     const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content || '[]';
+    const rawContent = aiData.choices?.[0]?.message?.content || '[]';
+    const content = stripThinkTags(rawContent);
     
-    // Parse the AI response - clean up markdown code blocks if present
     let threats;
     try {
       const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -109,14 +120,12 @@ async function fetchOSINTData() {
     sources: [],
   };
 
-  // Fetch CISA Known Exploited Vulnerabilities (free, no API key)
   try {
     const cisaRes = await fetch('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', {
       signal: AbortSignal.timeout(5000),
     });
     if (cisaRes.ok) {
       const cisaData = await cisaRes.json();
-      // Get latest 10 vulnerabilities
       results.cisaAlerts = (cisaData.vulnerabilities || []).slice(0, 10).map((v: any) => ({
         cve: v.cveID,
         vendor: v.vendorProject,
@@ -131,7 +140,6 @@ async function fetchOSINTData() {
     console.warn('CISA fetch failed:', e);
   }
 
-  // Fetch from AlienVault OTX public pulses (no API key needed for public)
   try {
     const otxRes = await fetch('https://otx.alienvault.com/api/v1/pulses/activity?limit=10&page=1', {
       headers: { 'Accept': 'application/json' },
@@ -155,7 +163,6 @@ async function fetchOSINTData() {
     console.warn('OTX fetch failed:', e);
   }
 
-  // Add current geopolitical context for AI
   results.cisaAlerts.push({
     context: 'Middle East Cyber Warfare - March 2026',
     actors: ['Israel Unit 8200', 'Iran APT33/APT34/MuddyWater/Charming Kitten', 'US Cyber Command', 'UAE DarkMatter', 'Saudi NCA'],

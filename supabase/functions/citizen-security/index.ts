@@ -7,32 +7,44 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function stripThinkTags(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+}
+
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("No AI provider available");
+  const apiKey = Deno.env.get("MINIMAX_API_KEY");
+  if (!apiKey) throw new Error("MINIMAX_API_KEY not configured");
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
-  if (response.status === 429) throw new Error("RATE_LIMIT");
-  if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
+  try {
+    const response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model: "MiniMax-M2", messages }),
+      signal: controller.signal,
+    });
 
-  const text = await response.text();
-  if (!response.ok || !text) {
-    console.error("Lovable AI failed, status:", response.status, "body:", text?.slice(0, 200));
-    throw new Error("AI_UNAVAILABLE");
+    if (response.status === 429) throw new Error("RATE_LIMIT");
+    if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
+
+    const text = await response.text();
+    if (!response.ok || !text) {
+      console.error("MiniMax failed, status:", response.status, "body:", text?.slice(0, 200));
+      throw new Error("AI_UNAVAILABLE");
+    }
+
+    const data = JSON.parse(text);
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("AI_UNAVAILABLE");
+    return stripThinkTags(content);
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const data = JSON.parse(text);
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("AI_UNAVAILABLE");
-  return content;
 }
 
 serve(async (req) => {
