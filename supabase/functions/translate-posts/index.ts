@@ -5,6 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function stripThinkTags(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,35 +24,44 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const apiKey = Deno.env.get("MINIMAX_API_KEY");
+    if (!apiKey) {
+      throw new Error("MINIMAX_API_KEY is not configured");
     }
 
     const numbered = texts.map((t: string, i: number) => `[${i}] ${t}`).join("\n---\n");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `You are a translator. Translate the following numbered texts from Arabic to English. 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    let response;
+    try {
+      response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "MiniMax-M2",
+          messages: [
+            {
+              role: "system",
+              content: `You are a translator. Translate the following numbered texts from Arabic to English. 
 Return ONLY a JSON array of strings in the same order, no explanation.
 If a text is already in English, return it as-is.
 Keep it concise and accurate. Military/geopolitical terminology should be precise.
 Example input: [0] مرحبا\n---\n[1] Hello world
 Example output: ["Hello", "Hello world"]`,
-          },
-          { role: "user", content: numbered },
-        ],
-      }),
-    });
+            },
+            { role: "user", content: numbered },
+          ],
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -64,22 +77,21 @@ Example output: ["Hello", "Hello world"]`,
         );
       }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      console.error("MiniMax error:", response.status, t);
       throw new Error("AI translation failed");
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "[]";
+    const rawContent = data.choices?.[0]?.message?.content || "[]";
+    const content = stripThinkTags(rawContent);
     
-    // Parse the JSON array from the response
     let translations: string[];
     try {
-      // Strip markdown code fences if present
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       translations = JSON.parse(cleaned);
     } catch {
       console.error("Failed to parse translations:", content);
-      translations = texts; // fallback to original
+      translations = texts;
     }
 
     return new Response(

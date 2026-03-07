@@ -6,14 +6,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function stripThinkTags(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("MINIMAX_API_KEY");
+    if (!apiKey) throw new Error("MINIMAX_API_KEY not configured");
 
     const today = new Date().toISOString().split("T")[0];
     const daysSinceOct2023 = Math.floor((Date.now() - new Date("2023-10-07").getTime()) / 86400000);
@@ -112,20 +116,29 @@ Return ONLY valid JSON (no markdown, no code blocks):
 
 CRITICAL: country_costs totals MUST sum to cumulative_estimate_billions. Each cost_per_second = daily_cost_millions * 1000000 / 86400. Use the FULL cost formula for each country breakdown.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Today is ${today}, day ${daysSinceOct2023} of the conflict. Provide precise per-second war costs with current event modifiers for all Middle East countries affected.` },
-        ],
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    let response;
+    try {
+      response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "MiniMax-M2",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Today is ${today}, day ${daysSinceOct2023} of the conflict. Provide precise per-second war costs with current event modifiers for all Middle East countries affected.` },
+          ],
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -139,14 +152,15 @@ CRITICAL: country_costs totals MUST sum to cumulative_estimate_billions. Each co
         });
       }
       const errText = await response.text();
-      console.error("AI error:", response.status, errText);
+      console.error("MiniMax error:", response.status, errText);
       throw new Error("AI gateway error");
     }
 
     const rawText = await response.text();
     if (!rawText) throw new Error("AI returned empty response");
     const data = JSON.parse(rawText);
-    const content = data.choices?.[0]?.message?.content || "";
+    const rawContent = data.choices?.[0]?.message?.content || "";
+    const content = stripThinkTags(rawContent);
 
     let costs;
     try {
