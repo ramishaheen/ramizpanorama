@@ -104,7 +104,7 @@ serve(async (req) => {
     const sorted = posts
       .filter(p => p.text.length > 0)
       .sort((a, b) => b.id - a.id)
-      .slice(0, 20);
+      .slice(0, 50);
 
     return new Response(JSON.stringify({ posts: sorted }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
