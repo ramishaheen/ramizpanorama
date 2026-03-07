@@ -81,6 +81,9 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
             </span>
           </button>
 
+          {/* Notification Center */}
+          <NotificationCenter rockets={rockets} alertMuted={alertMuted} />
+
           {/* Alert mute */}
           <button
             onClick={onToggleAlertMute}
