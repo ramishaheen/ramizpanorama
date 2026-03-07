@@ -90,11 +90,23 @@ serve(async (req) => {
       });
     }
 
-    const postsSummary = posts.map((p, i) => `[${i}] ${p.text.slice(0, 300)}`).join("\n---\n");
+    // Process posts in batches to handle larger volumes
+    const BATCH_SIZE = 20;
+    const batches: Array<Array<{ id: number; text: string; date: string }>> = [];
+    for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+      batches.push(posts.slice(i, i + BATCH_SIZE));
+    }
 
-    const prompt = `You are a military intelligence geo-analyst. Analyze these WarsLeaks Telegram posts and extract ONLY those that mention specific military events, attacks, missile launches, drone strikes, troop movements, naval incidents, or geopolitical events that can be pinpointed to a specific location.
+    const allMarkers: any[] = [];
 
-FOCUS REGIONS: Jordan, Iraq, Israel/Palestine, Gulf Area (UAE, Saudi Arabia, Bahrain, Qatar, Kuwait, Oman), Iran, Yemen, Lebanon, Syria.
+    for (const batch of batches) {
+      const postsSummary = batch.map((p, i) => `[${i}] ${p.text.slice(0, 300)}`).join("\n---\n");
+
+      const prompt = `You are a military intelligence geo-analyst. Analyze these WarsLeaks Telegram posts and extract ALL that mention specific military events, attacks, missile launches, drone strikes, troop movements, naval incidents, protests, airstrikes, explosions, or geopolitical events that can be pinpointed to a location.
+
+IMPORTANT: Extract as many geo-locatable events as possible. Even if location is vaguely mentioned (a country, region, or city), assign the best coordinates you can.
+
+FOCUS REGIONS: Jordan, Iraq, Israel/Palestine, Gulf Area (UAE, Saudi Arabia, Bahrain, Qatar, Kuwait, Oman), Iran, Yemen, Lebanon, Syria, Turkey, Egypt, Libya, Sudan, Ukraine, Russia.
 
 For each relevant post, provide:
 - lat/lng coordinates (be precise — use known city/base/border coordinates)
@@ -108,13 +120,17 @@ Reference coordinates for accuracy:
 - Tehran: 35.69, 51.39 | Isfahan: 32.65, 51.68 | Bandar Abbas: 27.18, 56.27
 - Baghdad: 33.31, 44.37 | Basra: 30.51, 47.81 | Erbil: 36.19, 44.01
 - Amman: 31.95, 35.93 | Aqaba: 29.53, 35.01
-- Gaza: 31.50, 34.47 | Tel Aviv: 32.07, 34.78 | Haifa: 32.79, 34.99
+- Gaza: 31.50, 34.47 | Tel Aviv: 32.07, 34.78 | Haifa: 32.79, 34.99 | Rafah: 31.28, 34.24
 - Riyadh: 24.71, 46.67 | Dubai: 25.20, 55.27 | Doha: 25.29, 51.53
-- Sanaa: 15.37, 44.21 | Aden: 12.79, 45.02
-- Beirut: 33.89, 35.50 | Damascus: 33.51, 36.29
+- Sanaa: 15.37, 44.21 | Aden: 12.79, 45.02 | Hodeidah: 14.80, 42.95
+- Beirut: 33.89, 35.50 | Damascus: 33.51, 36.29 | Aleppo: 36.20, 37.15
 - Strait of Hormuz: 26.57, 56.25 | Bab el-Mandeb: 12.58, 43.33
+- Kyiv: 50.45, 30.52 | Kharkiv: 49.99, 36.23 | Crimea: 44.95, 34.10
+- Tripoli: 32.90, 13.18 | Benghazi: 32.12, 20.07
+- Khartoum: 15.59, 32.53 | Port Sudan: 19.62, 37.22
 
-Return ONLY valid JSON array:
+Return ONLY valid JSON array. If no posts are geo-locatable, return: []
+
 [
   {
     "postIndex": 0,
@@ -128,43 +144,48 @@ Return ONLY valid JSON array:
   }
 ]
 
-If no posts are geo-locatable, return an empty array: []
-
 POSTS:
 ${postsSummary}`;
 
-    const aiResponse = await callAI([
-      { role: "system", content: "You are a precise military intelligence geo-analyst. Return ONLY valid JSON, no markdown." },
-      { role: "user", content: prompt },
-    ]);
+      try {
+        const aiResponse = await callAI([
+          { role: "system", content: "You are a precise military intelligence geo-analyst. Return ONLY valid JSON, no markdown. Extract ALL geo-locatable events." },
+          { role: "user", content: prompt },
+        ]);
 
-    let markers: any[] = [];
-    try {
-      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        markers = JSON.parse(jsonMatch[0]);
+        let batchMarkers: any[] = [];
+        try {
+          const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            batchMarkers = JSON.parse(jsonMatch[0]);
+          }
+        } catch (e) {
+          console.error("Failed to parse AI response:", e);
+        }
+
+        batchMarkers
+          .filter((m: any) => m.lat && m.lng && m.headline)
+          .forEach((m: any, i: number) => {
+            allMarkers.push({
+              id: `tg-${batch[m.postIndex]?.id || i}-${Date.now()}-${allMarkers.length}`,
+              lat: Number(m.lat),
+              lng: Number(m.lng),
+              headline: String(m.headline).slice(0, 80),
+              summary: String(m.summary || "").slice(0, 150),
+              category: m.category || "MILITARY",
+              severity: m.severity || "medium",
+              special: Boolean(m.special),
+              source: "WarsLeaks",
+              timestamp: batch[m.postIndex]?.date || new Date().toISOString(),
+            });
+          });
+      } catch (e) {
+        console.error("Batch AI error:", e);
+        // Continue with other batches even if one fails
       }
-    } catch (e) {
-      console.error("Failed to parse AI response:", e, aiResponse);
     }
 
-    // Validate and clean markers
-    markers = markers
-      .filter((m: any) => m.lat && m.lng && m.headline)
-      .map((m: any, i: number) => ({
-        id: `tg-${posts[m.postIndex]?.id || i}-${Date.now()}`,
-        lat: Number(m.lat),
-        lng: Number(m.lng),
-        headline: String(m.headline).slice(0, 80),
-        summary: String(m.summary || "").slice(0, 150),
-        category: m.category || "MILITARY",
-        severity: m.severity || "medium",
-        special: Boolean(m.special),
-        source: "WarsLeaks",
-        timestamp: posts[m.postIndex]?.date || new Date().toISOString(),
-      }));
-
-    return new Response(JSON.stringify({ markers }), {
+    return new Response(JSON.stringify({ markers: allMarkers }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
