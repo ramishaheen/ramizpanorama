@@ -177,7 +177,30 @@ const popupOptions: L.PopupOptions = {
 
 const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget }: IntelMapProps) => {
+const newsSeverityColors: Record<string, string> = {
+  low: "#22c55e",
+  medium: "#00d4ff",
+  high: "#ffb800",
+  critical: "#ef4444",
+};
+
+const createNewsIcon = (severity: string, category: string) => {
+  const color = newsSeverityColors[severity] || "#00d4ff";
+  const emoji = category === "MILITARY" ? "⚔️" : category === "DIPLOMATIC" ? "🏛️" : category === "ECONOMIC" ? "💰" : category === "HUMANITARIAN" ? "🩺" : "📰";
+  return L.divIcon({
+    className: "news-marker-icon",
+    html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;width:30px;height:30px;border-radius:50%;border:2px solid ${color};opacity:0.5;animation:pulse 2.5s ease-in-out infinite;"></div>
+      <div style="position:absolute;width:20px;height:20px;border-radius:50%;background:${color};opacity:0.15;"></div>
+      <div style="font-size:14px;filter:drop-shadow(0 0 6px ${color});">${emoji}</div>
+    </div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18],
+  });
+};
+
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [] }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
