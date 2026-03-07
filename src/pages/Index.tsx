@@ -17,6 +17,7 @@ import { CyberSecurityAlerts } from "@/components/dashboard/CyberSecurityAlerts"
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
+import { useTelegramIntel } from "@/hooks/useTelegramIntel";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
@@ -102,6 +103,7 @@ const Index = () => {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh } = useLiveDashboard();
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
+  const telegramIntel = useTelegramIntel();
   const isMobile = useIsMobile();
 
   const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; label: string } | null>(null);
@@ -277,6 +279,7 @@ const Index = () => {
                   safetyData={citizenSecurity.data?.countries}
                   flyToTarget={flyToTarget}
                   newsMarkers={warUpdates.data?.updates}
+                  telegramMarkers={telegramIntel.markers}
                 />
               </div>
               <div className="flex flex-col sm:flex-row border-t border-border sm:h-[220px]">
@@ -423,6 +426,7 @@ const Index = () => {
               safetyData={citizenSecurity.data?.countries}
               flyToTarget={flyToTarget}
               newsMarkers={warUpdates.data?.updates}
+              telegramMarkers={telegramIntel.markers}
             />
           </div>
 

@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
 import type { WarUpdate } from "@/hooks/useWarUpdates";
+import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 import type { CountrySafety } from "@/hooks/useCitizenSecurity";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
@@ -26,6 +27,7 @@ interface IntelMapProps {
   safetyData?: CountrySafety[];
   flyToTarget?: { lat: number; lng: number; label: string } | null;
   newsMarkers?: WarUpdate[];
+  telegramMarkers?: TelegramMarker[];
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
@@ -222,7 +224,7 @@ const createNewsIcon = (severity: string, category: string, special: boolean) =>
   });
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [] }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [] }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
@@ -232,6 +234,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
   const conflictGroupRef = useRef<L.LayerGroup | null>(null);
   const newsGroupRef = useRef<L.LayerGroup | null>(null);
+  const telegramGroupRef = useRef<L.LayerGroup | null>(null);
   const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
@@ -314,6 +317,58 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   }, [newsMarkers]);
 
 
+  // Render WarsLeaks Telegram markers on map
+  useEffect(() => {
+    const group = telegramGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    const categoryEmojis: Record<string, string> = {
+      MISSILE: "🚀", MILITARY: "⚔️", NAVAL: "⚓", DRONE: "🛩️",
+      AIRSTRIKE: "💣", EXPLOSION: "💥", PROTEST: "✊", DIPLOMATIC: "🏛️", HUMANITARIAN: "🩺",
+    };
+
+    telegramMarkers.forEach((tm) => {
+      const emoji = categoryEmojis[tm.category] || "📡";
+      const color = tm.special ? "#ff0040" : (newsSeverityColors[tm.severity] || "#a855f7");
+      const size = tm.special ? 36 : 28;
+      const glowColor = tm.special ? "#ff0040" : "#a855f7";
+
+      const icon = L.divIcon({
+        className: "telegram-marker",
+        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;border:${tm.special ? 3 : 2}px solid ${color};box-shadow:0 0 ${tm.special ? 16 : 8}px ${glowColor};animation:pulse ${tm.special ? '1s' : '2.5s'} ease-in-out infinite;"></div>
+          <div style="position:absolute;width:${size - 10}px;height:${size - 10}px;border-radius:50%;background:${color};opacity:0.15;"></div>
+          <div style="font-size:${tm.special ? 18 : 14}px;filter:drop-shadow(0 0 ${tm.special ? 10 : 6}px ${glowColor});">${emoji}</div>
+        </div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+        popupAnchor: [0, -(size / 2 + 4)],
+      });
+
+      const badge = tm.special
+        ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ WARSLEAKS SPECIAL</div>`
+        : `<div style="background:#a855f7;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">📡 WARSLEAKS</div>`;
+
+      const marker = L.marker([tm.lat, tm.lng], { icon, zIndexOffset: tm.special ? 1200 : 500 }).bindPopup(
+        `<div style="${popupStyle}">
+          ${badge}
+          <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${emoji} ${tm.headline}</div>
+          <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${tm.summary}</div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <span style="color:${color};font-size:9px;font-weight:600;">● ${tm.severity.toUpperCase()}</span>
+            <span style="color:#888;font-size:9px;">${tm.category}</span>
+            <span style="color:#a855f7;font-size:9px;">WarsLeaks</span>
+          </div>
+        </div>`,
+        { className: "intel-popup" }
+      );
+      group.addLayer(marker);
+    });
+  }, [telegramMarkers]);
+
+
+  // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
   const [pendingItem, setPendingItem] = useState<Partial<UserMapItem> | null>(null);
   const [userItems, setUserItems] = useState<UserMapItem[]>([]);
@@ -341,6 +396,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     conflictGroupRef.current = L.layerGroup().addTo(map);
     up42GroupRef.current = L.layerGroup().addTo(map);
     newsGroupRef.current = L.layerGroup().addTo(map);
+    telegramGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -360,6 +416,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       conflictGroupRef.current?.clearLayers();
       up42GroupRef.current?.clearLayers();
       newsGroupRef.current?.clearLayers();
+      telegramGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -372,6 +429,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       conflictGroupRef.current = null;
       up42GroupRef.current = null;
       newsGroupRef.current = null;
+      telegramGroupRef.current = null;
       userItemsGroupRef.current = null;
       weatherTileRef.current = null;
     };
