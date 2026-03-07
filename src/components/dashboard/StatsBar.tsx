@@ -136,7 +136,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   const { oil, brent, gold, silver, gas, copper, wheat, usdils, usdsar, ita, btc, eth, loading } = useCommodityPrices();
   const warCosts = useWarCosts();
   const { t } = useLanguage();
-  const [scenario, setScenario] = useState<Scenario>("base");
+  const [scenario, setScenario] = useState<Scenario>("severe");
 
   // Build missile breakdown by type
   const missileBreakdown = useMemo(() => {
