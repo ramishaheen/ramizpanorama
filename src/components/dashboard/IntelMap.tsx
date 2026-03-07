@@ -307,8 +307,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const severityLabel = update.severity.toUpperCase();
       const color = special ? "#ff0040" : (newsSeverityColors[update.severity] || "#00d4ff");
       const badge = special ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ SPECIAL ALERT</div>` : "";
-      const marker = L.marker([update.lat, update.lng], { icon, zIndexOffset: special ? 1000 : 0 }).bindPopup(
-        `<div style="${popupStyle}">
+      const marker = L.marker([update.lat, update.lng], { icon, zIndexOffset: special ? 1000 : 0 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
           ${badge}
           <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${special ? "🚀" : "📰"} AI INTEL — ${update.region}</div>
           <div style="color:#fff;font-size:11px;margin-bottom:4px;">${update.headline}</div>
@@ -318,10 +318,22 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <span style="color:#888;font-size:9px;">${update.category}</span>
             <span style="color:#666;font-size:9px;">${update.source}</span>
           </div>
-        </div>`,
-        { className: "intel-popup" }
-      );
+        </div>`);
       group.addLayer(marker);
+
+      // Threat radius for special alerts
+      if (special) {
+        const radius = L.circle([update.lat, update.lng], {
+          radius: 50000,
+          color: "#ff0040",
+          fillColor: "#ff0040",
+          fillOpacity: 0.06,
+          weight: 1.5,
+          dashArray: "6 4",
+          className: "threat-radius-circle",
+        });
+        group.addLayer(radius);
+      }
     });
   }, [newsMarkers]);
 
