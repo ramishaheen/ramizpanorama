@@ -196,6 +196,44 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const wildfires = useWildfires();
   const conflictEvents = useConflictEvents();
 
+  // FlyTo effect — when a news update is clicked, zoom to its location
+  const flyToMarkerRef = useRef<L.Marker | null>(null);
+  useEffect(() => {
+    if (!flyToTarget || !mapRef.current) return;
+    const { lat, lng, label } = flyToTarget;
+    mapRef.current.flyTo([lat, lng], 8, { duration: 1.5 });
+    
+    // Remove previous flyTo marker
+    if (flyToMarkerRef.current) {
+      flyToMarkerRef.current.remove();
+    }
+    
+    // Add a pulsing marker at the target location
+    const icon = L.divIcon({
+      className: "flyto-pulse-marker",
+      html: `<div style="position:relative;width:24px;height:24px;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:hsl(var(--primary));opacity:0.3;animation:flyto-ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+        <div style="position:absolute;inset:6px;border-radius:50%;background:hsl(var(--primary));border:2px solid white;"></div>
+      </div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+    
+    const marker = L.marker([lat, lng], { icon })
+      .bindPopup(`<div style="${popupStyle}"><div style="color:#00d4ff;font-weight:700;">📰 AI NEWS</div><div>${label}</div></div>`, { className: "intel-popup" })
+      .addTo(mapRef.current);
+    marker.openPopup();
+    flyToMarkerRef.current = marker;
+    
+    // Auto-remove after 15 seconds
+    setTimeout(() => {
+      if (flyToMarkerRef.current === marker) {
+        marker.remove();
+        flyToMarkerRef.current = null;
+      }
+    }, 15000);
+  }, [flyToTarget]);
+
   // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
   const [pendingItem, setPendingItem] = useState<Partial<UserMapItem> | null>(null);
