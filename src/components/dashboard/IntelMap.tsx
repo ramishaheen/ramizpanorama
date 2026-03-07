@@ -344,6 +344,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     conflictGroupRef.current = L.layerGroup().addTo(map);
     up42GroupRef.current = L.layerGroup().addTo(map);
     newsGroupRef.current = L.layerGroup().addTo(map);
+    telegramGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -363,6 +364,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       conflictGroupRef.current?.clearLayers();
       up42GroupRef.current?.clearLayers();
       newsGroupRef.current?.clearLayers();
+      telegramGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -375,6 +377,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       conflictGroupRef.current = null;
       up42GroupRef.current = null;
       newsGroupRef.current = null;
+      telegramGroupRef.current = null;
       userItemsGroupRef.current = null;
       weatherTileRef.current = null;
     };
