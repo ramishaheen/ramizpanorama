@@ -9,6 +9,7 @@ import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorder
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
+import { Satellite } from "lucide-react";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -413,6 +414,20 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
   const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
+  // Satellite count badge - fetch from edge function
+  const [satCount, setSatCount] = useState(0);
+  useEffect(() => {
+    const fetchSats = async () => {
+      try {
+        const { data } = await import("@/integrations/supabase/client").then(m => m.supabase.functions.invoke("celestrak-satellites"));
+        if (data?.satellites) setSatCount(data.satellites.length);
+      } catch {}
+    };
+    fetchSats();
+    const interval = setInterval(fetchSats, 120_000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className={`relative h-full w-full ${mapStyle === "satellite" ? "satellite-mode" : ""}`}>
       <HolographicOverlay alertCount={totalAlerts} />
@@ -425,6 +440,16 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onCancelItem={handleCancelItem}
       />
       <TotalLaunchesWidget rockets={rockets} />
+
+      {/* Satellite count badge */}
+      {satCount > 0 && (
+        <div className="absolute top-14 right-3 z-[1000] flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg">
+          <Satellite className="h-3.5 w-3.5 text-primary" />
+          <span className="text-xs font-mono font-bold text-primary">{satCount}</span>
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">SAT</span>
+        </div>
+      )}
+
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
     </div>
   );

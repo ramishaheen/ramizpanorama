@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.translate-posts]
 verify_jwt = false
+
+[functions.war-escalation]
+verify_jwt = false
