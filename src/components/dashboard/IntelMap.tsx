@@ -371,8 +371,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ WARSLEAKS SPECIAL</div>`
         : `<div style="background:#a855f7;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">📡 WARSLEAKS</div>`;
 
-      const marker = L.marker([tm.lat, tm.lng], { icon, zIndexOffset: tm.special ? 1200 : 500 }).bindPopup(
-        `<div style="${popupStyle}">
+      const marker = L.marker([tm.lat, tm.lng], { icon, zIndexOffset: tm.special ? 1200 : 500 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
           ${badge}
           <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${emoji} ${tm.headline}</div>
           <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${tm.summary}</div>
@@ -381,10 +381,22 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <span style="color:#888;font-size:9px;">${tm.category}</span>
             <span style="color:#a855f7;font-size:9px;">WarsLeaks</span>
           </div>
-        </div>`,
-        { className: "intel-popup" }
-      );
+        </div>`);
       group.addLayer(marker);
+
+      // Threat radius for special WarsLeaks alerts
+      if (tm.special) {
+        const radius = L.circle([tm.lat, tm.lng], {
+          radius: 60000,
+          color: "#ff0040",
+          fillColor: "#ff0040",
+          fillOpacity: 0.05,
+          weight: 1.5,
+          dashArray: "6 4",
+          className: "threat-radius-circle",
+        });
+        group.addLayer(radius);
+      }
     });
   }, [telegramMarkers]);
 
