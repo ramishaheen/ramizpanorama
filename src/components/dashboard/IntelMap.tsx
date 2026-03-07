@@ -6,6 +6,7 @@ import type { LayerState } from "./LayerControls";
 import type { WarUpdate } from "@/hooks/useWarUpdates";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 import type { CountrySafety } from "@/hooks/useCitizenSecurity";
+import type { FusionEvent } from "@/hooks/useGeoFusion";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
@@ -29,6 +30,7 @@ interface IntelMapProps {
   flyToTarget?: { lat: number; lng: number; label: string } | null;
   newsMarkers?: WarUpdate[];
   telegramMarkers?: TelegramMarker[];
+  fusionEvents?: FusionEvent[];
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
@@ -233,7 +235,7 @@ const createNewsIcon = (severity: string, category: string, special: boolean) =>
   });
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [] }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [] }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
