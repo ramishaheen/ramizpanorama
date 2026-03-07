@@ -290,12 +290,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     newsMarkers.forEach((update) => {
       if (!update.lat || !update.lng) return;
-      const icon = createNewsIcon(update.severity, update.category);
+      const special = isSpecialNews(update.headline, update.body || "", update.region, update.category);
+      const icon = createNewsIcon(update.severity, update.category, special);
       const severityLabel = update.severity.toUpperCase();
-      const color = newsSeverityColors[update.severity] || "#00d4ff";
-      const marker = L.marker([update.lat, update.lng], { icon }).bindPopup(
+      const color = special ? "#ff0040" : (newsSeverityColors[update.severity] || "#00d4ff");
+      const badge = special ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ SPECIAL ALERT</div>` : "";
+      const marker = L.marker([update.lat, update.lng], { icon, zIndexOffset: special ? 1000 : 0 }).bindPopup(
         `<div style="${popupStyle}">
-          <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">📰 AI INTEL — ${update.region}</div>
+          ${badge}
+          <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${special ? "🚀" : "📰"} AI INTEL — ${update.region}</div>
           <div style="color:#fff;font-size:11px;margin-bottom:4px;">${update.headline}</div>
           <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${update.body?.slice(0, 120) || ""}${update.body && update.body.length > 120 ? "…" : ""}</div>
           <div style="display:flex;gap:8px;margin-top:4px;">
