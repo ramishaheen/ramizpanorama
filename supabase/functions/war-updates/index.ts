@@ -62,11 +62,18 @@ Deno.serve(async (req) => {
     const { context } = await req.json().catch(() => ({ context: '' }));
     const now = new Date().toISOString();
 
-    const prompt = `You are a military intelligence analyst providing REAL-TIME war situation updates for the Iran-Middle East conflict zone. Current time: ${now}
+    const prompt = `You are a military intelligence analyst providing REAL-TIME war situation updates. Current time: ${now}
 
 ${context ? `Current dashboard data context:\n${context}\n` : ''}
 
-Generate exactly 8 intelligence updates in JSON format. Each update should be realistic, specific, and based on plausible current events in the region. Include a mix of:
+FOCUS AREA: Your updates MUST be located ONLY within these 5 regions:
+1. JORDAN (Amman, Zarqa, Irbid, Aqaba, Jordan Valley, Dead Sea)
+2. IRAQ (Baghdad, Basra, Erbil, Mosul, Kirkuk, Anbar, Tikrit, Najaf)
+3. ISRAEL (Tel Aviv, Jerusalem, Haifa, Beer Sheva, Negev, Gaza Strip, West Bank, Golan Heights)
+4. GULF AREA (Saudi Arabia, UAE, Qatar, Bahrain, Kuwait, Oman, Strait of Hormuz, Persian Gulf, Red Sea)
+5. IRAN (Tehran, Isfahan, Shiraz, Tabriz, Bushehr, Bandar Abbas, Khuzestan, Natanz)
+
+Generate exactly 8 intelligence updates in JSON format — at least 1 update per region above. Each update should be realistic, specific, and based on plausible current events. Include a mix of:
 - Active military operations and strikes
 - Diplomatic developments 
 - Humanitarian situations
@@ -76,14 +83,19 @@ Generate exactly 8 intelligence updates in JSON format. Each update should be re
 - Airspace status
 - Civilian safety warnings
 
-CRITICAL: Each update MUST include precise "lat" and "lng" coordinates (as numbers) for the exact location of the event. Use real geographic coordinates for the specified region. Examples:
-- Gaza Strip: lat 31.4, lng 34.4
-- Tehran: lat 35.7, lng 51.4
+CRITICAL: Each update MUST include precise "lat" and "lng" coordinates (as numbers) for the exact location within one of the 5 focus regions. Reference coordinates:
+- Amman, Jordan: lat 31.95, lng 35.93
+- Baghdad, Iraq: lat 33.31, lng 44.37
+- Erbil, Iraq: lat 36.19, lng 44.01
+- Tel Aviv, Israel: lat 32.07, lng 34.77
+- Jerusalem: lat 31.77, lng 35.23
+- Gaza City: lat 31.52, lng 34.45
 - Strait of Hormuz: lat 26.6, lng 56.2
-- Southern Lebanon: lat 33.3, lng 35.5
-- Red Sea: lat 15.0, lng 42.0
-- Riyadh: lat 24.7, lng 46.7
-- Baghdad: lat 33.3, lng 44.4
+- Tehran, Iran: lat 35.69, lng 51.39
+- Isfahan, Iran: lat 32.65, lng 51.68
+- Riyadh, Saudi: lat 24.71, lng 46.67
+- Dubai, UAE: lat 25.2, lng 55.27
+- Kuwait City: lat 29.38, lng 47.99
 
 Respond ONLY with valid JSON in this exact format:
 {
