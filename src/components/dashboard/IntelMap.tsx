@@ -180,6 +180,14 @@ const popupOptions: L.PopupOptions = {
 
 const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
+/** Bind popup that opens on hover instead of click */
+function bindHoverPopup(marker: L.Marker, content: string, opts?: L.PopupOptions) {
+  marker.bindPopup(content, { ...popupOptions, ...opts, className: "intel-popup" });
+  marker.on("mouseover", function (this: L.Marker) { this.openPopup(); });
+  marker.on("mouseout", function (this: L.Marker) { this.closePopup(); });
+  return marker;
+}
+
 const newsSeverityColors: Record<string, string> = {
   low: "#22c55e",
   medium: "#00d4ff",
