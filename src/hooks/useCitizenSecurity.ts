@@ -29,11 +29,20 @@ export function useCitizenSecurity() {
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke("citizen-security");
       if (fnError) throw fnError;
-      if (fnData?.error) throw new Error(fnData.error);
+      if (fnData?.error) {
+        // On rate limit, keep existing data instead of clearing it
+        if (fnData.error === "Rate limit exceeded.") {
+          console.warn("[CitizenSecurity] Rate limited, keeping cached data");
+          setLoading(false);
+          return;
+        }
+        throw new Error(fnData.error);
+      }
       setData(fnData);
     } catch (e) {
       console.error("Citizen security fetch error:", e);
-      setError(e instanceof Error ? e.message : "Failed to load");
+      // Only set error if we have no existing data
+      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -45,12 +54,12 @@ export function useCitizenSecurity() {
     debounceRef.current = setTimeout(() => {
       console.log("[CitizenSecurity] New incident detected — auto-recalculating...");
       fetchSecurity();
-    }, 3000); // 3s debounce to batch rapid changes
+    }, 5000); // 5s debounce to batch rapid changes
   }, [fetchSecurity]);
 
   useEffect(() => {
     fetchSecurity();
-    const interval = setInterval(fetchSecurity, 60000);
+    const interval = setInterval(fetchSecurity, 120000); // 2 min interval
 
     // Subscribe to realtime changes on incident-related tables
     const channel = supabase

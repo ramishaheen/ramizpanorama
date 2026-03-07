@@ -42,12 +42,22 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
   }
 }
 
+// In-memory cache to avoid hammering the AI gateway
+let cachedResult: { data: unknown; timestamp: number } | null = null;
+const CACHE_TTL_MS = 120_000; // 2 minutes
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Return cached result if fresh
+    if (cachedResult && Date.now() - cachedResult.timestamp < CACHE_TTL_MS) {
+      return new Response(JSON.stringify(cachedResult.data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -106,6 +116,9 @@ RISK: Overall ${risk.overall || 'N/A'}/100, Trend: ${risk.trend || 'N/A'}`
     } catch {
       result = { countries: [], overall_assessment: "Analysis pending", error: "Failed to parse" };
     }
+
+    // Cache the result
+    cachedResult = { data: result, timestamp: Date.now() };
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
