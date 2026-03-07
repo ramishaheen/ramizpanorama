@@ -163,9 +163,10 @@ export function CountryStatusPanel({ data, loading, error, onRefresh }: CountryS
         ))}
       </div>
 
-      {data.generated_at_utc && (
+      {data.generated_at && (
         <div className="mt-2 text-[8px] text-muted-foreground/50 font-mono text-right">
-          Updated: {new Date(data.generated_at_utc).toLocaleTimeString()}
+          Updated: {new Date(data.generated_at).toLocaleTimeString()}
+          {data._sources && data._sources.length > 0 && ` • ${data._sources.length} sources`}
         </div>
       )}
     </div>
