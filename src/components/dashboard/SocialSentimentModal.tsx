@@ -63,10 +63,31 @@ export const SocialSentimentModal = ({ open, onClose }: Props) => {
       const { data: fnData, error: fnError } = await supabase.functions.invoke("social-sentiment", {
         body: { country, topic, date_range: dateRange, platforms: selectedPlatforms, max_posts: 500 },
       });
-      if (fnError) throw fnError;
-      if (fnData?.error) throw new Error(fnData.error);
+
+      if (fnError) {
+        console.error("Social sentiment invoke error:", fnError);
+        const msg = typeof fnError === "object" && fnError !== null
+          ? (fnError as any).message || JSON.stringify(fnError)
+          : String(fnError);
+        throw new Error(`Edge function error: ${msg}`);
+      }
+
+      if (!fnData) {
+        throw new Error("No data returned from edge function");
+      }
+
+      if (fnData.error) {
+        throw new Error(`API error: ${fnData.error}`);
+      }
+
+      if (!fnData.sentiment_summary) {
+        console.error("Unexpected response shape:", JSON.stringify(fnData).slice(0, 500));
+        throw new Error(`Unexpected response format — missing sentiment_summary. Keys: ${Object.keys(fnData).join(", ")}`);
+      }
+
       setData(fnData);
     } catch (e) {
+      console.error("Social sentiment fetch failed:", e);
       setError(e instanceof Error ? e.message : "Failed to fetch sentiment data");
     } finally {
       setLoading(false);
