@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
+import type { WarUpdate } from "@/hooks/useWarUpdates";
 import type { CountrySafety } from "@/hooks/useCitizenSecurity";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
@@ -24,6 +25,7 @@ interface IntelMapProps {
   layers: LayerState;
   safetyData?: CountrySafety[];
   flyToTarget?: { lat: number; lng: number; label: string } | null;
+  newsMarkers?: WarUpdate[];
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
@@ -175,7 +177,30 @@ const popupOptions: L.PopupOptions = {
 
 const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget }: IntelMapProps) => {
+const newsSeverityColors: Record<string, string> = {
+  low: "#22c55e",
+  medium: "#00d4ff",
+  high: "#ffb800",
+  critical: "#ef4444",
+};
+
+const createNewsIcon = (severity: string, category: string) => {
+  const color = newsSeverityColors[severity] || "#00d4ff";
+  const emoji = category === "MILITARY" ? "⚔️" : category === "DIPLOMATIC" ? "🏛️" : category === "ECONOMIC" ? "💰" : category === "HUMANITARIAN" ? "🩺" : "📰";
+  return L.divIcon({
+    className: "news-marker-icon",
+    html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;width:30px;height:30px;border-radius:50%;border:2px solid ${color};opacity:0.5;animation:pulse 2.5s ease-in-out infinite;"></div>
+      <div style="position:absolute;width:20px;height:20px;border-radius:50%;background:${color};opacity:0.15;"></div>
+      <div style="font-size:14px;filter:drop-shadow(0 0 6px ${color});">${emoji}</div>
+    </div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18],
+  });
+};
+
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [] }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
@@ -184,6 +209,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const earthquakeGroupRef = useRef<L.LayerGroup | null>(null);
   const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
   const conflictGroupRef = useRef<L.LayerGroup | null>(null);
+  const newsGroupRef = useRef<L.LayerGroup | null>(null);
   const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
@@ -234,7 +260,35 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     }, 15000);
   }, [flyToTarget]);
 
-  // User map items state
+  // Render AI news markers on map
+  useEffect(() => {
+    const group = newsGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    newsMarkers.forEach((update) => {
+      if (!update.lat || !update.lng) return;
+      const icon = createNewsIcon(update.severity, update.category);
+      const severityLabel = update.severity.toUpperCase();
+      const color = newsSeverityColors[update.severity] || "#00d4ff";
+      const marker = L.marker([update.lat, update.lng], { icon }).bindPopup(
+        `<div style="${popupStyle}">
+          <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">📰 AI INTEL — ${update.region}</div>
+          <div style="color:#fff;font-size:11px;margin-bottom:4px;">${update.headline}</div>
+          <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${update.body?.slice(0, 120) || ""}${update.body && update.body.length > 120 ? "…" : ""}</div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <span style="color:${color};font-size:9px;font-weight:600;">● ${severityLabel}</span>
+            <span style="color:#888;font-size:9px;">${update.category}</span>
+            <span style="color:#666;font-size:9px;">${update.source}</span>
+          </div>
+        </div>`,
+        { className: "intel-popup" }
+      );
+      group.addLayer(marker);
+    });
+  }, [newsMarkers]);
+
+
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
   const [pendingItem, setPendingItem] = useState<Partial<UserMapItem> | null>(null);
   const [userItems, setUserItems] = useState<UserMapItem[]>([]);
@@ -261,6 +315,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     wildfireGroupRef.current = L.layerGroup().addTo(map);
     conflictGroupRef.current = L.layerGroup().addTo(map);
     up42GroupRef.current = L.layerGroup().addTo(map);
+    newsGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -279,6 +334,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       wildfireGroupRef.current?.clearLayers();
       conflictGroupRef.current?.clearLayers();
       up42GroupRef.current?.clearLayers();
+      newsGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -290,6 +346,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       wildfireGroupRef.current = null;
       conflictGroupRef.current = null;
       up42GroupRef.current = null;
+      newsGroupRef.current = null;
       userItemsGroupRef.current = null;
       weatherTileRef.current = null;
     };
