@@ -113,10 +113,10 @@ const Index = () => {
     maritime: true,
     alerts: true,
     rockets: true,
-    heatmap: false,
+    heatmap: true,
     earthquakes: true,
     wildfires: true,
-    weather: false,
+    weather: true,
     conflicts: true,
   });
 
