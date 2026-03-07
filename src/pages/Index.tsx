@@ -250,7 +250,7 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen overflow-hidden relative">
-        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} />
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
         <StatsBar
           airspaceCount={airspaceAlerts.filter(a => a.active).length}
           vesselCount={vessels.length}
@@ -351,7 +351,7 @@ const Index = () => {
   // ─── DESKTOP LAYOUT ───
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
-      <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} />
+      <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
       <StatsBar
         airspaceCount={airspaceAlerts.filter(a => a.active).length}
         vesselCount={vessels.length}
