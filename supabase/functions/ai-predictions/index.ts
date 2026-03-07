@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\\s\\S]*?</think>/gi, "").trim();
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 }
 
 async function callAI(messages: Array<{ role: string; content: string }>) {
