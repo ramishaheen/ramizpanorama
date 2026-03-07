@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Eye, EyeOff, Tag, Tags } from "lucide-react";
+import { X, RefreshCw, Satellite, Eye, EyeOff, Tag, Tags, Search } from "lucide-react";
 
 interface SatelliteData {
   name: string;
