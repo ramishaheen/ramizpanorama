@@ -71,6 +71,29 @@ export function useGeoFusion() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const normalizeEvents = (events: any[]): FusionEvent[] => {
+    const typeMap: Record<string, string> = {
+      aviation: "airspace_closure", security: "explosion", diplomatic: "political_announcement",
+      humanitarian: "infrastructure_damage", weather: "satellite_observation",
+      fire_hotspot: "fire_hotspot", shipping: "shipping_disruption",
+    };
+    const sevMap: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+
+    return (events || []).map((evt: any) => ({
+      event_id: evt.event_id || `evt_${Math.random().toString(36).slice(2, 8)}`,
+      event_type: evt.event_type || typeMap[evt.category] || "explosion",
+      country: evt.country || "Unknown",
+      location: evt.location || evt.title || "",
+      lat: evt.lat || 0,
+      lng: evt.lng || 0,
+      timestamp: evt.timestamp || evt.time_utc || new Date().toISOString(),
+      description: evt.description || "",
+      source: evt.source || evt.source_type || "Unknown",
+      confidence: (evt.confidence || "medium").toLowerCase() as "high" | "medium" | "low",
+      severity: typeof evt.severity === "number" ? evt.severity : (sevMap[evt.severity] || 2),
+    }));
+  };
+
   const fetchFusion = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -85,8 +108,10 @@ export function useGeoFusion() {
         }
         throw new Error(fnData.error);
       }
-      console.log(`[GeoFusion] ${fnData.events?.length || 0} events, ${fnData._sources?.length || 0} sources`);
-      setData(fnData);
+      // Normalize events to match our type schema
+      const normalized = { ...fnData, events: normalizeEvents(fnData.events) };
+      console.log(`[GeoFusion] ${normalized.events.length} events, ${fnData._sources?.length || 0} sources`);
+      setData(normalized);
     } catch (e) {
       console.error("GeoFusion fetch error:", e);
       if (!data) setError(e instanceof Error ? e.message : "Failed to load");
