@@ -284,6 +284,7 @@ const Index = () => {
                   flyToTarget={flyToTarget}
                   newsMarkers={warUpdates.data?.updates}
                   telegramMarkers={telegramIntel.markers}
+                  fusionEvents={geoFusion.data?.events}
                 />
               </div>
               <div className="flex flex-col sm:flex-row border-t border-border sm:h-[220px]">
@@ -431,6 +432,7 @@ const Index = () => {
               flyToTarget={flyToTarget}
               newsMarkers={warUpdates.data?.updates}
               telegramMarkers={telegramIntel.markers}
+              fusionEvents={geoFusion.data?.events}
             />
           </div>
 
