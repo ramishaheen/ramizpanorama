@@ -21,6 +21,7 @@ import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
+import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
@@ -39,7 +40,7 @@ import {
 } from "@dnd-kit/sortable";
 
 const STORAGE_KEY = "waros-layout";
-const DEFAULT_LEFT_ORDER = ["risk", "commodities", "news", "predictions", "telegram"];
+const DEFAULT_LEFT_ORDER = ["risk", "escalation", "commodities", "news", "predictions", "telegram"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 interface LayoutState {
@@ -201,6 +202,7 @@ const Index = () => {
 
   const leftWidgets: Record<string, ReactNode> = {
     risk: <RiskScoreGauge score={riskScore} />,
+    escalation: <WarEscalationEngine />,
     commodities: <CommodityTracker riskScore={riskScore.overall} />,
     news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
