@@ -374,149 +374,156 @@ const Index = () => {
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Main 3-column row */}
-        <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-          {/* Left sidebar - resizable & collapsible */}
-          {!leftCollapsed ? (
-            <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
-              <button
-                onClick={() => setLeftCollapsed(true)}
-                className="flex items-center justify-end pr-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                title="Collapse sidebar"
-              >
-                <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-3 space-y-3">
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
-                    <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
-                      {leftOrder.map((id) => (
-                        <DraggableWidget key={id} id={id}>
-                          {leftWidgets[id]}
-                        </DraggableWidget>
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
-              <button
-                onClick={() => setLeftCollapsed(false)}
-                className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                title="Expand sidebar"
-              >
-                <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </div>
-          )}
-
-          {/* Left resize handle */}
-          {!leftCollapsed && (
-            <div
-              onMouseDown={handleResizeLeft}
-              className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
-            >
-              <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
-            </div>
-          )}
-
-          {/* Map (center) */}
-          <div className="flex-1 relative min-w-0 h-full z-0">
-            <IntelMap
-              airspaceAlerts={airspaceAlerts}
-              vessels={vessels}
-              geoAlerts={geoAlerts}
-              rockets={rockets}
-              layers={layers}
-              safetyData={citizenSecurity.data?.countries}
-              flyToTarget={flyToTarget}
-              newsMarkers={warUpdates.data?.updates}
-              telegramMarkers={telegramIntel.markers}
-              fusionEvents={geoFusion.data?.events}
-            />
-          </div>
-
-          {/* Right resize handle */}
-          {!rightCollapsed && (
-            <div
-              onMouseDown={handleResizeRight}
-              className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
-            >
-              <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
-            </div>
-          )}
-
-          {/* Right sidebar - resizable & collapsible */}
-          {!rightCollapsed ? (
-            <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
-              <button
-                onClick={() => setRightCollapsed(true)}
-                className="flex items-center justify-start pl-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                title="Collapse sidebar"
-              >
-                <PanelRightClose className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
-                <div className="direction-ltr">
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
-                    <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                      {rightOrder.map((id) => (
-                        <DraggableWidget key={id} id={id}>
-                          {rightWidgets[id]}
-                        </DraggableWidget>
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-                  <div className="p-2 space-y-2">
-                    <LayerControls layers={layers} onToggle={toggleLayer} />
-                    <TimelineSlider events={timeline} />
-                    <CyberSecurityAlerts />
+        <ResizablePanelGroup direction="vertical" className="flex-1">
+          {/* Main 3-column row */}
+          <ResizablePanel defaultSize={75} minSize={30}>
+            <div className="flex h-full overflow-hidden" ref={containerRef}>
+              {/* Left sidebar - resizable & collapsible */}
+              {!leftCollapsed ? (
+                <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
+                  <button
+                    onClick={() => setLeftCollapsed(true)}
+                    className="flex items-center justify-end pr-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                    title="Collapse sidebar"
+                  >
+                    <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="p-3 space-y-3">
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
+                        <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
+                          {leftOrder.map((id) => (
+                            <DraggableWidget key={id} id={id}>
+                              {leftWidgets[id]}
+                            </DraggableWidget>
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
-              <button
-                onClick={() => setRightCollapsed(false)}
-                className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                title="Expand sidebar"
-              >
-                <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </div>
-          )}
-        </div>
+              ) : (
+                <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
+                  <button
+                    onClick={() => setLeftCollapsed(false)}
+                    className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                    title="Expand sidebar"
+                  >
+                    <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+              )}
 
-        {/* Bottom row — Citizen Security + Sector Predictions + Social Sentiment — resizable */}
-        <div className="flex-shrink-0 border-t border-border h-[220px]">
-          <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={33} minSize={15}>
-              <div className="h-full overflow-hidden">
-                <CitizenSecurity
-                  data={citizenSecurity.data}
-                  loading={citizenSecurity.loading}
-                  error={citizenSecurity.error}
-                  onRefresh={citizenSecurity.refresh}
+              {/* Left resize handle */}
+              {!leftCollapsed && (
+                <div
+                  onMouseDown={handleResizeLeft}
+                  className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+                </div>
+              )}
+
+              {/* Map (center) */}
+              <div className="flex-1 relative min-w-0 h-full z-0">
+                <IntelMap
+                  airspaceAlerts={airspaceAlerts}
+                  vessels={vessels}
+                  geoAlerts={geoAlerts}
+                  rockets={rockets}
+                  layers={layers}
+                  safetyData={citizenSecurity.data?.countries}
+                  flyToTarget={flyToTarget}
+                  newsMarkers={warUpdates.data?.updates}
+                  telegramMarkers={telegramIntel.markers}
+                  fusionEvents={geoFusion.data?.events}
                 />
               </div>
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={34} minSize={15}>
-              <div className="h-full overflow-hidden">
-                <SectorPredictions />
-              </div>
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={33} minSize={15}>
-              <div className="h-full overflow-hidden">
-                <SocialSentimentBox />
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
+
+              {/* Right resize handle */}
+              {!rightCollapsed && (
+                <div
+                  onMouseDown={handleResizeRight}
+                  className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
+                >
+                  <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+                </div>
+              )}
+
+              {/* Right sidebar - resizable & collapsible */}
+              {!rightCollapsed ? (
+                <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
+                  <button
+                    onClick={() => setRightCollapsed(true)}
+                    className="flex items-center justify-start pl-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                    title="Collapse sidebar"
+                  >
+                    <PanelRightClose className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
+                    <div className="direction-ltr">
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+                        <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+                          {rightOrder.map((id) => (
+                            <DraggableWidget key={id} id={id}>
+                              {rightWidgets[id]}
+                            </DraggableWidget>
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                      <div className="p-2 space-y-2">
+                        <LayerControls layers={layers} onToggle={toggleLayer} />
+                        <TimelineSlider events={timeline} />
+                        <CyberSecurityAlerts />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
+                  <button
+                    onClick={() => setRightCollapsed(false)}
+                    className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                    title="Expand sidebar"
+                  >
+                    <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </ResizablePanel>
+
+          {/* Vertical resize handle between map and bottom row */}
+          <ResizableHandle withHandle />
+
+          {/* Bottom row — Citizen Security + Sector Predictions + Social Sentiment — resizable */}
+          <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel defaultSize={33} minSize={15}>
+                <div className="h-full overflow-hidden">
+                  <CitizenSecurity
+                    data={citizenSecurity.data}
+                    loading={citizenSecurity.loading}
+                    error={citizenSecurity.error}
+                    onRefresh={citizenSecurity.refresh}
+                  />
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={34} minSize={15}>
+                <div className="h-full overflow-hidden">
+                  <SectorPredictions />
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={33} minSize={15}>
+                <div className="h-full overflow-hidden">
+                  <SocialSentimentBox />
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
 
       <Disclaimer />
