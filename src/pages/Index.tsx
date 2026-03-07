@@ -276,6 +276,7 @@ const Index = () => {
                   layers={layers}
                   safetyData={citizenSecurity.data?.countries}
                   flyToTarget={flyToTarget}
+                  newsMarkers={warUpdates.data?.updates}
                 />
               </div>
               <div className="flex flex-col sm:flex-row border-t border-border sm:h-[220px]">
@@ -421,6 +422,7 @@ const Index = () => {
               layers={layers}
               safetyData={citizenSecurity.data?.countries}
               flyToTarget={flyToTarget}
+              newsMarkers={warUpdates.data?.updates}
             />
           </div>
 
