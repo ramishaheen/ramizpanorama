@@ -18,10 +18,12 @@ import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { useTelegramIntel } from "@/hooks/useTelegramIntel";
+import { useGeoFusion } from "@/hooks/useGeoFusion";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
+import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
@@ -104,7 +106,7 @@ const Index = () => {
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
   const telegramIntel = useTelegramIntel();
-  const isMobile = useIsMobile();
+  const geoFusion = useGeoFusion();
 
   const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [alertMuted, setAlertMuted] = useState(false);
