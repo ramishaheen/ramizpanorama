@@ -234,6 +234,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
   const conflictGroupRef = useRef<L.LayerGroup | null>(null);
   const newsGroupRef = useRef<L.LayerGroup | null>(null);
+  const telegramGroupRef = useRef<L.LayerGroup | null>(null);
   const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
