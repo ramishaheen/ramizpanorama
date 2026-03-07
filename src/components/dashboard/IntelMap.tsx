@@ -175,6 +175,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     bordersGroupRef.current = L.layerGroup().addTo(map);
     overlayGroupRef.current = L.layerGroup().addTo(map);
+    earthquakeGroupRef.current = L.layerGroup().addTo(map);
+    wildfireGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
