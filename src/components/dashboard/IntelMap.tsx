@@ -306,6 +306,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       wildfireGroupRef.current?.clearLayers();
       conflictGroupRef.current?.clearLayers();
       up42GroupRef.current?.clearLayers();
+      newsGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -317,6 +318,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       wildfireGroupRef.current = null;
       conflictGroupRef.current = null;
       up42GroupRef.current = null;
+      newsGroupRef.current = null;
       userItemsGroupRef.current = null;
       weatherTileRef.current = null;
     };
