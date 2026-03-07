@@ -3,12 +3,12 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
-import { MapStyleToggle, type MapStyle } from "./MapStyleToggle";
 import type { CountrySafety } from "@/hooks/useCitizenSecurity";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
+import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite } from "lucide-react";
 
 interface IntelMapProps {
@@ -89,17 +89,6 @@ const createUserItemIcon = (type: string) => {
   });
 };
 
-const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
-  dark: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "&copy; OSM",
-  },
-  satellite: {
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attribution: "&copy; Esri",
-  },
-};
-
 const popupOptions: L.PopupOptions = {
   autoPan: true,
   autoPanPadding: L.point(40, 40),
@@ -114,8 +103,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
   const userItemsGroupRef = useRef<L.LayerGroup | null>(null);
   const bordersGroupRef = useRef<L.LayerGroup | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const [mapStyle, setMapStyle] = useState<MapStyle>("dark");
+  const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
+  const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
 
   // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
@@ -133,8 +122,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       attributionControl: true,
     });
 
-    const tile = TILE_LAYERS.dark;
-    tileLayerRef.current = L.tileLayer(tile.url, { attribution: tile.attribution }).addTo(map);
+    // Add initial base layer
+    const initBase = DEFAULT_IMAGERY_LAYERS.find(l => l.type === "base" && l.enabled)!;
+    const initTile = L.tileLayer(initBase.url, { attribution: initBase.attribution, maxZoom: initBase.maxZoom }).addTo(map);
+    tileLayersRef.current.set(initBase.id, initTile);
 
     bordersGroupRef.current = L.layerGroup().addTo(map);
     overlayGroupRef.current = L.layerGroup().addTo(map);
@@ -145,12 +136,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       overlayGroupRef.current?.clearLayers();
       bordersGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
+      tileLayersRef.current.clear();
       map.remove();
       mapRef.current = null;
       overlayGroupRef.current = null;
       bordersGroupRef.current = null;
       userItemsGroupRef.current = null;
-      tileLayerRef.current = null;
     };
   }, []);
 
@@ -252,15 +243,58 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     });
   }, [userItems]);
 
-  // Handle tile layer changes
+  // Sync imagery layers to map
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
-    const tile = TILE_LAYERS[mapStyle];
-    tileLayerRef.current = L.tileLayer(tile.url, { attribution: tile.attribution }).addTo(map);
-    tileLayerRef.current.bringToBack();
-  }, [mapStyle]);
+
+    // Remove all existing tile layers
+    tileLayersRef.current.forEach((tl) => map.removeLayer(tl));
+    tileLayersRef.current.clear();
+
+    // Add enabled base layer first
+    const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
+    if (activeBase) {
+      const tl = L.tileLayer(activeBase.url, {
+        attribution: activeBase.attribution,
+        maxZoom: activeBase.maxZoom,
+        opacity: activeBase.opacity,
+      }).addTo(map);
+      tl.bringToBack();
+      tileLayersRef.current.set(activeBase.id, tl);
+    }
+
+    // Add enabled overlays on top
+    imageryLayers
+      .filter(l => l.type === "overlay" && l.enabled)
+      .forEach(layer => {
+        const tl = L.tileLayer(layer.url, {
+          attribution: layer.attribution,
+          maxZoom: layer.maxZoom,
+          opacity: layer.opacity,
+        }).addTo(map);
+        tileLayersRef.current.set(layer.id, tl);
+      });
+  }, [imageryLayers]);
+
+  // Imagery layer handlers
+  const handleBaseChange = useCallback((id: string) => {
+    setImageryLayers(prev => prev.map(l =>
+      l.type === "base" ? { ...l, enabled: l.id === id } : l
+    ));
+  }, []);
+
+  const handleOverlayToggle = useCallback((id: string) => {
+    setImageryLayers(prev => prev.map(l =>
+      l.id === id ? { ...l, enabled: !l.enabled } : l
+    ));
+  }, []);
+
+  const handleOpacityChange = useCallback((id: string, opacity: number) => {
+    setImageryLayers(prev => prev.map(l =>
+      l.id === id ? { ...l, opacity } : l
+    ));
+  }, []);
 
   // Render data layers
   useEffect(() => {
@@ -428,10 +462,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     return () => clearInterval(interval);
   }, []);
 
+  const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
+
   return (
-    <div className={`relative h-full w-full ${mapStyle === "satellite" ? "satellite-mode" : ""}`}>
+    <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
       <HolographicOverlay alertCount={totalAlerts} />
-      <MapStyleToggle style={mapStyle} onChange={setMapStyle} />
+      <ImageryLayerPanel
+        layers={imageryLayers}
+        onToggle={handleOverlayToggle}
+        onOpacityChange={handleOpacityChange}
+        onBaseChange={handleBaseChange}
+      />
       <MapToolbar
         activeMode={activeMode}
         onModeChange={setActiveMode}
