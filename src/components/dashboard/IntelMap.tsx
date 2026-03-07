@@ -466,7 +466,6 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         group.addLayer(radius);
       }
     });
-    });
   }, [fusionEvents]);
 
 
