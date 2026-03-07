@@ -73,7 +73,7 @@ async function fetchTelegramPosts(): Promise<Array<{ id: number; text: string; d
     }
   }
 
-  return posts.sort((a, b) => b.id - a.id).slice(0, 15);
+  return posts.sort((a, b) => b.id - a.id).slice(0, 50);
 }
 
 serve(async (req) => {
