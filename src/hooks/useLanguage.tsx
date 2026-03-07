@@ -83,6 +83,9 @@ export const translations: Record<string, { en: string; ar: string }> = {
   "layer.alerts": { en: "Alerts", ar: "تنبيهات" },
   "layer.rockets": { en: "Rockets", ar: "صواريخ" },
   "layer.heatmap": { en: "Heatmap", ar: "خريطة حرارية" },
+  "layer.earthquakes": { en: "Earthquakes", ar: "زلازل" },
+  "layer.wildfires": { en: "Wildfires", ar: "حرائق الغابات" },
+  "layer.weather": { en: "Weather Radar", ar: "رادار الطقس" },
 
   // Risk levels
   "risk.critical": { en: "CRITICAL", ar: "حرج" },

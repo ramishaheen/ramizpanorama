@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff, Mountain, Flame, Cloud } from "lucide-react";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 export interface LayerState {
@@ -7,6 +7,9 @@ export interface LayerState {
   alerts: boolean;
   rockets: boolean;
   heatmap: boolean;
+  earthquakes: boolean;
+  wildfires: boolean;
+  weather: boolean;
 }
 
 interface LayerControlsProps {
@@ -19,6 +22,9 @@ const layerConfig = [
   { key: "maritime" as const, trKey: "layer.maritime", icon: Ship, color: "text-primary" },
   { key: "alerts" as const, trKey: "layer.alerts", icon: AlertTriangle, color: "text-warning" },
   { key: "rockets" as const, trKey: "layer.rockets", icon: Rocket, color: "text-critical" },
+  { key: "earthquakes" as const, trKey: "layer.earthquakes", icon: Mountain, color: "text-warning" },
+  { key: "wildfires" as const, trKey: "layer.wildfires", icon: Flame, color: "text-critical" },
+  { key: "weather" as const, trKey: "layer.weather", icon: Cloud, color: "text-primary" },
   { key: "heatmap" as const, trKey: "layer.heatmap", icon: Radio, color: "text-critical" },
 ];
 

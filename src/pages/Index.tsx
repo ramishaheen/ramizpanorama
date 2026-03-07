@@ -112,6 +112,9 @@ const Index = () => {
     alerts: true,
     rockets: true,
     heatmap: false,
+    earthquakes: true,
+    wildfires: true,
+    weather: false,
   });
 
   const initialLayout = loadLayout();
