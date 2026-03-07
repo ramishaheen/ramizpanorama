@@ -53,6 +53,10 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
 function CountryCard({ country, status }: { country: string; status: CountryStatus }) {
   const [expanded, setExpanded] = useState(false);
   const alertClass = alertColors[status.public_alert_level] || alertColors.green;
+  const riskColors: Record<string, string> = {
+    Low: "text-emerald-400", Moderate: "text-yellow-400", Elevated: "text-orange-400",
+    High: "text-red-400", Critical: "text-red-500",
+  };
 
   return (
     <div
@@ -69,8 +73,14 @@ function CountryCard({ country, status }: { country: string; status: CountryStat
               {status.fire_hotspots}
             </span>
           )}
+          {status.latest_events > 0 && (
+            <span className="text-[9px] text-muted-foreground">{status.latest_events} evt</span>
+          )}
         </div>
         <div className="flex items-center gap-1">
+          <span className={`text-[8px] font-mono font-bold ${riskColors[status.risk_level] || "text-muted-foreground"}`}>
+            {status.risk_level}
+          </span>
           <span className={`text-[8px] font-mono uppercase px-1 py-0.5 rounded ${alertClass}`}>
             {status.public_alert_level}
           </span>
@@ -80,6 +90,18 @@ function CountryCard({ country, status }: { country: string; status: CountryStat
 
       {expanded && (
         <div className="mt-2 pt-2 border-t border-current/10 space-y-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${status.conflict_intensity}%`,
+                  background: status.conflict_intensity > 70 ? "#ef4444" : status.conflict_intensity > 40 ? "#f97316" : "#22c55e",
+                }}
+              />
+            </div>
+            <span className="text-[9px] font-mono text-muted-foreground">{status.conflict_intensity}/100</span>
+          </div>
           <div className="grid grid-cols-2 gap-1">
             <StatusBadge status={status.visibility_status} label={`VIS: ${status.visibility_status}`} />
             <StatusBadge status={status.weather_risk} label={`WX: ${status.weather_risk}`} />
@@ -163,9 +185,10 @@ export function CountryStatusPanel({ data, loading, error, onRefresh }: CountryS
         ))}
       </div>
 
-      {data.generated_at_utc && (
+      {data.generated_at && (
         <div className="mt-2 text-[8px] text-muted-foreground/50 font-mono text-right">
-          Updated: {new Date(data.generated_at_utc).toLocaleTimeString()}
+          Updated: {new Date(data.generated_at).toLocaleTimeString()}
+          {data._sources && data._sources.length > 0 && ` • ${data._sources.length} sources`}
         </div>
       )}
     </div>

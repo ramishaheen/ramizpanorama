@@ -410,44 +410,61 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     group.clearLayers();
 
     const fusionEmojis: Record<string, string> = {
-      fire_hotspot: "🔥", aviation: "✈️", shipping: "🚢", infrastructure: "🏗️",
-      humanitarian: "🩺", weather: "🌪️", security: "🛡️",
+      airstrike: "💥", missile_launch: "🚀", drone_attack: "🛩️", explosion: "💣",
+      border_clash: "⚔️", airspace_closure: "✈️", shipping_disruption: "🚢",
+      infrastructure_damage: "🏗️", political_announcement: "🏛️",
+      satellite_observation: "🛰️", fire_hotspot: "🔥",
     };
     const fusionColors: Record<string, string> = {
-      fire_hotspot: "#ff4500", aviation: "#00d4ff", shipping: "#3b82f6", infrastructure: "#eab308",
-      humanitarian: "#22c55e", weather: "#8b5cf6", security: "#ef4444",
+      airstrike: "#ef4444", missile_launch: "#ff0040", drone_attack: "#ff6b00", explosion: "#ef4444",
+      border_clash: "#dc2626", airspace_closure: "#eab308", shipping_disruption: "#3b82f6",
+      infrastructure_damage: "#f97316", political_announcement: "#ffffff",
+      satellite_observation: "#8b5cf6", fire_hotspot: "#ff4500",
     };
 
     fusionEvents.forEach((evt) => {
       if (!evt.lat || !evt.lng) return;
-      const emoji = fusionEmojis[evt.category] || "📡";
-      const color = fusionColors[evt.category] || "#00d4ff";
-      const isCritical = evt.severity === "critical" || evt.severity === "high";
-      const size = isCritical ? 18 : 14;
+      const emoji = fusionEmojis[evt.event_type] || "📡";
+      const color = fusionColors[evt.event_type] || "#00d4ff";
+      const isCritical = evt.severity >= 4;
+      const isFlashing = evt.event_type === "missile_launch" || evt.event_type === "airstrike" || evt.severity >= 4;
+      const size = isCritical ? 20 : evt.severity >= 3 ? 16 : 14;
       const icon = L.divIcon({
         className: "fusion-event-icon",
         html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
-          ${isCritical ? `<div style="position:absolute;width:${size + 8}px;height:${size + 8}px;border-radius:50%;border:2px solid ${color};opacity:0.4;animation:pulse 2s ease-in-out infinite;"></div>` : ""}
-          <div style="font-size:${size}px;filter:drop-shadow(0 0 6px ${color});">${emoji}</div>
+          ${isFlashing ? `<div style="position:absolute;width:${size + 10}px;height:${size + 10}px;border-radius:50%;border:2px solid ${color};opacity:0.5;animation:pulse 1s ease-in-out infinite;"></div>` : ""}
+          ${isCritical ? `<div style="position:absolute;width:${size + 4}px;height:${size + 4}px;border-radius:50%;background:${color};opacity:0.15;"></div>` : ""}
+          <div style="font-size:${size}px;filter:drop-shadow(0 0 8px ${color});${isFlashing ? "animation:pulse 1.5s ease-in-out infinite;" : ""}">${emoji}</div>
         </div>`,
-        iconSize: [size + 8, size + 8],
-        iconAnchor: [(size + 8) / 2, (size + 8) / 2],
+        iconSize: [size + 10, size + 10],
+        iconAnchor: [(size + 10) / 2, (size + 10) / 2],
         popupAnchor: [0, -(size / 2 + 4)],
       });
 
-      const confColor = evt.confidence === "High" ? "#22c55e" : evt.confidence === "Medium" ? "#eab308" : "#888";
-      const marker = L.marker([evt.lat, evt.lng], { icon, zIndexOffset: isCritical ? 800 : 0 });
+      const confColor = evt.confidence === "high" ? "#22c55e" : evt.confidence === "medium" ? "#eab308" : "#888";
+      const sevLabel = ["", "Minor", "Localized", "Multiple", "Regional", "Major"][evt.severity] || `Sev ${evt.severity}`;
+      const marker = L.marker([evt.lat, evt.lng], { icon, zIndexOffset: isCritical ? 900 : evt.severity * 100 });
       bindHoverPopup(marker, `<div style="${popupStyle}">
-        <div style="color:${color};font-weight:700;font-size:11px;margin-bottom:3px;">${emoji} GEO FUSION — ${evt.country}</div>
-        <div style="color:#fff;font-size:11px;margin-bottom:3px;">${evt.title}</div>
-        <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${evt.description}</div>
-        <div style="display:flex;gap:8px;">
-          <span style="color:${color};font-size:9px;font-weight:600;">● ${evt.severity.toUpperCase()}</span>
+        <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${emoji} ${evt.event_type.replace(/_/g, " ").toUpperCase()} — ${evt.country}</div>
+        <div style="color:#fff;font-size:11px;margin-bottom:3px;">${evt.location}</div>
+        <div style="color:#ccc;font-size:10px;margin-bottom:4px;">${evt.description}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="color:${color};font-size:9px;font-weight:600;">● SEV ${evt.severity} — ${sevLabel}</span>
           <span style="color:${confColor};font-size:9px;">◆ ${evt.confidence}</span>
-          <span style="color:#666;font-size:9px;">${evt.source_type}</span>
+          <span style="color:#888;font-size:9px;">📰 ${evt.source}</span>
         </div>
       </div>`);
       group.addLayer(marker);
+
+      // Add threat radius for severity 4-5
+      if (evt.severity >= 4) {
+        const radius = L.circle([evt.lat, evt.lng], {
+          radius: evt.severity >= 5 ? 80000 : 40000,
+          color, fillColor: color, fillOpacity: 0.06,
+          weight: 1.5, dashArray: "6 4",
+        });
+        group.addLayer(radius);
+      }
     });
   }, [fusionEvents]);
 
