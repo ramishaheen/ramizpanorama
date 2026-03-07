@@ -14,6 +14,7 @@ import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite } from "lucide-react";
 import { MapLegend } from "./MapLegend";
+import { SatelliteGlobe } from "./SatelliteGlobe";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 import { useConflictEvents, type ConflictEvent } from "@/hooks/useConflictEvents";
@@ -1036,6 +1037,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   }, []);
 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
+  const [showSatGlobe, setShowSatGlobe] = useState(false);
 
   return (
     <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
@@ -1056,14 +1058,23 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       <TotalLaunchesWidget rockets={rockets} />
       <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
 
-      {/* Satellite count badge */}
-      {satCount > 0 && (
-        <div className="absolute top-14 right-3 z-[1000] flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg">
-          <Satellite className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-mono font-bold text-primary">{satCount}</span>
-          <span className="text-[9px] font-mono text-muted-foreground uppercase">SAT</span>
-        </div>
-      )}
+      {/* Satellite count badge + 3D Globe toggle */}
+      <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1.5">
+        {satCount > 0 && (
+          <button
+            onClick={() => setShowSatGlobe(true)}
+            className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+            title="Open 3D Satellite Globe"
+          >
+            <Satellite className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
+            <span className="text-xs font-mono font-bold text-primary">{satCount}</span>
+            <span className="text-[9px] font-mono text-muted-foreground uppercase">SAT 3D</span>
+          </button>
+        )}
+      </div>
+
+      {/* 3D Satellite Globe overlay */}
+      {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
 
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
