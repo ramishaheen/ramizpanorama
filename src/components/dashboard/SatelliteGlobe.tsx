@@ -330,7 +330,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 : "border-border text-muted-foreground hover:bg-secondary"
             }`}
           >
-            {showLabels ? <Tag className="h-3 w-3" /> : <TagOff className="h-3 w-3" />}
+            {showLabels ? <Tag className="h-3 w-3" /> : <Tags className="h-3 w-3" />}
             Names
           </button>
           <button
