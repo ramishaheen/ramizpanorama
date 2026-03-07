@@ -134,17 +134,35 @@ Return ONLY valid JSON matching this exact schema:
   }
 }`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You are a social media sentiment analysis engine. Return ONLY valid JSON. No markdown, no code fences." },
-          { role: "user", content: structurePrompt },
-        ],
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 55000);
+
+    let aiResp;
+    try {
+      aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: "You are a social media sentiment analysis engine. Return ONLY valid JSON. No markdown, no code fences, no explanation." },
+            { role: "user", content: structurePrompt },
+          ],
+          temperature: 0.3,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      if (fetchErr instanceof Error && fetchErr.name === "AbortError") {
+        return new Response(JSON.stringify({ error: "AI request timed out. Please try again." }), {
+          status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!aiResp.ok) {
       const status = aiResp.status;
@@ -164,19 +182,36 @@ Return ONLY valid JSON matching this exact schema:
     const aiData = await aiResp.json();
     let rawContent = aiData.choices?.[0]?.message?.content || "";
 
-    // Strip think tags and code fences
+    // Strip think tags, code fences, and leading/trailing noise
     rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
     rawContent = rawContent.replace(/```(?:json)?\s*/g, "").replace(/```/g, "").trim();
+    // Remove any leading text before the first {
+    const firstBrace = rawContent.indexOf("{");
+    if (firstBrace > 0) rawContent = rawContent.slice(firstBrace);
+    // Remove any trailing text after the last }
+    const lastBrace = rawContent.lastIndexOf("}");
+    if (lastBrace >= 0 && lastBrace < rawContent.length - 1) rawContent = rawContent.slice(0, lastBrace + 1);
 
     let result;
     try {
       result = JSON.parse(rawContent);
     } catch {
+      // Try to find the largest JSON object
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
+        try {
+          result = JSON.parse(jsonMatch[0]);
+        } catch {
+          console.error("JSON parse retry failed. Raw content (first 500 chars):", rawContent.slice(0, 500));
+          return new Response(JSON.stringify({ error: "AI returned malformed data. Please try again." }), {
+            status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       } else {
-        throw new Error("Failed to parse AI response as JSON");
+        console.error("No JSON found in response. Raw content (first 500 chars):", rawContent.slice(0, 500));
+        return new Response(JSON.stringify({ error: "AI returned non-JSON response. Please try again." }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
