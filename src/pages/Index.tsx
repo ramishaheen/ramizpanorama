@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers } from "lucide-react";
-import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { IntelMap } from "@/components/dashboard/IntelMap";
