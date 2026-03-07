@@ -6,15 +6,17 @@ import { WarChatPanel } from "./WarChatPanel";
 import { NotificationCenter } from "./NotificationCenter";
 import warosLogo from "@/assets/waros-logo.png";
 import type { Rocket } from "@/data/mockData";
+import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 
 interface DashboardHeaderProps {
   dataFresh?: boolean;
   alertMuted?: boolean;
   onToggleAlertMute?: () => void;
   rockets?: Rocket[];
+  telegramMarkers?: TelegramMarker[];
 }
 
-export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [] }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [] }: DashboardHeaderProps) => {
   const now = new Date();
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
@@ -82,7 +84,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
           </button>
 
           {/* Notification Center */}
-          <NotificationCenter rockets={rockets} alertMuted={alertMuted} />
+          <NotificationCenter rockets={rockets} alertMuted={alertMuted} telegramMarkers={telegramMarkers} />
 
           {/* Alert mute */}
           <button

@@ -3,11 +3,12 @@ import { Bell, Rocket, X, AlertTriangle, Shield, Anchor, Plane, ChevronDown } fr
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Rocket as RocketType } from "@/data/mockData";
+import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 export interface NotificationItem {
   id: string;
-  type: "missile" | "alert" | "military" | "maritime" | "airspace";
+  type: "missile" | "alert" | "military" | "maritime" | "airspace" | "warsleaks";
   title: string;
   detail: string;
   severity: "low" | "medium" | "high" | "critical";
@@ -74,14 +75,16 @@ const typeIcons: Record<string, React.ReactNode> = {
   military: <Shield className="h-3.5 w-3.5" />,
   maritime: <Anchor className="h-3.5 w-3.5" />,
   airspace: <Plane className="h-3.5 w-3.5" />,
+  warsleaks: <AlertTriangle className="h-3.5 w-3.5" />,
 };
 
 interface NotificationCenterProps {
   rockets: RocketType[];
   alertMuted?: boolean;
+  telegramMarkers?: TelegramMarker[];
 }
 
-export const NotificationCenter = ({ rockets, alertMuted }: NotificationCenterProps) => {
+export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }: NotificationCenterProps) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const seenRocketIds = useRef<Set<string>>(new Set());
