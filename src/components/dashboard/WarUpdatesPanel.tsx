@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Newspaper, RefreshCw, ChevronDown, ChevronUp, Shield, Globe,
-  AlertTriangle, Plane, Anchor, Rocket, Users, Fuel
+  AlertTriangle, Plane, Anchor, Rocket, Users, Fuel, MapPin
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { WarUpdatesData, WarUpdate } from "@/hooks/useWarUpdates";
@@ -13,6 +13,7 @@ interface WarUpdatesPanelProps {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
+  onFlyTo?: (lat: number, lng: number, headline: string) => void;
 }
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -47,8 +48,16 @@ const threatColors: Record<string, string> = {
   CRITICAL: "text-critical",
 };
 
-const UpdateCard = ({ update }: { update: WarUpdate }) => {
+const UpdateCard = ({ update, onFlyTo }: { update: WarUpdate; onFlyTo?: (lat: number, lng: number, headline: string) => void }) => {
   const [expanded, setExpanded] = useState(false);
+  const hasLocation = update.lat != null && update.lng != null;
+
+  const handleLocate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasLocation && onFlyTo) {
+      onFlyTo(update.lat!, update.lng!, update.headline);
+    }
+  };
 
   return (
     <motion.div
@@ -72,7 +81,16 @@ const UpdateCard = ({ update }: { update: WarUpdate }) => {
             {update.headline}
           </p>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {hasLocation && (
+            <button
+              onClick={handleLocate}
+              className="p-0.5 text-primary/60 hover:text-primary transition-colors"
+              title="Locate on map"
+            >
+              <MapPin className="h-3 w-3" />
+            </button>
+          )}
           {expanded ? <ChevronUp className="h-2.5 w-2.5 text-muted-foreground/50" /> : <ChevronDown className="h-2.5 w-2.5 text-muted-foreground/50" />}
         </div>
       </div>
@@ -87,7 +105,12 @@ const UpdateCard = ({ update }: { update: WarUpdate }) => {
             <p className="text-[9px] text-muted-foreground leading-relaxed mt-1 pl-4.5">
               {update.body}
             </p>
-            <span className="text-[7px] text-muted-foreground/50 font-mono pl-4.5 block mt-0.5">{update.source}</span>
+            <div className="flex items-center gap-2 pl-4.5 mt-0.5">
+              <span className="text-[7px] text-muted-foreground/50 font-mono">{update.source}</span>
+              {hasLocation && (
+                <span className="text-[7px] text-primary/40 font-mono">📍 {update.lat?.toFixed(1)}, {update.lng?.toFixed(1)}</span>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -95,7 +118,7 @@ const UpdateCard = ({ update }: { update: WarUpdate }) => {
   );
 };
 
-export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesPanelProps) => {
+export const WarUpdatesPanel = ({ data, loading, error, onRefresh, onFlyTo }: WarUpdatesPanelProps) => {
   const [showSummary, setShowSummary] = useState(false);
   const { t } = useLanguage();
 
@@ -170,7 +193,7 @@ export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesP
         <ScrollArea className="flex-1">
           <div className="p-1.5 space-y-0.5">
             {data?.updates?.map((update) => (
-              <UpdateCard key={update.id} update={update} />
+              <UpdateCard key={update.id} update={update} onFlyTo={onFlyTo} />
             ))}
           </div>
         </ScrollArea>
