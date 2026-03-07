@@ -107,6 +107,7 @@ const Index = () => {
   const warUpdates = useWarUpdates();
   const telegramIntel = useTelegramIntel();
   const geoFusion = useGeoFusion();
+  const isMobile = useIsMobile();
 
   const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [alertMuted, setAlertMuted] = useState(false);
