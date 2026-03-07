@@ -298,6 +298,11 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           <span className="text-[9px] font-mono text-muted-foreground">{loading ? "LOADING…" : `${satellites.length} LIVE`}</span>
         </div>
         <div className="flex items-center gap-1.5">
+          {/* Search toggle */}
+          <button onClick={() => setShowSearch(!showSearch)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showSearch ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            <Search className="h-3 w-3" /> Search
+          </button>
           <button onClick={() => setShowLabels(!showLabels)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showLabels ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
             {showLabels ? <Tag className="h-3 w-3" /> : <Tags className="h-3 w-3" />} Names
@@ -316,6 +321,53 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           </button>
         </div>
       </div>
+
+      {/* Search bar */}
+      {showSearch && (
+        <div className="relative px-3 py-1.5 bg-card/80 backdrop-blur border-b border-border/50 z-10">
+          <div className="flex items-center gap-2">
+            <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search by satellite name or NORAD ID…"
+              className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/50 outline-none border-none"
+              autoFocus
+            />
+            {searchQuery && (
+              <button onClick={() => { setSearchQuery(""); setSearchResults([]); }}
+                className="text-muted-foreground hover:text-foreground transition-colors">
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          {searchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mx-3 mt-0.5 max-h-60 overflow-y-auto rounded-md border border-border bg-card/95 backdrop-blur-md shadow-xl z-30">
+              {searchResults.map((sat, i) => (
+                <button
+                  key={sat.noradId || i}
+                  onClick={() => flyToSatellite(sat)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-primary/10 transition-colors border-b border-border/20 last:border-b-0"
+                >
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[sat.category] }} />
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-mono font-bold text-foreground block truncate">{sat.name}</span>
+                    <span className="text-[8px] font-mono text-muted-foreground">
+                      NORAD: {sat.noradId} • {sat.category} • {Math.round(sat.alt)} km
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchQuery && searchResults.length === 0 && (
+            <div className="absolute left-0 right-0 top-full mx-3 mt-0.5 rounded-md border border-border bg-card/95 backdrop-blur-md shadow-xl z-30 px-3 py-2">
+              <span className="text-[10px] font-mono text-muted-foreground">No satellites found for "{searchQuery}"</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Category filters */}
       <div className="flex items-center gap-1 px-3 py-1.5 bg-card/70 backdrop-blur border-b border-border/50 overflow-x-auto z-10">
