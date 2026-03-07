@@ -3,12 +3,12 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
-import { MapStyleToggle, type MapStyle } from "./MapStyleToggle";
 import type { CountrySafety } from "@/hooks/useCitizenSecurity";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
+import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite } from "lucide-react";
 
 interface IntelMapProps {
@@ -89,17 +89,6 @@ const createUserItemIcon = (type: string) => {
   });
 };
 
-const TILE_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
-  dark: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "&copy; OSM",
-  },
-  satellite: {
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attribution: "&copy; Esri",
-  },
-};
-
 const popupOptions: L.PopupOptions = {
   autoPan: true,
   autoPanPadding: L.point(40, 40),
@@ -114,8 +103,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
   const userItemsGroupRef = useRef<L.LayerGroup | null>(null);
   const bordersGroupRef = useRef<L.LayerGroup | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const [mapStyle, setMapStyle] = useState<MapStyle>("dark");
+  const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
+  const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
 
   // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
