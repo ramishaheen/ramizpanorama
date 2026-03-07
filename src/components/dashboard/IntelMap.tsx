@@ -183,13 +183,19 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     return () => {
       overlayGroupRef.current?.clearLayers();
       bordersGroupRef.current?.clearLayers();
+      earthquakeGroupRef.current?.clearLayers();
+      wildfireGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
+      if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
       map.remove();
       mapRef.current = null;
       overlayGroupRef.current = null;
       bordersGroupRef.current = null;
+      earthquakeGroupRef.current = null;
+      wildfireGroupRef.current = null;
       userItemsGroupRef.current = null;
+      weatherTileRef.current = null;
     };
   }, []);
 
@@ -457,6 +463,115 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       });
     }
   }, [airspaceAlerts, vessels, geoAlerts, rockets, layers]);
+
+  // Render earthquake layer
+  useEffect(() => {
+    const group = earthquakeGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    if (!layers.earthquakes || earthquakes.data.length === 0) return;
+
+    earthquakes.data.forEach((eq) => {
+      const color = getQuakeColor(eq.magnitude);
+      const radius = getQuakeRadius(eq.magnitude);
+
+      // Pulsing ring for significant quakes
+      if (eq.magnitude >= 5) {
+        L.circleMarker([eq.lat, eq.lng], {
+          radius: radius + 8,
+          color,
+          fillColor: color,
+          fillOpacity: 0.08,
+          weight: 1,
+          opacity: 0.3,
+        }).addTo(group);
+      }
+
+      const marker = L.circleMarker([eq.lat, eq.lng], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 0.6,
+        weight: eq.magnitude >= 5 ? 2.5 : 1.5,
+      });
+
+      marker.bindPopup(`
+        <div style="${popupStyle}">
+          <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${eq.magnitude.toFixed(1)} Earthquake</div>
+          <div>${eq.place || "Unknown location"}</div>
+          <div>Depth: ${eq.depth.toFixed(1)} km</div>
+          ${eq.tsunami ? '<div style="color:#ef4444;font-weight:700;">⚠ TSUNAMI WARNING</div>' : ""}
+          ${eq.felt ? `<div>Felt by: ${eq.felt} reports</div>` : ""}
+          <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(eq.time).toLocaleString()}</div>
+          ${eq.url ? `<div style="margin-top:4px;"><a href="${eq.url}" target="_blank" style="color:#00d4ff;text-decoration:underline;font-size:9px;">USGS Details →</a></div>` : ""}
+        </div>
+      `, popupOptions);
+
+      marker.addTo(group);
+    });
+  }, [earthquakes.data, layers.earthquakes]);
+
+  // Render wildfire layer
+  useEffect(() => {
+    const group = wildfireGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    if (!layers.wildfires || wildfires.data.length === 0) return;
+
+    wildfires.data.forEach((fire) => {
+      // Heat glow for intense fires
+      if (fire.frp > 50) {
+        L.circleMarker([fire.lat, fire.lng], {
+          radius: Math.min(20, 8 + fire.frp / 20),
+          color: "transparent",
+          fillColor: "#ff4500",
+          fillOpacity: 0.12,
+          weight: 0,
+        }).addTo(group);
+      }
+
+      const marker = L.marker([fire.lat, fire.lng], {
+        icon: createFireIcon(fire.frp),
+      });
+
+      const intensity = fire.frp > 100 ? "EXTREME" : fire.frp > 50 ? "HIGH" : fire.frp > 20 ? "MODERATE" : "LOW";
+      const intColor = fire.frp > 100 ? "#ff0000" : fire.frp > 50 ? "#ff4500" : fire.frp > 20 ? "#ff6b00" : "#ffb800";
+
+      marker.bindPopup(`
+        <div style="${popupStyle}">
+          <div style="color:${intColor};font-weight:700;margin-bottom:4px;">🔥 Active Fire</div>
+          <div>Intensity: <span style="color:${intColor};font-weight:600;">${intensity}</span></div>
+          <div>FRP: ${fire.frp.toFixed(1)} MW | Brightness: ${fire.brightness.toFixed(0)}K</div>
+          <div>Confidence: ${fire.confidence}</div>
+          ${fire.region ? `<div>Region: ${fire.region}</div>` : ""}
+          <div style="font-size:9px;opacity:0.6;margin-top:4px;">${fire.date} ${fire.time}</div>
+        </div>
+      `, popupOptions);
+
+      marker.addTo(group);
+    });
+  }, [wildfires.data, layers.wildfires]);
+
+  // Weather radar tile layer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (weatherTileRef.current) {
+      map.removeLayer(weatherTileRef.current);
+      weatherTileRef.current = null;
+    }
+
+    if (layers.weather) {
+      // OpenWeatherMap free precipitation tile layer
+      weatherTileRef.current = L.tileLayer(
+        "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=b1b15e88fa797225412429c1c50c122a1",
+        { attribution: "&copy; OpenWeatherMap", opacity: 0.5, maxZoom: 18 }
+      ).addTo(map);
+    }
+  }, [layers.weather]);
 
   // Safety-level country borders
   useEffect(() => {
