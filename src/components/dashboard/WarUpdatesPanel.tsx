@@ -118,7 +118,7 @@ const UpdateCard = ({ update, onFlyTo }: { update: WarUpdate; onFlyTo?: (lat: nu
   );
 };
 
-export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesPanelProps) => {
+export const WarUpdatesPanel = ({ data, loading, error, onRefresh, onFlyTo }: WarUpdatesPanelProps) => {
   const [showSummary, setShowSummary] = useState(false);
   const { t } = useLanguage();
 
@@ -193,7 +193,7 @@ export const WarUpdatesPanel = ({ data, loading, error, onRefresh }: WarUpdatesP
         <ScrollArea className="flex-1">
           <div className="p-1.5 space-y-0.5">
             {data?.updates?.map((update) => (
-              <UpdateCard key={update.id} update={update} />
+              <UpdateCard key={update.id} update={update} onFlyTo={onFlyTo} />
             ))}
           </div>
         </ScrollArea>
