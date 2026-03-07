@@ -17,7 +17,7 @@ export interface ImageryLayer {
 const today = new Date().toISOString().split("T")[0];
 
 export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
-  // Base maps
+  // ── Base Maps ──
   {
     id: "osm-dark",
     name: "OpenStreetMap",
@@ -43,18 +43,90 @@ export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
     category: "satellite",
   },
   {
+    id: "google-satellite",
+    name: "Google Satellite",
+    shortName: "GSAT",
+    url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    attribution: "&copy; Google",
+    type: "base",
+    opacity: 1,
+    enabled: false,
+    maxZoom: 20,
+    category: "satellite",
+  },
+  {
+    id: "google-hybrid",
+    name: "Google Hybrid",
+    shortName: "GHYB",
+    url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    attribution: "&copy; Google",
+    type: "base",
+    opacity: 1,
+    enabled: false,
+    maxZoom: 20,
+    category: "satellite",
+  },
+  {
     id: "sentinel2",
     name: "Sentinel-2 Cloudless",
     shortName: "S2",
     url: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg",
-    attribution: "&copy; EOX/Sentinel-2",
+    attribution: "&copy; EOX/Sentinel-2 Copernicus",
     type: "base",
     opacity: 1,
     enabled: false,
     maxZoom: 14,
     category: "satellite",
   },
-  // Overlays
+  {
+    id: "esri-wayback",
+    name: "ESRI Wayback Imagery",
+    shortName: "WAYBACK",
+    url: "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{z}/{y}/{x}",
+    attribution: "&copy; Esri Living Atlas Wayback",
+    type: "base",
+    opacity: 1,
+    enabled: false,
+    maxZoom: 18,
+    category: "satellite",
+  },
+  {
+    id: "esri-terrain",
+    name: "ESRI World Terrain",
+    shortName: "TERRAIN",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}",
+    attribution: "&copy; Esri",
+    type: "base",
+    opacity: 1,
+    enabled: false,
+    maxZoom: 13,
+    category: "terrain",
+  },
+  {
+    id: "usgs-imagery",
+    name: "USGS Imagery",
+    shortName: "USGS",
+    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}",
+    attribution: "&copy; USGS National Map",
+    type: "base",
+    opacity: 1,
+    enabled: false,
+    maxZoom: 16,
+    category: "satellite",
+  },
+  {
+    id: "up42-basemap",
+    name: "UP42 Satellite (Purchased)",
+    shortName: "UP42",
+    url: "https://api.up42.com/v2/assets/wmts/1.0.0/WMTSCapabilities/{z}/{x}/{y}.png",
+    attribution: "&copy; UP42 / Airbus",
+    type: "base",
+    opacity: 1,
+    enabled: false,
+    maxZoom: 20,
+    category: "satellite",
+  },
+  // ── Overlays ──
   {
     id: "modis-truecolor",
     name: "NASA MODIS True Color",
@@ -80,6 +152,18 @@ export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
     category: "analysis",
   },
   {
+    id: "landsat-truecolor",
+    name: "Landsat 8-9 True Color",
+    shortName: "LANDSAT",
+    url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual/default/2023-01-01/GoogleMapsCompatible_Level12/{z}/{y}/{x}.jpg`,
+    attribution: "&copy; NASA/USGS Landsat",
+    type: "overlay",
+    opacity: 0.6,
+    enabled: false,
+    maxZoom: 12,
+    category: "satellite",
+  },
+  {
     id: "viirs-nightlights",
     name: "VIIRS Night Lights",
     shortName: "NIGHT",
@@ -92,6 +176,30 @@ export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
     category: "weather",
   },
   {
+    id: "viirs-fires",
+    name: "VIIRS Active Fires",
+    shortName: "V-FIRES",
+    url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Thermal_Anomalies_375m_Day/default/${today}/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`,
+    attribution: "&copy; NASA VIIRS FIRMS",
+    type: "overlay",
+    opacity: 0.7,
+    enabled: false,
+    maxZoom: 8,
+    category: "analysis",
+  },
+  {
+    id: "sentinel2-ndvi",
+    name: "Sentinel-2 NDVI",
+    shortName: "NDVI",
+    url: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857_ndvi/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg",
+    attribution: "&copy; EOX/Sentinel-2 NDVI",
+    type: "overlay",
+    opacity: 0.5,
+    enabled: false,
+    maxZoom: 14,
+    category: "analysis",
+  },
+  {
     id: "owm-clouds",
     name: "Cloud Cover",
     shortName: "CLOUDS",
@@ -99,6 +207,18 @@ export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
     attribution: "&copy; OpenWeatherMap",
     type: "overlay",
     opacity: 0.4,
+    enabled: false,
+    maxZoom: 18,
+    category: "weather",
+  },
+  {
+    id: "owm-precip",
+    name: "Precipitation",
+    shortName: "RAIN",
+    url: "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=b1b15e88fa797225412429c1c50c122a1",
+    attribution: "&copy; OpenWeatherMap",
+    type: "overlay",
+    opacity: 0.5,
     enabled: false,
     maxZoom: 18,
     category: "weather",
@@ -128,6 +248,18 @@ export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
     category: "weather",
   },
   {
+    id: "esri-labels",
+    name: "ESRI Reference Labels",
+    shortName: "LABELS",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    attribution: "&copy; Esri",
+    type: "overlay",
+    opacity: 0.9,
+    enabled: false,
+    maxZoom: 18,
+    category: "terrain",
+  },
+  {
     id: "oam-mosaic",
     name: "OpenAerialMap Mosaic",
     shortName: "OAM",
@@ -137,19 +269,6 @@ export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
     opacity: 0.7,
     enabled: false,
     maxZoom: 18,
-    category: "satellite",
-  },
-  // UP42 Imagery
-  {
-    id: "up42-basemap",
-    name: "UP42 Satellite (Purchased)",
-    shortName: "UP42",
-    url: "https://api.up42.com/v2/assets/wmts/1.0.0/WMTSCapabilities/{z}/{x}/{y}.png",
-    attribution: "&copy; UP42 / Airbus",
-    type: "base",
-    opacity: 1,
-    enabled: false,
-    maxZoom: 20,
     category: "satellite",
   },
   {
@@ -291,7 +410,7 @@ export const ImageryLayerPanel = ({ layers, onToggle, onOpacityChange, onBaseCha
           </div>
           <div className="mt-2 pt-1.5 border-t border-border">
             <p className="text-[7px] font-mono text-muted-foreground/50 leading-tight">
-              Sources: NASA GIBS/MODIS, VIIRS, Sentinel-2/EOX, OpenAerialMap. Layers stack with configurable opacity.
+              Sources: NASA GIBS/MODIS/Landsat, VIIRS, Google Satellite, ESRI Wayback, Sentinel-2/EOX, USGS, OpenAerialMap, UP42. Layers stack with configurable opacity.
             </p>
           </div>
         </div>
