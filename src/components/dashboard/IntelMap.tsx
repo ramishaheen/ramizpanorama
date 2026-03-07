@@ -6,6 +6,7 @@ import type { LayerState } from "./LayerControls";
 import type { WarUpdate } from "@/hooks/useWarUpdates";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 import type { CountrySafety } from "@/hooks/useCitizenSecurity";
+import type { FusionEvent } from "@/hooks/useGeoFusion";
 import { getCountryGeoJSON, SAFETY_LEVEL_MAP_COLORS } from "@/data/countryBorders";
 import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
@@ -29,6 +30,7 @@ interface IntelMapProps {
   flyToTarget?: { lat: number; lng: number; label: string } | null;
   newsMarkers?: WarUpdate[];
   telegramMarkers?: TelegramMarker[];
+  fusionEvents?: FusionEvent[];
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
@@ -233,7 +235,7 @@ const createNewsIcon = (severity: string, category: string, special: boolean) =>
   });
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [] }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [] }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
@@ -245,6 +247,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const newsGroupRef = useRef<L.LayerGroup | null>(null);
   const telegramGroupRef = useRef<L.LayerGroup | null>(null);
   const up42GroupRef = useRef<L.LayerGroup | null>(null);
+  const fusionGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
@@ -400,6 +403,55 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     });
   }, [telegramMarkers]);
 
+  // Render Geo Fusion events on map
+  useEffect(() => {
+    const group = fusionGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    const fusionEmojis: Record<string, string> = {
+      fire_hotspot: "🔥", aviation: "✈️", shipping: "🚢", infrastructure: "🏗️",
+      humanitarian: "🩺", weather: "🌪️", security: "🛡️",
+    };
+    const fusionColors: Record<string, string> = {
+      fire_hotspot: "#ff4500", aviation: "#00d4ff", shipping: "#3b82f6", infrastructure: "#eab308",
+      humanitarian: "#22c55e", weather: "#8b5cf6", security: "#ef4444",
+    };
+
+    fusionEvents.forEach((evt) => {
+      if (!evt.lat || !evt.lng) return;
+      const emoji = fusionEmojis[evt.category] || "📡";
+      const color = fusionColors[evt.category] || "#00d4ff";
+      const isCritical = evt.severity === "critical" || evt.severity === "high";
+      const size = isCritical ? 18 : 14;
+      const icon = L.divIcon({
+        className: "fusion-event-icon",
+        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+          ${isCritical ? `<div style="position:absolute;width:${size + 8}px;height:${size + 8}px;border-radius:50%;border:2px solid ${color};opacity:0.4;animation:pulse 2s ease-in-out infinite;"></div>` : ""}
+          <div style="font-size:${size}px;filter:drop-shadow(0 0 6px ${color});">${emoji}</div>
+        </div>`,
+        iconSize: [size + 8, size + 8],
+        iconAnchor: [(size + 8) / 2, (size + 8) / 2],
+        popupAnchor: [0, -(size / 2 + 4)],
+      });
+
+      const confColor = evt.confidence === "High" ? "#22c55e" : evt.confidence === "Medium" ? "#eab308" : "#888";
+      const marker = L.marker([evt.lat, evt.lng], { icon, zIndexOffset: isCritical ? 800 : 0 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
+        <div style="color:${color};font-weight:700;font-size:11px;margin-bottom:3px;">${emoji} GEO FUSION — ${evt.country}</div>
+        <div style="color:#fff;font-size:11px;margin-bottom:3px;">${evt.title}</div>
+        <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${evt.description}</div>
+        <div style="display:flex;gap:8px;">
+          <span style="color:${color};font-size:9px;font-weight:600;">● ${evt.severity.toUpperCase()}</span>
+          <span style="color:${confColor};font-size:9px;">◆ ${evt.confidence}</span>
+          <span style="color:#666;font-size:9px;">${evt.source_type}</span>
+        </div>
+      </div>`);
+      group.addLayer(marker);
+    });
+  }, [fusionEvents]);
+
+
 
   // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
@@ -428,6 +480,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     wildfireGroupRef.current = L.layerGroup().addTo(map);
     conflictGroupRef.current = L.layerGroup().addTo(map);
     up42GroupRef.current = L.layerGroup().addTo(map);
+    fusionGroupRef.current = L.layerGroup().addTo(map);
     newsGroupRef.current = L.layerGroup().addTo(map);
     telegramGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
@@ -448,6 +501,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       wildfireGroupRef.current?.clearLayers();
       conflictGroupRef.current?.clearLayers();
       up42GroupRef.current?.clearLayers();
+      fusionGroupRef.current?.clearLayers();
       newsGroupRef.current?.clearLayers();
       telegramGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
@@ -461,6 +515,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       wildfireGroupRef.current = null;
       conflictGroupRef.current = null;
       up42GroupRef.current = null;
+      fusionGroupRef.current = null;
       newsGroupRef.current = null;
       telegramGroupRef.current = null;
       userItemsGroupRef.current = null;

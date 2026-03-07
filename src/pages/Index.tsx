@@ -18,10 +18,12 @@ import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
 import { useTelegramIntel } from "@/hooks/useTelegramIntel";
+import { useGeoFusion } from "@/hooks/useGeoFusion";
 import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
+import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
@@ -40,7 +42,7 @@ import {
 } from "@dnd-kit/sortable";
 
 const STORAGE_KEY = "waros-layout";
-const DEFAULT_LEFT_ORDER = ["risk", "escalation", "commodities", "news", "predictions", "telegram"];
+const DEFAULT_LEFT_ORDER = ["risk", "geo-fusion", "escalation", "commodities", "news", "predictions", "telegram"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 interface LayoutState {
@@ -104,6 +106,7 @@ const Index = () => {
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
   const telegramIntel = useTelegramIntel();
+  const geoFusion = useGeoFusion();
   const isMobile = useIsMobile();
 
   const [flyToTarget, setFlyToTarget] = useState<{ lat: number; lng: number; label: string } | null>(null);
@@ -208,6 +211,7 @@ const Index = () => {
 
   const leftWidgets: Record<string, ReactNode> = {
     risk: <RiskScoreGauge score={riskScore} />,
+    "geo-fusion": <CountryStatusPanel data={geoFusion.data} loading={geoFusion.loading} error={geoFusion.error} onRefresh={geoFusion.refresh} />,
     escalation: <WarEscalationEngine />,
     commodities: <CommodityTracker riskScore={riskScore.overall} />,
     news: <LiveNewsFeed />,
@@ -280,6 +284,7 @@ const Index = () => {
                   flyToTarget={flyToTarget}
                   newsMarkers={warUpdates.data?.updates}
                   telegramMarkers={telegramIntel.markers}
+                  fusionEvents={geoFusion.data?.events}
                 />
               </div>
               <div className="flex flex-col sm:flex-row border-t border-border sm:h-[220px]">
@@ -427,6 +432,7 @@ const Index = () => {
               flyToTarget={flyToTarget}
               newsMarkers={warUpdates.data?.updates}
               telegramMarkers={telegramIntel.markers}
+              fusionEvents={geoFusion.data?.events}
             />
           </div>
 
