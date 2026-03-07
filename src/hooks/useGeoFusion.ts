@@ -3,19 +3,22 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface FusionEvent {
   event_id: string;
-  title: string;
-  category: "fire_hotspot" | "aviation" | "shipping" | "infrastructure" | "humanitarian" | "weather" | "security";
+  event_type: "airstrike" | "missile_launch" | "drone_attack" | "explosion" | "border_clash" | "airspace_closure" | "shipping_disruption" | "infrastructure_damage" | "political_announcement" | "satellite_observation" | "fire_hotspot";
   country: string;
+  location: string;
   lat: number;
   lng: number;
-  time_utc: string;
+  timestamp: string;
   description: string;
-  source_type: "satellite_derived" | "official_alert" | "public_news";
-  confidence: "High" | "Medium" | "Low";
-  severity: "low" | "medium" | "high" | "critical";
+  source: string;
+  confidence: "high" | "medium" | "low";
+  severity: number; // 1-5
 }
 
 export interface CountryStatus {
+  conflict_intensity: number;
+  latest_events: number;
+  risk_level: "Low" | "Moderate" | "Elevated" | "High" | "Critical";
   visibility_status: "clear" | "hazy" | "obscured";
   weather_risk: "low" | "moderate" | "high";
   aviation_status: "normal" | "disrupted" | "closed";
@@ -24,6 +27,13 @@ export interface CountryStatus {
   public_alert_level: "green" | "yellow" | "orange" | "red";
   fire_hotspots: number;
   latest_summary: string;
+}
+
+export interface CountryRiskIndex {
+  conflict_intensity: number;
+  infrastructure_disruption: number;
+  regional_escalation: number;
+  overall: number;
 }
 
 export interface FusionImageryLayer {
@@ -41,14 +51,17 @@ export interface FusionSummary {
 }
 
 export interface GeoFusionData {
-  region: string;
-  generated_at_utc: string;
-  countries: string[];
-  country_status: Record<string, CountryStatus>;
+  generated_at: string;
+  conflict: string;
+  countries_monitored: string[];
   events: FusionEvent[];
-  imagery_layers: FusionImageryLayer[];
-  summaries: FusionSummary[];
+  layers: Record<string, string[]>;
+  country_status: Record<string, CountryStatus>;
+  country_summaries: FusionSummary[];
+  risk_index?: Record<string, CountryRiskIndex>;
+  imagery_layers?: FusionImageryLayer[];
   exclusions: string[];
+  _sources?: string[];
   _cached?: boolean;
   _rate_limited?: boolean;
 }
@@ -57,7 +70,6 @@ export function useGeoFusion() {
   const [data, setData] = useState<GeoFusionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const retryRef = useRef(0);
 
   const fetchFusion = useCallback(async () => {
     setLoading(true);
@@ -73,8 +85,8 @@ export function useGeoFusion() {
         }
         throw new Error(fnData.error);
       }
+      console.log(`[GeoFusion] ${fnData.events?.length || 0} events, ${fnData._sources?.length || 0} sources`);
       setData(fnData);
-      retryRef.current = 0;
     } catch (e) {
       console.error("GeoFusion fetch error:", e);
       if (!data) setError(e instanceof Error ? e.message : "Failed to load");
