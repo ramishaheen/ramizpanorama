@@ -13,6 +13,8 @@ import { Satellite } from "lucide-react";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 import { useConflictEvents, type ConflictEvent } from "@/hooks/useConflictEvents";
+import { UP42Panel } from "./UP42Panel";
+import type { UP42Feature } from "@/hooks/useUP42Catalog";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
