@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.up42-catalog]
 verify_jwt = false
+
+[functions.social-sentiment]
+verify_jwt = false
