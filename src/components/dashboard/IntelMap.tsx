@@ -183,9 +183,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const earthquakeGroupRef = useRef<L.LayerGroup | null>(null);
   const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
   const conflictGroupRef = useRef<L.LayerGroup | null>(null);
+  const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
+  const [up42Features, setUp42Features] = useState<UP42Feature[]>([]);
+  const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
