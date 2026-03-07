@@ -211,6 +211,7 @@ const Index = () => {
 
   const leftWidgets: Record<string, ReactNode> = {
     risk: <RiskScoreGauge score={riskScore} />,
+    "geo-fusion": <CountryStatusPanel data={geoFusion.data} loading={geoFusion.loading} error={geoFusion.error} onRefresh={geoFusion.refresh} />,
     escalation: <WarEscalationEngine />,
     commodities: <CommodityTracker riskScore={riskScore.overall} />,
     news: <LiveNewsFeed />,
