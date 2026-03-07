@@ -8,6 +8,8 @@ export interface WarUpdate {
   category: string;
   severity: "low" | "medium" | "high" | "critical";
   region: string;
+  lat?: number;
+  lng?: number;
   timestamp: string;
   source: string;
 }
