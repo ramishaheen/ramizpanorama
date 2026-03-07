@@ -45,12 +45,12 @@ export function useCitizenSecurity() {
     debounceRef.current = setTimeout(() => {
       console.log("[CitizenSecurity] New incident detected — auto-recalculating...");
       fetchSecurity();
-    }, 3000); // 3s debounce to batch rapid changes
+    }, 5000); // 5s debounce to batch rapid changes
   }, [fetchSecurity]);
 
   useEffect(() => {
     fetchSecurity();
-    const interval = setInterval(fetchSecurity, 60000);
+    const interval = setInterval(fetchSecurity, 120000); // 2 min interval
 
     // Subscribe to realtime changes on incident-related tables
     const channel = supabase

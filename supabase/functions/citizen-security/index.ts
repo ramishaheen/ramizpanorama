@@ -117,6 +117,9 @@ RISK: Overall ${risk.overall || 'N/A'}/100, Trend: ${risk.trend || 'N/A'}`
       result = { countries: [], overall_assessment: "Analysis pending", error: "Failed to parse" };
     }
 
+    // Cache the result
+    cachedResult = { data: result, timestamp: Date.now() };
+
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
