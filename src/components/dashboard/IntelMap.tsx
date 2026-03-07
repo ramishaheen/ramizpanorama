@@ -368,6 +368,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   }, [telegramMarkers]);
 
 
+  // User map items state
+  const [activeMode, setActiveMode] = useState<MapToolMode>(null);
   const [pendingItem, setPendingItem] = useState<Partial<UserMapItem> | null>(null);
   const [userItems, setUserItems] = useState<UserMapItem[]>([]);
 
