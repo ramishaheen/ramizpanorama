@@ -142,8 +142,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
   const userItemsGroupRef = useRef<L.LayerGroup | null>(null);
   const bordersGroupRef = useRef<L.LayerGroup | null>(null);
+  const earthquakeGroupRef = useRef<L.LayerGroup | null>(null);
+  const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
+  const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
+
+  // OSINT data hooks
+  const earthquakes = useEarthquakes();
+  const wildfires = useWildfires();
 
   // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
