@@ -108,12 +108,14 @@ export function useGeoFusion() {
         }
         throw new Error(fnData.error);
       }
+      const normalizedEvents = normalizeEvents(fnData.events);
+
       // Normalize country_status to ensure all fields exist
       const normalizedStatus: Record<string, CountryStatus> = {};
       if (fnData.country_status) {
         for (const [country, raw] of Object.entries(fnData.country_status)) {
           const s = raw as any;
-          const evtsForCountry = normalized.events.filter(e => e.country === country);
+          const evtsForCountry = normalizedEvents.filter(e => e.country === country);
           normalizedStatus[country] = {
             conflict_intensity: s.conflict_intensity ?? evtsForCountry.length * 10,
             latest_events: s.latest_events ?? evtsForCountry.length,
@@ -129,7 +131,12 @@ export function useGeoFusion() {
           };
         }
       }
-      normalized.country_status = normalizedStatus;
+
+      const normalized: GeoFusionData = {
+        ...fnData,
+        events: normalizedEvents,
+        country_status: normalizedStatus,
+      };
 
       console.log(`[GeoFusion] ${normalized.events.length} events, ${fnData._sources?.length || 0} sources`);
       setData(normalized);
