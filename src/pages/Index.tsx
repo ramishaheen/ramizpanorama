@@ -115,6 +115,7 @@ const Index = () => {
     earthquakes: true,
     wildfires: true,
     weather: false,
+    conflicts: true,
   });
 
   const initialLayout = loadLayout();
