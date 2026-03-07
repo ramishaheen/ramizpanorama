@@ -203,6 +203,27 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_intel_cache: {
+        Row: {
+          fetched_at: string
+          id: string
+          markers: Json
+          region_focus: string
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          markers?: Json
+          region_focus?: string
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          markers?: Json
+          region_focus?: string
+        }
+        Relationships: []
+      }
       timeline_events: {
         Row: {
           id: string
