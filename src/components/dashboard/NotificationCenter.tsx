@@ -88,7 +88,9 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const seenRocketIds = useRef<Set<string>>(new Set());
+  const seenTelegramIds = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
+  const telegramInitRef = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
@@ -127,6 +129,70 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
     newLaunches.forEach((r) => seenRocketIds.current.add(r.id));
     rockets.forEach((r) => seenRocketIds.current.add(r.id));
   }, [rockets, alertMuted]);
+
+  // Track WarsLeaks critical/high alerts — deduplicated by headline
+  useEffect(() => {
+    if (telegramMarkers.length === 0) return;
+
+    // On first load, mark all existing as seen (don't spam old alerts)
+    if (!telegramInitRef.current) {
+      telegramMarkers.forEach((m) => seenTelegramIds.current.add(m.headline));
+      telegramInitRef.current = true;
+      // Still add critical ones on first load
+      const criticalMarkers = telegramMarkers.filter(
+        (m) => m.severity === "critical" || m.special
+      );
+      if (criticalMarkers.length > 0) {
+        const newNotifs: NotificationItem[] = criticalMarkers.map((m) => ({
+          id: `wl-${m.id}`,
+          type: "warsleaks" as const,
+          title: `📡 WARSLEAKS: ${m.headline}`,
+          detail: `${m.summary} • ${m.category}`,
+          severity: m.severity,
+          timestamp: Date.now(),
+          read: false,
+        }));
+        setNotifications((prev) => {
+          // Deduplicate by title
+          const existingTitles = new Set(prev.map((n) => n.title));
+          const unique = newNotifs.filter((n) => !existingTitles.has(n.title));
+          return [...unique, ...prev].slice(0, 50);
+        });
+      }
+      return;
+    }
+
+    // On subsequent updates, only add NEW critical/high alerts not seen before
+    const newCritical = telegramMarkers.filter(
+      (m) =>
+        (m.severity === "critical" || m.severity === "high" || m.special) &&
+        !seenTelegramIds.current.has(m.headline)
+    );
+
+    if (newCritical.length > 0) {
+      const newNotifs: NotificationItem[] = newCritical.map((m) => ({
+        id: `wl-${m.id}`,
+        type: "warsleaks" as const,
+        title: `📡 WARSLEAKS: ${m.headline}`,
+        detail: `${m.summary} • ${m.category}`,
+        severity: m.severity,
+        timestamp: Date.now(),
+        read: false,
+      }));
+
+      setNotifications((prev) => {
+        const existingTitles = new Set(prev.map((n) => n.title));
+        const unique = newNotifs.filter((n) => !existingTitles.has(n.title));
+        return [...unique, ...prev].slice(0, 50);
+      });
+
+      if (!alertMuted && newCritical.some((m) => m.severity === "critical" || m.special)) {
+        playMissileAlertSound();
+      }
+    }
+
+    telegramMarkers.forEach((m) => seenTelegramIds.current.add(m.headline));
+  }, [telegramMarkers, alertMuted]);
 
   // Close on outside click
   useEffect(() => {
