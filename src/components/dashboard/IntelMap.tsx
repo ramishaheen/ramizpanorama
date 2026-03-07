@@ -10,6 +10,8 @@ import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite } from "lucide-react";
+import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
+import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
@@ -89,6 +91,43 @@ const createUserItemIcon = (type: string) => {
   });
 };
 
+const magnitudeColors: Record<string, string> = {
+  minor: "#22c55e",    // < 3
+  light: "#00d4ff",    // 3-4.9
+  moderate: "#ffb800", // 5-5.9
+  strong: "#ff6b00",   // 6-6.9
+  major: "#ef4444",    // 7+
+};
+
+function getQuakeColor(mag: number): string {
+  if (mag >= 7) return magnitudeColors.major;
+  if (mag >= 6) return magnitudeColors.strong;
+  if (mag >= 5) return magnitudeColors.moderate;
+  if (mag >= 3) return magnitudeColors.light;
+  return magnitudeColors.minor;
+}
+
+function getQuakeRadius(mag: number): number {
+  if (mag >= 7) return 14;
+  if (mag >= 6) return 11;
+  if (mag >= 5) return 8;
+  if (mag >= 3) return 5;
+  return 3;
+}
+
+const createFireIcon = (frp: number) => {
+  const intensity = frp > 100 ? "high" : frp > 30 ? "medium" : "low";
+  const size = intensity === "high" ? 16 : intensity === "medium" ? 13 : 10;
+  const glow = intensity === "high" ? "0 0 12px #ff4500" : intensity === "medium" ? "0 0 8px #ff6b00" : "0 0 4px #ffb800";
+  return L.divIcon({
+    className: "fire-icon",
+    html: `<div style="font-size:${size}px;filter:drop-shadow(${glow});${intensity === "high" ? "animation:pulse 1s ease-in-out infinite;" : ""}">🔥</div>`,
+    iconSize: [size + 4, size + 4],
+    iconAnchor: [(size + 4) / 2, (size + 4) / 2],
+    popupAnchor: [0, -10],
+  });
+};
+
 const popupOptions: L.PopupOptions = {
   autoPan: true,
   autoPanPadding: L.point(40, 40),
@@ -103,8 +142,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
   const userItemsGroupRef = useRef<L.LayerGroup | null>(null);
   const bordersGroupRef = useRef<L.LayerGroup | null>(null);
+  const earthquakeGroupRef = useRef<L.LayerGroup | null>(null);
+  const wildfireGroupRef = useRef<L.LayerGroup | null>(null);
+  const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
+
+  // OSINT data hooks
+  const earthquakes = useEarthquakes();
+  const wildfires = useWildfires();
 
   // User map items state
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
@@ -129,19 +175,27 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     bordersGroupRef.current = L.layerGroup().addTo(map);
     overlayGroupRef.current = L.layerGroup().addTo(map);
+    earthquakeGroupRef.current = L.layerGroup().addTo(map);
+    wildfireGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
     return () => {
       overlayGroupRef.current?.clearLayers();
       bordersGroupRef.current?.clearLayers();
+      earthquakeGroupRef.current?.clearLayers();
+      wildfireGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
+      if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
       map.remove();
       mapRef.current = null;
       overlayGroupRef.current = null;
       bordersGroupRef.current = null;
+      earthquakeGroupRef.current = null;
+      wildfireGroupRef.current = null;
       userItemsGroupRef.current = null;
+      weatherTileRef.current = null;
     };
   }, []);
 
@@ -409,6 +463,115 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       });
     }
   }, [airspaceAlerts, vessels, geoAlerts, rockets, layers]);
+
+  // Render earthquake layer
+  useEffect(() => {
+    const group = earthquakeGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    if (!layers.earthquakes || earthquakes.data.length === 0) return;
+
+    earthquakes.data.forEach((eq) => {
+      const color = getQuakeColor(eq.magnitude);
+      const radius = getQuakeRadius(eq.magnitude);
+
+      // Pulsing ring for significant quakes
+      if (eq.magnitude >= 5) {
+        L.circleMarker([eq.lat, eq.lng], {
+          radius: radius + 8,
+          color,
+          fillColor: color,
+          fillOpacity: 0.08,
+          weight: 1,
+          opacity: 0.3,
+        }).addTo(group);
+      }
+
+      const marker = L.circleMarker([eq.lat, eq.lng], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 0.6,
+        weight: eq.magnitude >= 5 ? 2.5 : 1.5,
+      });
+
+      marker.bindPopup(`
+        <div style="${popupStyle}">
+          <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${eq.magnitude.toFixed(1)} Earthquake</div>
+          <div>${eq.place || "Unknown location"}</div>
+          <div>Depth: ${eq.depth.toFixed(1)} km</div>
+          ${eq.tsunami ? '<div style="color:#ef4444;font-weight:700;">⚠ TSUNAMI WARNING</div>' : ""}
+          ${eq.felt ? `<div>Felt by: ${eq.felt} reports</div>` : ""}
+          <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(eq.time).toLocaleString()}</div>
+          ${eq.url ? `<div style="margin-top:4px;"><a href="${eq.url}" target="_blank" style="color:#00d4ff;text-decoration:underline;font-size:9px;">USGS Details →</a></div>` : ""}
+        </div>
+      `, popupOptions);
+
+      marker.addTo(group);
+    });
+  }, [earthquakes.data, layers.earthquakes]);
+
+  // Render wildfire layer
+  useEffect(() => {
+    const group = wildfireGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    if (!layers.wildfires || wildfires.data.length === 0) return;
+
+    wildfires.data.forEach((fire) => {
+      // Heat glow for intense fires
+      if (fire.frp > 50) {
+        L.circleMarker([fire.lat, fire.lng], {
+          radius: Math.min(20, 8 + fire.frp / 20),
+          color: "transparent",
+          fillColor: "#ff4500",
+          fillOpacity: 0.12,
+          weight: 0,
+        }).addTo(group);
+      }
+
+      const marker = L.marker([fire.lat, fire.lng], {
+        icon: createFireIcon(fire.frp),
+      });
+
+      const intensity = fire.frp > 100 ? "EXTREME" : fire.frp > 50 ? "HIGH" : fire.frp > 20 ? "MODERATE" : "LOW";
+      const intColor = fire.frp > 100 ? "#ff0000" : fire.frp > 50 ? "#ff4500" : fire.frp > 20 ? "#ff6b00" : "#ffb800";
+
+      marker.bindPopup(`
+        <div style="${popupStyle}">
+          <div style="color:${intColor};font-weight:700;margin-bottom:4px;">🔥 Active Fire</div>
+          <div>Intensity: <span style="color:${intColor};font-weight:600;">${intensity}</span></div>
+          <div>FRP: ${fire.frp.toFixed(1)} MW | Brightness: ${fire.brightness.toFixed(0)}K</div>
+          <div>Confidence: ${fire.confidence}</div>
+          ${fire.region ? `<div>Region: ${fire.region}</div>` : ""}
+          <div style="font-size:9px;opacity:0.6;margin-top:4px;">${fire.date} ${fire.time}</div>
+        </div>
+      `, popupOptions);
+
+      marker.addTo(group);
+    });
+  }, [wildfires.data, layers.wildfires]);
+
+  // Weather radar tile layer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (weatherTileRef.current) {
+      map.removeLayer(weatherTileRef.current);
+      weatherTileRef.current = null;
+    }
+
+    if (layers.weather) {
+      // OpenWeatherMap free precipitation tile layer
+      weatherTileRef.current = L.tileLayer(
+        "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=b1b15e88fa797225412429c1c50c122a1",
+        { attribution: "&copy; OpenWeatherMap", opacity: 0.5, maxZoom: 18 }
+      ).addTo(map);
+    }
+  }, [layers.weather]);
 
   // Safety-level country borders
   useEffect(() => {

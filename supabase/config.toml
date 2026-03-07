@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.war-escalation]
 verify_jwt = false
+
+[functions.usgs-earthquakes]
+verify_jwt = false
+
+[functions.nasa-wildfires]
+verify_jwt = false
