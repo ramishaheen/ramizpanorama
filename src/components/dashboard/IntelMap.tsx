@@ -184,7 +184,29 @@ const newsSeverityColors: Record<string, string> = {
   critical: "#ef4444",
 };
 
-const createNewsIcon = (severity: string, category: string) => {
+const SPECIAL_KEYWORDS = /iran|missile|rocket|ballistic|cruise|drone strike|IRGC|quds|hezbollah|houthi|intercept|warhead|launch|strike|attack/i;
+const SPECIAL_REGIONS = /iran|jordan|gulf|bahrain|qatar|uae|saudi|kuwait|oman/i;
+
+function isSpecialNews(headline: string, body: string, region: string, category: string): boolean {
+  const text = `${headline} ${body} ${region} ${category}`;
+  return SPECIAL_KEYWORDS.test(text) || SPECIAL_REGIONS.test(region);
+}
+
+const createNewsIcon = (severity: string, category: string, special: boolean) => {
+  if (special) {
+    const size = 38;
+    return L.divIcon({
+      className: "news-marker-special",
+      html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;border:3px solid #ff0040;box-shadow:0 0 18px #ff0040,0 0 40px rgba(255,0,64,0.3);animation:pulse 1s ease-in-out infinite;"></div>
+        <div style="position:absolute;width:${size - 8}px;height:${size - 8}px;border-radius:50%;background:rgba(255,0,64,0.2);"></div>
+        <div style="font-size:20px;filter:drop-shadow(0 0 10px #ff0040);animation:pulse 1.5s ease-in-out infinite;">🚀</div>
+      </div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -(size / 2 + 4)],
+    });
+  }
   const color = newsSeverityColors[severity] || "#00d4ff";
   const emoji = category === "MILITARY" ? "⚔️" : category === "DIPLOMATIC" ? "🏛️" : category === "ECONOMIC" ? "💰" : category === "HUMANITARIAN" ? "🩺" : "📰";
   return L.divIcon({
@@ -268,12 +290,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     newsMarkers.forEach((update) => {
       if (!update.lat || !update.lng) return;
-      const icon = createNewsIcon(update.severity, update.category);
+      const special = isSpecialNews(update.headline, update.body || "", update.region, update.category);
+      const icon = createNewsIcon(update.severity, update.category, special);
       const severityLabel = update.severity.toUpperCase();
-      const color = newsSeverityColors[update.severity] || "#00d4ff";
-      const marker = L.marker([update.lat, update.lng], { icon }).bindPopup(
+      const color = special ? "#ff0040" : (newsSeverityColors[update.severity] || "#00d4ff");
+      const badge = special ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ SPECIAL ALERT</div>` : "";
+      const marker = L.marker([update.lat, update.lng], { icon, zIndexOffset: special ? 1000 : 0 }).bindPopup(
         `<div style="${popupStyle}">
-          <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">📰 AI INTEL — ${update.region}</div>
+          ${badge}
+          <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${special ? "🚀" : "📰"} AI INTEL — ${update.region}</div>
           <div style="color:#fff;font-size:11px;margin-bottom:4px;">${update.headline}</div>
           <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${update.body?.slice(0, 120) || ""}${update.body && update.body.length > 120 ? "…" : ""}</div>
           <div style="display:flex;gap:8px;margin-top:4px;">
