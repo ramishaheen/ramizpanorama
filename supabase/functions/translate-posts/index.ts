@@ -5,10 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,35 +20,31 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("MINIMAX_API_KEY");
-    if (!apiKey) {
-      throw new Error("MINIMAX_API_KEY is not configured");
-    }
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
     const numbered = texts.map((t: string, i: number) => `[${i}] ${t}`).join("\n---\n");
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     let response;
     try {
-      response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "MiniMax-M2",
+          model: "google/gemini-2.5-flash",
           messages: [
             {
               role: "system",
               content: `You are a translator. Translate the following numbered texts from Arabic to English. 
 Return ONLY a JSON array of strings in the same order, no explanation.
 If a text is already in English, return it as-is.
-Keep it concise and accurate. Military/geopolitical terminology should be precise.
-Example input: [0] مرحبا\n---\n[1] Hello world
-Example output: ["Hello", "Hello world"]`,
+Keep it concise and accurate. Military/geopolitical terminology should be precise.`,
             },
             { role: "user", content: numbered },
           ],
@@ -65,32 +57,29 @@ Example output: ["Hello", "Hello world"]`,
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limited, try again later" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Rate limited" }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Payment required" }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       const t = await response.text();
-      console.error("MiniMax error:", response.status, t);
+      console.error("AI gateway error:", response.status, t);
       throw new Error("AI translation failed");
     }
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || "[]";
-    const content = stripThinkTags(rawContent);
     
     let translations: string[];
     try {
-      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const cleaned = rawContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       translations = JSON.parse(cleaned);
     } catch {
-      console.error("Failed to parse translations:", content);
+      console.error("Failed to parse translations:", rawContent);
       translations = texts;
     }
 
@@ -101,7 +90,7 @@ Example output: ["Hello", "Hello world"]`,
   } catch (error) {
     console.error("Translation error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

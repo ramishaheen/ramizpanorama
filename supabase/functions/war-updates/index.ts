@@ -3,41 +3,37 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-}
-
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("MINIMAX_API_KEY");
-  if (!apiKey) throw new Error("MINIMAX_API_KEY not configured");
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: "MiniMax-M2", messages }),
+      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
       signal: controller.signal,
     });
 
     if (response.status === 429) throw new Error("RATE_LIMIT");
     if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
 
-    const text = await response.text();
-    if (!response.ok || !text) {
-      console.error("MiniMax failed, status:", response.status, "body:", text?.slice(0, 200));
+    if (!response.ok) {
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
       throw new Error("AI_UNAVAILABLE");
     }
 
-    const data = JSON.parse(text);
+    const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("AI_UNAVAILABLE");
-    return stripThinkTags(content);
+    return content.trim();
   } finally {
     clearTimeout(timeout);
   }
@@ -53,8 +49,6 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
 
     const prompt = `You are a military intelligence analyst providing REAL-TIME war situation updates for the Iran-Middle East conflict zone. Current time: ${now}
-
-Based on your knowledge of the ongoing geopolitical situation in the Middle East (Iran, Israel, Gulf states, Yemen, Lebanon, Iraq), provide a concise intelligence briefing.
 
 ${context ? `Current dashboard data context:\n${context}\n` : ''}
 
@@ -95,13 +89,11 @@ Respond ONLY with valid JSON in this exact format:
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return new Response(JSON.stringify({ error: 'Failed to parse AI response' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const sanitized = jsonMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' ');
-
     let parsed: unknown;
     try {
       parsed = JSON.parse(sanitized);
@@ -126,8 +118,7 @@ Respond ONLY with valid JSON in this exact format:
     }
     console.error('War updates error:', e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

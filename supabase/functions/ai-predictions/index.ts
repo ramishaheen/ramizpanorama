@@ -3,58 +3,44 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function stripThinkTags(text: string): string {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-}
-
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("MINIMAX_API_KEY");
-  if (!apiKey) throw new Error("MINIMAX_API_KEY not configured");
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch("https://api.minimax.chat/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: "MiniMax-M2", messages }),
+      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
       signal: controller.signal,
     });
 
     if (response.status === 429) throw new Error("RATE_LIMIT");
     if (response.status === 402) throw new Error("PAYMENT_REQUIRED");
 
-    const text = await response.text();
-    if (!response.ok || !text) {
-      console.error("MiniMax failed, status:", response.status, "body:", text?.slice(0, 200));
+    if (!response.ok) {
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
       throw new Error("AI_UNAVAILABLE");
     }
 
-    const data = JSON.parse(text);
+    const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("AI_UNAVAILABLE");
-    return stripThinkTags(content);
+    return content.trim();
   } finally {
     clearTimeout(timeout);
   }
 }
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -76,73 +62,36 @@ serve(async (req) => {
 
     const intelSummary = {
       activeAirspaceAlerts: airspaceRes.data?.length || 0,
-      airspaceDetails: airspaceRes.data?.map(a => `${a.type} in ${a.region} (${a.severity})`).join("; "),
-      recentGeoAlerts: geoRes.data?.map(a => `${a.type}: ${a.title} (${a.severity})`).join("; "),
       activeRockets: rocketsRes.data?.filter(r => r.status === "launched" || r.status === "in_flight").length || 0,
-      rocketDetails: rocketsRes.data?.map(r => `${r.name} [${r.type}] - ${r.status}`).join("; "),
-      riskScore: riskRes.data?.[0] || {},
       militaryVessels: vesselsRes.data?.filter(v => v.type === "MILITARY").length || 0,
-      totalVessels: vesselsRes.data?.length || 0,
+      riskScore: riskRes.data?.[0] || {},
     };
 
-    const systemPrompt = `You are a senior geopolitical financial analyst specializing in conflict-driven market impacts. You analyze real-time intelligence data from the Iran war theater and provide actionable stock/commodity/trade predictions.
+    const systemPrompt = `You are a senior geopolitical financial analyst. Analyze real-time intelligence data and provide actionable stock/commodity/trade predictions.
 
-IMPORTANT RULES:
-- Base predictions ONLY on the intelligence data provided
-- Include specific ticker symbols when possible
-- Rate confidence as LOW/MEDIUM/HIGH
-- Include both SHORT-TERM (24-48h) and MEDIUM-TERM (1-2 weeks) predictions
-- Cover: Oil & Energy, Defense/Aerospace, Currencies, Gold/Commodities, Shipping/Logistics, Regional Markets, Cryptocurrency (BTC, ETH, and other relevant crypto assets)
-- Be concise, use bullet points
-- Add a risk disclaimer at the end
-- Return your response as valid JSON with this structure:
+Return valid JSON:
 {
   "timestamp": "ISO timestamp",
   "overall_market_sentiment": "BEARISH/BULLISH/MIXED",
   "predictions": [
-    {
-      "sector": "string",
-      "ticker": "string or null",
-      "direction": "UP/DOWN/VOLATILE",
-      "recommendation": "STRONG BUY/BUY/HOLD/SELL/STRONG SELL",
-      "confidence": "LOW/MEDIUM/HIGH",
-      "timeframe": "SHORT/MEDIUM",
-      "rationale": "brief explanation"
-    }
+    { "sector": "string", "ticker": "string or null", "direction": "UP/DOWN/VOLATILE", "recommendation": "STRONG BUY/BUY/HOLD/SELL/STRONG SELL", "confidence": "LOW/MEDIUM/HIGH", "timeframe": "SHORT/MEDIUM", "rationale": "brief" }
   ],
-  "key_insight": "one-sentence top takeaway",
+  "key_insight": "one-sentence takeaway",
   "risk_level": "LOW/MEDIUM/HIGH/EXTREME"
 }`;
 
-    const userPrompt = `Here is the current real-time intelligence from the Iran conflict theater. Generate market/stock/trade predictions based on this data:
-
-SITUATION OVERVIEW:
-- Active Airspace Closures/Alerts: ${intelSummary.activeAirspaceAlerts}
-- Details: ${intelSummary.airspaceDetails || "None"}
-- Recent Geo Alerts: ${intelSummary.recentGeoAlerts || "None"}  
-- Active Rockets/Missiles: ${intelSummary.activeRockets}
-- Rocket Details: ${intelSummary.rocketDetails || "None"}
-- Military Vessels in Theater: ${intelSummary.militaryVessels} of ${intelSummary.totalVessels} total
-- Overall Risk Score: ${intelSummary.riskScore?.overall || "N/A"}/100
-- Risk Trend: ${intelSummary.riskScore?.trend || "N/A"}
-- Airspace Risk: ${intelSummary.riskScore?.airspace || "N/A"}
-- Maritime Risk: ${intelSummary.riskScore?.maritime || "N/A"}
-- Diplomatic Risk: ${intelSummary.riskScore?.diplomatic || "N/A"}
-- Sentiment Score: ${intelSummary.riskScore?.sentiment || "N/A"}
-
-Generate predictions now.`;
-
     const content = await callAI([
       { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      { role: "user", content: `Intelligence: ${JSON.stringify(intelSummary)}. Generate market predictions now.` },
     ]);
 
     let predictions;
     try {
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      predictions = JSON.parse(jsonMatch[1].trim());
+      const objMatch = (jsonMatch[1] || content).trim().match(/\{[\s\S]*\}/);
+      predictions = JSON.parse(objMatch ? objMatch[0] : (jsonMatch[1] || content).trim());
     } catch {
-      predictions = { raw: content, predictions: [], key_insight: "Analysis pending", risk_level: "MEDIUM", overall_market_sentiment: "MIXED" };
+      predictions = { predictions: [], key_insight: "Analysis pending", risk_level: "MEDIUM", overall_market_sentiment: "MIXED" };
     }
 
     return new Response(JSON.stringify(predictions), {
@@ -150,12 +99,12 @@ Generate predictions now.`;
     });
   } catch (e) {
     if (e instanceof Error && e.message === "RATE_LIMIT") {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (e instanceof Error && e.message === "PAYMENT_REQUIRED") {
-      return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
+      return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
         status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -166,4 +115,3 @@ Generate predictions now.`;
     );
   }
 });
-
