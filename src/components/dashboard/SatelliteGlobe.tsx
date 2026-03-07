@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Eye, EyeOff, Tag, TagOff } from "lucide-react";
+import { X, RefreshCw, Satellite, Eye, EyeOff, Tag, Tags } from "lucide-react";
 
 interface SatelliteData {
   name: string;
@@ -217,7 +217,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           }))
         : [];
 
-      const globe = Globe()(containerRef.current!)
+      const globe = new Globe(containerRef.current!)
         .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
         .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png")
         .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
