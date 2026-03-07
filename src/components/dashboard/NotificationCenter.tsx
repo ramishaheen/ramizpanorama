@@ -191,7 +191,7 @@ export const NotificationCenter = ({ rockets, alertMuted }: NotificationCenterPr
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-[360px] max-w-[90vw] bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-2xl z-[2000] overflow-hidden"
+            className="fixed right-4 top-14 w-[360px] max-w-[90vw] bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-2xl z-[9999] overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card">
