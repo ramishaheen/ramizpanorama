@@ -100,6 +100,29 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [showLabels, setShowLabels] = useState(true);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedSat, setSelectedSat] = useState<SatelliteData | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SatelliteData[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) { setSearchResults([]); return; }
+    const q = query.toUpperCase().trim();
+    const results = satsRef.current.filter(s =>
+      s.name.toUpperCase().includes(q) || (s.noradId && s.noradId.includes(q))
+    ).slice(0, 20);
+    setSearchResults(results);
+  }, []);
+
+  const flyToSatellite = useCallback((sat: SatelliteData) => {
+    setSelectedSat(sat);
+    setShowSearch(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    if (globeRef.current) {
+      globeRef.current.pointOfView({ lat: sat.lat, lng: sat.lng, altitude: 1.8 }, 1000);
+    }
+  }, []);
 
   // Keep ref in sync
   useEffect(() => { satsRef.current = satellites; }, [satellites]);
