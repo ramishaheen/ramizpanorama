@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers } from "lucide-react";
-import { MissileAlertBanner } from "@/components/dashboard/MissileAlertBanner";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { IntelMap } from "@/components/dashboard/IntelMap";
@@ -249,8 +248,7 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen overflow-hidden relative">
-        <MissileAlertBanner rockets={rockets} muted={alertMuted} />
-        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} />
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} />
         <StatsBar
           airspaceCount={airspaceAlerts.filter(a => a.active).length}
           vesselCount={vessels.length}
@@ -349,9 +347,7 @@ const Index = () => {
   // ─── DESKTOP LAYOUT ───
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
-      
-      <MissileAlertBanner rockets={rockets} muted={alertMuted} />
-      <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} />
+      <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} />
       <StatsBar
         airspaceCount={airspaceAlerts.filter(a => a.active).length}
         vesselCount={vessels.length}

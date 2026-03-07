@@ -3,15 +3,18 @@ import { motion } from "framer-motion";
 import { Wifi, Volume2, VolumeX, Languages, MessageCircle } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
+import { NotificationCenter } from "./NotificationCenter";
 import warosLogo from "@/assets/waros-logo.png";
+import type { Rocket } from "@/data/mockData";
 
 interface DashboardHeaderProps {
   dataFresh?: boolean;
   alertMuted?: boolean;
   onToggleAlertMute?: () => void;
+  rockets?: Rocket[];
 }
 
-export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [] }: DashboardHeaderProps) => {
   const now = new Date();
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
@@ -77,6 +80,9 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute }: Da
               {isArabic ? "EN" : "عربي"}
             </span>
           </button>
+
+          {/* Notification Center */}
+          <NotificationCenter rockets={rockets} alertMuted={alertMuted} />
 
           {/* Alert mute */}
           <button
