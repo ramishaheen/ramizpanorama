@@ -24,6 +24,7 @@ import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
 import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
+import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
@@ -501,6 +502,10 @@ const Index = () => {
           <div className="w-px bg-border/50 flex-shrink-0" />
           <div className="flex-1 min-w-0 overflow-hidden">
             <SectorPredictions />
+          </div>
+          <div className="w-px bg-border/50 flex-shrink-0" />
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <SocialSentimentBox />
           </div>
         </div>
       </div>
