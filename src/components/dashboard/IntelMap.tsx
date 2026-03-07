@@ -260,7 +260,35 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     }, 15000);
   }, [flyToTarget]);
 
-  // User map items state
+  // Render AI news markers on map
+  useEffect(() => {
+    const group = newsGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    newsMarkers.forEach((update) => {
+      if (!update.lat || !update.lng) return;
+      const icon = createNewsIcon(update.severity, update.category);
+      const severityLabel = update.severity.toUpperCase();
+      const color = newsSeverityColors[update.severity] || "#00d4ff";
+      const marker = L.marker([update.lat, update.lng], { icon }).bindPopup(
+        `<div style="${popupStyle}">
+          <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">📰 AI INTEL — ${update.region}</div>
+          <div style="color:#fff;font-size:11px;margin-bottom:4px;">${update.headline}</div>
+          <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${update.body?.slice(0, 120) || ""}${update.body && update.body.length > 120 ? "…" : ""}</div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <span style="color:${color};font-size:9px;font-weight:600;">● ${severityLabel}</span>
+            <span style="color:#888;font-size:9px;">${update.category}</span>
+            <span style="color:#666;font-size:9px;">${update.source}</span>
+          </div>
+        </div>`,
+        { className: "intel-popup" }
+      );
+      group.addLayer(marker);
+    });
+  }, [newsMarkers]);
+
+
   const [activeMode, setActiveMode] = useState<MapToolMode>(null);
   const [pendingItem, setPendingItem] = useState<Partial<UserMapItem> | null>(null);
   const [userItems, setUserItems] = useState<UserMapItem[]>([]);
