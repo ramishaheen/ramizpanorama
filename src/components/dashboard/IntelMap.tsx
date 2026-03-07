@@ -10,6 +10,8 @@ import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite } from "lucide-react";
+import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
+import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
