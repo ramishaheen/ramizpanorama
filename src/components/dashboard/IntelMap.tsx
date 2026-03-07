@@ -91,6 +91,43 @@ const createUserItemIcon = (type: string) => {
   });
 };
 
+const magnitudeColors: Record<string, string> = {
+  minor: "#22c55e",    // < 3
+  light: "#00d4ff",    // 3-4.9
+  moderate: "#ffb800", // 5-5.9
+  strong: "#ff6b00",   // 6-6.9
+  major: "#ef4444",    // 7+
+};
+
+function getQuakeColor(mag: number): string {
+  if (mag >= 7) return magnitudeColors.major;
+  if (mag >= 6) return magnitudeColors.strong;
+  if (mag >= 5) return magnitudeColors.moderate;
+  if (mag >= 3) return magnitudeColors.light;
+  return magnitudeColors.minor;
+}
+
+function getQuakeRadius(mag: number): number {
+  if (mag >= 7) return 14;
+  if (mag >= 6) return 11;
+  if (mag >= 5) return 8;
+  if (mag >= 3) return 5;
+  return 3;
+}
+
+const createFireIcon = (frp: number) => {
+  const intensity = frp > 100 ? "high" : frp > 30 ? "medium" : "low";
+  const size = intensity === "high" ? 16 : intensity === "medium" ? 13 : 10;
+  const glow = intensity === "high" ? "0 0 12px #ff4500" : intensity === "medium" ? "0 0 8px #ff6b00" : "0 0 4px #ffb800";
+  return L.divIcon({
+    className: "fire-icon",
+    html: `<div style="font-size:${size}px;filter:drop-shadow(${glow});${intensity === "high" ? "animation:pulse 1s ease-in-out infinite;" : ""}">🔥</div>`,
+    iconSize: [size + 4, size + 4],
+    iconAnchor: [(size + 4) / 2, (size + 4) / 2],
+    popupAnchor: [0, -10],
+  });
+};
+
 const popupOptions: L.PopupOptions = {
   autoPan: true,
   autoPanPadding: L.point(40, 40),
