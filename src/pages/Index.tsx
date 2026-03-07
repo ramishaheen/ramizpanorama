@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers } from "lucide-react";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { IntelMap } from "@/components/dashboard/IntelMap";
@@ -489,24 +490,32 @@ const Index = () => {
           )}
         </div>
 
-        {/* Bottom row — Citizen Security + Sector Predictions — spans full width, respects sidebars */}
-        <div className="flex-shrink-0 border-t border-border h-[220px] flex flex-row">
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <CitizenSecurity
-              data={citizenSecurity.data}
-              loading={citizenSecurity.loading}
-              error={citizenSecurity.error}
-              onRefresh={citizenSecurity.refresh}
-            />
-          </div>
-          <div className="w-px bg-border/50 flex-shrink-0" />
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <SectorPredictions />
-          </div>
-          <div className="w-px bg-border/50 flex-shrink-0" />
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <SocialSentimentBox />
-          </div>
+        {/* Bottom row — Citizen Security + Sector Predictions + Social Sentiment — resizable */}
+        <div className="flex-shrink-0 border-t border-border h-[220px]">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={33} minSize={15}>
+              <div className="h-full overflow-hidden">
+                <CitizenSecurity
+                  data={citizenSecurity.data}
+                  loading={citizenSecurity.loading}
+                  error={citizenSecurity.error}
+                  onRefresh={citizenSecurity.refresh}
+                />
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={34} minSize={15}>
+              <div className="h-full overflow-hidden">
+                <SectorPredictions />
+              </div>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={33} minSize={15}>
+              <div className="h-full overflow-hidden">
+                <SocialSentimentBox />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </div>
 
