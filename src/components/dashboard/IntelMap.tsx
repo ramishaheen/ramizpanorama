@@ -699,6 +699,42 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     }).addTo(group);
   }, [safetyData]);
 
+  // Render UP42 footprints on map
+  useEffect(() => {
+    const group = up42GroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    up42Features.forEach((feature) => {
+      if (!feature.geometry) return;
+      try {
+        const geoJson = L.geoJSON(feature.geometry as any, {
+          style: {
+            color: "#00d4ff",
+            fillColor: "#00d4ff",
+            fillOpacity: 0.08,
+            weight: 2,
+            dashArray: "4 2",
+          },
+        });
+        const props = feature.properties || {};
+        geoJson.bindPopup(`
+          <div style="${popupStyle}">
+            <div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">🛰 ${props.constellation || props.collection || "Satellite"}</div>
+            <div>Date: ${props.datetime?.split("T")[0] || "N/A"}</div>
+            ${props["eo:cloud_cover"] != null ? `<div>Cloud: ${Math.round(props["eo:cloud_cover"])}%</div>` : ""}
+            ${props["up42-system:asset_id"] ? `<div style="font-size:8px;opacity:0.5;margin-top:4px;">ID: ${props["up42-system:asset_id"]}</div>` : ""}
+          </div>
+        `, popupOptions);
+        geoJson.addTo(group);
+      } catch {}
+    });
+  }, [up42Features]);
+
+  const handleUP42FeaturesChange = useCallback((features: UP42Feature[]) => {
+    setUp42Features(features);
+  }, []);
+
   const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
   // Satellite count badge - fetch from edge function
@@ -734,6 +770,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onCancelItem={handleCancelItem}
       />
       <TotalLaunchesWidget rockets={rockets} />
+      <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
 
       {/* Satellite count badge */}
       {satCount > 0 && (
