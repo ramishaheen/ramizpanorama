@@ -5,18 +5,18 @@ interface SatelliteData {
   name: string;
   lat: number;
   lng: number;
-  alt: number; // km
+  alt: number;
   category: string;
   noradId?: string;
   inclination?: number;
   meanMotion?: number;
   eccentricity?: number;
-  period?: number; // minutes
+  period?: number;
   epochYear?: number;
   epochDay?: number;
   launchYear?: string;
   intlDesignator?: string;
-  velocity?: number; // km/s approx
+  velocity?: number;
 }
 
 interface SatelliteGlobeProps {
@@ -38,59 +38,36 @@ function parseTLEFull(name: string, tle1: string, tle2: string): SatelliteData |
     const inclination = parseFloat(tle2.substring(8, 16).trim());
     const raan = parseFloat(tle2.substring(17, 25).trim());
     const eccentricity = parseFloat("0." + tle2.substring(26, 33).trim());
-    const argPerigee = parseFloat(tle2.substring(34, 42).trim());
     const meanAnomaly = parseFloat(tle2.substring(43, 51).trim());
     const meanMotion = parseFloat(tle2.substring(52, 63).trim());
-
     const intlDesignator = tle1.substring(9, 17).trim();
     const epochYearRaw = parseInt(tle1.substring(18, 20).trim());
     const epochDay = parseFloat(tle1.substring(20, 32).trim());
     const epochYear = epochYearRaw > 56 ? 1900 + epochYearRaw : 2000 + epochYearRaw;
-
-    // Altitude from mean motion
     const GM = 398600.4418;
     const T = 86400 / meanMotion;
     const a = Math.pow((GM * T * T) / (4 * Math.PI * Math.PI), 1 / 3);
     const alt = Math.max(a - 6371, 200);
-    const period = T / 60; // minutes
-
-    // Approximate orbital velocity
+    const period = T / 60;
     const velocity = Math.sqrt(GM / a);
-
-    // Subsatellite point approximation using current time offset
     const now = new Date();
     const startOfYear = new Date(epochYear, 0, 1);
     const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
     const elapsedRevs = (currentDayOfYear - epochDay) * meanMotion;
     const currentAnomaly = ((meanAnomaly + elapsedRevs * 360) % 360 + 360) % 360;
-
     const lat = inclination * Math.sin((currentAnomaly * Math.PI) / 180);
     const greenwichOffset = ((now.getUTCHours() * 15) + (now.getUTCMinutes() * 0.25));
     const lng = ((raan + currentAnomaly - greenwichOffset) % 360 + 540) % 360 - 180;
-
     const noradId = tle1.substring(2, 7).trim();
     const launchYear = intlDesignator.substring(0, 2);
-
     return {
-      name: name.trim(),
-      lat: Math.max(-85, Math.min(85, lat)),
-      lng,
-      alt: Math.min(alt, 42000),
-      category: categorizeSatellite(name),
-      noradId,
-      inclination,
-      meanMotion,
-      eccentricity,
-      period,
-      epochYear,
-      epochDay,
+      name: name.trim(), lat: Math.max(-85, Math.min(85, lat)), lng,
+      alt: Math.min(alt, 42000), category: categorizeSatellite(name), noradId,
+      inclination, meanMotion, eccentricity, period, epochYear, epochDay,
       launchYear: launchYear ? (parseInt(launchYear) > 56 ? `19${launchYear}` : `20${launchYear}`) : undefined,
-      intlDesignator,
-      velocity,
+      intlDesignator, velocity,
     };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function categorizeSatellite(name: string): string {
@@ -113,9 +90,10 @@ function getOrbitType(alt: number, inclination?: number, eccentricity?: number):
 }
 
 export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const globeElRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<any>(null);
-  const animFrameRef = useRef<number>(0);
+  const satsRef = useRef<SatelliteData[]>([]);
   const [satellites, setSatellites] = useState<SatelliteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOrbits, setShowOrbits] = useState(true);
@@ -123,34 +101,24 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedSat, setSelectedSat] = useState<SatelliteData | null>(null);
 
+  // Keep ref in sync
+  useEffect(() => { satsRef.current = satellites; }, [satellites]);
+
   const fetchSatellites = useCallback(async () => {
     setLoading(true);
     try {
-      const urls = [
-        "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle",
-      ];
-
-      const responses = await Promise.all(
-        urls.map((url) => fetch(url).then((r) => r.text()).catch(() => ""))
-      );
-
+      const resp = await fetch("https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle").then(r => r.text()).catch(() => "");
       const allSats: SatelliteData[] = [];
       const seen = new Set<string>();
-
-      responses.forEach((text) => {
-        const lines = text.trim().split("\n").map((l) => l.trim());
-        for (let i = 0; i < lines.length - 2; i += 3) {
-          const name = lines[i];
-          const tle1 = lines[i + 1];
-          const tle2 = lines[i + 2];
-          if (!tle1?.startsWith("1 ") || !tle2?.startsWith("2 ")) continue;
-          if (seen.has(name)) continue;
-          seen.add(name);
-          const sat = parseTLEFull(name, tle1, tle2);
-          if (sat) allSats.push(sat);
-        }
-      });
-
+      const lines = resp.trim().split("\n").map(l => l.trim());
+      for (let i = 0; i < lines.length - 2; i += 3) {
+        const name = lines[i], tle1 = lines[i + 1], tle2 = lines[i + 2];
+        if (!tle1?.startsWith("1 ") || !tle2?.startsWith("2 ")) continue;
+        if (seen.has(name)) continue;
+        seen.add(name);
+        const sat = parseTLEFull(name, tle1, tle2);
+        if (sat) allSats.push(sat);
+      }
       setSatellites(allSats.slice(0, 2500));
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
@@ -159,73 +127,75 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchSatellites();
-  }, [fetchSatellites]);
+  useEffect(() => { fetchSatellites(); }, [fetchSatellites]);
 
-  // Animate satellite positions
+  // Animate positions via ref — no state update, just update globe data directly
   useEffect(() => {
     if (satellites.length === 0) return;
-
-    const updatePositions = () => {
-      setSatellites((prev) =>
-        prev.map((s) => {
-          // Simulate orbital motion: move longitude based on mean motion
-          const degreesPerSecond = (s.meanMotion || 15) * 360 / 86400;
-          const newLng = ((s.lng + degreesPerSecond * 0.5) + 540) % 360 - 180;
-          // Slight lat oscillation based on inclination
-          const latOscillation = Math.sin(Date.now() / 10000 + (s.noradId ? parseInt(s.noradId) : 0)) * (s.inclination || 30) * 0.01;
-          return {
-            ...s,
-            lng: newLng,
-            lat: Math.max(-85, Math.min(85, s.lat + latOscillation)),
-          };
-        })
-      );
-    };
-
-    const interval = setInterval(updatePositions, 2000);
+    const interval = setInterval(() => {
+      const globe = globeRef.current;
+      if (!globe) return;
+      const current = satsRef.current;
+      const updated = current.map(s => {
+        const dps = (s.meanMotion || 15) * 360 / 86400;
+        const newLng = ((s.lng + dps * 2) + 540) % 360 - 180;
+        const latOsc = Math.sin(Date.now() / 10000 + (s.noradId ? parseInt(s.noradId) : 0)) * (s.inclination || 30) * 0.01;
+        return { ...s, lng: newLng, lat: Math.max(-85, Math.min(85, s.lat + latOsc)) };
+      });
+      satsRef.current = updated;
+      // Update globe data without React re-render
+      const catFilter = selectedCat;
+      const filtered = catFilter ? updated.filter(s => s.category === catFilter) : updated;
+      globe.pointsData(filtered);
+    }, 3000);
     return () => clearInterval(interval);
-  }, [satellites.length]);
+  }, [satellites.length, selectedCat]);
 
-  // Initialize Globe.gl
+  // Create globe ONCE, update data separately
   useEffect(() => {
-    if (!containerRef.current || satellites.length === 0) return;
+    if (!wrapperRef.current || satellites.length === 0) return;
+
+    // Create a dedicated DOM element for globe outside React's control
+    if (!globeElRef.current) {
+      globeElRef.current = document.createElement("div");
+      globeElRef.current.style.cssText = "width:100%;height:100%;position:absolute;inset:0;";
+      wrapperRef.current.appendChild(globeElRef.current);
+    }
+
+    let cancelled = false;
 
     const initGlobe = async () => {
       const mod = await import("globe.gl");
       const Globe = mod.default;
+      if (cancelled || !globeElRef.current) return;
 
-      // Clean up previous canvas
+      // Destroy previous instance
       if (globeRef.current) {
-        containerRef.current?.querySelectorAll("canvas").forEach((c) => c.remove());
+        globeRef.current._destructor?.();
+        globeElRef.current.innerHTML = "";
       }
 
-      const filtered = selectedCat
-        ? satellites.filter((s) => s.category === selectedCat)
-        : satellites;
+      const el = globeElRef.current;
+      const filtered = selectedCat ? satellites.filter(s => s.category === selectedCat) : satellites;
 
-      // Orbit arcs for visual effect
       const arcs = showOrbits
-        ? filtered.slice(0, 600).map((s) => ({
-            startLat: s.lat,
-            startLng: s.lng,
-            endLat: s.lat + (Math.sin((s.inclination || 45) * Math.PI / 180)) * 30,
+        ? filtered.slice(0, 600).map(s => ({
+            startLat: s.lat, startLng: s.lng,
+            endLat: s.lat + Math.sin((s.inclination || 45) * Math.PI / 180) * 30,
             endLng: ((s.lng + 50 + (s.meanMotion || 15) * 2) % 360) - 180,
             alt: Math.min(s.alt / 6371 / 3, 0.8),
             color: CATEGORY_COLORS[s.category] || "#888",
           }))
         : [];
 
-      const globe = new Globe(containerRef.current!)
+      const globe = new Globe(el)
         .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
         .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png")
         .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
-        .width(containerRef.current!.clientWidth)
-        .height(containerRef.current!.clientHeight)
+        .width(el.clientWidth)
+        .height(el.clientHeight)
         .atmosphereColor("hsl(190, 100%, 50%)")
         .atmosphereAltitude(0.18)
-        // Satellite points
         .pointsData(filtered)
         .pointLat("lat")
         .pointLng("lng")
@@ -234,10 +204,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .pointColor((d: SatelliteData) => CATEGORY_COLORS[d.category] || "#888")
         .onPointClick((d: any) => {
           setSelectedSat(d as SatelliteData);
-          // Fly camera to clicked satellite
           globe.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.8 }, 1000);
         })
-        // Labels
         .labelsData(showLabels ? filtered.filter((_, i) => i % (filtered.length > 500 ? 5 : 1) === 0) : [])
         .labelLat("lat")
         .labelLng("lng")
@@ -251,109 +219,76 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           setSelectedSat(d as SatelliteData);
           globe.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.8 }, 1000);
         })
-        // Orbit arcs
         .arcsData(arcs)
-        .arcStartLat("startLat")
-        .arcStartLng("startLng")
-        .arcEndLat("endLat")
-        .arcEndLng("endLng")
-        .arcColor("color")
-        .arcAltitude("alt")
-        .arcStroke(0.3)
-        .arcDashLength(0.5)
-        .arcDashGap(0.15)
-        .arcDashAnimateTime(3000);
+        .arcStartLat("startLat").arcStartLng("startLng")
+        .arcEndLat("endLat").arcEndLng("endLng")
+        .arcColor("color").arcAltitude("alt")
+        .arcStroke(0.3).arcDashLength(0.5).arcDashGap(0.15).arcDashAnimateTime(3000);
 
       globe.pointOfView({ lat: 30, lng: 50, altitude: 2.5 }, 1000);
       globe.controls().autoRotate = true;
       globe.controls().autoRotateSpeed = 0.3;
-
       globeRef.current = globe;
     };
 
     initGlobe();
 
     return () => {
-      if (containerRef.current) {
-        containerRef.current.querySelectorAll("canvas").forEach((c) => c.remove());
-      }
+      cancelled = true;
     };
-  }, [satellites, showOrbits, selectedCat, showLabels]);
-
-  // Keep globe points data in sync with animated positions
-  useEffect(() => {
-    if (!globeRef.current || satellites.length === 0) return;
-    const filtered = selectedCat
-      ? satellites.filter((s) => s.category === selectedCat)
-      : satellites;
-    globeRef.current.pointsData(filtered);
-  }, [satellites, selectedCat]);
+  }, [satellites.length > 0, showOrbits, selectedCat, showLabels]); // Only re-init on toggle changes, NOT on position updates
 
   // Handle resize
   useEffect(() => {
     const handleResize = () => {
-      if (globeRef.current && containerRef.current) {
-        globeRef.current
-          .width(containerRef.current.clientWidth)
-          .height(containerRef.current.clientHeight);
+      if (globeRef.current && globeElRef.current) {
+        globeRef.current.width(globeElRef.current.clientWidth).height(globeElRef.current.clientHeight);
       }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (globeElRef.current) {
+        globeElRef.current.remove();
+        globeElRef.current = null;
+      }
+      globeRef.current = null;
+    };
+  }, []);
+
   const categories = Object.entries(CATEGORY_COLORS);
   const counts = categories.map(([cat]) => ({
-    cat,
-    count: satellites.filter((s) => s.category === cat).length,
+    cat, count: satellites.filter(s => s.category === cat).length,
   }));
 
   return (
     <div className="absolute inset-0 z-[2000] bg-black flex flex-col">
-      {/* Header bar */}
+      {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-card/90 backdrop-blur border-b border-border z-10">
         <div className="flex items-center gap-2">
           <Satellite className="h-4 w-4 text-primary animate-pulse" />
-          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
-            3D Satellite Tracker
-          </span>
-          <span className="text-[9px] font-mono text-muted-foreground">
-            {loading ? "LOADING…" : `${satellites.length} LIVE`}
-          </span>
+          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">3D Satellite Tracker</span>
+          <span className="text-[9px] font-mono text-muted-foreground">{loading ? "LOADING…" : `${satellites.length} LIVE`}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setShowLabels(!showLabels)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${
-              showLabels
-                ? "border-primary/50 bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:bg-secondary"
-            }`}
-          >
-            {showLabels ? <Tag className="h-3 w-3" /> : <Tags className="h-3 w-3" />}
-            Names
+          <button onClick={() => setShowLabels(!showLabels)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showLabels ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            {showLabels ? <Tag className="h-3 w-3" /> : <Tags className="h-3 w-3" />} Names
           </button>
-          <button
-            onClick={() => setShowOrbits(!showOrbits)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${
-              showOrbits
-                ? "border-primary/50 bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:bg-secondary"
-            }`}
-          >
-            {showOrbits ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-            Orbits
+          <button onClick={() => setShowOrbits(!showOrbits)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showOrbits ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            {showOrbits ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} Orbits
           </button>
-          <button
-            onClick={fetchSatellites}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all"
-          >
+          <button onClick={fetchSatellites}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all">
             <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
           </button>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center w-7 h-7 rounded border border-border text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-all"
-          >
+          <button onClick={onClose}
+            className="flex items-center justify-center w-7 h-7 rounded border border-border text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-all">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -361,96 +296,49 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
       {/* Category filters */}
       <div className="flex items-center gap-1 px-3 py-1.5 bg-card/70 backdrop-blur border-b border-border/50 overflow-x-auto z-10">
-        <button
-          onClick={() => setSelectedCat(null)}
-          className={`flex-shrink-0 px-2 py-0.5 rounded text-[8px] font-mono uppercase border transition-all ${
-            !selectedCat
-              ? "border-primary/50 bg-primary/10 text-primary"
-              : "border-border text-muted-foreground hover:bg-secondary"
-          }`}
-        >
+        <button onClick={() => setSelectedCat(null)}
+          className={`flex-shrink-0 px-2 py-0.5 rounded text-[8px] font-mono uppercase border transition-all ${!selectedCat ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
           ALL ({satellites.length})
         </button>
-        {counts
-          .filter((c) => c.count > 0)
-          .map(({ cat, count }) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCat(selectedCat === cat ? null : cat)}
-              className={`flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-mono uppercase border transition-all ${
-                selectedCat === cat
-                  ? "border-primary/50 bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:bg-secondary"
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
-              {cat} ({count})
-            </button>
-          ))}
+        {counts.filter(c => c.count > 0).map(({ cat, count }) => (
+          <button key={cat} onClick={() => setSelectedCat(selectedCat === cat ? null : cat)}
+            className={`flex-shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-mono uppercase border transition-all ${selectedCat === cat ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
+            {cat} ({count})
+          </button>
+        ))}
       </div>
 
-      {/* Globe container */}
-      <div ref={containerRef} className="flex-1 relative">
+      {/* Globe wrapper — React doesn't manage children inside this div */}
+      <div ref={wrapperRef} className="flex-1 relative">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center z-20">
+          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
             <div className="text-center space-y-2">
               <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
-                Fetching satellite TLE data…
-              </p>
+              <p className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">Fetching satellite TLE data…</p>
             </div>
           </div>
         )}
 
         {/* Selected satellite detail panel */}
         {selectedSat && (
-          <div
-            className="absolute top-3 left-3 z-30 w-72 rounded-lg border backdrop-blur-md shadow-2xl animate-fade-in"
-            style={{
-              borderColor: CATEGORY_COLORS[selectedSat.category] + "80",
-              background: "rgba(0,0,0,0.88)",
-              boxShadow: `0 0 30px ${CATEGORY_COLORS[selectedSat.category]}33`,
-            }}
-          >
-            {/* Detail header */}
-            <div
-              className="flex items-center justify-between px-3 py-2 border-b rounded-t-lg"
-              style={{
-                borderColor: CATEGORY_COLORS[selectedSat.category] + "40",
-                background: CATEGORY_COLORS[selectedSat.category] + "15",
-              }}
-            >
+          <div className="absolute top-3 left-3 z-30 w-72 rounded-lg border backdrop-blur-md shadow-2xl animate-fade-in pointer-events-auto"
+            style={{ borderColor: CATEGORY_COLORS[selectedSat.category] + "80", background: "rgba(0,0,0,0.88)", boxShadow: `0 0 30px ${CATEGORY_COLORS[selectedSat.category]}33` }}>
+            <div className="flex items-center justify-between px-3 py-2 border-b rounded-t-lg"
+              style={{ borderColor: CATEGORY_COLORS[selectedSat.category] + "40", background: CATEGORY_COLORS[selectedSat.category] + "15" }}>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-sm">🛰</span>
-                <span
-                  className="text-xs font-mono font-bold truncate"
-                  style={{ color: CATEGORY_COLORS[selectedSat.category] }}
-                >
-                  {selectedSat.name}
-                </span>
+                <span className="text-xs font-mono font-bold truncate" style={{ color: CATEGORY_COLORS[selectedSat.category] }}>{selectedSat.name}</span>
               </div>
-              <button
-                onClick={() => setSelectedSat(null)}
-                className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
-              >
+              <button onClick={() => setSelectedSat(null)} className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition-colors">
                 <X className="h-3 w-3 text-muted-foreground" />
               </button>
             </div>
-
-            {/* Detail body */}
             <div className="p-3 space-y-2.5">
-              {/* Status row */}
               <div className="flex items-center gap-2">
-                <span
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: CATEGORY_COLORS[selectedSat.category] }}
-                />
-                <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                  {selectedSat.category} • ACTIVE
-                </span>
+                <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: CATEGORY_COLORS[selectedSat.category] }} />
+                <span className="text-[10px] font-mono text-muted-foreground uppercase">{selectedSat.category} • ACTIVE</span>
               </div>
-
-              {/* Data grid */}
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                 <DataRow label="NORAD ID" value={selectedSat.noradId || "N/A"} />
                 <DataRow label="INTL DES" value={selectedSat.intlDesignator || "N/A"} />
@@ -465,12 +353,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 <DataRow label="LATITUDE" value={`${selectedSat.lat.toFixed(3)}°`} />
                 <DataRow label="LONGITUDE" value={`${selectedSat.lng.toFixed(3)}°`} />
               </div>
-
-              {/* Epoch info */}
               <div className="border-t border-border/30 pt-1.5">
-                <span className="text-[8px] font-mono text-muted-foreground/60">
-                  EPOCH: {selectedSat.epochYear} DAY {selectedSat.epochDay?.toFixed(4)} • TLE SOURCE: CELESTRAK
-                </span>
+                <span className="text-[8px] font-mono text-muted-foreground/60">EPOCH: {selectedSat.epochYear} DAY {selectedSat.epochDay?.toFixed(4)} • TLE SOURCE: CELESTRAK</span>
               </div>
             </div>
           </div>
