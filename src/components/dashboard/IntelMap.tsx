@@ -184,7 +184,29 @@ const newsSeverityColors: Record<string, string> = {
   critical: "#ef4444",
 };
 
-const createNewsIcon = (severity: string, category: string) => {
+const SPECIAL_KEYWORDS = /iran|missile|rocket|ballistic|cruise|drone strike|IRGC|quds|hezbollah|houthi|intercept|warhead|launch|strike|attack/i;
+const SPECIAL_REGIONS = /iran|jordan|gulf|bahrain|qatar|uae|saudi|kuwait|oman/i;
+
+function isSpecialNews(headline: string, body: string, region: string, category: string): boolean {
+  const text = `${headline} ${body} ${region} ${category}`;
+  return SPECIAL_KEYWORDS.test(text) || SPECIAL_REGIONS.test(region);
+}
+
+const createNewsIcon = (severity: string, category: string, special: boolean) => {
+  if (special) {
+    const size = 38;
+    return L.divIcon({
+      className: "news-marker-special",
+      html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;border:3px solid #ff0040;box-shadow:0 0 18px #ff0040,0 0 40px rgba(255,0,64,0.3);animation:pulse 1s ease-in-out infinite;"></div>
+        <div style="position:absolute;width:${size - 8}px;height:${size - 8}px;border-radius:50%;background:rgba(255,0,64,0.2);"></div>
+        <div style="font-size:20px;filter:drop-shadow(0 0 10px #ff0040);animation:pulse 1.5s ease-in-out infinite;">🚀</div>
+      </div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -(size / 2 + 4)],
+    });
+  }
   const color = newsSeverityColors[severity] || "#00d4ff";
   const emoji = category === "MILITARY" ? "⚔️" : category === "DIPLOMATIC" ? "🏛️" : category === "ECONOMIC" ? "💰" : category === "HUMANITARIAN" ? "🩺" : "📰";
   return L.divIcon({
