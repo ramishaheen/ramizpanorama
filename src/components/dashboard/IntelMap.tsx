@@ -595,6 +595,39 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     });
   }, [wildfires.data, layers.wildfires]);
 
+  // Render conflict events layer
+  useEffect(() => {
+    const group = conflictGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    if (!layers.conflicts || conflictEvents.data.length === 0) return;
+
+    conflictEvents.data.forEach((event) => {
+      const color = conflictTypeColors[event.event_type] || "#ef4444";
+
+      const marker = L.marker([event.lat, event.lng], {
+        icon: createConflictIcon(event.event_type, event.severity),
+      });
+
+      marker.bindPopup(`
+        <div style="${popupStyle}">
+          <div style="color:${color};font-weight:700;margin-bottom:4px;">
+            ${conflictTypeEmojis[event.event_type] || "⚔️"} ${event.event_type}
+          </div>
+          <div style="font-size:10px;opacity:0.7;margin-bottom:4px;">${event.sub_event_type || ""}</div>
+          <div style="margin-bottom:4px;">${event.notes}</div>
+          <div>Location: <b>${event.location}</b>, ${event.admin1}, ${event.country}</div>
+          <div>Actors: ${event.actor1}${event.actor2 ? ` vs ${event.actor2}` : ""}</div>
+          ${event.fatalities > 0 ? `<div style="color:#ef4444;">Fatalities: ${event.fatalities}</div>` : ""}
+          <div style="font-size:9px;opacity:0.6;margin-top:4px;">${event.event_date} — ${event.source}</div>
+        </div>
+      `, popupOptions);
+
+      marker.addTo(group);
+    });
+  }, [conflictEvents.data, layers.conflicts]);
+
   // Weather radar tile layer
   useEffect(() => {
     const map = mapRef.current;
