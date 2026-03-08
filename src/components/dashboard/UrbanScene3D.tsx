@@ -2145,6 +2145,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         {/* Weather Radar Overlay */}
         <WeatherRadarOverlay mapRef={mapInstanceRef} enabled={showWeatherRadar} opacity={opacityWeather} />
 
+        {/* Traffic Particle Simulation Overlay */}
+        <TrafficParticleOverlay mapRef={mapInstanceRef} enabled={showTrafficParticles} zoom={zoomLevel} lat={lat} lng={lng} opacity={opacityTrafficParticles} />
+
         {/* Satellite Timestamp HUD */}
         <SatelliteTimestampHUD
           layers={[
