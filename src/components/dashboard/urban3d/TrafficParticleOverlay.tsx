@@ -26,6 +26,7 @@ interface Particle {
   direction: 1 | -1;
   vehicleType: VehicleType;
   angle: number;
+  laneOffset: number; // perpendicular offset in pixels for multi-lane
 }
 
 const HIGHWAY_COLORS: Record<string, string> = {
