@@ -322,10 +322,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     setMapillaryLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("mapillary", {
-        body: { lat: targetLat, lng: targetLng, radius: 1000, limit: 1 },
+        body: { lat: targetLat, lng: targetLng, radius: 2000, limit: 10 },
       });
       if (!error && data?.images?.length > 0) {
-        setMapillaryImageId(data.images[0].id);
+        // Prefer panoramic images for immersive experience
+        const pano = data.images.find((img: any) => img.is_pano);
+        const best = pano || data.images[0];
+        setMapillaryImageId(best.id);
         setMapillaryToken(data.token);
         setMapillaryActive(true);
         return true;
@@ -364,7 +367,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     };
 
     const initViewer = (container: HTMLElement) => {
-      const { Viewer } = (window as any).mapillary;
+      const { Viewer, NavigationDirection } = (window as any).mapillary;
       if (mapillaryViewerRef.current) {
         mapillaryViewerRef.current.remove();
       }
@@ -372,6 +375,24 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         accessToken: mapillaryToken,
         container,
         imageId: mapillaryImageId,
+        component: {
+          cover: false,
+          direction: true,
+          sequence: true,
+          zoom: true,
+          bearing: true,
+          cache: true,
+          image: true,
+          navigation: true,
+          popup: true,
+          spatial: true,
+        },
+      });
+      // Allow walking/navigating between connected images
+      viewer.on("image", (event: any) => {
+        if (event.image?.id) {
+          setMapillaryImageId(event.image.id);
+        }
       });
       mapillaryViewerRef.current = viewer;
     };
