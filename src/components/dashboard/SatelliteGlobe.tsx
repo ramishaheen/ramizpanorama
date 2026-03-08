@@ -410,6 +410,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [aiLoading, setAiLoading] = useState(false);
   const aiScrollRef = useRef<HTMLDivElement>(null);
   const pulseFrameRef = useRef<number>(0);
+  const countrySatNamesRef = useRef<Set<string>>(new Set());
   const satsRef = useRef<SatelliteData[]>([]);
   const [predicting, setPredicting] = useState(false);
   const [predictionData, setPredictionData] = useState<{
