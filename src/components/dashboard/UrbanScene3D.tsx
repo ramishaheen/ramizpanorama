@@ -136,7 +136,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 47.5);
   
   const [searchInput, setSearchInput] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearch, setShowSearch] = useState(true);
   const [showFlights, setShowFlights] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
@@ -1798,9 +1798,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       {showSearch && (
         <div className="px-3 py-1.5 bg-card/80 backdrop-blur border-b border-border/50 z-20 space-y-1.5">
           <div className="flex items-center gap-2">
-            <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()} placeholder="City, coordinates, or callsign (e.g. UAE231)…" className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/50 outline-none" autoFocus />
-            <button onClick={handleSearchSubmit} className="px-2 py-0.5 rounded text-[9px] font-mono uppercase border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 transition-all">Go</button>
+            <Search className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+            <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()} placeholder="Search city, coordinates, or callsign…" className="flex-1 bg-muted/30 border border-border/50 rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/60 transition-colors" autoFocus />
+            <button onClick={handleSearchSubmit} className="px-4 py-1 rounded text-xs font-mono font-bold uppercase bg-primary text-primary-foreground hover:bg-primary/80 transition-all shadow-[0_0_12px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.5)] active:scale-95">GO</button>
           </div>
           <div className="flex items-center gap-1 overflow-x-auto">
             {PRESETS.map((p) => (
