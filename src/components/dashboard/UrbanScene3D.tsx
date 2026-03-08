@@ -1081,14 +1081,29 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
   }, [weatherData, showWeather]);
 
+  const flashZoomIndicator = useCallback((zoom: number) => {
+    setZoomLevel(zoom);
+    setShowZoomIndicator(true);
+    if (zoomIndicatorTimerRef.current) clearTimeout(zoomIndicatorTimerRef.current);
+    zoomIndicatorTimerRef.current = setTimeout(() => setShowZoomIndicator(false), 1500);
+  }, []);
+
   const handleZoomIn = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (map) map.setZoom(Math.min((map.getZoom() || 6) + 1, 21));
-  }, []);
+    if (map) {
+      const newZoom = Math.min((map.getZoom() || 6) + 1, 21);
+      map.setZoom(newZoom);
+      flashZoomIndicator(newZoom);
+    }
+  }, [flashZoomIndicator]);
   const handleZoomOut = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (map) map.setZoom(Math.max((map.getZoom() || 6) - 1, 1));
-  }, []);
+    if (map) {
+      const newZoom = Math.max((map.getZoom() || 6) - 1, 1);
+      map.setZoom(newZoom);
+      flashZoomIndicator(newZoom);
+    }
+  }, [flashZoomIndicator]);
   const handleRotate = useCallback(() => {
     const map = mapInstanceRef.current;
     if (map) map.setHeading((map.getHeading() || 0) + 45);
