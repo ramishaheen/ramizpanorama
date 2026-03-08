@@ -436,20 +436,19 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const laneWidthPx = zoom >= 21 ? 9 : zoom >= 20 ? 7 : zoom >= 18 ? 5 : 3.5;
 
         for (let lane = 0; lane < totalLanes; lane++) {
-          // On two-way roads split lanes by direction
-          const halfLanes = Math.ceil(totalLanes / 2);
-          const dir: 1 | -1 = road.oneway ? 1 : lane < halfLanes ? 1 : -1;
+          const dir: 1 | -1 = road.laneDirections[lane] ?? 1;
 
           // Center lanes around the road centerline
           const laneOffset = (lane - (totalLanes - 1) / 2) * laneWidthPx;
+          const lanePhase = lane / Math.max(1, totalLanes);
 
           for (let i = 0; i < densityPerLane; i++) {
             const vType = pickVehicleType(road.highway);
             const vConf = VEHICLE_CONFIG[vType];
             particles.push({
               roadIdx: ri,
-              progress: ((i + Math.random() * 0.25) / densityPerLane) % 1,
-              speed: baseSpeed * vConf.speedMult * (0.8 + Math.random() * 0.4),
+              progress: (i + lanePhase) / densityPerLane,
+              speed: baseSpeed,
               color: vConf.color || roadColor,
               size: vConf.sizeBase,
               direction: dir,
