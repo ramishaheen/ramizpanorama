@@ -255,6 +255,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const fusionGroupRef = useRef<L.LayerGroup | null>(null);
   const cctvGroupRef = useRef<L.LayerGroup | null>(null);
   const flightGroupRef = useRef<L.LayerGroup | null>(null);
+  const chokeGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
