@@ -722,7 +722,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </button>
           <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showFlights ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_12px_hsl(var(--primary)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Plane className="h-3 w-3" /> Flights
-            {aircraft.length > 0 && <span className="bg-primary/30 text-white text-[8px] px-1.5 rounded-full font-bold">{aircraft.length}</span>}
+            {interpolatedAircraft.length > 0 && <span className="bg-primary/30 text-white text-[8px] px-1.5 rounded-full font-bold">{interpolatedAircraft.length}</span>}
           </button>
           <button onClick={() => setShowMarkers(!showMarkers)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showMarkers ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} Markers
@@ -825,11 +825,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               PHOTOREALISTIC 3D TILES
             </div>
-            {showFlights && aircraft.length > 0 && (
+            {showFlights && interpolatedAircraft.length > 0 && (
               <>
                 <div className="border-t border-primary/20 pt-1 mt-1 flex items-center gap-2">
                   <Plane className="h-2.5 w-2.5 text-primary" />
-                  <span className="text-primary font-bold">{aircraft.length}</span>
+                  <span className="text-primary font-bold">{interpolatedAircraft.length}</span>
                   <span>AIRCRAFT</span>
                   <span className="text-[8px] font-mono px-1 rounded bg-primary/15">
                     {flightSource === "opensky" ? "LIVE" : "SIM"}
@@ -1046,7 +1046,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           SRC: Google 3D Tiles • {flightSource === "opensky" ? "OpenSky Network (LIVE)" : "Simulated Flight Data"}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
-          {showFlights ? `${aircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
+          {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
         </span>
       </div>
     </div>
