@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, RotateCcw, Eye, EyeOff, Flame } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame } from "lucide-react";
 
 interface UrbanSceneProps {
   onClose: () => void;
@@ -24,7 +24,7 @@ interface Aircraft {
 interface ConflictPoint {
   lat: number;
   lng: number;
-  severity: number; // 1-4
+  severity: number;
 }
 
 const PRESETS = [
@@ -37,22 +37,6 @@ const PRESETS = [
   { name: "Baghdad", lat: 33.3152, lng: 44.3661 },
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
 ];
-
-// Convert lat/lng offset to pixel position relative to container center
-// Approximate: at zoom 17, ~1.5m per pixel. We use a wider scale for our 6-degree bbox.
-function latLngToPixel(
-  acLat: number, acLng: number,
-  centerLat: number, centerLng: number,
-  containerW: number, containerH: number,
-  zoomDeg: number // how many degrees the viewport spans
-) {
-  const dLat = acLat - centerLat;
-  const dLng = acLng - centerLng;
-  const cosLat = Math.cos((centerLat * Math.PI) / 180);
-  const x = containerW / 2 + (dLng / zoomDeg) * containerW * cosLat;
-  const y = containerH / 2 - (dLat / (zoomDeg * (containerH / containerW))) * containerH;
-  return { x, y };
-}
 
 export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const [lat, setLat] = useState(initialCoords?.lat || 25.2048);
@@ -72,13 +56,15 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(true);
   const [containerSize, setContainerSize] = useState({ w: 800, h: 600 });
+  const [mapVersion, setMapVersion] = useState(0); // increment on map move to re-render overlays
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const overlayRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
 
-  // Track container size for marker positioning
+  // Track container size
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -90,7 +76,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
     return () => obs.disconnect();
   }, []);
 
-  // Fetch Google Maps API key from backend
+  // Fetch Google Maps API key
   useEffect(() => {
     const fetchKey = async () => {
       try {
@@ -116,7 +102,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: 17,
+        zoom: 12, // wider zoom so flights are visible
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
@@ -128,9 +114,22 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
         fullscreenControl: false,
       });
       mapInstanceRef.current = map;
+
+      // Create a custom overlay to access MapCanvasProjection
+      const overlay = new google.maps.OverlayView();
+      overlay.onAdd = () => {};
+      overlay.draw = () => {};
+      overlay.onRemove = () => {};
+      overlay.setMap(map);
+      overlayRef.current = overlay;
+
+      // Listen for map movements to re-render overlays
+      const updateOverlays = () => setMapVersion((v) => v + 1);
+      map.addListener("idle", updateOverlays);
+      map.addListener("zoom_changed", updateOverlays);
+      map.addListener("bounds_changed", updateOverlays);
     };
 
-    // Check if already loaded
     if ((window as any).google?.maps) {
       scriptLoadedRef.current = true;
       initMap();
@@ -149,10 +148,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       console.error("Failed to load Google Maps script");
     };
     document.head.appendChild(script);
-
-    return () => {
-      // Don't remove script on cleanup - it stays cached
-    };
   }, [apiKey]);
 
   // Update map center when lat/lng changes
@@ -161,6 +156,27 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       mapInstanceRef.current.panTo({ lat, lng });
     }
   }, [lat, lng]);
+
+  // Helper: convert lat/lng to pixel using Google Maps projection
+  const latLngToPixel = useCallback(
+    (pLat: number, pLng: number): { x: number; y: number } | null => {
+      const overlay = overlayRef.current;
+      if (!overlay) return null;
+      try {
+        const projection = overlay.getProjection();
+        if (!projection) return null;
+        const google = (window as any).google;
+        const point = projection.fromLatLngToContainerPixel(
+          new google.maps.LatLng(pLat, pLng)
+        );
+        if (!point) return null;
+        return { x: point.x, y: point.y };
+      } catch {
+        return null;
+      }
+    },
+    [mapVersion] // re-bind when map moves
+  );
 
   // Fetch conflict data for heatmap
   useEffect(() => {
@@ -171,12 +187,10 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           supabase.functions.invoke("conflict-events"),
         ]);
         const points: ConflictPoint[] = [];
-        // Geo alerts
         const sevMap: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
         (geoRes.data || []).forEach((g: any) => {
           if (g.lat && g.lng) points.push({ lat: g.lat, lng: g.lng, severity: sevMap[g.severity] || 2 });
         });
-        // Conflict events
         const events = conflictRes.data?.data || [];
         events.forEach((e: any) => {
           if (e.lat && e.lng) points.push({ lat: e.lat, lng: e.lng, severity: sevMap[e.severity] || 2 });
@@ -194,13 +208,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   // Render heatmap on canvas
   useEffect(() => {
     const canvas = heatCanvasRef.current;
-    if (!canvas || !showHeatmap || conflictPoints.length === 0) {
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      return;
-    }
+    if (!canvas) return;
     const { w, h } = containerSize;
     canvas.width = w;
     canvas.height = h;
@@ -208,10 +216,12 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
 
-    // Draw radial gradients for each point
+    if (!showHeatmap || conflictPoints.length === 0) return;
+
     conflictPoints.forEach((pt) => {
-      const pos = latLngToPixel(pt.lat, pt.lng, lat, lng, w, h, VIEWPORT_DEG);
-      if (pos.x < -100 || pos.x > w + 100 || pos.y < -100 || pos.y > h + 100) return;
+      const pos = latLngToPixel(pt.lat, pt.lng);
+      if (!pos) return;
+      if (pos.x < -150 || pos.x > w + 150 || pos.y < -150 || pos.y > h + 150) return;
       const radius = 30 + pt.severity * 20;
       const intensity = 0.15 + pt.severity * 0.08;
       const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, radius);
@@ -227,42 +237,31 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       ctx.fillStyle = grad;
       ctx.fillRect(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
     });
-  }, [conflictPoints, showHeatmap, lat, lng, containerSize]);
-
-  const VIEWPORT_DEG = 6;
-
-  // Fetch Google Maps API key from backend
-  useEffect(() => {
-    const fetchKey = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("google-maps-key");
-        if (!error && data?.apiKey) {
-          setApiKey(data.apiKey);
-        }
-      } catch (e) {
-        console.error("Failed to fetch Google Maps key:", e);
-      } finally {
-        setApiKeyLoading(false);
-      }
-    };
-    fetchKey();
-  }, []);
+  }, [conflictPoints, showHeatmap, latLngToPixel, containerSize, mapVersion]);
 
   // Fetch live flights
   const fetchFlights = useCallback(async () => {
     if (!showFlights) return;
     setFlightsLoading(true);
     try {
-      const bbox = {
-        lamin: lat - 3,
-        lamax: lat + 3,
-        lomin: lng - 3,
-        lomax: lng + 3,
-      };
+      // Use map bounds if available, otherwise use center +/- 3 deg
+      const map = mapInstanceRef.current;
+      let bbox: any;
+      if (map) {
+        const bounds = map.getBounds();
+        if (bounds) {
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          bbox = { lamin: sw.lat(), lamax: ne.lat(), lomin: sw.lng(), lomax: ne.lng() };
+        }
+      }
+      if (!bbox) {
+        bbox = { lamin: lat - 3, lamax: lat + 3, lomin: lng - 3, lomax: lng + 3 };
+      }
+
       const { data, error } = await supabase.functions.invoke("live-flights", { body: bbox });
       if (!error && data?.aircraft) {
         const newAircraft: Aircraft[] = data.aircraft;
-        // Detect newly appeared military aircraft
         const prevMilIds = new Set(aircraft.filter(a => a.is_military).map(a => a.icao24));
         const newMil = newAircraft.filter(a => a.is_military && !prevMilIds.has(a.icao24));
         if (newMil.length > 0 && aircraft.length > 0) {
@@ -277,21 +276,18 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
         const now = Date.now();
         const history = { ...trailHistoryRef.current };
         const MAX_TRAIL = 8;
-        const TRAIL_EXPIRE = 5 * 60 * 1000; // 5 min
+        const TRAIL_EXPIRE = 5 * 60 * 1000;
         newAircraft.forEach((ac) => {
           const trail = history[ac.icao24] || [];
           const last = trail[trail.length - 1];
           if (!last || last.lat !== ac.lat || last.lng !== ac.lng) {
             trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
           }
-          // Trim old points
           history[ac.icao24] = trail.filter(p => now - p.ts < TRAIL_EXPIRE).slice(-MAX_TRAIL);
         });
-        // Remove stale aircraft from history
         const activeIds = new Set(newAircraft.map(a => a.icao24));
         Object.keys(history).forEach(id => { if (!activeIds.has(id)) delete history[id]; });
         trailHistoryRef.current = history;
-
         setAircraft(newAircraft);
       }
     } catch (e) {
@@ -338,21 +334,25 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const militaryCount = aircraft.filter((a) => a.is_military).length;
   const civilCount = aircraft.length - militaryCount;
 
-  // Compute marker positions (uses VIEWPORT_DEG defined above)
-
-  // Compute marker positions
+  // Compute marker positions using Google Maps projection
   const markerPositions = useMemo(() => {
     if (!showMarkers || !showFlights) return [];
-    return aircraft.map((ac) => {
-      const pos = latLngToPixel(ac.lat, ac.lng, lat, lng, containerSize.w, containerSize.h, VIEWPORT_DEG);
-      const visible = pos.x >= -20 && pos.x <= containerSize.w + 20 && pos.y >= -20 && pos.y <= containerSize.h + 20;
-      // Compute trail pixel positions
-      const trail = (trailHistoryRef.current[ac.icao24] || []).map((p) =>
-        latLngToPixel(p.lat, p.lng, lat, lng, containerSize.w, containerSize.h, VIEWPORT_DEG)
-      );
-      return { ...ac, px: pos.x, py: pos.y, visible, trail };
-    }).filter((m) => m.visible);
-  }, [aircraft, lat, lng, containerSize, showMarkers, showFlights]);
+    return aircraft
+      .map((ac) => {
+        const pos = latLngToPixel(ac.lat, ac.lng);
+        if (!pos) return null;
+        const visible =
+          pos.x >= -20 && pos.x <= containerSize.w + 20 &&
+          pos.y >= -20 && pos.y <= containerSize.h + 20;
+        if (!visible) return null;
+        // Compute trail pixel positions
+        const trail = (trailHistoryRef.current[ac.icao24] || [])
+          .map((p) => latLngToPixel(p.lat, p.lng))
+          .filter(Boolean) as { x: number; y: number }[];
+        return { ...ac, px: pos.x, py: pos.y, visible: true, trail };
+      })
+      .filter(Boolean) as (Aircraft & { px: number; py: number; visible: boolean; trail: { x: number; y: number }[] })[];
+  }, [aircraft, latLngToPixel, containerSize, showMarkers, showFlights, mapVersion]);
 
   return (
     <div className="absolute inset-0 z-[2000] bg-black flex flex-col">
@@ -389,7 +389,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           <button
             onClick={() => setShowMarkers(!showMarkers)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showMarkers ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
-            title="Toggle aircraft markers on map"
           >
             {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             Markers
@@ -397,7 +396,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           <button
             onClick={() => setShowHeatmap(!showHeatmap)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showHeatmap ? "border-orange-500/50 bg-orange-500/10 text-orange-400" : "border-border text-muted-foreground hover:bg-secondary"}`}
-            title="Toggle conflict heatmap"
           >
             <Flame className="h-3 w-3" />
             Heatmap
@@ -410,7 +408,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           <button
             onClick={() => setShowTrails(!showTrails)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
-            title="Toggle flight trail lines"
           >
             <Navigation className="h-3 w-3" />
             Trails
@@ -474,8 +471,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
 
       {/* Main content */}
       <div className="flex-1 relative" ref={containerRef}>
-        {/* Google Maps 3D Embed */}
-        {/* Google Maps via JS API */}
+        {/* Google Maps */}
         {apiKeyLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-2">
@@ -554,7 +550,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
                 }}
                 onClick={() => setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac)}
               >
-                {/* Pulse ring */}
                 <div
                   className="absolute inset-0 rounded-full animate-ping opacity-30"
                   style={{
@@ -565,7 +560,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
                     backgroundColor: ac.is_military ? "rgba(239,68,68,0.4)" : "rgba(96,165,250,0.3)",
                   }}
                 />
-                {/* Plane icon */}
                 <div
                   className="relative flex items-center justify-center w-4 h-4"
                   style={{
@@ -582,10 +576,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
                     <path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z" />
                   </svg>
                 </div>
-                {/* Callsign tooltip */}
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 top-full mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap"
-                >
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                   <div
                     className="px-1.5 py-0.5 rounded text-[7px] font-mono font-bold"
                     style={{
@@ -648,7 +639,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
                 </span>
               </div>
 
-              {/* Stats */}
               <div className="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-border/30">
                 <div className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -664,7 +654,6 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
                 </div>
               </div>
 
-              {/* Aircraft list */}
               <div className="space-y-0.5 max-h-[35vh] overflow-y-auto">
                 {aircraft
                   .sort((a, b) => (b.is_military ? 1 : 0) - (a.is_military ? 1 : 0))
