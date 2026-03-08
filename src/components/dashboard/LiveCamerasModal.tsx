@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter } from "lucide-react";
+import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CameraData {
@@ -39,31 +39,27 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [selectedCamera, setSelectedCamera] = useState<CameraData | null>(null);
   const [embedError, setEmbedError] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
 
   const fetchCameras = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ action: "list" });
-      if (selectedCountry) params.set("country", selectedCountry);
-      if (selectedCategory) params.set("category", selectedCategory);
-      if (searchQuery) params.set("search", searchQuery);
-
       const { data, error } = await supabase.functions.invoke("cameras", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        body: null,
+        method: "POST",
+        body: {
+          action: "list",
+          country: selectedCountry,
+          category: selectedCategory,
+          search: searchQuery,
+        },
       });
 
-      // Fallback: query directly
-      let query = supabase.from("cameras" as any).select("*").eq("is_active", true).order("country").order("city");
-      if (selectedCountry) query = query.eq("country", selectedCountry);
-      if (selectedCategory) query = query.eq("category", selectedCategory);
-      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`);
-
-      const result = await query;
-      setCameras((result.data as any[]) || []);
+      if (error) throw error;
+      setCameras((data?.cameras as CameraData[]) || []);
     } catch (e) {
       console.error("Failed to fetch cameras:", e);
+      setCameras([]);
     } finally {
       setLoading(false);
     }
@@ -78,6 +74,54 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
+
+  const runHealthCheck = useCallback(async () => {
+    setCheckingHealth(true);
+    try {
+      await supabase.functions.invoke("cameras", {
+        method: "POST",
+        body: { action: "health_check" },
+      });
+      await fetchCameras();
+    } catch (e) {
+      console.error("Health check failed:", e);
+    } finally {
+      setCheckingHealth(false);
+    }
+  }, [fetchCameras]);
+
+  const discoverMoreCameras = useCallback(async () => {
+    setDiscovering(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cameras", {
+        method: "POST",
+        body: { action: "discover", country: selectedCountry || "Middle East" },
+      });
+      if (error) throw error;
+      await fetchCameras();
+      console.info("AI camera discovery result:", data);
+    } catch (e) {
+      console.error("AI camera discovery failed:", e);
+    } finally {
+      setDiscovering(false);
+    }
+  }, [fetchCameras, selectedCountry]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      runHealthCheck();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [runHealthCheck]);
+
+  const openCameraSource = (cam: CameraData) => {
+    const rawUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
+    if (!rawUrl) return;
+
+    const match = rawUrl.match(/youtube\.com\/embed\/([^?&/]+)/i);
+    const openUrl = match ? `https://www.youtube.com/watch?v=${match[1]}` : rawUrl;
+    window.open(openUrl, "_blank", "noopener,noreferrer");
+  };
 
   const handleShowOnMap = (cam: CameraData) => {
     if (onShowOnMap && cam.lat && cam.lng) {
@@ -196,11 +240,21 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchCameras}
-              className="p-1.5 rounded hover:bg-muted transition-colors"
-              title="Refresh"
+              onClick={discoverMoreCameras}
+              className="px-2 py-1 rounded bg-primary/15 border border-primary/30 hover:bg-primary/25 transition-colors text-[10px] font-mono text-primary flex items-center gap-1"
+              title="AI discover more public cameras"
+              disabled={discovering}
             >
-              <RefreshCw className={`h-4 w-4 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
+              <Sparkles className={`h-3.5 w-3.5 ${discovering ? "animate-pulse" : ""}`} />
+              {discovering ? "DISCOVERING" : "AI FIND"}
+            </button>
+            <button
+              onClick={runHealthCheck}
+              className="p-1.5 rounded hover:bg-muted transition-colors"
+              title="Refresh live/offline status"
+              disabled={checkingHealth}
+            >
+              <RefreshCw className={`h-4 w-4 text-muted-foreground ${checkingHealth ? "animate-spin" : ""}`} />
             </button>
             <button onClick={onClose} className="p-1.5 rounded hover:bg-destructive/20 transition-colors">
               <X className="h-4 w-4 text-muted-foreground" />
@@ -305,12 +359,13 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                           {cam.city}, {cam.country}
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded uppercase ${
+                          <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded uppercase inline-flex items-center gap-1 ${
                             cam.status === "active" ? "bg-success/20 text-success" :
                             cam.status === "error" ? "bg-destructive/20 text-destructive" :
                             "bg-muted text-muted-foreground"
                           }`}>
-                            {cam.status}
+                            <span className={`w-1.5 h-1.5 rounded-full ${cam.status === "active" ? "bg-success" : cam.status === "error" ? "bg-destructive" : "bg-muted-foreground"}`} />
+                            {cam.status === "active" ? "ONLINE" : cam.status === "error" ? "OFFLINE" : cam.status}
                           </span>
                           <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
                             {cam.category}
@@ -329,14 +384,22 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                         />
                       )}
                     </div>
-                    {cam.lat !== 0 && cam.lng !== 0 && (
+                    <div className="mt-1.5 flex items-center gap-3">
+                      {cam.lat !== 0 && cam.lng !== 0 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleShowOnMap(cam); }}
+                          className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
+                        >
+                          <MapPin className="h-3 w-3" /> SHOW ON MAP
+                        </button>
+                      )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleShowOnMap(cam); }}
-                        className="mt-1.5 flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); openCameraSource(cam); }}
+                        className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
                       >
-                        <MapPin className="h-3 w-3" /> SHOW ON MAP
+                        <ExternalLink className="h-3 w-3" /> OPEN LIVE
                       </button>
-                    )}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -354,6 +417,14 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {selectedCamera && (
+                    <button
+                      onClick={() => openCameraSource(selectedCamera)}
+                      className="px-2 py-1 bg-primary/20 hover:bg-primary/30 border border-primary/30 rounded text-[10px] font-mono text-primary flex items-center gap-1 transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" /> OPEN LIVE
+                    </button>
+                  )}
                   {selectedCamera.lat !== 0 && (
                     <button
                       onClick={() => handleShowOnMap(selectedCamera)}
@@ -363,8 +434,10 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                     </button>
                   )}
                   <div className="flex items-center gap-1">
-                    <Eye className="h-3 w-3 text-success" />
-                    <span className="text-[9px] font-mono text-success">LIVE</span>
+                    <Eye className={`h-3 w-3 ${selectedCamera.status === "active" ? "text-success" : "text-destructive"}`} />
+                    <span className={`text-[9px] font-mono ${selectedCamera.status === "active" ? "text-success" : "text-destructive"}`}>
+                      {selectedCamera.status === "active" ? "LIVE" : "OFFLINE"}
+                    </span>
                   </div>
                 </div>
               </div>
