@@ -212,7 +212,7 @@ export const ResponseMapModal = ({ onClose, onFlyTo }: ResponseMapProps) => {
     { id: "alerts" as const, label: "Summary", icon: Shield },
   ];
 
-  return createPortal(
+  return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -524,7 +524,6 @@ export const ResponseMapModal = ({ onClose, onFlyTo }: ResponseMapProps) => {
           </div>
         </div>
       </motion.div>
-    </motion.div>,
-    document.body
+    </motion.div>
   );
 };
