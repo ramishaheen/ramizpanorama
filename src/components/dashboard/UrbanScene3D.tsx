@@ -1650,6 +1650,16 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <LayerControl icon={<CloudRain className="h-3 w-3" />} label="Weather" color="#06b6d4" active={showWeather} onToggle={() => setShowWeather(!showWeather)} opacity={opacityWeather} onOpacity={setOpacityWeather} source="OpenWeatherMap" />
                 <LayerControl icon={<Car className="h-3 w-3" />} label="Traffic" color="#10b981" active={showTraffic} onToggle={() => setShowTraffic(!showTraffic)} opacity={opacityTraffic} onOpacity={setOpacityTraffic} source="Google" />
                 <LayerControl icon={<Compass className="h-3 w-3" />} label="360° Street View" color="#22c55e" active={streetViewActive} onToggle={() => setStreetViewActive(!streetViewActive)} opacity={1} onOpacity={() => {}} />
+                <LayerControl icon={<Eye className="h-3 w-3" />} label="Mapillary" color="#05CB63" active={mapillaryActive} onToggle={() => {
+                  if (mapillaryActive) {
+                    setMapillaryActive(false);
+                    setMapillaryImageId(null);
+                  } else {
+                    const map = mapInstanceRef.current;
+                    const center = map?.getCenter?.();
+                    activateMapillary(center?.lat?.() ?? lat, center?.lng?.() ?? lng);
+                  }
+                }} opacity={1} onOpacity={() => {}} source="Street-level" />
 
                 <div className="border-t border-border/20 my-2" />
 
