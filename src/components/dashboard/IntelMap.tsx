@@ -270,11 +270,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     heading: number; vertical_rate: number; is_military: boolean;
   }
   const [flightData, setFlightData] = useState<FlightAircraft[]>([]);
+  const flightSnapshotRef = useRef<FlightAircraft[]>([]);
+  const flightLastPollRef = useRef<number>(Date.now());
+  const [interpolatedFlights, setInterpolatedFlights] = useState<FlightAircraft[]>([]);
   const flightTrailsRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const flightInterpRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [trackedFlightId, setTrackedFlightId] = useState<string | null>(null);
   const [flightSource, setFlightSource] = useState<string>("");
-  const prevFlightPositions = useRef<Record<string, { lat: number; lng: number }>>({});
+  const prevFlightPositions = useRef<Record<string, { lat: number; lng: number }>>({}); 
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
@@ -999,7 +1003,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         Object.keys(prevPos).forEach(id => { if (!activeIds.has(id)) delete prevPos[id]; });
         flightTrailsRef.current = history;
         prevFlightPositions.current = prevPos;
+        flightSnapshotRef.current = newAircraft;
+        flightLastPollRef.current = Date.now();
         setFlightData(newAircraft);
+        setInterpolatedFlights(newAircraft);
       }
     } catch (e) { console.error("Flight fetch error:", e); }
   }, [layers.flights]);
@@ -1008,24 +1015,47 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     if (!layers.flights) {
       flightGroupRef.current?.clearLayers();
       setFlightData([]);
+      setInterpolatedFlights([]);
       if (flightIntervalRef.current) { clearInterval(flightIntervalRef.current); flightIntervalRef.current = null; }
+      if (flightInterpRef.current) { clearInterval(flightInterpRef.current); flightInterpRef.current = null; }
       return;
     }
     fetchFlightData();
-    flightIntervalRef.current = setInterval(fetchFlightData, 15000); // 15s for smoother updates
-    return () => { if (flightIntervalRef.current) { clearInterval(flightIntervalRef.current); flightIntervalRef.current = null; } };
+    flightIntervalRef.current = setInterval(fetchFlightData, 15000);
+    return () => {
+      if (flightIntervalRef.current) { clearInterval(flightIntervalRef.current); flightIntervalRef.current = null; }
+    };
   }, [fetchFlightData, layers.flights]);
+
+  // ===== REAL-TIME INTERPOLATION ENGINE for 2D map =====
+  useEffect(() => {
+    if (!layers.flights) return;
+    flightInterpRef.current = setInterval(() => {
+      const snapshot = flightSnapshotRef.current;
+      if (snapshot.length === 0) return;
+      const elapsed = (Date.now() - flightLastPollRef.current) / 1000;
+      const moved = snapshot.map(ac => {
+        const headingRad = ac.heading * Math.PI / 180;
+        const speedDegPerSec = ac.velocity / 111320;
+        const dLat = Math.cos(headingRad) * speedDegPerSec * elapsed;
+        const dLng = Math.sin(headingRad) * speedDegPerSec * elapsed / Math.max(Math.cos(ac.lat * Math.PI / 180), 0.01);
+        return { ...ac, lat: ac.lat + dLat, lng: ac.lng + dLng };
+      });
+      setInterpolatedFlights(moved);
+    }, 200);
+    return () => { if (flightInterpRef.current) { clearInterval(flightInterpRef.current); flightInterpRef.current = null; } };
+  }, [layers.flights]);
 
   // Click-to-track: pan to tracked aircraft on each data update
   useEffect(() => {
     if (!trackedFlightId || !mapRef.current) return;
-    const ac = flightData.find(f => f.icao24 === trackedFlightId);
+    const ac = interpolatedFlights.find(f => f.icao24 === trackedFlightId);
     if (ac) {
       mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.8 });
     } else {
       setTrackedFlightId(null);
     }
-  }, [flightData, trackedFlightId]);
+  }, [interpolatedFlights, trackedFlightId]);
 
   // Render flights on map — optimized with proper aircraft icons
   useEffect(() => {
@@ -1033,9 +1063,9 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     if (!group) return;
     group.clearLayers();
 
-    if (!layers.flights || flightData.length === 0) return;
+    if (!layers.flights || interpolatedFlights.length === 0) return;
 
-    flightData.forEach((ac) => {
+    interpolatedFlights.forEach((ac) => {
       const isMil = ac.is_military;
       const color = isMil ? "#ef4444" : "#3b82f6";
       const trailColor = isMil ? "#ef444480" : "#3b82f640";
@@ -1149,7 +1179,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       group.addLayer(marker);
     });
-  }, [flightData, layers.flights, trackedFlightId]);
+  }, [interpolatedFlights, layers.flights, trackedFlightId]);
 
 
   useEffect(() => {

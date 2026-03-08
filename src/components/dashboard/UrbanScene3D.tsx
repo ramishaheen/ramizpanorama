@@ -121,6 +121,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showFlights, setShowFlights] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  const aircraftSnapshotRef = useRef<Aircraft[]>([]); // last poll snapshot for interpolation
+  const lastPollTimeRef = useRef<number>(Date.now());
+  const [interpolatedAircraft, setInterpolatedAircraft] = useState<Aircraft[]>([]);
   const [showTrails, setShowTrails] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(!!initialEvent);
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
@@ -134,6 +137,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(true);
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const interpolationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -267,10 +271,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
-    if (!showFlights || !showMarkers || aircraft.length === 0) return;
+    if (!showFlights || !showMarkers || interpolatedAircraft.length === 0) return;
 
     const newMarkers: any[] = [];
-    aircraft.forEach((ac) => {
+    interpolatedAircraft.forEach((ac) => {
       const isTracked = trackedAircraftId === ac.icao24;
       const isMil = ac.is_military;
       const color = isMil ? "#ef4444" : "#3b82f6";
@@ -333,7 +337,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       newMarkers.push(marker);
     });
     markersRef.current = newMarkers;
-  }, [aircraft, showFlights, showMarkers, trackedAircraftId]);
+  }, [interpolatedAircraft, showFlights, showMarkers, trackedAircraftId]);
 
   // ===== RENDER FLIGHT ROUTES & TRAILS WITH ANIMATED DOTS =====
   useEffect(() => {
@@ -344,10 +348,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     trailLinesRef.current.forEach(l => l.setMap(null));
     trailLinesRef.current = [];
 
-    if (!showFlights || !showMarkers || !showTrails || aircraft.length === 0) return;
+    if (!showFlights || !showMarkers || !showTrails || interpolatedAircraft.length === 0) return;
 
     const newLines: any[] = [];
-    aircraft.forEach((ac) => {
+    interpolatedAircraft.forEach((ac) => {
       const history = trailHistoryRef.current[ac.icao24] || [];
       const isMil = ac.is_military;
       const isTracked = trackedAircraftId === ac.icao24;
@@ -449,7 +453,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }, 80);
 
     return () => clearInterval(animInterval);
-  }, [aircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
+  }, [interpolatedAircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
 
   // ===== HEATMAP LAYER =====
   useEffect(() => {
@@ -605,7 +609,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         const activeIds = new Set(newAircraft.map(a => a.icao24));
         Object.keys(history).forEach(id => { if (!activeIds.has(id)) delete history[id]; });
         trailHistoryRef.current = history;
+        aircraftSnapshotRef.current = newAircraft;
+        lastPollTimeRef.current = Date.now();
         setAircraft(newAircraft);
+        setInterpolatedAircraft(newAircraft);
       }
     } catch (e) {
       console.error("Failed to fetch flights:", e);
@@ -620,10 +627,29 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     return () => { if (flightIntervalRef.current) clearInterval(flightIntervalRef.current); };
   }, [fetchFlights]);
 
+  // ===== REAL-TIME INTERPOLATION ENGINE — move aircraft smoothly between polls =====
+  useEffect(() => {
+    if (!showFlights) return;
+    interpolationRef.current = setInterval(() => {
+      const snapshot = aircraftSnapshotRef.current;
+      if (snapshot.length === 0) return;
+      const elapsed = (Date.now() - lastPollTimeRef.current) / 1000; // seconds since last poll
+      const moved = snapshot.map(ac => {
+        const headingRad = ac.heading * Math.PI / 180;
+        const speedDegPerSec = ac.velocity / 111320; // m/s to deg/s approx
+        const dLat = Math.cos(headingRad) * speedDegPerSec * elapsed;
+        const dLng = Math.sin(headingRad) * speedDegPerSec * elapsed / Math.max(Math.cos(ac.lat * Math.PI / 180), 0.01);
+        return { ...ac, lat: ac.lat + dLat, lng: ac.lng + dLng };
+      });
+      setInterpolatedAircraft(moved);
+    }, 200); // update positions every 200ms
+    return () => { if (interpolationRef.current) clearInterval(interpolationRef.current); };
+  }, [showFlights]);
+
   // Auto-pan to tracked aircraft
   useEffect(() => {
     if (!trackedAircraftId || !mapInstanceRef.current) return;
-    const ac = aircraft.find(f => f.icao24 === trackedAircraftId);
+    const ac = interpolatedAircraft.find(f => f.icao24 === trackedAircraftId);
     if (ac) {
       mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
       setSelectedAircraft(ac);
@@ -631,7 +657,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       setTrackedAircraftId(null);
       setSelectedAircraft(null);
     }
-  }, [aircraft, trackedAircraftId]);
+  }, [interpolatedAircraft, trackedAircraftId]);
 
   const navigateTo = useCallback((newLat: number, newLng: number) => {
     setLat(newLat);
@@ -669,8 +695,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       .catch(console.error);
   }, [searchInput, navigateTo, aircraft]);
 
-  const militaryCount = aircraft.filter((a) => a.is_military).length;
-  const civilCount = aircraft.length - militaryCount;
+  const militaryCount = interpolatedAircraft.filter((a) => a.is_military).length;
+  const civilCount = interpolatedAircraft.length - militaryCount;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -678,6 +704,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       markersRef.current.forEach(m => m.setMap(null));
       trailLinesRef.current.forEach(l => l.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
+      if (interpolationRef.current) clearInterval(interpolationRef.current);
     };
   }, []);
 
@@ -696,7 +723,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </button>
           <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showFlights ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_12px_hsl(var(--primary)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Plane className="h-3 w-3" /> Flights
-            {aircraft.length > 0 && <span className="bg-primary/30 text-white text-[8px] px-1.5 rounded-full font-bold">{aircraft.length}</span>}
+            {interpolatedAircraft.length > 0 && <span className="bg-primary/30 text-white text-[8px] px-1.5 rounded-full font-bold">{interpolatedAircraft.length}</span>}
           </button>
           <button onClick={() => setShowMarkers(!showMarkers)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showMarkers ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} Markers
@@ -799,11 +826,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               PHOTOREALISTIC 3D TILES
             </div>
-            {showFlights && aircraft.length > 0 && (
+            {showFlights && interpolatedAircraft.length > 0 && (
               <>
                 <div className="border-t border-primary/20 pt-1 mt-1 flex items-center gap-2">
                   <Plane className="h-2.5 w-2.5 text-primary" />
-                  <span className="text-primary font-bold">{aircraft.length}</span>
+                  <span className="text-primary font-bold">{interpolatedAircraft.length}</span>
                   <span>AIRCRAFT</span>
                   <span className="text-[8px] font-mono px-1 rounded bg-primary/15">
                     {flightSource === "opensky" ? "LIVE" : "SIM"}
@@ -861,7 +888,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 </div>
               </div>
               <div className="divide-y divide-border/10 max-h-[42vh] overflow-y-auto">
-                {aircraft
+                {interpolatedAircraft
                   .sort((a, b) => {
                     // Tracked first, then military, then by callsign
                     if (a.icao24 === trackedAircraftId) return -1;
@@ -1020,7 +1047,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           SRC: Google 3D Tiles • {flightSource === "opensky" ? "OpenSky Network (LIVE)" : "Simulated Flight Data"}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
-          {showFlights ? `${aircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
+          {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
         </span>
       </div>
     </div>
