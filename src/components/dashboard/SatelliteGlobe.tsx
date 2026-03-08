@@ -1114,6 +1114,14 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                   value={selectedSat.noradId || "N/A"}
                 />
                 <DataRow
+                  label="COUNTRY"
+                  value={selectedSat.country || "N/A"}
+                />
+                <DataRow
+                  label="OPERATOR"
+                  value={selectedSat.operator || "N/A"}
+                />
+                <DataRow
                   label="INTL"
                   value={selectedSat.intlDesignator || "N/A"}
                 />
