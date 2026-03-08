@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target } from "lucide-react";
 
 interface IntelEvent {
   title: string;
@@ -48,16 +48,31 @@ const PRESETS = [
   { name: "Baghdad", lat: 33.3152, lng: 44.3661 },
   { name: "Dubai", lat: 25.2048, lng: 55.2708 },
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
+  { name: "New York", lat: 40.7128, lng: -74.006 },
+  { name: "London", lat: 51.5074, lng: -0.1278 },
+  { name: "Tokyo", lat: 35.6762, lng: 139.6503 },
 ];
 
-// Create SVG data URL for aircraft icon
-function createAircraftSvg(isMilitary: boolean, heading: number): string {
-  const color = isMilitary ? "#ef4444" : "#60a5fa";
-  const glow = isMilitary ? "rgba(239,68,68,0.6)" : "rgba(96,165,250,0.5)";
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
-    <defs><filter id="g"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${glow}"/></filter></defs>
-    <g transform="rotate(${heading} 14 14)" filter="url(#g)">
-      <path d="M14 4L10 11H5l2 3.5L5 18h5l4 6 4-6h5l-2-3.5L23 11h-5L14 4z" fill="${color}"/>
+function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: boolean): string {
+  const color = isMilitary ? "#ef4444" : "#3b82f6";
+  const glowColor = isMilitary ? "rgba(239,68,68,0.7)" : "rgba(59,130,246,0.6)";
+  const size = isTracked ? 36 : 28;
+  const center = size / 2;
+  const trackRing = isTracked
+    ? `<circle cx="${center}" cy="${center}" r="${center - 2}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="4 2" opacity="0.6">
+        <animateTransform attributeName="transform" type="rotate" from="0 ${center} ${center}" to="360 ${center} ${center}" dur="3s" repeatCount="indefinite"/>
+      </circle>`
+    : "";
+  const pulseRing = `<circle cx="${center}" cy="${center}" r="${center - 4}" fill="none" stroke="${color}" stroke-width="1" opacity="0.3">
+    <animate attributeName="r" values="${center - 4};${center}" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.4;0" dur="2s" repeatCount="indefinite"/>
+  </circle>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs><filter id="g${isTracked ? 't' : 'n'}"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="${glowColor}"/></filter></defs>
+    ${trackRing}
+    ${pulseRing}
+    <g transform="rotate(${heading} ${center} ${center})" filter="url(#g${isTracked ? 't' : 'n'})">
+      <path d="M${center} ${center - 10}l-3.5 8h-7l2 3-2 3h7l3.5 8 3.5-8h7l-2-3 2-3h-7l-3.5-8z" fill="${color}" stroke="rgba(255,255,255,0.25)" stroke-width="0.5"/>
     </g>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
@@ -80,13 +95,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
+  const [trackedAircraftId, setTrackedAircraftId] = useState<string | null>(null);
+  const [flightSource, setFlightSource] = useState("");
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(true);
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  // Native Google Maps objects
   const markersRef = useRef<any[]>([]);
   const trailLinesRef = useRef<any[]>([]);
   const heatmapLayerRef = useRef<any>(null);
@@ -131,7 +147,6 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     const initMap = () => {
       if (!mapDivRef.current || !(window as any).google?.maps) return;
       if (mapInstanceRef.current) {
-        // Clean up previous markers/trails
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
         trailLinesRef.current.forEach(l => l.setMap(null));
@@ -176,7 +191,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (mapInstanceRef.current) mapInstanceRef.current.panTo({ lat, lng });
   }, [lat, lng]);
 
-  // Toggle Street View 360° — check coverage first
+  // Toggle Street View 360°
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !apiKey) return;
@@ -209,13 +224,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [streetViewActive, lat, lng, apiKey]);
 
-  // ===== RENDER NATIVE GOOGLE MAPS MARKERS FOR AIRCRAFT =====
+  // ===== RENDER AIRCRAFT MARKERS =====
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
     if (!map || !google?.maps) return;
 
-    // Clear previous markers
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
@@ -223,50 +237,76 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
     const newMarkers: any[] = [];
     aircraft.forEach((ac) => {
+      const isTracked = trackedAircraftId === ac.icao24;
+      const isMil = ac.is_military;
+      const color = isMil ? "#ef4444" : "#3b82f6";
+      const size = isTracked ? 36 : 28;
+
       const marker = new google.maps.Marker({
         position: { lat: ac.lat, lng: ac.lng },
         map,
         icon: {
-          url: createAircraftSvg(ac.is_military, ac.heading),
-          scaledSize: new google.maps.Size(28, 28),
-          anchor: new google.maps.Point(14, 14),
+          url: createAircraftSvg(isMil, ac.heading, isTracked),
+          scaledSize: new google.maps.Size(size, size),
+          anchor: new google.maps.Point(size / 2, size / 2),
         },
-        title: `${ac.callsign || ac.icao24} | ${Math.round(ac.altitude)}m | ${ac.origin_country}`,
-        zIndex: ac.is_military ? 100 : 50,
+        title: `${ac.callsign || ac.icao24} | ${ac.origin_country}`,
+        zIndex: isTracked ? 200 : (isMil ? 100 : 50),
+        optimized: false,
       });
 
-      // Create info window content
+      const altFt = Math.round(ac.altitude * 3.281);
+      const speedKts = Math.round(ac.velocity * 1.944);
+      const speedKmh = Math.round(ac.velocity * 3.6);
+      const vsArrow = ac.vertical_rate > 0.5 ? "▲" : ac.vertical_rate < -0.5 ? "▼" : "—";
+      const vsColor = ac.vertical_rate > 0.5 ? "#22c55e" : ac.vertical_rate < -0.5 ? "#ef4444" : "#888";
+
       const infoContent = `
-        <div style="background:#111;color:#fff;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:10px;min-width:180px;border:1px solid ${ac.is_military ? '#ef4444' : '#60a5fa'}40">
-          <div style="font-weight:bold;font-size:12px;color:${ac.is_military ? '#ef4444' : '#60a5fa'};margin-bottom:4px">
-            ${ac.is_military ? '🛩️ MILITARY' : '✈️ CIVIL'} — ${ac.callsign || ac.icao24}
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:220px;border:1px solid ${color}40;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-weight:700;font-size:13px;color:${color};">
+              ${isMil ? '🛩️' : '✈️'} ${ac.callsign || 'N/A'}
+            </span>
+            <span style="font-size:8px;padding:2px 6px;border-radius:4px;background:${color}20;color:${color};font-weight:600;">
+              ${isMil ? 'MILITARY' : 'CIVIL'}
+            </span>
           </div>
-          <div>ICAO: ${ac.icao24}</div>
-          <div>Origin: ${ac.origin_country}</div>
-          <div>Altitude: ${Math.round(ac.altitude)}m</div>
-          <div>Speed: ${Math.round(ac.velocity * 3.6)} km/h</div>
-          <div>Heading: ${Math.round(ac.heading)}°</div>
-          <div>V/S: ${ac.vertical_rate > 0 ? '+' : ''}${ac.vertical_rate.toFixed(1)} m/s</div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
+            <span style="color:#7d8590;">ICAO</span><span>${ac.icao24}</span>
+            <span style="color:#7d8590;">ORIGIN</span><span>${ac.origin_country}</span>
+            <span style="color:#7d8590;">ALT</span><span>${altFt.toLocaleString()} ft (${Math.round(ac.altitude)}m)</span>
+            <span style="color:#7d8590;">SPEED</span><span>${speedKts} kts (${speedKmh} km/h)</span>
+            <span style="color:#7d8590;">HDG</span><span>${Math.round(ac.heading)}°</span>
+            <span style="color:#7d8590;">V/S</span><span style="color:${vsColor};">${vsArrow} ${ac.vertical_rate > 0 ? '+' : ''}${ac.vertical_rate.toFixed(1)} m/s</span>
+            <span style="color:#7d8590;">POS</span><span>${ac.lat.toFixed(4)}°, ${ac.lng.toFixed(4)}°</span>
+          </div>
+          <div style="margin-top:8px;font-size:9px;color:${isTracked ? '#22c55e' : '#7d8590'};">
+            ${isTracked ? '📡 TRACKING — click to stop' : '🖱️ Click to track'}
+          </div>
         </div>
       `;
       const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+
       marker.addListener("click", () => {
+        setTrackedAircraftId(prev => prev === ac.icao24 ? null : ac.icao24);
         setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac);
         infoWindow.open(map, marker);
       });
 
+      marker.addListener("mouseover", () => infoWindow.open(map, marker));
+      marker.addListener("mouseout", () => infoWindow.close());
+
       newMarkers.push(marker);
     });
     markersRef.current = newMarkers;
-  }, [aircraft, showFlights, showMarkers]);
+  }, [aircraft, showFlights, showMarkers, trackedAircraftId]);
 
-  // ===== RENDER NATIVE GOOGLE MAPS POLYLINES FOR TRAILS =====
+  // ===== RENDER TRAILS =====
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
     if (!map || !google?.maps) return;
 
-    // Clear previous trails
     trailLinesRef.current.forEach(l => l.setMap(null));
     trailLinesRef.current = [];
 
@@ -276,24 +316,37 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     aircraft.forEach((ac) => {
       const history = trailHistoryRef.current[ac.icao24] || [];
       if (history.length < 2) return;
-      const path = [...history.map(p => ({ lat: p.lat, lng: p.lng })), { lat: ac.lat, lng: ac.lng }];
-      const line = new google.maps.Polyline({
-        path,
+      const isMil = ac.is_military;
+      const isTracked = trackedAircraftId === ac.icao24;
+      const color = isMil ? "#ef4444" : "#3b82f6";
+      const fullPath = [...history.map(p => ({ lat: p.lat, lng: p.lng })), { lat: ac.lat, lng: ac.lng }];
+
+      // Faded old trail
+      if (fullPath.length > 3) {
+        const fadedLine = new google.maps.Polyline({
+          path: fullPath.slice(0, -2),
+          map,
+          strokeColor: color,
+          strokeOpacity: 0.2,
+          strokeWeight: isTracked ? 2 : 1.2,
+          geodesic: true,
+        });
+        newLines.push(fadedLine);
+      }
+
+      // Bright recent trail
+      const recentLine = new google.maps.Polyline({
+        path: fullPath.slice(Math.max(0, fullPath.length - 5)),
         map,
-        strokeColor: ac.is_military ? "#ef4444" : "#60a5fa",
-        strokeOpacity: 0.7,
-        strokeWeight: ac.is_military ? 2.5 : 1.8,
+        strokeColor: color,
+        strokeOpacity: isTracked ? 0.9 : 0.6,
+        strokeWeight: isTracked ? 3.5 : 2,
         geodesic: true,
-        icons: ac.is_military ? [] : [{
-          icon: { path: "M 0,-1 0,1", strokeOpacity: 0.5, scale: 2 },
-          offset: "0",
-          repeat: "12px",
-        }],
       });
-      newLines.push(line);
+      newLines.push(recentLine);
     });
     trailLinesRef.current = newLines;
-  }, [aircraft, showFlights, showMarkers, showTrails]);
+  }, [aircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
 
   // ===== HEATMAP LAYER =====
   useEffect(() => {
@@ -375,7 +428,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     return () => clearInterval(iv);
   }, []);
 
-  // Fetch live flights
+  // Fetch live flights — 15s interval, worldwide bbox
   const fetchFlights = useCallback(async () => {
     if (!showFlights) return;
     setFlightsLoading(true);
@@ -391,12 +444,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         }
       }
       if (!bbox) {
-        bbox = { lamin: lat - 3, lamax: lat + 3, lomin: lng - 3, lomax: lng + 3 };
+        bbox = { lamin: lat - 10, lamax: lat + 10, lomin: lng - 15, lomax: lng + 15 };
       }
 
       const { data, error } = await supabase.functions.invoke("live-flights", { body: bbox });
       if (!error && data?.aircraft) {
         const newAircraft: Aircraft[] = data.aircraft;
+        if (data.source) setFlightSource(data.source);
         const prevMilIds = new Set(aircraft.filter(a => a.is_military).map(a => a.icao24));
         const newMil = newAircraft.filter(a => a.is_military && !prevMilIds.has(a.icao24));
         if (newMil.length > 0 && aircraft.length > 0) {
@@ -407,15 +461,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             duration: 8000,
           });
         }
-        // Record trail history
+        // Trail history
         const now = Date.now();
         const history = { ...trailHistoryRef.current };
-        const MAX_TRAIL = 8;
-        const TRAIL_EXPIRE = 5 * 60 * 1000;
+        const MAX_TRAIL = 20;
+        const TRAIL_EXPIRE = 10 * 60 * 1000;
         newAircraft.forEach((ac) => {
           const trail = history[ac.icao24] || [];
           const last = trail[trail.length - 1];
-          if (!last || last.lat !== ac.lat || last.lng !== ac.lng) {
+          if (!last || Math.abs(last.lat - ac.lat) > 0.001 || Math.abs(last.lng - ac.lng) > 0.001) {
             trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
           }
           history[ac.icao24] = trail.filter(p => now - p.ts < TRAIL_EXPIRE).slice(-MAX_TRAIL);
@@ -434,14 +488,28 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   useEffect(() => {
     fetchFlights();
-    flightIntervalRef.current = setInterval(fetchFlights, 30000);
+    flightIntervalRef.current = setInterval(fetchFlights, 15000);
     return () => { if (flightIntervalRef.current) clearInterval(flightIntervalRef.current); };
   }, [fetchFlights]);
+
+  // Auto-pan to tracked aircraft
+  useEffect(() => {
+    if (!trackedAircraftId || !mapInstanceRef.current) return;
+    const ac = aircraft.find(f => f.icao24 === trackedAircraftId);
+    if (ac) {
+      mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
+      setSelectedAircraft(ac);
+    } else {
+      setTrackedAircraftId(null);
+      setSelectedAircraft(null);
+    }
+  }, [aircraft, trackedAircraftId]);
 
   const navigateTo = useCallback((newLat: number, newLng: number) => {
     setLat(newLat);
     setLng(newLng);
     setSelectedAircraft(null);
+    setTrackedAircraftId(null);
   }, []);
 
   const handleSearchSubmit = useCallback(() => {
@@ -450,6 +518,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     const coordMatch = input.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
     if (coordMatch) {
       navigateTo(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]));
+      setShowSearch(false);
+      return;
+    }
+    // Also check if it matches a callsign
+    const matchAc = aircraft.find(a => a.callsign.toLowerCase() === input.toLowerCase() || a.icao24.toLowerCase() === input.toLowerCase());
+    if (matchAc) {
+      setTrackedAircraftId(matchAc.icao24);
+      setSelectedAircraft(matchAc);
+      if (mapInstanceRef.current) mapInstanceRef.current.panTo({ lat: matchAc.lat, lng: matchAc.lng });
       setShowSearch(false);
       return;
     }
@@ -462,7 +539,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         }
       })
       .catch(console.error);
-  }, [searchInput, navigateTo]);
+  }, [searchInput, navigateTo, aircraft]);
 
   const militaryCount = aircraft.filter((a) => a.is_military).length;
   const civilCount = aircraft.length - militaryCount;
@@ -483,11 +560,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-primary" />
           <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">Google 3D View</span>
-          <span className="text-[9px] font-mono text-muted-foreground">GOOGLE 3D TILES</span>
+          <span className="text-[9px] font-mono text-muted-foreground">PHOTOREALISTIC TILES</span>
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={() => setShowSearch(!showSearch)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showSearch ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-            <Search className="h-3 w-3" /> Location
+            <Search className="h-3 w-3" /> Search
           </button>
           <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showFlights ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
             <Plane className="h-3 w-3" /> Flights
@@ -498,13 +575,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </button>
           <button onClick={() => setShowHeatmap(!showHeatmap)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showHeatmap ? "border-orange-500/50 bg-orange-500/10 text-orange-400" : "border-border text-muted-foreground hover:bg-secondary"}`}>
             <Flame className="h-3 w-3" /> Heatmap
-            {conflictPoints.length > 0 && <span className="bg-orange-500/20 text-orange-400 text-[8px] px-1 rounded-full font-bold">{conflictPoints.length}</span>}
           </button>
           <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}>
             <Navigation className="h-3 w-3" /> Trails
           </button>
           <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${streetViewActive ? "border-green-500/50 bg-green-500/10 text-green-400" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-            <Compass className="h-3 w-3" /> 360° View
+            <Compass className="h-3 w-3" /> 360°
           </button>
           <button onClick={() => fetchFlights()} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all">
             <RefreshCw className={`h-3 w-3 ${flightsLoading ? "animate-spin" : ""}`} />
@@ -520,7 +596,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         <div className="px-3 py-1.5 bg-card/80 backdrop-blur border-b border-border/50 z-20 space-y-1.5">
           <div className="flex items-center gap-2">
             <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()} placeholder="City name or coordinates (lat, lng)…" className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/50 outline-none" autoFocus />
+            <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()} placeholder="City, coordinates, or callsign (e.g. UAE231)…" className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/50 outline-none" autoFocus />
             <button onClick={handleSearchSubmit} className="px-2 py-0.5 rounded text-[9px] font-mono uppercase border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 transition-all">Go</button>
           </div>
           <div className="flex items-center gap-1 overflow-x-auto">
@@ -587,7 +663,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
         {/* HUD Overlay */}
         <div className="absolute top-3 left-3 z-10 pointer-events-none">
-          <div className="bg-black/70 backdrop-blur border border-primary/30 rounded px-2.5 py-1.5 font-mono text-[9px] text-primary/80 space-y-0.5"
+          <div className="bg-black/70 backdrop-blur border border-primary/30 rounded-lg px-3 py-2 font-mono text-[9px] text-primary/80 space-y-1"
             style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.1)" }}>
             <div className="text-primary font-bold text-[10px]">// GOOGLE 3D SATELLITE</div>
             <div>SECTOR {lat.toFixed(4)}N {Math.abs(lng).toFixed(4)}{lng >= 0 ? "E" : "W"}</div>
@@ -596,83 +672,156 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               PHOTOREALISTIC 3D TILES
             </div>
             {showFlights && aircraft.length > 0 && (
-              <div className="flex items-center gap-1 text-blue-400">
-                <Plane className="h-2.5 w-2.5" />
-                {aircraft.length} AIRCRAFT • {militaryCount} MIL
-              </div>
+              <>
+                <div className="border-t border-primary/20 pt-1 mt-1 flex items-center gap-2">
+                  <Plane className="h-2.5 w-2.5 text-primary" />
+                  <span className="text-primary font-bold">{aircraft.length}</span>
+                  <span>AIRCRAFT</span>
+                  <span className="text-[8px] font-mono px-1 rounded bg-primary/15">
+                    {flightSource === "opensky" ? "LIVE" : "SIM"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#3b82f6" }} />
+                    <span style={{ color: "#3b82f6" }}>{civilCount}</span> CIV
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#ef4444" }} />
+                    <span style={{ color: "#ef4444" }}>{militaryCount}</span> MIL
+                  </span>
+                </div>
+                {trackedAircraftId && (
+                  <div className="flex items-center gap-1 text-green-400 border-t border-primary/20 pt-1">
+                    <Target className="h-2.5 w-2.5" />
+                    <span className="font-bold">TRACKING:</span>
+                    <span>{aircraft.find(a => a.icao24 === trackedAircraftId)?.callsign || trackedAircraftId}</span>
+                    <button onClick={() => { setTrackedAircraftId(null); setSelectedAircraft(null); }}
+                      className="ml-auto text-[8px] text-red-400 hover:text-red-300 pointer-events-auto">
+                      STOP
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {/* Flight sidebar */}
         {showFlights && aircraft.length > 0 && (
-          <div className="absolute top-3 right-3 z-10 pointer-events-auto">
-            <div className="bg-black/80 backdrop-blur border border-primary/30 rounded-lg p-2 w-56 max-h-[50vh] overflow-hidden"
-              style={{ boxShadow: "0 0 20px hsl(190 100% 50% / 0.1)" }}>
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Plane className="h-3 w-3 text-primary" />
-                  <span className="text-[9px] font-mono font-bold text-primary uppercase">Live Airspace</span>
+          <div className="absolute top-3 right-14 z-10 pointer-events-auto">
+            <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg w-60 max-h-[55vh] overflow-hidden"
+              style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 20px hsl(190 100% 50% / 0.05)" }}>
+              <div className="px-2.5 py-2 border-b border-border/30">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <Plane className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] font-mono font-bold text-primary uppercase">Live Airspace</span>
+                  </div>
+                  <span className="text-[8px] font-mono text-muted-foreground">{aircraft.length} tracked</span>
                 </div>
-                <span className="text-[8px] font-mono text-muted-foreground">{aircraft.length} tracked</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full" style={{ background: "#3b82f6" }} />
+                    <span className="text-[8px] font-mono" style={{ color: "#3b82f6" }}>CIV: {civilCount}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full" style={{ background: "#ef4444" }} />
+                    <span className="text-[8px] font-mono" style={{ color: "#ef4444" }}>MIL: {militaryCount}</span>
+                  </div>
+                  <span className="ml-auto text-[7px] font-mono text-muted-foreground/50">15s refresh</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-border/30">
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span className="text-[8px] font-mono text-blue-400">CIV: {civilCount}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  <span className="text-[8px] font-mono text-red-400">MIL: {militaryCount}</span>
-                </div>
-              </div>
-              <div className="space-y-0.5 max-h-[35vh] overflow-y-auto">
+              <div className="divide-y divide-border/10 max-h-[42vh] overflow-y-auto">
                 {aircraft
-                  .sort((a, b) => (b.is_military ? 1 : 0) - (a.is_military ? 1 : 0))
-                  .slice(0, 40)
-                  .map((ac) => (
-                    <button key={ac.icao24}
-                      onClick={() => {
-                        setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac);
-                        if (mapInstanceRef.current) mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
-                      }}
-                      className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded text-left transition-all ${
-                        selectedAircraft?.icao24 === ac.icao24 ? "bg-primary/15 border border-primary/30" : "hover:bg-white/5 border border-transparent"
-                      }`}>
-                      <Plane className="h-2.5 w-2.5 flex-shrink-0" style={{ color: ac.is_military ? "#ef4444" : "#60a5fa", transform: `rotate(${ac.heading}deg)` }} />
-                      <div className="min-w-0 flex-1">
-                        <span className="text-[8px] font-mono font-bold text-foreground/90 block truncate">{ac.callsign || ac.icao24}</span>
-                        <span className="text-[7px] font-mono text-muted-foreground/60">{Math.round(ac.altitude)}m • {Math.round(ac.velocity * 3.6)}km/h • {ac.origin_country}</span>
-                      </div>
-                      {ac.is_military && <span className="text-[6px] font-mono font-bold text-red-400 bg-red-500/15 px-1 rounded">MIL</span>}
-                    </button>
-                  ))}
+                  .sort((a, b) => {
+                    // Tracked first, then military, then by callsign
+                    if (a.icao24 === trackedAircraftId) return -1;
+                    if (b.icao24 === trackedAircraftId) return 1;
+                    if (a.is_military !== b.is_military) return a.is_military ? -1 : 1;
+                    return (a.callsign || a.icao24).localeCompare(b.callsign || b.icao24);
+                  })
+                  .slice(0, 50)
+                  .map((ac) => {
+                    const isTracked = trackedAircraftId === ac.icao24;
+                    const color = ac.is_military ? "#ef4444" : "#3b82f6";
+                    return (
+                      <button key={ac.icao24}
+                        onClick={() => {
+                          setTrackedAircraftId(isTracked ? null : ac.icao24);
+                          setSelectedAircraft(isTracked ? null : ac);
+                          if (!isTracked && mapInstanceRef.current) mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
+                        }}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-all ${
+                          isTracked ? "bg-primary/10" : "hover:bg-white/5"
+                        }`}>
+                        <Plane className="h-3 w-3 flex-shrink-0" style={{ color, transform: `rotate(${ac.heading}deg)` }} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-mono font-bold text-foreground/90 truncate">{ac.callsign || ac.icao24}</span>
+                            {ac.is_military && <span className="text-[6px] font-mono font-bold px-1 rounded" style={{ color: "#ef4444", background: "rgba(239,68,68,0.15)" }}>MIL</span>}
+                            {isTracked && <Target className="h-2.5 w-2.5 text-green-400 flex-shrink-0" />}
+                          </div>
+                          <span className="text-[7px] font-mono text-muted-foreground/60">
+                            {Math.round(ac.altitude * 3.281).toLocaleString()}ft · {Math.round(ac.velocity * 1.944)}kts · {ac.origin_country}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
               </div>
             </div>
           </div>
         )}
 
-        {/* Selected aircraft detail */}
+        {/* Selected aircraft detail panel */}
         {selectedAircraft && (
-          <div className="absolute bottom-14 left-3 z-10 pointer-events-auto bg-black/85 backdrop-blur border rounded-lg p-2.5 w-60"
-            style={{ borderColor: selectedAircraft.is_military ? "rgba(239,68,68,0.4)" : "rgba(96,165,250,0.4)", boxShadow: `0 0 20px ${selectedAircraft.is_military ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)"}` }}>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <Plane className="h-3.5 w-3.5" style={{ color: selectedAircraft.is_military ? "#ef4444" : "#60a5fa", transform: `rotate(${selectedAircraft.heading}deg)` }} />
-                <span className="text-[10px] font-mono font-bold" style={{ color: selectedAircraft.is_military ? "#ef4444" : "#60a5fa" }}>{selectedAircraft.callsign || selectedAircraft.icao24}</span>
-                {selectedAircraft.is_military && <span className="text-[7px] font-mono font-bold text-red-400 bg-red-500/15 px-1 rounded">MILITARY</span>}
+          <div className="absolute bottom-14 left-3 z-10 pointer-events-auto flight-info-panel rounded-lg p-3 w-64"
+            style={{ borderColor: selectedAircraft.is_military ? "rgba(239,68,68,0.4)" : "rgba(59,130,246,0.4)", boxShadow: `0 4px 24px rgba(0,0,0,0.5), 0 0 20px ${selectedAircraft.is_military ? "rgba(239,68,68,0.1)" : "rgba(59,130,246,0.1)"}` }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Plane className="h-4 w-4" style={{ color: selectedAircraft.is_military ? "#ef4444" : "#3b82f6", transform: `rotate(${selectedAircraft.heading}deg)` }} />
+                <span className="text-[11px] font-mono font-bold" style={{ color: selectedAircraft.is_military ? "#ef4444" : "#3b82f6" }}>
+                  {selectedAircraft.callsign || selectedAircraft.icao24}
+                </span>
+                {selectedAircraft.is_military && <span className="text-[7px] font-mono font-bold text-red-400 bg-red-500/15 px-1.5 py-0.5 rounded">MILITARY</span>}
               </div>
-              <button onClick={() => setSelectedAircraft(null)} className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"><X className="h-2.5 w-2.5 text-muted-foreground" /></button>
+              <div className="flex items-center gap-1">
+                {trackedAircraftId !== selectedAircraft.icao24 ? (
+                  <button onClick={() => setTrackedAircraftId(selectedAircraft.icao24)}
+                    className="text-[8px] font-mono text-green-400 border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 rounded hover:bg-green-500/20 transition-all">
+                    📡 TRACK
+                  </button>
+                ) : (
+                  <button onClick={() => setTrackedAircraftId(null)}
+                    className="text-[8px] font-mono text-red-400 border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 rounded hover:bg-red-500/20 transition-all">
+                    ✕ STOP
+                  </button>
+                )}
+                <button onClick={() => { setSelectedAircraft(null); }} className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10">
+                  <X className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-              <DataRow label="ICAO" value={selectedAircraft.icao24} />
-              <DataRow label="ORIGIN" value={selectedAircraft.origin_country} />
-              <DataRow label="ALT" value={`${Math.round(selectedAircraft.altitude)}m`} />
-              <DataRow label="SPEED" value={`${Math.round(selectedAircraft.velocity * 3.6)} km/h`} />
-              <DataRow label="HDG" value={`${Math.round(selectedAircraft.heading)}°`} />
-              <DataRow label="V/S" value={`${selectedAircraft.vertical_rate > 0 ? "+" : ""}${selectedAircraft.vertical_rate.toFixed(1)} m/s`} />
-              <DataRow label="LAT" value={selectedAircraft.lat.toFixed(4)} />
-              <DataRow label="LNG" value={selectedAircraft.lng.toFixed(4)} />
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+              <FlightStat label="ICAO" value={selectedAircraft.icao24} />
+              <FlightStat label="ORIGIN" value={selectedAircraft.origin_country} />
+              <FlightStat label="ALTITUDE" value={`${Math.round(selectedAircraft.altitude * 3.281).toLocaleString()} ft`} />
+              <FlightStat label="SPEED" value={`${Math.round(selectedAircraft.velocity * 1.944)} kts`} />
+              <FlightStat label="HEADING" value={`${Math.round(selectedAircraft.heading)}°`} />
+              <FlightStat label="V/S" value={`${selectedAircraft.vertical_rate > 0 ? "+" : ""}${selectedAircraft.vertical_rate.toFixed(1)} m/s`}
+                color={selectedAircraft.vertical_rate > 0.5 ? "#22c55e" : selectedAircraft.vertical_rate < -0.5 ? "#ef4444" : undefined} />
+              <FlightStat label="LAT" value={selectedAircraft.lat.toFixed(4) + "°"} />
+              <FlightStat label="LNG" value={selectedAircraft.lng.toFixed(4) + "°"} />
+            </div>
+            {/* Trail point count */}
+            <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between">
+              <span className="text-[7px] font-mono text-muted-foreground/50">
+                TRAIL: {(trailHistoryRef.current[selectedAircraft.icao24] || []).length} points
+              </span>
+              <span className="text-[7px] font-mono text-muted-foreground/50">
+                {Math.round(selectedAircraft.velocity * 3.6)} km/h
+              </span>
             </div>
           </div>
         )}
@@ -739,14 +888,23 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
       {/* Bottom bar */}
       <div className="flex items-center gap-3 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
-        <span className="text-[8px] font-mono text-muted-foreground uppercase">SRC: Google Photorealistic 3D Tiles • OpenSky Network</span>
+        <span className="text-[8px] font-mono text-muted-foreground uppercase">
+          SRC: Google 3D Tiles • {flightSource === "opensky" ? "OpenSky Network (LIVE)" : "Simulated Flight Data"}
+        </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
-          {showFlights ? `${aircraft.length} aircraft tracked • ${militaryCount} military • Updates every 30s` : "Flight layer disabled"}
+          {showFlights ? `${aircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
         </span>
       </div>
     </div>
   );
 };
+
+const FlightStat = ({ label, value, color }: { label: string; value: string; color?: string }) => (
+  <div className="flight-stat rounded px-2 py-1">
+    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase tracking-wider block">{label}</span>
+    <span className="text-[9px] font-mono font-medium block" style={color ? { color } : undefined}>{value}</span>
+  </div>
+);
 
 const DataRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col">
