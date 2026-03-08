@@ -68,7 +68,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     } finally {
       setLoading(false);
     }
-  }, [selectedCountry, selectedCategory, searchQuery]);
+  }, [selectedCountry, selectedCategory, searchQuery, selectedSource]);
 
   useEffect(() => {
     fetchCameras();
