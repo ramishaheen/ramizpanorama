@@ -187,6 +187,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const rocketMarkersRef = useRef<any[]>([]);
   const rocketLinesRef = useRef<any[]>([]);
 
+  // City landmarks layer
+  const [showCities, setShowCities] = useState(true);
+  const cityMarkersRef = useRef<any[]>([]);
+  const cityInfoWindowRef = useRef<any>(null);
+
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [vesselSource, setVesselSource] = useState<string>("loading");
