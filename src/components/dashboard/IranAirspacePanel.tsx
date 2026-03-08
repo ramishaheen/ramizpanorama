@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   X, Plane, Shield, AlertTriangle, RefreshCw, Radar,
   ArrowUpRight, ArrowDownRight, Minus, Eye, EyeOff,
-  ChevronDown, ChevronUp, Filter
+  ChevronDown, ChevronUp, Filter, Volume2, VolumeX
 } from "lucide-react";
 
 interface Aircraft {
@@ -102,6 +103,40 @@ interface IranAirspacePanelProps {
   onFlyTo?: (lat: number, lng: number) => void;
 }
 
+// Proximity alert sound — urgent radar warning tone
+function playProximityAlert() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Triple beep pattern — ascending urgent tone
+    for (let i = 0; i < 3; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 800 + i * 200; // 800, 1000, 1200 Hz ascending
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.2 + 0.15);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.2);
+      osc.stop(ctx.currentTime + i * 0.2 + 0.15);
+    }
+    // Low warning rumble underneath
+    const rumble = ctx.createOscillator();
+    const rumbleGain = ctx.createGain();
+    rumble.type = "sawtooth";
+    rumble.frequency.value = 120;
+    rumbleGain.gain.setValueAtTime(0.08, ctx.currentTime);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    rumble.connect(rumbleGain).connect(ctx.destination);
+    rumble.start(ctx.currentTime);
+    rumble.stop(ctx.currentTime + 0.8);
+    setTimeout(() => ctx.close(), 2000);
+  } catch (e) {
+    // Audio not available
+  }
+}
+
+const PROXIMITY_THRESHOLD_KM = 50; // Alert radius around sensitive sites
+
 export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAirspacePanelProps) => {
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [loading, setLoading] = useState(false);
@@ -112,8 +147,11 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
   const [showMilOnly, setShowMilOnly] = useState(false);
   const [selectedAc, setSelectedAc] = useState<Aircraft | null>(null);
   const [expanded, setExpanded] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [proximityAlerts, setProximityAlerts] = useState<{ callsign: string; base: string; dist: number; time: number }[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const prevAircraftRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const alertedIcaosRef = useRef<Set<string>>(new Set()); // Track already-alerted aircraft to avoid spam
 
   const fetchIranAirspace = async () => {
     setLoading(true);
@@ -127,13 +165,44 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
         },
       });
       if (!error && data?.aircraft) {
-        // Track previous positions for enter/leave detection
         const prevMap = prevAircraftRef.current;
         const newMap = new Map<string, { lat: number; lng: number }>();
         data.aircraft.forEach((ac: Aircraft) => {
           newMap.set(ac.icao24, { lat: ac.lat, lng: ac.lng });
         });
         prevAircraftRef.current = newMap;
+
+        // Check military aircraft near sensitive sites
+        const newProxAlerts: { callsign: string; base: string; dist: number; time: number }[] = [];
+        data.aircraft.forEach((ac: Aircraft) => {
+          if (!ac.is_military) return;
+          for (const base of IRAN_MILITARY_BASES) {
+            const d = distKm(ac.lat, ac.lng, base.lat, base.lng);
+            if (d < PROXIMITY_THRESHOLD_KM && !alertedIcaosRef.current.has(`${ac.icao24}-${base.name}`)) {
+              alertedIcaosRef.current.add(`${ac.icao24}-${base.name}`);
+              newProxAlerts.push({
+                callsign: ac.callsign || ac.icao24,
+                base: base.name,
+                dist: Math.round(d),
+                time: Date.now(),
+              });
+            }
+          }
+        });
+
+        if (newProxAlerts.length > 0) {
+          setProximityAlerts(prev => [...newProxAlerts, ...prev].slice(0, 20));
+          if (soundEnabled) {
+            playProximityAlert();
+          }
+          // Show toast for each new proximity alert
+          newProxAlerts.forEach(alert => {
+            toast.error(`⚠ MIL AIRCRAFT NEAR ${alert.base.toUpperCase()}`, {
+              description: `${alert.callsign} detected ${alert.dist}km from ${alert.base}`,
+              duration: 8000,
+            });
+          });
+        }
 
         setAircraft(data.aircraft);
         if (data.source) setSource(data.source);
@@ -223,6 +292,18 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {proximityAlerts.length > 0 && (
+            <span className="text-[8px] font-mono font-bold text-destructive bg-destructive/20 px-1.5 py-0.5 rounded animate-pulse">
+              {proximityAlerts.length} ⚠
+            </span>
+          )}
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`p-1 rounded transition-colors ${soundEnabled ? "text-destructive hover:bg-destructive/10" : "text-muted-foreground hover:bg-secondary"}`}
+            title={soundEnabled ? "Mute proximity alerts" : "Unmute proximity alerts"}
+          >
+            {soundEnabled ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
+          </button>
           {loading && <RefreshCw className="h-3 w-3 text-primary animate-spin" />}
           <button onClick={() => setExpanded(!expanded)} className="p-1 rounded hover:bg-secondary text-muted-foreground">
             {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -232,6 +313,21 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
           </button>
         </div>
       </div>
+
+      {/* Proximity alerts banner */}
+      {proximityAlerts.length > 0 && expanded && (
+        <div className="border-b border-destructive/30 bg-destructive/5 px-2 py-1.5 max-h-[80px] overflow-y-auto">
+          {proximityAlerts.slice(0, 5).map((alert, i) => (
+            <div key={`${alert.callsign}-${alert.time}-${i}`} className="flex items-center gap-1.5 text-[8px] font-mono py-0.5">
+              <AlertTriangle className="h-3 w-3 text-destructive flex-shrink-0 animate-pulse" />
+              <span className="text-destructive font-bold">{alert.callsign}</span>
+              <span className="text-muted-foreground">→</span>
+              <span className="text-foreground">{alert.base}</span>
+              <span className="text-muted-foreground ml-auto">{alert.dist}km</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats bar */}
       <div className="grid grid-cols-4 gap-px bg-border/50">
