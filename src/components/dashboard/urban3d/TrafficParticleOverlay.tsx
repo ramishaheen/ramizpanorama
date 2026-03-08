@@ -7,21 +7,23 @@ import { supabase } from "@/integrations/supabase/client";
  * Multi-factor Traffic Density Index (TDI):
  *   TDI = (VehicleFlow / RoadCapacity) × SpeedFactor × WeatherImpact × TimeOfDayFactor
  *
- * Data sources: OSM road network + Open-Meteo weather + time-of-day modeling
- * Visualization: Particle flow on Google Maps 3D canvas overlay
+ * FULL ROAD COVERAGE: Densifies polylines, stitches connected segments,
+ * filters drivable-only roads, spawns particles across the entire road length.
  */
 
 // ── Types ────────────────────────────────────────────────────────
 
 interface Road {
   id: number;
-  points: { lat: number; lng: number }[];
+  points: { lat: number; lng: number }[];       // densified points
+  rawPoints: { lat: number; lng: number }[];     // original OSM nodes
   highway: string;
   lanes: number;
-  maxspeed: number;         // km/h free flow
-  capacity: number;         // vehicles/hour capacity
-  tdi: number;              // Traffic Density Index 0..3
+  maxspeed: number;
+  capacity: number;
+  tdi: number;
   progressStops: number[];
+  lengthM: number;
 }
 
 interface Particle {
@@ -59,7 +61,17 @@ const OVERPASS_ENDPOINTS = [
   "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
 
-// Road capacity (vehicles/hour per lane) by type
+// Only fetch drivable road types
+const DRIVABLE_HIGHWAY_TYPES = new Set([
+  "motorway", "motorway_link",
+  "trunk", "trunk_link",
+  "primary", "primary_link",
+  "secondary", "secondary_link",
+  "tertiary", "tertiary_link",
+  "residential", "service",
+  "unclassified", "living_street",
+]);
+
 const ROAD_CAPACITY_PER_LANE: Record<string, number> = {
   motorway: 2200, motorway_link: 1800,
   trunk: 2000, trunk_link: 1600,
@@ -70,7 +82,6 @@ const ROAD_CAPACITY_PER_LANE: Record<string, number> = {
   unclassified: 500, living_street: 200,
 };
 
-// Default free-flow speeds (km/h) by type
 const FREE_FLOW_SPEED: Record<string, number> = {
   motorway: 120, motorway_link: 80,
   trunk: 100, trunk_link: 70,
@@ -81,16 +92,18 @@ const FREE_FLOW_SPEED: Record<string, number> = {
   unclassified: 40, living_street: 20,
 };
 
-// Road line width (CSS px) for rendering
 const ROAD_LINE_WIDTH: Record<string, number> = {
-  motorway: 10, motorway_link: 7,
-  trunk: 9, trunk_link: 6,
-  primary: 7, primary_link: 5,
-  secondary: 6, secondary_link: 4,
-  tertiary: 5, tertiary_link: 3.5,
-  residential: 3.5, service: 2.5,
-  unclassified: 3, living_street: 2.5,
+  motorway: 12, motorway_link: 8,
+  trunk: 10, trunk_link: 7,
+  primary: 8, primary_link: 6,
+  secondary: 7, secondary_link: 5,
+  tertiary: 6, tertiary_link: 4,
+  residential: 4, service: 3,
+  unclassified: 3.5, living_street: 3,
 };
+
+// Densification interval in meters — smaller = smoother curves
+const DENSIFY_INTERVAL_M = 5;
 
 // ── Utility Functions ────────────────────────────────────────────
 
@@ -98,18 +111,15 @@ function tdiToColor(tdi: number, alpha = 0.7): string {
   const t = Math.max(0, Math.min(3, tdi));
   let r: number, g: number, b: number;
   if (t < 1) {
-    // Green → Yellow (free → moderate)
     r = Math.round(34 + t * (234 - 34));
     g = Math.round(197 + t * (179 - 197));
     b = Math.round(94 - t * 86);
   } else if (t < 2) {
-    // Yellow → Orange (moderate → congested)
     const u = t - 1;
     r = Math.round(234 + u * (249 - 234));
     g = Math.round(179 - u * 64);
     b = Math.round(8 + u * 14);
   } else {
-    // Orange → Red (congested → gridlock)
     const u = t - 2;
     r = Math.round(249 - u * 29);
     g = Math.round(115 - u * 77);
@@ -119,11 +129,9 @@ function tdiToColor(tdi: number, alpha = 0.7): string {
 }
 
 function tdiToParticleSpeed(tdi: number, highway: string): number {
-  // Higher TDI = slower particles
-  const base = highway.includes("motorway") ? 0.005 : highway.includes("trunk") ? 0.004 :
-    highway.includes("primary") ? 0.0035 : highway.includes("secondary") ? 0.003 : 0.002;
-  const speedReduction = Math.max(0.15, 1 - tdi * 0.3);
-  return base * speedReduction;
+  const base = highway.includes("motorway") ? 0.004 : highway.includes("trunk") ? 0.0035 :
+    highway.includes("primary") ? 0.003 : highway.includes("secondary") ? 0.0025 : 0.0018;
+  return base * Math.max(0.15, 1 - tdi * 0.3);
 }
 
 function parseLaneNumber(raw: unknown): number {
@@ -153,14 +161,114 @@ function parseMaxSpeed(tags: Record<string, any> = {}, highway: string): number 
   return FREE_FLOW_SPEED[highway] ?? 50;
 }
 
+/** Haversine distance in meters between two lat/lng points */
+function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const dLat = (b.lat - a.lat) * 111320;
+  const dLng = (b.lng - a.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180);
+  return Math.sqrt(dLat * dLat + dLng * dLng);
+}
+
+/** Densify a polyline by interpolating points every `intervalM` meters */
+function densifyPolyline(points: { lat: number; lng: number }[], intervalM: number): { lat: number; lng: number }[] {
+  if (points.length < 2) return [...points];
+  const result: { lat: number; lng: number }[] = [points[0]];
+
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const segDist = distanceM(prev, curr);
+
+    if (segDist > intervalM) {
+      const numInserts = Math.floor(segDist / intervalM);
+      for (let j = 1; j <= numInserts; j++) {
+        const t = j / (numInserts + 1);
+        result.push({
+          lat: prev.lat + (curr.lat - prev.lat) * t,
+          lng: prev.lng + (curr.lng - prev.lng) * t,
+        });
+      }
+    }
+    result.push(curr);
+  }
+  return result;
+}
+
+/** Stitch connected road segments of the same type by matching endpoints */
+function stitchRoads(
+  segments: Array<{ id: number; points: { lat: number; lng: number }[]; highway: string; tags: Record<string, any> }>
+): Array<{ id: number; points: { lat: number; lng: number }[]; highway: string; tags: Record<string, any> }> {
+  // Group by highway type for stitching
+  const byType = new Map<string, typeof segments>();
+  for (const seg of segments) {
+    const arr = byType.get(seg.highway) || [];
+    arr.push(seg);
+    byType.set(seg.highway, arr);
+  }
+
+  const result: typeof segments = [];
+  const STITCH_THRESHOLD = 0.00005; // ~5m in degrees
+
+  for (const [, group] of byType) {
+    const used = new Set<number>();
+    
+    for (let i = 0; i < group.length; i++) {
+      if (used.has(i)) continue;
+      used.add(i);
+      
+      let chain = [...group[i].points];
+      let merged = true;
+
+      while (merged) {
+        merged = false;
+        for (let j = 0; j < group.length; j++) {
+          if (used.has(j)) continue;
+          const other = group[j].points;
+          if (other.length < 2) continue;
+
+          const chainStart = chain[0];
+          const chainEnd = chain[chain.length - 1];
+          const otherStart = other[0];
+          const otherEnd = other[other.length - 1];
+
+          // Check 4 connection cases
+          const dEndStart = Math.abs(chainEnd.lat - otherStart.lat) + Math.abs(chainEnd.lng - otherStart.lng);
+          const dEndEnd = Math.abs(chainEnd.lat - otherEnd.lat) + Math.abs(chainEnd.lng - otherEnd.lng);
+          const dStartStart = Math.abs(chainStart.lat - otherStart.lat) + Math.abs(chainStart.lng - otherStart.lng);
+          const dStartEnd = Math.abs(chainStart.lat - otherEnd.lat) + Math.abs(chainStart.lng - otherEnd.lng);
+
+          if (dEndStart < STITCH_THRESHOLD) {
+            chain = [...chain, ...other.slice(1)];
+            used.add(j);
+            merged = true;
+          } else if (dEndEnd < STITCH_THRESHOLD) {
+            chain = [...chain, ...[...other].reverse().slice(1)];
+            used.add(j);
+            merged = true;
+          } else if (dStartEnd < STITCH_THRESHOLD) {
+            chain = [...other, ...chain.slice(1)];
+            used.add(j);
+            merged = true;
+          } else if (dStartStart < STITCH_THRESHOLD) {
+            chain = [...[...other].reverse(), ...chain.slice(1)];
+            used.add(j);
+            merged = true;
+          }
+        }
+      }
+
+      result.push({ ...group[i], points: chain, id: group[i].id });
+    }
+  }
+
+  return result;
+}
+
 function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
   if (points.length < 2) return [0, 1];
   const cum: number[] = [0];
   let total = 0;
   for (let i = 1; i < points.length; i++) {
-    const dLat = (points[i].lat - points[i - 1].lat) * 111320;
-    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180);
-    total += Math.sqrt(dLat * dLat + dLng * dLng);
+    total += distanceM(points[i - 1], points[i]);
     cum.push(total);
   }
   return total <= 0 ? points.map((_, i) => i / (points.length - 1)) : cum.map((d) => d / total);
@@ -169,9 +277,7 @@ function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
 function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
-    const dLat = (points[i].lat - points[i - 1].lat) * 111320;
-    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180);
-    total += Math.sqrt(dLat * dLat + dLng * dLng);
+    total += distanceM(points[i - 1], points[i]);
   }
   return total;
 }
@@ -195,39 +301,21 @@ function latLngToPixel(lat: number, lng: number, _map: any, overlay: any): { x: 
   return point ? { x: point.x, y: point.y } : null;
 }
 
-/**
- * Calculate Traffic Density Index for a road segment
- * TDI = (VehicleFlow / RoadCapacity) × SpeedFactor × WeatherImpact × TimeOfDayFactor
- */
 function calculateTDI(
-  highway: string,
-  lanes: number,
-  maxspeed: number,
-  weatherImpact: number,
-  timeOfDayFactor: number,
+  highway: string, lanes: number, maxspeed: number,
+  weatherImpact: number, timeOfDayFactor: number,
 ): number {
   const capacityPerLane = ROAD_CAPACITY_PER_LANE[highway] ?? 600;
   const totalCapacity = capacityPerLane * Math.max(1, lanes);
-
-  // Simulate vehicle flow based on time and road importance
   const roadImportance = highway.includes("motorway") ? 0.85 : highway.includes("trunk") ? 0.75 :
     highway.includes("primary") ? 0.65 : highway.includes("secondary") ? 0.5 :
     highway.includes("tertiary") ? 0.35 : 0.2;
-
   const simulatedFlow = totalCapacity * roadImportance * timeOfDayFactor;
   const flowRatio = simulatedFlow / totalCapacity;
-
-  // Speed factor: in congestion, speed drops below free flow
   const estimatedSpeed = maxspeed * Math.max(0.1, 1 - flowRatio * 0.8);
   const speedFactor = maxspeed / Math.max(1, estimatedSpeed);
-
-  // Per-road randomness for visual realism
   const jitter = 0.8 + Math.random() * 0.4;
-
-  const tdi = flowRatio * speedFactor * weatherImpact * jitter;
-
-  // Normalize to 0..3 scale
-  return Math.max(0, Math.min(3, tdi));
+  return Math.max(0, Math.min(3, flowRatio * speedFactor * weatherImpact * jitter));
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -259,8 +347,10 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   const [avgTDI, setAvgTDI] = useState(0);
   const [intelInfo, setIntelInfo] = useState<IntelData | null>(null);
   const [debugMode, setDebugMode] = useState(false);
+  const [stitchedCount, setStitchedCount] = useState(0);
+  const [densifiedPointCount, setDensifiedPointCount] = useState(0);
 
-  // Fetch traffic intelligence factors from edge function
+  // Fetch traffic intelligence factors
   const fetchIntel = useCallback(async (centerLat: number, centerLng: number) => {
     try {
       const { data, error } = await supabase.functions.invoke("traffic-intel", {
@@ -287,7 +377,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     }
   }, []);
 
-  // Fetch intel on mount and every 5 min
   useEffect(() => {
     if (!enabled || zoom < MIN_ZOOM) return;
     fetchIntel(lat, lng);
@@ -295,7 +384,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     return () => clearInterval(iv);
   }, [enabled, lat, lng, zoom, fetchIntel]);
 
-  // Fetch roads from Overpass
+  // Fetch roads from Overpass — drivable only, stitch + densify
   const fetchRoads = useCallback(async (centerLat: number, centerLng: number) => {
     const map = mapRef.current;
     let bbox: string;
@@ -304,8 +393,9 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const bounds = map.getBounds();
         const ne = bounds.getNorthEast();
         const sw = bounds.getSouthWest();
-        const padLat = (ne.lat() - sw.lat()) * 1.0;
-        const padLng = (ne.lng() - sw.lng()) * 1.0;
+        // Pad viewport by 50% for seamless tile boundaries
+        const padLat = (ne.lat() - sw.lat()) * 0.5;
+        const padLng = (ne.lng() - sw.lng()) * 0.5;
         bbox = `${sw.lat() - padLat},${sw.lng() - padLng},${ne.lat() + padLat},${ne.lng() + padLng}`;
       } catch {
         const delta = zoom >= 20 ? 0.01 : zoom >= 18 ? 0.02 : 0.04;
@@ -320,7 +410,11 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     lastFetchRef.current = bbox;
     setLoading(true);
 
-    const query = `[out:json][timeout:15];way["highway"](${bbox});out geom;`;
+    // Filter to drivable road types only
+    const highwayFilter = Array.from(DRIVABLE_HIGHWAY_TYPES)
+      .map(t => `way["highway"="${t}"](${bbox});`)
+      .join("");
+    const query = `[out:json][timeout:20];(${highwayFilter});out geom;`;
     const body = `data=${encodeURIComponent(query)}`;
     let data: any = null;
 
@@ -352,24 +446,51 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       const weatherImpact = intel?.weather.weatherImpactFactor ?? 1.0;
       const timeOfDayFactor = intel?.timeFactors.timeOfDayFactor ?? 0.6;
 
-      const roads: Road[] = (data.elements || [])
+      // 1. Parse raw segments
+      const rawSegments = (data.elements || [])
         .filter((el: any) => el.type === "way" && el.geometry?.length >= 2)
-        .map((el: any) => {
-          const highway = el.tags?.highway || "unclassified";
-          const lanes = parseLaneCount(el.tags || {}, highway);
-          const maxspeed = parseMaxSpeed(el.tags || {}, highway);
-          const capacity = (ROAD_CAPACITY_PER_LANE[highway] ?? 600) * lanes;
-          const pts = el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon }));
-          const tdi = calculateTDI(highway, lanes, maxspeed, weatherImpact, timeOfDayFactor);
+        .filter((el: any) => {
+          const hw = el.tags?.highway || "";
+          return DRIVABLE_HIGHWAY_TYPES.has(hw);
+        })
+        .map((el: any) => ({
+          id: el.id,
+          points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
+          highway: el.tags?.highway || "unclassified",
+          tags: el.tags || {},
+        }));
 
-          return {
-            id: el.id, highway, points: pts, lanes, maxspeed, capacity, tdi,
-            progressStops: buildProgressStops(pts),
-          };
-        });
+      // 2. Stitch connected segments of same type
+      const stitched = stitchRoads(rawSegments);
+      setStitchedCount(rawSegments.length - stitched.length); // how many were merged
+
+      // 3. Densify + build road objects
+      let totalDensifiedPts = 0;
+      const roads: Road[] = stitched.map((seg) => {
+        const highway = seg.highway;
+        const lanes = parseLaneCount(seg.tags, highway);
+        const maxspeed = parseMaxSpeed(seg.tags, highway);
+        const capacity = (ROAD_CAPACITY_PER_LANE[highway] ?? 600) * lanes;
+        const rawPoints = seg.points;
+
+        // Densify polyline for full curve coverage
+        const densified = densifyPolyline(rawPoints, DENSIFY_INTERVAL_M);
+        totalDensifiedPts += densified.length;
+
+        const tdi = calculateTDI(highway, lanes, maxspeed, weatherImpact, timeOfDayFactor);
+        const lengthM = estimateRoadLengthM(densified);
+
+        return {
+          id: seg.id, highway, lanes, maxspeed, capacity, tdi, lengthM,
+          points: densified,
+          rawPoints,
+          progressStops: buildProgressStops(densified),
+        };
+      });
 
       roadsRef.current = roads;
       setRoadCount(roads.length);
+      setDensifiedPointCount(totalDensifiedPts);
 
       // Compute average TDI
       if (roads.length > 0) {
@@ -377,16 +498,16 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         setAvgTDI(sum / roads.length);
       }
 
-      // Generate particles — count proportional to TDI
+      // 4. Generate particles — uniform distribution across full road length
       const particles: Particle[] = [];
       roads.forEach((road, ri) => {
-        const roadLenM = estimateRoadLengthM(road.points);
         const totalLanes = Math.max(1, road.lanes);
-        const baseCount = Math.max(2, Math.round(roadLenM / 15));
-        const tdiMultiplier = Math.max(0.3, road.tdi);
-        const carsPerLane = Math.max(3, Math.round(baseCount * tdiMultiplier));
+        // More particles for longer roads, scaled by TDI
+        const baseDensity = road.lengthM / 8; // 1 particle per 8m base
+        const tdiMultiplier = Math.max(0.4, road.tdi);
+        const carsPerLane = Math.max(4, Math.round(baseDensity * tdiMultiplier));
         const particleSpeed = tdiToParticleSpeed(road.tdi, road.highway);
-        const laneSpreadPx = zoom >= 20 ? 3.5 : zoom >= 18 ? 2.5 : 1.8;
+        const laneSpreadPx = zoom >= 20 ? 4 : zoom >= 18 ? 3 : 2;
 
         for (let lane = 0; lane < totalLanes; lane++) {
           const dir: 1 | -1 = lane < Math.ceil(totalLanes / 2) ? 1 : -1;
@@ -394,9 +515,12 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           const laneOffset = normalizedLane * laneSpreadPx * 2;
 
           for (let i = 0; i < carsPerLane; i++) {
+            // Uniform distribution across full road length
+            const baseProgress = i / carsPerLane;
+            const jitter = (Math.random() - 0.5) * (1 / carsPerLane) * 0.5;
             particles.push({
               roadIdx: ri,
-              progress: (i + lane * 0.12) / carsPerLane,
+              progress: Math.max(0, Math.min(1, baseProgress + jitter)),
               speed: particleSpeed * (0.8 + Math.random() * 0.4),
               direction: dir,
               laneOffset,
@@ -503,53 +627,94 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
-      // 1. Draw TDI-coloured road lines
+      // 1. Draw TDI-coloured road lines — full polyline coverage
       roads.forEach((road, ri) => {
         const baseW = ROAD_LINE_WIDTH[road.highway] ?? 3;
-        const zoomScale = zoom >= 21 ? 2.2 : zoom >= 20 ? 1.7 : zoom >= 19 ? 1.3 : zoom >= 18 ? 1.0 : 0.75;
+        const zoomScale = zoom >= 21 ? 2.5 : zoom >= 20 ? 2.0 : zoom >= 19 ? 1.5 : zoom >= 18 ? 1.1 : 0.8;
         const lineW = baseW * zoomScale * dpr;
 
-        // Outer glow
-        ctx.beginPath();
-        let started = false;
+        // Convert ALL densified points to pixels
+        const pixels: { x: number; y: number }[] = [];
         for (const p of road.points) {
           const px = latLngToPixel(p.lat, p.lng, mapRef.current, overlay);
-          if (!px) continue;
-          if (!started) { ctx.moveTo(px.x * dpr, px.y * dpr); started = true; }
-          else ctx.lineTo(px.x * dpr, px.y * dpr);
+          if (px) pixels.push({ x: px.x * dpr, y: px.y * dpr });
         }
-        if (!started) return;
-        ctx.strokeStyle = tdiToColor(road.tdi, 0.2);
-        ctx.lineWidth = lineW * 2;
+        if (pixels.length < 2) return;
+
+        // Outer glow — full polyline
+        ctx.beginPath();
+        ctx.moveTo(pixels[0].x, pixels[0].y);
+        for (let i = 1; i < pixels.length; i++) {
+          ctx.lineTo(pixels[i].x, pixels[i].y);
+        }
+        ctx.strokeStyle = tdiToColor(road.tdi, 0.15);
+        ctx.lineWidth = lineW * 2.5;
         ctx.stroke();
 
-        // Main road
+        // Main road line — full polyline
         ctx.beginPath();
-        started = false;
-        for (const p of road.points) {
-          const px = latLngToPixel(p.lat, p.lng, mapRef.current, overlay);
-          if (!px) continue;
-          if (!started) { ctx.moveTo(px.x * dpr, px.y * dpr); started = true; }
-          else ctx.lineTo(px.x * dpr, px.y * dpr);
+        ctx.moveTo(pixels[0].x, pixels[0].y);
+        for (let i = 1; i < pixels.length; i++) {
+          ctx.lineTo(pixels[i].x, pixels[i].y);
         }
-        ctx.strokeStyle = tdiToColor(road.tdi, 0.6);
+        ctx.strokeStyle = tdiToColor(road.tdi, 0.55);
         ctx.lineWidth = lineW;
         ctx.stroke();
 
-        // Debug: lane count + particle count label at road midpoint
+        // Inner bright center line
+        ctx.beginPath();
+        ctx.moveTo(pixels[0].x, pixels[0].y);
+        for (let i = 1; i < pixels.length; i++) {
+          ctx.lineTo(pixels[i].x, pixels[i].y);
+        }
+        ctx.strokeStyle = tdiToColor(road.tdi, 0.8);
+        ctx.lineWidth = lineW * 0.4;
+        ctx.stroke();
+
+        // ── Debug overlays ──
         if (debugMode) {
-          const midIdx = Math.floor(road.points.length / 2);
-          const midPt = road.points[midIdx];
-          const midPx = latLngToPixel(midPt.lat, midPt.lng, mapRef.current, overlay);
+          // Show densified points as tiny dots
+          for (let i = 0; i < pixels.length; i++) {
+            ctx.beginPath();
+            ctx.arc(pixels[i].x, pixels[i].y, 1.5 * dpr, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0,255,200,0.4)";
+            ctx.fill();
+          }
+
+          // Show original OSM nodes as larger cyan dots
+          for (const rp of road.rawPoints) {
+            const rpx = latLngToPixel(rp.lat, rp.lng, mapRef.current, overlay);
+            if (rpx) {
+              ctx.beginPath();
+              ctx.arc(rpx.x * dpr, rpx.y * dpr, 3 * dpr, 0, Math.PI * 2);
+              ctx.fillStyle = "rgba(0,200,255,0.7)";
+              ctx.fill();
+              ctx.strokeStyle = "rgba(0,200,255,0.9)";
+              ctx.lineWidth = 1 * dpr;
+              ctx.stroke();
+            }
+          }
+
+          // Segment boundary markers (first and last point)
+          const first = pixels[0];
+          const last = pixels[pixels.length - 1];
+          for (const ep of [first, last]) {
+            ctx.beginPath();
+            ctx.rect(ep.x - 4 * dpr, ep.y - 4 * dpr, 8 * dpr, 8 * dpr);
+            ctx.strokeStyle = "rgba(255,100,0,0.8)";
+            ctx.lineWidth = 1.5 * dpr;
+            ctx.stroke();
+          }
+
+          // Label at midpoint: L:<lanes> P:<particles> D:<densified pts>
+          const midPx = pixels[Math.floor(pixels.length / 2)];
           if (midPx) {
-            const mx = midPx.x * dpr;
-            const my = midPx.y * dpr;
             const pCount = particles.filter(pp => pp.roadIdx === ri).length;
-            const debugLabel = `L:${road.lanes} P:${pCount}`;
+            const debugLabel = `L:${road.lanes} P:${pCount} D:${road.points.length}`;
             const fontSize = Math.round(7 * dpr);
             ctx.font = `bold ${fontSize}px monospace`;
             const tw = ctx.measureText(debugLabel).width;
-            const pad = 2 * dpr;
+            const pad = 3 * dpr;
             const bw = tw + pad * 2;
             const bh = fontSize + pad * 2;
 
@@ -557,19 +722,19 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
             ctx.strokeStyle = "rgba(0,255,200,0.6)";
             ctx.lineWidth = 1 * dpr;
             ctx.beginPath();
-            ctx.roundRect(mx - bw / 2, my - bh / 2, bw, bh, 2 * dpr);
+            ctx.roundRect(midPx.x - bw / 2, midPx.y - bh / 2, bw, bh, 2 * dpr);
             ctx.fill();
             ctx.stroke();
 
             ctx.fillStyle = "rgba(0,255,200,0.95)";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(debugLabel, mx, my);
+            ctx.fillText(debugLabel, midPx.x, midPx.y);
           }
         }
       });
 
-      // 2. Animate particles along roads
+      // 2. Animate particles along roads — full coverage
       const dotR = (zoom >= 20 ? 3 : 2.2) * dpr;
 
       particles.forEach((p) => {
@@ -589,7 +754,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         let segIdx = 0;
         while (segIdx < stops.length - 2 && p.progress > stops[segIdx + 1]) segIdx++;
         const p1 = road.points[segIdx];
-        const p2 = road.points[segIdx + 1];
+        const p2 = road.points[Math.min(segIdx + 1, road.points.length - 1)];
         const px1 = latLngToPixel(p1.lat, p1.lng, mapRef.current, overlay);
         const px2 = latLngToPixel(p2.lat, p2.lng, mapRef.current, overlay);
         let roadAngle = 0;
@@ -614,7 +779,19 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         ctx.arc(x, y, dotR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Coordinate label (only at high zoom)
+        // Debug: show spawn positions as small crosses
+        if (debugMode) {
+          ctx.strokeStyle = "rgba(255,255,0,0.5)";
+          ctx.lineWidth = 0.5 * dpr;
+          ctx.beginPath();
+          ctx.moveTo(x - 2 * dpr, y);
+          ctx.lineTo(x + 2 * dpr, y);
+          ctx.moveTo(x, y - 2 * dpr);
+          ctx.lineTo(x, y + 2 * dpr);
+          ctx.stroke();
+        }
+
+        // Coordinate label at high zoom
         if (zoom >= 20) {
           const fontSize = Math.round(5.5 * dpr);
           const label = `${geo.lat.toFixed(4)},${geo.lng.toFixed(4)}`;
@@ -645,7 +822,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
     animFrameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [enabled, zoom, opacity]);
+  }, [enabled, zoom, opacity, debugMode]);
 
   // Cleanup
   useEffect(() => {
@@ -665,7 +842,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   return (
     <div className="absolute top-14 right-14 z-[15] pointer-events-none">
       <div className="flex flex-col gap-1 px-3 py-2 rounded-lg bg-black/90 backdrop-blur-sm border border-accent/30"
-        style={{ boxShadow: "0 0 20px rgba(139,92,246,0.2)", minWidth: 180 }}>
+        style={{ boxShadow: "0 0 20px rgba(139,92,246,0.2)", minWidth: 200 }}>
         {/* Header */}
         <div className="flex items-center gap-1.5">
           <div className={`w-1.5 h-1.5 rounded-full ${loading ? "bg-warning animate-pulse" : "bg-accent animate-pulse"}`} />
@@ -674,9 +851,9 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           </span>
         </div>
 
-        {/* TDI Score */}
         {!loading && (
           <>
+            {/* TDI Score */}
             <div className="flex items-center justify-between">
               <span className="text-[7px] font-mono text-muted-foreground">TDI</span>
               <div className="flex items-center gap-1">
@@ -690,7 +867,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats + Debug toggle */}
             <div className="flex items-center gap-2">
               <span className="text-[7px] font-mono text-muted-foreground">
                 {roadCount} roads · {particleCount} pts
@@ -706,6 +883,38 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
                 {debugMode ? "DBG ON" : "DBG"}
               </button>
             </div>
+
+            {/* Debug info panel */}
+            {debugMode && (
+              <div className="border-t border-accent/20 pt-1 mt-0.5 space-y-0.5">
+                <span className="text-[7px] font-mono text-accent block">── DEBUG ──</span>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                  <span className="text-[6px] font-mono text-muted-foreground">
+                    Stitched: <span className="text-accent">{stitchedCount}</span> segs merged
+                  </span>
+                  <span className="text-[6px] font-mono text-muted-foreground">
+                    Densified: <span className="text-accent">{densifiedPointCount}</span> pts
+                  </span>
+                  <span className="text-[6px] font-mono text-muted-foreground">
+                    Interval: <span className="text-accent">{DENSIFY_INTERVAL_M}m</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ background: "rgba(0,200,255,0.7)" }} />
+                    <span className="text-[6px] font-mono text-muted-foreground">OSM node</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: "rgba(0,255,200,0.5)" }} />
+                    <span className="text-[6px] font-mono text-muted-foreground">Densified</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 border border-orange-400" />
+                    <span className="text-[6px] font-mono text-muted-foreground">Seg bound</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Weather info */}
             {intelInfo && (
