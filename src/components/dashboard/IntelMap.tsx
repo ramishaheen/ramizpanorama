@@ -1066,12 +1066,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.flights || interpolatedFlights.length === 0) return;
 
+    console.log(`[FLIGHTS] Rendering ${interpolatedFlights.length} aircraft on map`);
+
     interpolatedFlights.forEach((ac) => {
       const isMil = ac.is_military;
       const color = isMil ? "#ef4444" : "#3b82f6";
       const trailColor = isMil ? "#ef444480" : "#3b82f640";
       const isTracked = trackedFlightId === ac.icao24;
-      const size = isTracked ? 22 : (isMil ? 18 : 14);
+      const size = isTracked ? 28 : (isMil ? 24 : 20);
 
       // Draw trail polyline with animated dotted lines
       const trail = flightTrailsRef.current[ac.icao24] || [];
