@@ -421,6 +421,11 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                           <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
                             {cam.category}
                           </span>
+                          {cam.source_name && (
+                            <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground uppercase">
+                              {cam.source_name}
+                            </span>
+                          )}
                           <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
                             {cam.source_type}
                           </span>
