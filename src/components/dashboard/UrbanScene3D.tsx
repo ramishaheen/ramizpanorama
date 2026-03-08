@@ -49,8 +49,9 @@ const PRESETS = [
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
 ];
 
-export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
-  const [lat, setLat] = useState(initialCoords?.lat || 25.2048);
+export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanSceneProps) => {
+  const [lat, setLat] = useState(initialCoords?.lat || initialEvent?.lat || 25.2048);
+  const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 55.2708);
   const [lng, setLng] = useState(initialCoords?.lng || 55.2708);
   const [searchInput, setSearchInput] = useState("");
   const [showSearch, setShowSearch] = useState(false);
