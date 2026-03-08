@@ -359,12 +359,13 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                           {cam.city}, {cam.country}
                         </div>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded uppercase ${
+                          <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded uppercase inline-flex items-center gap-1 ${
                             cam.status === "active" ? "bg-success/20 text-success" :
                             cam.status === "error" ? "bg-destructive/20 text-destructive" :
                             "bg-muted text-muted-foreground"
                           }`}>
-                            {cam.status}
+                            <span className={`w-1.5 h-1.5 rounded-full ${cam.status === "active" ? "bg-success" : cam.status === "error" ? "bg-destructive" : "bg-muted-foreground"}`} />
+                            {cam.status === "active" ? "ONLINE" : cam.status === "error" ? "OFFLINE" : cam.status}
                           </span>
                           <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
                             {cam.category}
