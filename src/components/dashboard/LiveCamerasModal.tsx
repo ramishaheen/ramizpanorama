@@ -68,6 +68,27 @@ function FlyToHandler({ target }: { target: { center: [number, number]; zoom: nu
   return null;
 }
 
+function MapZoomControls() {
+  const map = useMap();
+  const btnStyle: React.CSSProperties = {
+    width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+    background: "rgba(10,15,24,0.92)", border: "1px solid rgba(6,182,212,0.2)",
+    borderRadius: 6, color: "#06b6d4", cursor: "pointer", fontSize: 16, fontWeight: 700,
+    transition: "all 0.15s",
+  };
+  return (
+    <div style={{ position: "absolute", right: 12, bottom: 60, zIndex: 1000, display: "flex", flexDirection: "column", gap: 4 }}>
+      <button style={btnStyle} onClick={() => map.zoomIn()} title="Zoom In">+</button>
+      <button style={btnStyle} onClick={() => map.zoomOut()} title="Zoom Out">−</button>
+      <button style={{ ...btnStyle, fontSize: 12 }} onClick={() => map.flyTo([28, 45], 5, { duration: 1.2 })} title="Reset View">⌂</button>
+      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([0, -100])} title="Pan Up">↑</button>
+      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([0, 100])} title="Pan Down">↓</button>
+      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([-100, 0])} title="Pan Left">←</button>
+      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([100, 0])} title="Pan Right">→</button>
+    </div>
+  );
+}
+
 // ═══════════════ FEED VIEWER ═══════════════
 function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) {
   const [embedState, setEmbedState] = useState<"loading" | "ok" | "blocked">("loading");
@@ -575,7 +596,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
             </div>
           )}
 
-          <MapContainer center={[20, 0]} zoom={2} className="w-full h-full" zoomControl={false} attributionControl={false} style={{ background: "#070b10" }}>
+          <MapContainer center={[28, 45]} zoom={5} className="w-full h-full" zoomControl={false} attributionControl={false} style={{ background: "#070b10" }}>
             {/* Dark 3D-style terrain tiles */}
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -587,6 +608,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
             />
             <MapEventHandler onMoveEnd={() => {}} />
             <FlyToHandler target={flyTarget} />
+            <MapZoomControls />
 
             {cameras.map(cam => {
               if (!cam.lat || !cam.lng) return null;
