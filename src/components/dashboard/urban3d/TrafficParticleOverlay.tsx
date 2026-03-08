@@ -101,7 +101,32 @@ function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
   return total;
 }
 
-function pickVehicleType(highway: string): VehicleType {
+function parseLaneCount(tags: Record<string, any> = {}, highway: string): number {
+  const laneRaw = String(tags?.lanes ?? "").trim();
+  const fwRaw = String(tags?.["lanes:forward"] ?? "").trim();
+  const bwRaw = String(tags?.["lanes:backward"] ?? "").trim();
+
+  const numericFrom = (val: string): number => {
+    if (!val) return 0;
+    const nums = val.split(/[;|,]/).map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
+    if (nums.length === 0) return 0;
+    return nums.reduce((a, b) => a + b, 0);
+  };
+
+  const fw = numericFrom(fwRaw);
+  const bw = numericFrom(bwRaw);
+  if (fw + bw > 0) return Math.max(1, fw + bw);
+
+  const laneVal = numericFrom(laneRaw);
+  if (laneVal > 0) return Math.max(1, laneVal);
+
+  if (highway.includes("motorway")) return 6;
+  if (highway.includes("trunk")) return 4;
+  if (highway.includes("primary")) return 4;
+  if (highway.includes("secondary")) return 3;
+  return 2;
+}
+
   const allowed = ROAD_VEHICLES[highway] || ["car"];
   const totalWeight = allowed.reduce((s, v) => s + VEHICLE_CONFIG[v].weight, 0);
   let r = Math.random() * totalWeight;
