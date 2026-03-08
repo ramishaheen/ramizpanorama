@@ -165,13 +165,44 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
         },
       });
       if (!error && data?.aircraft) {
-        // Track previous positions for enter/leave detection
         const prevMap = prevAircraftRef.current;
         const newMap = new Map<string, { lat: number; lng: number }>();
         data.aircraft.forEach((ac: Aircraft) => {
           newMap.set(ac.icao24, { lat: ac.lat, lng: ac.lng });
         });
         prevAircraftRef.current = newMap;
+
+        // Check military aircraft near sensitive sites
+        const newProxAlerts: { callsign: string; base: string; dist: number; time: number }[] = [];
+        data.aircraft.forEach((ac: Aircraft) => {
+          if (!ac.is_military) return;
+          for (const base of IRAN_MILITARY_BASES) {
+            const d = distKm(ac.lat, ac.lng, base.lat, base.lng);
+            if (d < PROXIMITY_THRESHOLD_KM && !alertedIcaosRef.current.has(`${ac.icao24}-${base.name}`)) {
+              alertedIcaosRef.current.add(`${ac.icao24}-${base.name}`);
+              newProxAlerts.push({
+                callsign: ac.callsign || ac.icao24,
+                base: base.name,
+                dist: Math.round(d),
+                time: Date.now(),
+              });
+            }
+          }
+        });
+
+        if (newProxAlerts.length > 0) {
+          setProximityAlerts(prev => [...newProxAlerts, ...prev].slice(0, 20));
+          if (soundEnabled) {
+            playProximityAlert();
+          }
+          // Show toast for each new proximity alert
+          newProxAlerts.forEach(alert => {
+            toast.error(`⚠ MIL AIRCRAFT NEAR ${alert.base.toUpperCase()}`, {
+              description: `${alert.callsign} detected ${alert.dist}km from ${alert.base}`,
+              duration: 8000,
+            });
+          });
+        }
 
         setAircraft(data.aircraft);
         if (data.source) setSource(data.source);
