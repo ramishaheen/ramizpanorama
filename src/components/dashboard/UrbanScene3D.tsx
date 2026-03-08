@@ -338,8 +338,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const militaryCount = aircraft.filter((a) => a.is_military).length;
   const civilCount = aircraft.length - militaryCount;
 
-  // Viewport degrees for marker projection (matches our 6-degree fetch bbox)
-  const VIEWPORT_DEG = 6;
+  // Compute marker positions (uses VIEWPORT_DEG defined above)
 
   // Compute marker positions
   const markerPositions = useMemo(() => {
