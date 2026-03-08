@@ -1433,6 +1433,24 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           </div>
         )}
 
+        {!loading && globeInitError && (
+          <div className="absolute inset-0 z-[2002] flex items-center justify-center pointer-events-none">
+            <div className="rounded-md border border-destructive/30 bg-card/90 px-4 py-3 text-center max-w-sm">
+              <p className="text-xs font-mono text-destructive">3D renderer failed to initialize.</p>
+              <p className="text-[10px] font-mono text-muted-foreground mt-1">Refresh Orbital Intel to retry.</p>
+            </div>
+          </div>
+        )}
+
+        {!loading && !globeInitError && satellites.length === 0 && (
+          <div className="absolute inset-0 z-[2002] flex items-center justify-center pointer-events-none">
+            <div className="rounded-md border border-border bg-card/90 px-4 py-3 text-center max-w-sm">
+              <p className="text-xs font-mono text-foreground">No orbital objects available right now.</p>
+              <p className="text-[10px] font-mono text-muted-foreground mt-1">Try refresh to reacquire TLE feeds.</p>
+            </div>
+          </div>
+        )}
+
         {/* Selected satellite detail panel */}
         {selectedSat && (
           <div
