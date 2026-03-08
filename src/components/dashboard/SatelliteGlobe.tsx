@@ -556,8 +556,29 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     }
   }, []);
 
+  const loadSatelliteCache = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(SATELLITE_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { satellites: SatelliteData[]; rawTLE: RawSatTLE[] };
+      if (!parsed?.satellites?.length || !parsed?.rawTLE?.length) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const saveSatelliteCache = useCallback((data: { satellites: SatelliteData[]; rawTLE: RawSatTLE[] }) => {
+    try {
+      localStorage.setItem(SATELLITE_CACHE_KEY, JSON.stringify(data));
+    } catch {
+      // Ignore cache write failures
+    }
+  }, []);
+
   const fetchSatellites = useCallback(async () => {
     setLoading(true);
+    setGlobeInitError(null);
     try {
       const fetchTextWithTimeout = async (url: string, timeoutMs = 9000) => {
         const controller = new AbortController();
