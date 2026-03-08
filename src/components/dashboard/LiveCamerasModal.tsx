@@ -417,6 +417,14 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {selectedCamera && (
+                    <button
+                      onClick={() => openCameraSource(selectedCamera)}
+                      className="px-2 py-1 bg-primary/20 hover:bg-primary/30 border border-primary/30 rounded text-[10px] font-mono text-primary flex items-center gap-1 transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" /> OPEN LIVE
+                    </button>
+                  )}
                   {selectedCamera.lat !== 0 && (
                     <button
                       onClick={() => handleShowOnMap(selectedCamera)}
@@ -426,8 +434,10 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                     </button>
                   )}
                   <div className="flex items-center gap-1">
-                    <Eye className="h-3 w-3 text-success" />
-                    <span className="text-[9px] font-mono text-success">LIVE</span>
+                    <Eye className={`h-3 w-3 ${selectedCamera.status === "active" ? "text-success" : "text-destructive"}`} />
+                    <span className={`text-[9px] font-mono ${selectedCamera.status === "active" ? "text-success" : "text-destructive"}`}>
+                      {selectedCamera.status === "active" ? "LIVE" : "OFFLINE"}
+                    </span>
                   </div>
                 </div>
               </div>
