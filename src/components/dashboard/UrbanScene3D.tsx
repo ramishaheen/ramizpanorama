@@ -75,7 +75,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const overlayRef = useRef<any>(null);
-  const scriptLoadedRef = useRef(false);
+  
   const [showIntelCard, setShowIntelCard] = useState(!!initialEvent);
   const [nearbyIntel, setNearbyIntel] = useState<{ alerts: any[]; vessels: any[]; airspace: any[] }>({ alerts: [], vessels: [], airspace: [] });
 
