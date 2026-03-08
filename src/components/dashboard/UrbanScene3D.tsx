@@ -713,6 +713,158 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [showTraffic]);
 
+  // ===== REAL-TIME ROCKET/MISSILE LAYER =====
+  useEffect(() => {
+    const fetchRockets = async () => {
+      try {
+        const { data, error } = await supabase.from("rockets").select("*");
+        if (!error && data) setRockets(data);
+      } catch (e) { console.error("Rocket fetch error:", e); }
+    };
+    fetchRockets();
+    const iv = setInterval(fetchRockets, 10_000); // 10s refresh
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    // Cleanup previous
+    rocketMarkersRef.current.forEach(m => m.setMap(null));
+    rocketMarkersRef.current = [];
+    rocketLinesRef.current.forEach(l => l.setMap(null));
+    rocketLinesRef.current = [];
+
+    if (!showRockets || rockets.length === 0) return;
+
+    const statusColors: Record<string, string> = {
+      launched: "#ff6b00", in_flight: "#ef4444", intercepted: "#22c55e", impact: "#ff0000",
+    };
+
+    rockets.forEach((rkt: any) => {
+      const color = statusColors[rkt.status] || "#ef4444";
+      const isActive = rkt.status === "launched" || rkt.status === "in_flight";
+
+      // Dashed trajectory line (origin → target)
+      const trajectoryLine = new google.maps.Polyline({
+        path: [
+          { lat: rkt.origin_lat, lng: rkt.origin_lng },
+          { lat: rkt.target_lat, lng: rkt.target_lng },
+        ],
+        strokeColor: color,
+        strokeOpacity: 0.35,
+        strokeWeight: 2,
+        map,
+        geodesic: true,
+        icons: [{
+          icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeWeight: 2, scale: 3 },
+          offset: "0", repeat: "15px",
+        }],
+      });
+      rocketLinesRef.current.push(trajectoryLine);
+
+      // Active flight path (origin → current)
+      if (isActive) {
+        const flightPath = new google.maps.Polyline({
+          path: [
+            { lat: rkt.origin_lat, lng: rkt.origin_lng },
+            { lat: rkt.current_lat, lng: rkt.current_lng },
+          ],
+          strokeColor: color,
+          strokeOpacity: 0.85,
+          strokeWeight: 3,
+          map,
+          geodesic: true,
+        });
+        rocketLinesRef.current.push(flightPath);
+      }
+
+      // Origin marker (small circle)
+      const originMarker = new google.maps.Marker({
+        position: { lat: rkt.origin_lat, lng: rkt.origin_lng },
+        map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 5,
+          fillColor: color,
+          fillOpacity: 0.6,
+          strokeColor: color,
+          strokeWeight: 1,
+        },
+        zIndex: 90,
+      });
+      rocketMarkersRef.current.push(originMarker);
+
+      // Target marker (crosshair circle)
+      const targetSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="4 3" opacity="0.6">
+          ${isActive ? '<animate attributeName="r" values="8;11;8" dur="1.5s" repeatCount="indefinite"/>' : ''}
+        </circle>
+        <line x1="12" y1="2" x2="12" y2="8" stroke="${color}" stroke-width="1.5" opacity="0.5"/>
+        <line x1="12" y1="16" x2="12" y2="22" stroke="${color}" stroke-width="1.5" opacity="0.5"/>
+        <line x1="2" y1="12" x2="8" y2="12" stroke="${color}" stroke-width="1.5" opacity="0.5"/>
+        <line x1="16" y1="12" x2="22" y2="12" stroke="${color}" stroke-width="1.5" opacity="0.5"/>
+      </svg>`;
+      const targetMarker = new google.maps.Marker({
+        position: { lat: rkt.target_lat, lng: rkt.target_lng },
+        map,
+        icon: {
+          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(targetSvg),
+          scaledSize: new google.maps.Size(24, 24),
+          anchor: new google.maps.Point(12, 12),
+        },
+        zIndex: 85,
+      });
+      rocketMarkersRef.current.push(targetMarker);
+
+      // Current position marker (rocket icon with pulse)
+      const rocketSize = isActive ? 32 : 24;
+      const rocketSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${rocketSize}" height="${rocketSize}" viewBox="0 0 ${rocketSize} ${rocketSize}">
+        ${isActive ? `<circle cx="${rocketSize/2}" cy="${rocketSize/2}" r="${rocketSize/2 - 2}" fill="${color}" opacity="0.2">
+          <animate attributeName="r" values="${rocketSize/2 - 4};${rocketSize/2};${rocketSize/2 - 4}" dur="1s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.3;0.1;0.3" dur="1s" repeatCount="indefinite"/>
+        </circle>` : ''}
+        <text x="${rocketSize/2}" y="${rocketSize/2 + 5}" text-anchor="middle" font-size="${isActive ? 18 : 14}">🚀</text>
+      </svg>`;
+
+      const rocketMarker = new google.maps.Marker({
+        position: { lat: rkt.current_lat, lng: rkt.current_lng },
+        map,
+        icon: {
+          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(rocketSvg),
+          scaledSize: new google.maps.Size(rocketSize, rocketSize),
+          anchor: new google.maps.Point(rocketSize / 2, rocketSize / 2),
+        },
+        zIndex: isActive ? 150 : 70,
+      });
+
+      const statusLabel = rkt.status.toUpperCase();
+      const statusEmoji = rkt.status === "intercepted" ? "🛡️" : rkt.status === "impact" ? "💥" : "🚀";
+      const infoContent = `
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:220px;border:1px solid ${color}40;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-weight:700;font-size:13px;color:${color};">${statusEmoji} ${rkt.name}</span>
+            <span style="font-size:8px;padding:2px 6px;border-radius:4px;background:${color}20;color:${color};font-weight:600;">${rkt.type}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
+            <span style="color:#7d8590;">STATUS</span><span style="color:${color};font-weight:700;">${statusLabel}</span>
+            <span style="color:#7d8590;">SPEED</span><span>${rkt.speed?.toLocaleString() || 0} km/h</span>
+            <span style="color:#7d8590;">ALT</span><span>${rkt.altitude || 0} km</span>
+            <span style="color:#7d8590;">SEVERITY</span><span style="color:${rkt.severity === 'critical' ? '#ef4444' : '#ff6b00'};font-weight:600;">${(rkt.severity || 'high').toUpperCase()}</span>
+          </div>
+          <div style="margin-top:6px;font-size:9px;color:#7d8590;">${new Date(rkt.timestamp).toLocaleString()}</div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      rocketMarker.addListener("mouseover", () => infoWindow.open(map, rocketMarker));
+      rocketMarker.addListener("mouseout", () => infoWindow.close());
+
+      rocketMarkersRef.current.push(rocketMarker);
+    });
+  }, [rockets, showRockets]);
+
   // ===== WEATHER OVERLAY (OpenWeatherMap precipitation tiles) =====
   useEffect(() => {
     const map = mapInstanceRef.current;
