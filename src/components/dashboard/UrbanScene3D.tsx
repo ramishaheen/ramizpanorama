@@ -271,10 +271,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
 
-    if (!showFlights || !showMarkers || aircraft.length === 0) return;
+    if (!showFlights || !showMarkers || interpolatedAircraft.length === 0) return;
 
     const newMarkers: any[] = [];
-    aircraft.forEach((ac) => {
+    interpolatedAircraft.forEach((ac) => {
       const isTracked = trackedAircraftId === ac.icao24;
       const isMil = ac.is_military;
       const color = isMil ? "#ef4444" : "#3b82f6";
@@ -337,7 +337,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       newMarkers.push(marker);
     });
     markersRef.current = newMarkers;
-  }, [aircraft, showFlights, showMarkers, trackedAircraftId]);
+  }, [interpolatedAircraft, showFlights, showMarkers, trackedAircraftId]);
 
   // ===== RENDER FLIGHT ROUTES & TRAILS WITH ANIMATED DOTS =====
   useEffect(() => {
@@ -348,10 +348,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     trailLinesRef.current.forEach(l => l.setMap(null));
     trailLinesRef.current = [];
 
-    if (!showFlights || !showMarkers || !showTrails || aircraft.length === 0) return;
+    if (!showFlights || !showMarkers || !showTrails || interpolatedAircraft.length === 0) return;
 
     const newLines: any[] = [];
-    aircraft.forEach((ac) => {
+    interpolatedAircraft.forEach((ac) => {
       const history = trailHistoryRef.current[ac.icao24] || [];
       const isMil = ac.is_military;
       const isTracked = trackedAircraftId === ac.icao24;
@@ -453,7 +453,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }, 80);
 
     return () => clearInterval(animInterval);
-  }, [aircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
+  }, [interpolatedAircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
 
   // ===== HEATMAP LAYER =====
   useEffect(() => {
@@ -657,7 +657,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       setTrackedAircraftId(null);
       setSelectedAircraft(null);
     }
-  }, [aircraft, trackedAircraftId]);
+  }, [interpolatedAircraft, trackedAircraftId]);
 
   const navigateTo = useCallback((newLat: number, newLng: number) => {
     setLat(newLat);
