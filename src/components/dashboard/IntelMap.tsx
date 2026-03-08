@@ -1138,7 +1138,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <div>🌍 ${ac.origin_country}</div>
           <div>📐 HDG ${Math.round(ac.heading)}°</div>
           <div>📏 ${altFt.toLocaleString()} ft (${Math.round(ac.altitude)}m)</div>
-          <div>💨 ${speedKts} kts (${speedKmh} km/h)</div>
+          <div>💨 ${speedKts} kts (${speedKmhDisplay} km/h)</div>
           <div style="color:${vsColor};">${vsArrow} V/S ${ac.vertical_rate > 0 ? "+" : ""}${ac.vertical_rate.toFixed(1)} m/s</div>
           <div style="opacity:0.5;">ICAO: ${ac.icao24}</div>
         </div>
