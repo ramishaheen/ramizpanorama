@@ -196,6 +196,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const cityMarkersRef = useRef<any[]>([]);
   const cityInfoWindowRef = useRef<any>(null);
 
+  // Mapillary street-level viewer
+  const [mapillaryActive, setMapillaryActive] = useState(false);
+  const [mapillaryImageId, setMapillaryImageId] = useState<string | null>(null);
+  const [mapillaryToken, setMapillaryToken] = useState<string | null>(null);
+  const [mapillaryLoading, setMapillaryLoading] = useState(false);
+  const mapillaryViewerRef = useRef<any>(null);
+
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [viewStyle, setViewStyle] = useState<"normal" | "crt" | "nvg" | "flir" | "noir" | "snow">("normal");
@@ -310,7 +317,76 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (mapInstanceRef.current) mapInstanceRef.current.panTo({ lat, lng });
   }, [lat, lng]);
 
-  // Toggle Street View 360°
+  // Fetch Mapillary street-level imagery
+  const activateMapillary = useCallback(async (targetLat: number, targetLng: number) => {
+    setMapillaryLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("mapillary", {
+        body: { lat: targetLat, lng: targetLng, radius: 1000, limit: 1 },
+      });
+      if (!error && data?.images?.length > 0) {
+        setMapillaryImageId(data.images[0].id);
+        setMapillaryToken(data.token);
+        setMapillaryActive(true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("Mapillary fetch error:", e);
+      return false;
+    } finally {
+      setMapillaryLoading(false);
+    }
+  }, []);
+
+  // Load Mapillary viewer script
+  useEffect(() => {
+    if (!mapillaryActive || !mapillaryImageId || !mapillaryToken) return;
+
+    const loadViewer = () => {
+      const container = document.getElementById("mapillary-viewer");
+      if (!container) return;
+
+      // Load Mapillary JS + CSS if not yet loaded
+      if (!(window as any).mapillary) {
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = "https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.css";
+        document.head.appendChild(css);
+
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.js";
+        script.onload = () => initViewer(container);
+        document.head.appendChild(script);
+      } else {
+        initViewer(container);
+      }
+    };
+
+    const initViewer = (container: HTMLElement) => {
+      const { Viewer } = (window as any).mapillary;
+      if (mapillaryViewerRef.current) {
+        mapillaryViewerRef.current.remove();
+      }
+      const viewer = new Viewer({
+        accessToken: mapillaryToken,
+        container,
+        imageId: mapillaryImageId,
+      });
+      mapillaryViewerRef.current = viewer;
+    };
+
+    loadViewer();
+
+    return () => {
+      if (mapillaryViewerRef.current) {
+        mapillaryViewerRef.current.remove();
+        mapillaryViewerRef.current = null;
+      }
+    };
+  }, [mapillaryActive, mapillaryImageId, mapillaryToken]);
+
+  // Toggle Street View 360° with Mapillary fallback
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !apiKey) return;
@@ -330,7 +406,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const targetLng = center?.lng?.() ?? lng;
 
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 5000 }, (data: any, status: any) => {
+      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 5000 }, async (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
           const sv = map.getStreetView();
           sv.setPosition(data.location.latLng);
@@ -342,7 +418,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           });
           return () => google.maps.event.removeListener(listener);
         } else {
-          toast({ title: "360° View Unavailable", description: `No Street View coverage near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try city center or main roads.`, duration: 4000 });
+          // Fallback to Mapillary
+          toast({ title: "Trying Mapillary…", description: "No Google Street View here. Searching Mapillary street-level imagery…", duration: 3000 });
+          const found = await activateMapillary(targetLat, targetLng);
+          if (!found) {
+            toast({ title: "360° View Unavailable", description: `No street-level imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try a city center.`, duration: 4000 });
+          }
           setStreetViewActive(false);
         }
       });
@@ -352,7 +433,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         streetViewRef.current = null;
       }
     }
-  }, [streetViewActive, lat, lng, apiKey]);
+  }, [streetViewActive, lat, lng, apiKey, activateMapillary]);
 
   // ===== RENDER AIRCRAFT MARKERS =====
   useEffect(() => {
@@ -1569,6 +1650,16 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <LayerControl icon={<CloudRain className="h-3 w-3" />} label="Weather" color="#06b6d4" active={showWeather} onToggle={() => setShowWeather(!showWeather)} opacity={opacityWeather} onOpacity={setOpacityWeather} source="OpenWeatherMap" />
                 <LayerControl icon={<Car className="h-3 w-3" />} label="Traffic" color="#10b981" active={showTraffic} onToggle={() => setShowTraffic(!showTraffic)} opacity={opacityTraffic} onOpacity={setOpacityTraffic} source="Google" />
                 <LayerControl icon={<Compass className="h-3 w-3" />} label="360° Street View" color="#22c55e" active={streetViewActive} onToggle={() => setStreetViewActive(!streetViewActive)} opacity={1} onOpacity={() => {}} />
+                <LayerControl icon={<Eye className="h-3 w-3" />} label="Mapillary" color="#05CB63" active={mapillaryActive} onToggle={() => {
+                  if (mapillaryActive) {
+                    setMapillaryActive(false);
+                    setMapillaryImageId(null);
+                  } else {
+                    const map = mapInstanceRef.current;
+                    const center = map?.getCenter?.();
+                    activateMapillary(center?.lat?.() ?? lat, center?.lng?.() ?? lng);
+                  }
+                }} opacity={1} onOpacity={() => {}} source="Street-level" />
 
                 <div className="border-t border-border/20 my-2" />
 
@@ -1650,6 +1741,30 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
               <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
               <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+            </div>
+          </div>
+        )}
+
+        {/* Mapillary street-level viewer overlay */}
+        {mapillaryActive && mapillaryImageId && (
+          <div className="absolute inset-0 z-[20] pointer-events-auto">
+            <div id="mapillary-viewer" className="w-full h-full" />
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[21]">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-emerald-500/40" style={{ boxShadow: "0 0 20px rgba(5,203,99,0.2)" }}>
+                <Eye className="h-4 w-4 text-emerald-400" />
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">MAPILLARY STREET VIEW</span>
+                <button onClick={() => { setMapillaryActive(false); setMapillaryImageId(null); }} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mapillary loading indicator */}
+        {mapillaryLoading && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-emerald-500/40">
+              <RefreshCw className="h-4 w-4 text-emerald-400 animate-spin" />
+              <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">Searching Mapillary…</span>
             </div>
           </div>
         )}
