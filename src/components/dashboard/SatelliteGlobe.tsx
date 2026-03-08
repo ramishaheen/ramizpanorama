@@ -1682,7 +1682,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       {/* Hover Tooltip */}
       {hoveredSat && !selectedSat && (
         <div
-          className="fixed z-[2010] pointer-events-auto animate-fade-in"
+          className="fixed z-[2010] pointer-events-none"
           style={{
             left: Math.min(hoverPos.x + 16, window.innerWidth - 260),
             top: Math.max(hoverPos.y - 40, 10),
