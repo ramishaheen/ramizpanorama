@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass } from "lucide-react";
@@ -50,8 +50,20 @@ const PRESETS = [
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
 ];
 
+// Create SVG data URL for aircraft icon
+function createAircraftSvg(isMilitary: boolean, heading: number): string {
+  const color = isMilitary ? "#ef4444" : "#60a5fa";
+  const glow = isMilitary ? "rgba(239,68,68,0.6)" : "rgba(96,165,250,0.5)";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+    <defs><filter id="g"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${glow}"/></filter></defs>
+    <g transform="rotate(${heading} 14 14)" filter="url(#g)">
+      <path d="M14 4L10 11H5l2 3.5L5 18h5l4 6 4-6h5l-2-3.5L23 11h-5L14 4z" fill="${color}"/>
+    </g>
+  </svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanSceneProps) => {
-  // Default to Middle East center (between Iran/Israel/Gulf)
   const [lat, setLat] = useState(initialCoords?.lat || initialEvent?.lat || 29.5);
   const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 47.5);
   
@@ -65,78 +77,49 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
   const [streetViewActive, setStreetViewActive] = useState(false);
   const streetViewRef = useRef<any>(null);
-  const heatCanvasRef = useRef<HTMLCanvasElement>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(true);
-  const [containerSize, setContainerSize] = useState({ w: 800, h: 600 });
-  const [mapVersion, setMapVersion] = useState(0); // increment on map move to re-render overlays
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  const overlayRef = useRef<any>(null);
+  // Native Google Maps objects
+  const markersRef = useRef<any[]>([]);
+  const trailLinesRef = useRef<any[]>([]);
+  const heatmapLayerRef = useRef<any>(null);
   
   const [showIntelCard, setShowIntelCard] = useState(!!initialEvent);
   const [nearbyIntel, setNearbyIntel] = useState<{ alerts: any[]; vessels: any[]; airspace: any[] }>({ alerts: [], vessels: [], airspace: [] });
 
-  // Fetch nearby intel when we have an event or location
+  // Fetch nearby intel
   useEffect(() => {
     const fetchNearby = async () => {
-      const radius = 5; // degrees
+      const radius = 5;
       try {
         const [alertsRes, vesselsRes, airspaceRes] = await Promise.all([
-          supabase.from("geo_alerts").select("*")
-            .gte("lat", lat - radius).lte("lat", lat + radius)
-            .gte("lng", lng - radius).lte("lng", lng + radius),
-          supabase.from("vessels").select("*")
-            .gte("lat", lat - radius).lte("lat", lat + radius)
-            .gte("lng", lng - radius).lte("lng", lng + radius),
-          supabase.from("airspace_alerts").select("*")
-            .gte("lat", lat - radius).lte("lat", lat + radius)
-            .gte("lng", lng - radius).lte("lng", lng + radius),
+          supabase.from("geo_alerts").select("*").gte("lat", lat - radius).lte("lat", lat + radius).gte("lng", lng - radius).lte("lng", lng + radius),
+          supabase.from("vessels").select("*").gte("lat", lat - radius).lte("lat", lat + radius).gte("lng", lng - radius).lte("lng", lng + radius),
+          supabase.from("airspace_alerts").select("*").gte("lat", lat - radius).lte("lat", lat + radius).gte("lng", lng - radius).lte("lng", lng + radius),
         ]);
-        setNearbyIntel({
-          alerts: alertsRes.data || [],
-          vessels: vesselsRes.data || [],
-          airspace: airspaceRes.data || [],
-        });
-      } catch (e) {
-        console.error("Nearby intel fetch error:", e);
-      }
+        setNearbyIntel({ alerts: alertsRes.data || [], vessels: vesselsRes.data || [], airspace: airspaceRes.data || [] });
+      } catch (e) { console.error("Nearby intel fetch error:", e); }
     };
     fetchNearby();
     const iv = setInterval(fetchNearby, 60_000);
     return () => clearInterval(iv);
   }, [lat, lng]);
 
-  // Track container size
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      setContainerSize({ w: width, h: height });
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
   // Fetch Google Maps API key
   useEffect(() => {
     const fetchKey = async () => {
       try {
         const { data, error } = await supabase.functions.invoke("google-maps-key");
-        if (!error && data?.apiKey) {
-          setApiKey(data.apiKey);
-        }
-      } catch (e) {
-        console.error("Failed to fetch Google Maps key:", e);
-      } finally {
-        setApiKeyLoading(false);
-      }
+        if (!error && data?.apiKey) setApiKey(data.apiKey);
+      } catch (e) { console.error("Failed to fetch Google Maps key:", e); }
+      finally { setApiKeyLoading(false); }
     };
     fetchKey();
   }, []);
@@ -147,10 +130,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
     const initMap = () => {
       if (!mapDivRef.current || !(window as any).google?.maps) return;
-      // Clean up previous instance
       if (mapInstanceRef.current) {
+        // Clean up previous markers/trails
+        markersRef.current.forEach(m => m.setMap(null));
+        markersRef.current = [];
+        trailLinesRef.current.forEach(l => l.setMap(null));
+        trailLinesRef.current = [];
         mapInstanceRef.current = null;
-        overlayRef.current = null;
       }
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
@@ -169,49 +155,28 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         maxZoom: 21,
       });
       mapInstanceRef.current = map;
-
-      // Create a custom overlay to access MapCanvasProjection
-      const overlay = new google.maps.OverlayView();
-      overlay.onAdd = () => {};
-      overlay.draw = () => {};
-      overlay.onRemove = () => {};
-      overlay.setMap(map);
-      overlayRef.current = overlay;
-
-      // Listen for map movements to re-render overlays
-      const updateOverlays = () => setMapVersion((v) => v + 1);
-      map.addListener("idle", updateOverlays);
-      map.addListener("zoom_changed", updateOverlays);
-      map.addListener("bounds_changed", updateOverlays);
     };
 
-    // Google Maps script may already be loaded from a previous mount
     if ((window as any).google?.maps) {
       initMap();
       return;
     }
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=maps3d`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=visualization,marker`;
     script.async = true;
     script.defer = true;
-    script.onload = () => {
-      initMap();
-    };
-    script.onerror = () => {
-      console.error("Failed to load Google Maps script");
-    };
+    script.onload = () => initMap();
+    script.onerror = () => console.error("Failed to load Google Maps script");
     document.head.appendChild(script);
   }, [apiKey]);
 
   // Update map center when lat/lng changes
   useEffect(() => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.panTo({ lat, lng });
-    }
+    if (mapInstanceRef.current) mapInstanceRef.current.panTo({ lat, lng });
   }, [lat, lng]);
 
-  // Toggle Street View 360°
+  // Toggle Street View 360° — check coverage first
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !apiKey) return;
@@ -219,17 +184,23 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (!google?.maps) return;
 
     if (streetViewActive) {
-      const sv = map.getStreetView();
-      sv.setPosition({ lat, lng });
-      sv.setPov({ heading: 0, pitch: 0 });
-      sv.setVisible(true);
-      streetViewRef.current = sv;
-
-      // Listen for close
-      const listener = google.maps.event.addListener(sv, "visible_changed", () => {
-        if (!sv.getVisible()) setStreetViewActive(false);
+      const svService = new google.maps.StreetViewService();
+      svService.getPanorama({ location: { lat, lng }, radius: 500 }, (data: any, status: any) => {
+        if (status === google.maps.StreetViewStatus.OK) {
+          const sv = map.getStreetView();
+          sv.setPosition(data.location.latLng);
+          sv.setPov({ heading: 0, pitch: 0 });
+          sv.setVisible(true);
+          streetViewRef.current = sv;
+          const listener = google.maps.event.addListener(sv, "visible_changed", () => {
+            if (!sv.getVisible()) setStreetViewActive(false);
+          });
+          return () => google.maps.event.removeListener(listener);
+        } else {
+          toast({ title: "360° View Unavailable", description: "No Street View coverage at this location. Try zooming into a city first.", duration: 4000 });
+          setStreetViewActive(false);
+        }
       });
-      return () => google.maps.event.removeListener(listener);
     } else {
       if (streetViewRef.current) {
         streetViewRef.current.setVisible(false);
@@ -237,6 +208,125 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       }
     }
   }, [streetViewActive, lat, lng, apiKey]);
+
+  // ===== RENDER NATIVE GOOGLE MAPS MARKERS FOR AIRCRAFT =====
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    // Clear previous markers
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+
+    if (!showFlights || !showMarkers || aircraft.length === 0) return;
+
+    const newMarkers: any[] = [];
+    aircraft.forEach((ac) => {
+      const marker = new google.maps.Marker({
+        position: { lat: ac.lat, lng: ac.lng },
+        map,
+        icon: {
+          url: createAircraftSvg(ac.is_military, ac.heading),
+          scaledSize: new google.maps.Size(28, 28),
+          anchor: new google.maps.Point(14, 14),
+        },
+        title: `${ac.callsign || ac.icao24} | ${Math.round(ac.altitude)}m | ${ac.origin_country}`,
+        zIndex: ac.is_military ? 100 : 50,
+      });
+
+      // Create info window content
+      const infoContent = `
+        <div style="background:#111;color:#fff;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:10px;min-width:180px;border:1px solid ${ac.is_military ? '#ef4444' : '#60a5fa'}40">
+          <div style="font-weight:bold;font-size:12px;color:${ac.is_military ? '#ef4444' : '#60a5fa'};margin-bottom:4px">
+            ${ac.is_military ? '🛩️ MILITARY' : '✈️ CIVIL'} — ${ac.callsign || ac.icao24}
+          </div>
+          <div>ICAO: ${ac.icao24}</div>
+          <div>Origin: ${ac.origin_country}</div>
+          <div>Altitude: ${Math.round(ac.altitude)}m</div>
+          <div>Speed: ${Math.round(ac.velocity * 3.6)} km/h</div>
+          <div>Heading: ${Math.round(ac.heading)}°</div>
+          <div>V/S: ${ac.vertical_rate > 0 ? '+' : ''}${ac.vertical_rate.toFixed(1)} m/s</div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("click", () => {
+        setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac);
+        infoWindow.open(map, marker);
+      });
+
+      newMarkers.push(marker);
+    });
+    markersRef.current = newMarkers;
+  }, [aircraft, showFlights, showMarkers]);
+
+  // ===== RENDER NATIVE GOOGLE MAPS POLYLINES FOR TRAILS =====
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    // Clear previous trails
+    trailLinesRef.current.forEach(l => l.setMap(null));
+    trailLinesRef.current = [];
+
+    if (!showFlights || !showMarkers || !showTrails || aircraft.length === 0) return;
+
+    const newLines: any[] = [];
+    aircraft.forEach((ac) => {
+      const history = trailHistoryRef.current[ac.icao24] || [];
+      if (history.length < 2) return;
+      const path = [...history.map(p => ({ lat: p.lat, lng: p.lng })), { lat: ac.lat, lng: ac.lng }];
+      const line = new google.maps.Polyline({
+        path,
+        map,
+        strokeColor: ac.is_military ? "#ef4444" : "#60a5fa",
+        strokeOpacity: 0.7,
+        strokeWeight: ac.is_military ? 2.5 : 1.8,
+        geodesic: true,
+        icons: ac.is_military ? [] : [{
+          icon: { path: "M 0,-1 0,1", strokeOpacity: 0.5, scale: 2 },
+          offset: "0",
+          repeat: "12px",
+        }],
+      });
+      newLines.push(line);
+    });
+    trailLinesRef.current = newLines;
+  }, [aircraft, showFlights, showMarkers, showTrails]);
+
+  // ===== HEATMAP LAYER =====
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps?.visualization) return;
+
+    if (heatmapLayerRef.current) {
+      heatmapLayerRef.current.setMap(null);
+      heatmapLayerRef.current = null;
+    }
+
+    if (!showHeatmap || conflictPoints.length === 0) return;
+
+    const heatmapData = conflictPoints.map(pt => ({
+      location: new google.maps.LatLng(pt.lat, pt.lng),
+      weight: pt.severity,
+    }));
+
+    heatmapLayerRef.current = new google.maps.visualization.HeatmapLayer({
+      data: heatmapData,
+      map,
+      radius: 40,
+      opacity: 0.7,
+      gradient: [
+        "rgba(0,0,0,0)",
+        "rgba(251,191,36,0.4)",
+        "rgba(251,146,36,0.6)",
+        "rgba(239,68,68,0.7)",
+        "rgba(239,68,68,0.9)",
+      ],
+    });
+  }, [conflictPoints, showHeatmap]);
 
   // Map navigation helpers
   const handleZoomIn = useCallback(() => {
@@ -253,38 +343,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   }, []);
   const handleResetView = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (map) {
-      map.setTilt(45);
-      map.setHeading(0);
-      map.setZoom(6);
-      map.panTo({ lat: 29.5, lng: 47.5 });
-    }
+    if (map) { map.setTilt(45); map.setHeading(0); map.setZoom(6); map.panTo({ lat: 29.5, lng: 47.5 }); }
   }, []);
   const handleToggleTilt = useCallback(() => {
     const map = mapInstanceRef.current;
     if (map) map.setTilt(map.getTilt() === 0 ? 45 : 0);
   }, []);
-
-  // Helper: convert lat/lng to pixel using Google Maps projection
-  const latLngToPixel = useCallback(
-    (pLat: number, pLng: number): { x: number; y: number } | null => {
-      const overlay = overlayRef.current;
-      if (!overlay) return null;
-      try {
-        const projection = overlay.getProjection();
-        if (!projection) return null;
-        const google = (window as any).google;
-        const point = projection.fromLatLngToContainerPixel(
-          new google.maps.LatLng(pLat, pLng)
-        );
-        if (!point) return null;
-        return { x: point.x, y: point.y };
-      } catch {
-        return null;
-      }
-    },
-    [mapVersion] // re-bind when map moves
-  );
 
   // Fetch conflict data for heatmap
   useEffect(() => {
@@ -304,55 +368,18 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           if (e.lat && e.lng) points.push({ lat: e.lat, lng: e.lng, severity: sevMap[e.severity] || 2 });
         });
         setConflictPoints(points);
-      } catch (e) {
-        console.error("Heatmap data error:", e);
-      }
+      } catch (e) { console.error("Heatmap data error:", e); }
     };
     fetchConflicts();
     const iv = setInterval(fetchConflicts, 300_000);
     return () => clearInterval(iv);
   }, []);
 
-  // Render heatmap on canvas
-  useEffect(() => {
-    const canvas = heatCanvasRef.current;
-    if (!canvas) return;
-    const { w, h } = containerSize;
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, w, h);
-
-    if (!showHeatmap || conflictPoints.length === 0) return;
-
-    conflictPoints.forEach((pt) => {
-      const pos = latLngToPixel(pt.lat, pt.lng);
-      if (!pos) return;
-      if (pos.x < -150 || pos.x > w + 150 || pos.y < -150 || pos.y > h + 150) return;
-      const radius = 30 + pt.severity * 20;
-      const intensity = 0.15 + pt.severity * 0.08;
-      const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, radius);
-      if (pt.severity >= 3) {
-        grad.addColorStop(0, `rgba(239, 68, 68, ${intensity})`);
-        grad.addColorStop(0.5, `rgba(239, 68, 68, ${intensity * 0.4})`);
-        grad.addColorStop(1, "rgba(239, 68, 68, 0)");
-      } else {
-        grad.addColorStop(0, `rgba(251, 191, 36, ${intensity})`);
-        grad.addColorStop(0.5, `rgba(251, 146, 36, ${intensity * 0.4})`);
-        grad.addColorStop(1, "rgba(251, 146, 36, 0)");
-      }
-      ctx.fillStyle = grad;
-      ctx.fillRect(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
-    });
-  }, [conflictPoints, showHeatmap, latLngToPixel, containerSize, mapVersion]);
-
   // Fetch live flights
   const fetchFlights = useCallback(async () => {
     if (!showFlights) return;
     setFlightsLoading(true);
     try {
-      // Use map bounds if available, otherwise use center +/- 3 deg
       const map = mapInstanceRef.current;
       let bbox: any;
       if (map) {
@@ -408,9 +435,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   useEffect(() => {
     fetchFlights();
     flightIntervalRef.current = setInterval(fetchFlights, 30000);
-    return () => {
-      if (flightIntervalRef.current) clearInterval(flightIntervalRef.current);
-    };
+    return () => { if (flightIntervalRef.current) clearInterval(flightIntervalRef.current); };
   }, [fetchFlights]);
 
   const navigateTo = useCallback((newLat: number, newLng: number) => {
@@ -442,25 +467,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const militaryCount = aircraft.filter((a) => a.is_military).length;
   const civilCount = aircraft.length - militaryCount;
 
-  // Compute marker positions using Google Maps projection
-  const markerPositions = useMemo(() => {
-    if (!showMarkers || !showFlights) return [];
-    return aircraft
-      .map((ac) => {
-        const pos = latLngToPixel(ac.lat, ac.lng);
-        if (!pos) return null;
-        const visible =
-          pos.x >= -20 && pos.x <= containerSize.w + 20 &&
-          pos.y >= -20 && pos.y <= containerSize.h + 20;
-        if (!visible) return null;
-        // Compute trail pixel positions
-        const trail = (trailHistoryRef.current[ac.icao24] || [])
-          .map((p) => latLngToPixel(p.lat, p.lng))
-          .filter(Boolean) as { x: number; y: number }[];
-        return { ...ac, px: pos.x, py: pos.y, visible: true, trail };
-      })
-      .filter(Boolean) as (Aircraft & { px: number; py: number; visible: boolean; trail: { x: number; y: number }[] })[];
-  }, [aircraft, latLngToPixel, containerSize, showMarkers, showFlights, mapVersion]);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach(m => m.setMap(null));
+      trailLinesRef.current.forEach(l => l.setMap(null));
+      if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
+    };
+  }, []);
 
   return (
     <div className="absolute inset-0 z-[2000] bg-black flex flex-col">
@@ -468,75 +482,34 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       <div className="flex items-center justify-between px-3 py-2 bg-card/90 backdrop-blur border-b border-border z-20">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-primary" />
-          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
-            Google 3D View
-          </span>
-          <span className="text-[9px] font-mono text-muted-foreground">
-            GOOGLE 3D TILES
-          </span>
+          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">Google 3D View</span>
+          <span className="text-[9px] font-mono text-muted-foreground">GOOGLE 3D TILES</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showSearch ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}
-          >
+          <button onClick={() => setShowSearch(!showSearch)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showSearch ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
             <Search className="h-3 w-3" /> Location
           </button>
-          <button
-            onClick={() => setShowFlights(!showFlights)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showFlights ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}
-          >
-            <Plane className="h-3 w-3" />
-            Flights
-            {aircraft.length > 0 && (
-              <span className="bg-primary/20 text-primary text-[8px] px-1 rounded-full font-bold">
-                {aircraft.length}
-              </span>
-            )}
+          <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showFlights ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            <Plane className="h-3 w-3" /> Flights
+            {aircraft.length > 0 && <span className="bg-primary/20 text-primary text-[8px] px-1 rounded-full font-bold">{aircraft.length}</span>}
           </button>
-          <button
-            onClick={() => setShowMarkers(!showMarkers)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showMarkers ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
-          >
-            {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-            Markers
+          <button onClick={() => setShowMarkers(!showMarkers)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showMarkers ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} Markers
           </button>
-          <button
-            onClick={() => setShowHeatmap(!showHeatmap)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showHeatmap ? "border-orange-500/50 bg-orange-500/10 text-orange-400" : "border-border text-muted-foreground hover:bg-secondary"}`}
-          >
-            <Flame className="h-3 w-3" />
-            Heatmap
-            {conflictPoints.length > 0 && (
-              <span className="bg-orange-500/20 text-orange-400 text-[8px] px-1 rounded-full font-bold">
-                {conflictPoints.length}
-              </span>
-            )}
+          <button onClick={() => setShowHeatmap(!showHeatmap)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showHeatmap ? "border-orange-500/50 bg-orange-500/10 text-orange-400" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            <Flame className="h-3 w-3" /> Heatmap
+            {conflictPoints.length > 0 && <span className="bg-orange-500/20 text-orange-400 text-[8px] px-1 rounded-full font-bold">{conflictPoints.length}</span>}
           </button>
-          <button
-            onClick={() => setShowTrails(!showTrails)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
-          >
-            <Navigation className="h-3 w-3" />
-            Trails
+          <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            <Navigation className="h-3 w-3" /> Trails
           </button>
-          <button
-            onClick={() => { setStreetViewActive(!streetViewActive); }}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${streetViewActive ? "border-green-500/50 bg-green-500/10 text-green-400" : "border-border text-muted-foreground hover:bg-secondary"}`}
-          >
-            <Compass className="h-3 w-3" />
-            360° View
+          <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${streetViewActive ? "border-green-500/50 bg-green-500/10 text-green-400" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+            <Compass className="h-3 w-3" /> 360° View
           </button>
-          <button
-            onClick={() => fetchFlights()}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all"
-          >
+          <button onClick={() => fetchFlights()} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all">
             <RefreshCw className={`h-3 w-3 ${flightsLoading ? "animate-spin" : ""}`} />
           </button>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center w-7 h-7 rounded border border-border text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-all"
-          >
+          <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded border border-border text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-all">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -547,36 +520,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         <div className="px-3 py-1.5 bg-card/80 backdrop-blur border-b border-border/50 z-20 space-y-1.5">
           <div className="flex items-center gap-2">
             <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
-              placeholder="City name or coordinates (lat, lng)…"
-              className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/50 outline-none"
-              autoFocus
-            />
-            <button
-              onClick={handleSearchSubmit}
-              className="px-2 py-0.5 rounded text-[9px] font-mono uppercase border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 transition-all"
-            >
-              Go
-            </button>
+            <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()} placeholder="City name or coordinates (lat, lng)…" className="flex-1 bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground/50 outline-none" autoFocus />
+            <button onClick={handleSearchSubmit} className="px-2 py-0.5 rounded text-[9px] font-mono uppercase border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 transition-all">Go</button>
           </div>
           <div className="flex items-center gap-1 overflow-x-auto">
             {PRESETS.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => {
-                  navigateTo(p.lat, p.lng);
-                  setShowSearch(false);
-                }}
-                className={`flex-shrink-0 px-2 py-0.5 rounded text-[8px] font-mono uppercase border transition-all ${
-                  Math.abs(lat - p.lat) < 0.01 && Math.abs(lng - p.lng) < 0.01
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:bg-secondary"
-                }`}
-              >
+              <button key={p.name} onClick={() => { navigateTo(p.lat, p.lng); setShowSearch(false); }}
+                className={`flex-shrink-0 px-2 py-0.5 rounded text-[8px] font-mono uppercase border transition-all ${Math.abs(lat - p.lat) < 0.01 && Math.abs(lng - p.lng) < 0.01 ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
                 {p.name}
               </button>
             ))}
@@ -586,14 +536,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
       {/* Main content */}
       <div className="flex-1 relative" ref={containerRef}>
-        {/* Google Maps */}
         {apiKeyLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-2">
               <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
-                Initializing Google 3D Tiles…
-              </p>
+              <p className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">Initializing Google 3D Tiles…</p>
             </div>
           </div>
         ) : apiKey ? (
@@ -602,14 +549,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           <div className="absolute inset-0 flex items-center justify-center bg-card">
             <div className="text-center space-y-2 max-w-sm px-4">
               <Building2 className="h-8 w-8 text-muted-foreground mx-auto" />
-              <p className="text-xs font-mono text-muted-foreground">
-                Google Maps API key not configured. Add GOOGLE_MAPS_API_KEY to enable 3D tiles.
-              </p>
+              <p className="text-xs font-mono text-muted-foreground">Google Maps API key not configured.</p>
             </div>
           </div>
         )}
 
-        {/* ===== MAP NAVIGATION CONTROLS ===== */}
+        {/* Map navigation controls */}
         {apiKey && !streetViewActive && (
           <div className="absolute right-3 bottom-16 z-[12] flex flex-col gap-1.5 pointer-events-auto">
             {[
@@ -620,225 +565,86 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               { icon: <Compass className="h-3.5 w-3.5" />, action: handleResetView, tip: "Reset View" },
               { icon: <span className="text-[10px] font-bold">360°</span>, action: () => setStreetViewActive(true), tip: "Enter 360° Street View" },
             ].map((btn, i) => (
-              <button
-                key={i}
-                onClick={btn.action}
-                title={btn.tip}
+              <button key={i} onClick={btn.action} title={btn.tip}
                 className="w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border border-primary/25 text-primary hover:bg-primary/15 hover:border-primary/50 transition-all"
-                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
-              >
+                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                 {btn.icon}
               </button>
             ))}
           </div>
         )}
 
-        {/* ===== STREET VIEW ACTIVE INDICATOR ===== */}
+        {/* Street View active indicator */}
         {streetViewActive && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
               <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
               <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
-              <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">
-                EXIT
-              </button>
+              <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
             </div>
-          </div>
-        )}
-        <canvas
-          ref={heatCanvasRef}
-          className="absolute inset-0 w-full h-full z-[8] pointer-events-none"
-          style={{ opacity: showHeatmap ? 0.85 : 0, transition: "opacity 0.5s ease" }}
-        />
-
-        {/* ===== TRAIL LINES ===== */}
-        {showFlights && showMarkers && showTrails && markerPositions.length > 0 && (
-          <svg className="absolute inset-0 w-full h-full z-[9] pointer-events-none overflow-hidden">
-            <defs>
-              <linearGradient id="trail-civ" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="rgba(96,165,250,0)" />
-                <stop offset="100%" stopColor="rgba(96,165,250,0.7)" />
-              </linearGradient>
-              <linearGradient id="trail-mil" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="rgba(239,68,68,0)" />
-                <stop offset="100%" stopColor="rgba(239,68,68,0.7)" />
-              </linearGradient>
-            </defs>
-            {markerPositions.map((ac) => {
-              if (ac.trail.length < 2) return null;
-              const points = [...ac.trail, { x: ac.px, y: ac.py }];
-              const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-              return (
-                <path
-                  key={`trail-${ac.icao24}`}
-                  d={d}
-                  fill="none"
-                  stroke={`url(#trail-${ac.is_military ? "mil" : "civ"})`}
-                  strokeWidth={ac.is_military ? 2 : 1.5}
-                  strokeLinecap="round"
-                  strokeDasharray={ac.is_military ? "none" : "4 2"}
-                  opacity={0.8}
-                  style={{ filter: `drop-shadow(0 0 3px ${ac.is_military ? "rgba(239,68,68,0.5)" : "rgba(96,165,250,0.4)"})` }}
-                />
-              );
-            })}
-          </svg>
-        )}
-
-        {/* ===== AIRCRAFT MARKERS OVERLAY ===== */}
-        {showFlights && showMarkers && markerPositions.length > 0 && (
-          <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
-            {markerPositions.map((ac) => (
-              <div
-                key={ac.icao24}
-                className="absolute pointer-events-auto cursor-pointer group"
-                style={{
-                  left: ac.px,
-                  top: ac.py,
-                  transform: "translate(-50%, -50%)",
-                  transition: "left 1.5s linear, top 1.5s linear",
-                }}
-                onClick={() => setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac)}
-              >
-                <div
-                  className="absolute inset-0 rounded-full animate-ping opacity-30"
-                  style={{
-                    width: 24,
-                    height: 24,
-                    marginLeft: -4,
-                    marginTop: -4,
-                    backgroundColor: ac.is_military ? "rgba(239,68,68,0.4)" : "rgba(96,165,250,0.3)",
-                  }}
-                />
-                <div
-                  className="relative flex items-center justify-center w-4 h-4"
-                  style={{
-                    filter: `drop-shadow(0 0 4px ${ac.is_military ? "rgba(239,68,68,0.8)" : "rgba(96,165,250,0.7)"})`,
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill={ac.is_military ? "#ef4444" : "#60a5fa"}
-                    style={{ transform: `rotate(${ac.heading}deg)`, transition: "transform 1.5s linear" }}
-                  >
-                    <path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z" />
-                  </svg>
-                </div>
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                  <div
-                    className="px-1.5 py-0.5 rounded text-[7px] font-mono font-bold"
-                    style={{
-                      backgroundColor: ac.is_military ? "rgba(239,68,68,0.85)" : "rgba(96,165,250,0.85)",
-                      color: "#fff",
-                      boxShadow: `0 0 8px ${ac.is_military ? "rgba(239,68,68,0.5)" : "rgba(96,165,250,0.5)"}`,
-                    }}
-                  >
-                    {ac.callsign || ac.icao24}
-                    <span className="text-white/70 ml-1">
-                      {Math.round(ac.altitude)}m
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         )}
 
         {/* HUD Overlay */}
         <div className="absolute top-3 left-3 z-10 pointer-events-none">
-          <div
-            className="bg-black/70 backdrop-blur border border-primary/30 rounded px-2.5 py-1.5 font-mono text-[9px] text-primary/80 space-y-0.5"
-            style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.1)" }}
-          >
+          <div className="bg-black/70 backdrop-blur border border-primary/30 rounded px-2.5 py-1.5 font-mono text-[9px] text-primary/80 space-y-0.5"
+            style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.1)" }}>
             <div className="text-primary font-bold text-[10px]">// GOOGLE 3D SATELLITE</div>
-            <div>
-              SECTOR {lat.toFixed(4)}N {Math.abs(lng).toFixed(4)}
-              {lng >= 0 ? "E" : "W"}
-            </div>
+            <div>SECTOR {lat.toFixed(4)}N {Math.abs(lng).toFixed(4)}{lng >= 0 ? "E" : "W"}</div>
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               PHOTOREALISTIC 3D TILES
             </div>
-            {showMarkers && markerPositions.length > 0 && (
+            {showFlights && aircraft.length > 0 && (
               <div className="flex items-center gap-1 text-blue-400">
                 <Plane className="h-2.5 w-2.5" />
-                {markerPositions.length} MARKERS ACTIVE
+                {aircraft.length} AIRCRAFT • {militaryCount} MIL
               </div>
             )}
           </div>
         </div>
 
-        {/* Flight overlay */}
+        {/* Flight sidebar */}
         {showFlights && aircraft.length > 0 && (
           <div className="absolute top-3 right-3 z-10 pointer-events-auto">
-            <div
-              className="bg-black/80 backdrop-blur border border-primary/30 rounded-lg p-2 w-56 max-h-[50vh] overflow-hidden"
-              style={{ boxShadow: "0 0 20px hsl(190 100% 50% / 0.1)" }}
-            >
+            <div className="bg-black/80 backdrop-blur border border-primary/30 rounded-lg p-2 w-56 max-h-[50vh] overflow-hidden"
+              style={{ boxShadow: "0 0 20px hsl(190 100% 50% / 0.1)" }}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   <Plane className="h-3 w-3 text-primary" />
-                  <span className="text-[9px] font-mono font-bold text-primary uppercase">
-                    Live Airspace
-                  </span>
+                  <span className="text-[9px] font-mono font-bold text-primary uppercase">Live Airspace</span>
                 </div>
-                <span className="text-[8px] font-mono text-muted-foreground">
-                  {aircraft.length} tracked
-                </span>
+                <span className="text-[8px] font-mono text-muted-foreground">{aircraft.length} tracked</span>
               </div>
-
               <div className="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-border/30">
                 <div className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span className="text-[8px] font-mono text-blue-400">
-                    CIV: {civilCount}
-                  </span>
+                  <span className="text-[8px] font-mono text-blue-400">CIV: {civilCount}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  <span className="text-[8px] font-mono text-red-400">
-                    MIL: {militaryCount}
-                  </span>
+                  <span className="text-[8px] font-mono text-red-400">MIL: {militaryCount}</span>
                 </div>
               </div>
-
               <div className="space-y-0.5 max-h-[35vh] overflow-y-auto">
                 {aircraft
                   .sort((a, b) => (b.is_military ? 1 : 0) - (a.is_military ? 1 : 0))
                   .slice(0, 40)
                   .map((ac) => (
-                    <button
-                      key={ac.icao24}
-                      onClick={() => setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac)}
+                    <button key={ac.icao24}
+                      onClick={() => {
+                        setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac);
+                        if (mapInstanceRef.current) mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
+                      }}
                       className={`w-full flex items-center gap-1.5 px-1.5 py-1 rounded text-left transition-all ${
-                        selectedAircraft?.icao24 === ac.icao24
-                          ? "bg-primary/15 border border-primary/30"
-                          : "hover:bg-white/5 border border-transparent"
-                      }`}
-                    >
-                      <Plane
-                        className="h-2.5 w-2.5 flex-shrink-0"
-                        style={{
-                          color: ac.is_military ? "#ef4444" : "#60a5fa",
-                          transform: `rotate(${ac.heading}deg)`,
-                        }}
-                      />
+                        selectedAircraft?.icao24 === ac.icao24 ? "bg-primary/15 border border-primary/30" : "hover:bg-white/5 border border-transparent"
+                      }`}>
+                      <Plane className="h-2.5 w-2.5 flex-shrink-0" style={{ color: ac.is_military ? "#ef4444" : "#60a5fa", transform: `rotate(${ac.heading}deg)` }} />
                       <div className="min-w-0 flex-1">
-                        <span className="text-[8px] font-mono font-bold text-foreground/90 block truncate">
-                          {ac.callsign || ac.icao24}
-                        </span>
-                        <span className="text-[7px] font-mono text-muted-foreground/60">
-                          {Math.round(ac.altitude)}m • {Math.round(ac.velocity * 3.6)}km/h •{" "}
-                          {ac.origin_country}
-                        </span>
+                        <span className="text-[8px] font-mono font-bold text-foreground/90 block truncate">{ac.callsign || ac.icao24}</span>
+                        <span className="text-[7px] font-mono text-muted-foreground/60">{Math.round(ac.altitude)}m • {Math.round(ac.velocity * 3.6)}km/h • {ac.origin_country}</span>
                       </div>
-                      {ac.is_military && (
-                        <span className="text-[6px] font-mono font-bold text-red-400 bg-red-500/15 px-1 rounded">
-                          MIL
-                        </span>
-                      )}
+                      {ac.is_military && <span className="text-[6px] font-mono font-bold text-red-400 bg-red-500/15 px-1 rounded">MIL</span>}
                     </button>
                   ))}
               </div>
@@ -848,48 +654,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
         {/* Selected aircraft detail */}
         {selectedAircraft && (
-          <div
-            className="absolute bottom-14 left-3 z-10 pointer-events-auto bg-black/85 backdrop-blur border rounded-lg p-2.5 w-60"
-            style={{
-              borderColor: selectedAircraft.is_military
-                ? "rgba(239,68,68,0.4)"
-                : "rgba(96,165,250,0.4)",
-              boxShadow: `0 0 20px ${
-                selectedAircraft.is_military
-                  ? "rgba(239,68,68,0.15)"
-                  : "rgba(96,165,250,0.15)"
-              }`,
-            }}
-          >
+          <div className="absolute bottom-14 left-3 z-10 pointer-events-auto bg-black/85 backdrop-blur border rounded-lg p-2.5 w-60"
+            style={{ borderColor: selectedAircraft.is_military ? "rgba(239,68,68,0.4)" : "rgba(96,165,250,0.4)", boxShadow: `0 0 20px ${selectedAircraft.is_military ? "rgba(239,68,68,0.15)" : "rgba(96,165,250,0.15)"}` }}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5">
-                <Plane
-                  className="h-3.5 w-3.5"
-                  style={{
-                    color: selectedAircraft.is_military ? "#ef4444" : "#60a5fa",
-                    transform: `rotate(${selectedAircraft.heading}deg)`,
-                  }}
-                />
-                <span
-                  className="text-[10px] font-mono font-bold"
-                  style={{
-                    color: selectedAircraft.is_military ? "#ef4444" : "#60a5fa",
-                  }}
-                >
-                  {selectedAircraft.callsign || selectedAircraft.icao24}
-                </span>
-                {selectedAircraft.is_military && (
-                  <span className="text-[7px] font-mono font-bold text-red-400 bg-red-500/15 px-1 rounded">
-                    MILITARY
-                  </span>
-                )}
+                <Plane className="h-3.5 w-3.5" style={{ color: selectedAircraft.is_military ? "#ef4444" : "#60a5fa", transform: `rotate(${selectedAircraft.heading}deg)` }} />
+                <span className="text-[10px] font-mono font-bold" style={{ color: selectedAircraft.is_military ? "#ef4444" : "#60a5fa" }}>{selectedAircraft.callsign || selectedAircraft.icao24}</span>
+                {selectedAircraft.is_military && <span className="text-[7px] font-mono font-bold text-red-400 bg-red-500/15 px-1 rounded">MILITARY</span>}
               </div>
-              <button
-                onClick={() => setSelectedAircraft(null)}
-                className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"
-              >
-                <X className="h-2.5 w-2.5 text-muted-foreground" />
-              </button>
+              <button onClick={() => setSelectedAircraft(null)} className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"><X className="h-2.5 w-2.5 text-muted-foreground" /></button>
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
               <DataRow label="ICAO" value={selectedAircraft.icao24} />
@@ -904,116 +677,56 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* ===== INTEL BRIEFING CARD ===== */}
+        {/* Intel Briefing Card */}
         {showIntelCard && initialEvent && (
           <div className="absolute bottom-14 right-3 z-[15] pointer-events-auto w-72 max-h-[60vh] overflow-y-auto">
-            <div
-              className="bg-black/90 backdrop-blur-xl border rounded-lg p-3 space-y-2"
-              style={{
-                borderColor: initialEvent.severity === "critical" ? "rgba(239,68,68,0.6)" : initialEvent.severity === "high" ? "rgba(251,146,36,0.6)" : "hsl(var(--primary) / 0.4)",
-                boxShadow: initialEvent.severity === "critical" ? "0 0 25px rgba(239,68,68,0.2)" : "0 0 20px hsl(var(--primary) / 0.1)",
-              }}
-            >
-              {/* Header */}
+            <div className="bg-black/90 backdrop-blur-xl border rounded-lg p-3 space-y-2"
+              style={{ borderColor: initialEvent.severity === "critical" ? "rgba(239,68,68,0.6)" : initialEvent.severity === "high" ? "rgba(251,146,36,0.6)" : "hsl(var(--primary) / 0.4)", boxShadow: initialEvent.severity === "critical" ? "0 0 25px rgba(239,68,68,0.2)" : "0 0 20px hsl(var(--primary) / 0.1)" }}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" style={{
-                    color: initialEvent.severity === "critical" ? "#ef4444" : initialEvent.severity === "high" ? "#f59e0b" : "hsl(var(--primary))"
-                  }} />
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" style={{ color: initialEvent.severity === "critical" ? "#ef4444" : initialEvent.severity === "high" ? "#f59e0b" : "hsl(var(--primary))" }} />
                   <span className="text-[9px] font-mono font-bold text-primary uppercase">Intel Briefing</span>
                 </div>
-                <button onClick={() => setShowIntelCard(false)} className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10">
-                  <X className="h-2.5 w-2.5 text-muted-foreground" />
-                </button>
+                <button onClick={() => setShowIntelCard(false)} className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"><X className="h-2.5 w-2.5 text-muted-foreground" /></button>
               </div>
-
-              {/* Severity badge */}
               {initialEvent.severity && (
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-[7px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${
-                    initialEvent.severity === "critical" ? "bg-red-500/20 text-red-400" :
-                    initialEvent.severity === "high" ? "bg-orange-500/20 text-orange-400" :
-                    initialEvent.severity === "medium" ? "bg-yellow-500/20 text-yellow-400" :
-                    "bg-green-500/20 text-green-400"
-                  }`}>
-                    {initialEvent.severity} SEVERITY
-                  </span>
-                  {initialEvent.type && (
-                    <span className="text-[7px] font-mono text-muted-foreground/70 uppercase px-1.5 py-0.5 rounded border border-border/30">
-                      {initialEvent.type}
-                    </span>
-                  )}
+                  <span className={`text-[7px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${initialEvent.severity === "critical" ? "bg-red-500/20 text-red-400" : initialEvent.severity === "high" ? "bg-orange-500/20 text-orange-400" : initialEvent.severity === "medium" ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"}`}>{initialEvent.severity} SEVERITY</span>
+                  {initialEvent.type && <span className="text-[7px] font-mono text-muted-foreground/70 uppercase px-1.5 py-0.5 rounded border border-border/30">{initialEvent.type}</span>}
                 </div>
               )}
-
-              {/* Event title */}
-              <div className="text-[10px] font-mono font-bold text-foreground/90 leading-tight">
-                {initialEvent.title}
-              </div>
-
-              {/* Summary */}
-              {initialEvent.summary && (
-                <p className="text-[8px] font-mono text-muted-foreground/80 leading-relaxed">
-                  {initialEvent.summary}
-                </p>
-              )}
-
-              {/* Coordinates */}
-              <div className="flex items-center gap-2 text-[7px] font-mono text-muted-foreground/60">
-                <MapPin className="h-2.5 w-2.5" />
-                <span>{initialEvent.lat.toFixed(4)}°N, {initialEvent.lng.toFixed(4)}°E</span>
-              </div>
-
-              {/* Source */}
-              {initialEvent.source && (
-                <div className="text-[7px] font-mono text-muted-foreground/50 italic">
-                  SRC: {initialEvent.source}
-                </div>
-              )}
-
-              {/* Nearby Intel Summary */}
+              <div className="text-[10px] font-mono font-bold text-foreground/90 leading-tight">{initialEvent.title}</div>
+              {initialEvent.summary && <p className="text-[8px] font-mono text-muted-foreground/80 leading-relaxed">{initialEvent.summary}</p>}
+              <div className="flex items-center gap-2 text-[7px] font-mono text-muted-foreground/60"><MapPin className="h-2.5 w-2.5" /><span>{initialEvent.lat.toFixed(4)}°N, {initialEvent.lng.toFixed(4)}°E</span></div>
+              {initialEvent.source && <div className="text-[7px] font-mono text-muted-foreground/50 italic">SRC: {initialEvent.source}</div>}
               <div className="border-t border-border/30 pt-2 mt-1 space-y-1">
                 <span className="text-[8px] font-mono font-bold text-primary/80 uppercase">Nearby Activity</span>
                 <div className="grid grid-cols-3 gap-1.5">
                   <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
-                    <Shield className="h-3 w-3 text-orange-400 mb-0.5" />
-                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.alerts.length}</span>
-                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Alerts</span>
+                    <Shield className="h-3 w-3 text-orange-400 mb-0.5" /><span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.alerts.length}</span><span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Alerts</span>
                   </div>
                   <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
-                    <Anchor className="h-3 w-3 text-blue-400 mb-0.5" />
-                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.vessels.length}</span>
-                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Vessels</span>
+                    <Anchor className="h-3 w-3 text-blue-400 mb-0.5" /><span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.vessels.length}</span><span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Vessels</span>
                   </div>
                   <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
-                    <Radio className="h-3 w-3 text-yellow-400 mb-0.5" />
-                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.airspace.length}</span>
-                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Airspace</span>
+                    <Radio className="h-3 w-3 text-yellow-400 mb-0.5" /><span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.airspace.length}</span><span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Airspace</span>
                   </div>
                 </div>
-
-                {/* Nearby alerts list */}
                 {nearbyIntel.alerts.length > 0 && (
                   <div className="space-y-0.5 max-h-24 overflow-y-auto">
                     {nearbyIntel.alerts.slice(0, 5).map((a: any, i: number) => (
                       <div key={a.id || i} className="flex items-start gap-1 px-1 py-0.5 rounded bg-white/3">
-                        <span className={`w-1 h-1 rounded-full mt-1 flex-shrink-0 ${
-                          a.severity === "critical" ? "bg-red-500" : a.severity === "high" ? "bg-orange-400" : "bg-yellow-400"
-                        }`} />
+                        <span className={`w-1 h-1 rounded-full mt-1 flex-shrink-0 ${a.severity === "critical" ? "bg-red-500" : a.severity === "high" ? "bg-orange-400" : "bg-yellow-400"}`} />
                         <span className="text-[7px] font-mono text-foreground/70 leading-tight">{a.title}</span>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {/* Nearby vessels */}
                 {nearbyIntel.vessels.length > 0 && (
                   <div className="space-y-0.5">
                     {nearbyIntel.vessels.slice(0, 3).map((v: any, i: number) => (
                       <div key={v.id || i} className="flex items-center gap-1 px-1 py-0.5 text-[7px] font-mono text-blue-400/80">
-                        <Anchor className="h-2 w-2 flex-shrink-0" />
-                        <span className="truncate">{v.name}</span>
-                        <span className="text-muted-foreground/50 ml-auto">{v.type}</span>
+                        <Anchor className="h-2 w-2 flex-shrink-0" /><span className="truncate">{v.name}</span><span className="text-muted-foreground/50 ml-auto">{v.type}</span>
                       </div>
                     ))}
                   </div>
@@ -1026,13 +739,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
       {/* Bottom bar */}
       <div className="flex items-center gap-3 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
-        <span className="text-[8px] font-mono text-muted-foreground uppercase">
-          SRC: Google Photorealistic 3D Tiles • OpenSky Network
-        </span>
+        <span className="text-[8px] font-mono text-muted-foreground uppercase">SRC: Google Photorealistic 3D Tiles • OpenSky Network</span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
-          {showFlights
-            ? `${aircraft.length} aircraft tracked • ${militaryCount} military • ${markerPositions.length} markers • Updates every 30s`
-            : "Flight layer disabled"}
+          {showFlights ? `${aircraft.length} aircraft tracked • ${militaryCount} military • Updates every 30s` : "Flight layer disabled"}
         </span>
       </div>
     </div>
@@ -1041,9 +750,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
 const DataRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col">
-    <span className="text-[6px] font-mono text-muted-foreground/40 uppercase tracking-wider">
-      {label}
-    </span>
+    <span className="text-[6px] font-mono text-muted-foreground/40 uppercase tracking-wider">{label}</span>
     <span className="text-[9px] font-mono text-foreground/80">{value}</span>
   </div>
 );
