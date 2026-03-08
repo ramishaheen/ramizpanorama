@@ -1109,8 +1109,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               </div>
               <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
                 {/* Flight layer */}
-                <LayerControl icon={<Plane className="h-3 w-3" />} label="Flights" color="hsl(var(--primary))" active={showFlights} onToggle={() => setShowFlights(!showFlights)} count={interpolatedAircraft.length} opacity={opacityFlights} onOpacity={setOpacityFlights} source={flightSource || "adsb.fi"} />
-                <LayerControl icon={<Navigation className="h-3 w-3" />} label="Trails" color="hsl(var(--accent))" active={showTrails} onToggle={() => setShowTrails(!showTrails)} opacity={1} onOpacity={() => {}} />
+                <LayerControl icon={<Plane className="h-3 w-3" />} label="Flights" color="hsl(var(--primary))" active={showFlights} onToggle={() => setShowFlights(!showFlights)} count={interpolatedAircraft.length} opacity={opacityFlights} onOpacity={setOpacityFlights} source="OSINT Unified (5 feeds)" />
+                <LayerControl icon={<Navigation className="h-3 w-3" />} label="Trails" color="hsl(var(--accent))" active={showTrails} onToggle={() => setShowTrails(!showTrails)} opacity={1} onOpacity={() => {}} source="Flight trails" />
                 <LayerControl icon={showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} label="Markers" color="hsl(var(--accent))" active={showMarkers} onToggle={() => setShowMarkers(!showMarkers)} opacity={1} onOpacity={() => {}} />
 
                 <div className="border-t border-border/20 my-2" />
@@ -1171,7 +1171,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   <span className="text-primary font-bold">{interpolatedAircraft.length}</span>
                   <span>AIRCRAFT</span>
                   <span className="text-[8px] font-mono px-1 rounded bg-primary/15">
-                    {flightSource === "adsb.fi" ? "LIVE" : flightSource ? flightSource.toUpperCase() : "—"}
+                    OSINT UNIFIED
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1184,6 +1184,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     <span style={{ color: "#ef4444" }}>{militaryCount}</span> MIL
                   </span>
                 </div>
+                {flightSource && (
+                  <div className="text-[7px] text-muted-foreground/50 leading-tight">
+                    SRC: {flightSource}
+                  </div>
+                )}
                 {trackedAircraftId && (
                   <div className="flex items-center gap-1 text-green-400 border-t border-primary/20 pt-1">
                     <Target className="h-2.5 w-2.5" />
@@ -1382,7 +1387,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       {/* Bottom bar */}
       <div className="flex items-center gap-3 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
         <span className="text-[8px] font-mono text-muted-foreground uppercase">
-          SRC: Google 3D Tiles • {flightSource === "adsb.fi" ? "adsb.fi (LIVE)" : flightSource === "opensky" ? "OpenSky (LIVE)" : flightSource === "adsb.fi+opensky" ? "adsb.fi + OpenSky (LIVE)" : flightSource || "—"}
+          SRC: OSINT UNIFIED • {flightSource || "—"}
           {showVessels ? ` • ${vessels.length} vessels (${vesselSource})` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showWeather ? " • Weather ON" : ""}{showTraffic ? " • Traffic ON" : ""}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
