@@ -330,7 +330,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const openAiChat = useCallback((sat: SatelliteData) => {
     setAiChatSat(sat);
     setHoveredSat(null);
-    const initialQ = `Tell me about the satellite "${sat.name}" (NORAD ID: ${sat.noradId || "N/A"}, Category: ${sat.category}, Altitude: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}). What is its purpose, operator, and strategic significance?`;
+    const initialQ = `Provide OSINT intelligence analysis on satellite "${sat.name}" (NORAD: ${sat.noradId || "N/A"}, Category: ${sat.category}, Country: ${sat.country || "Unknown"}, Operator: ${sat.operator || "Unknown"}, Alt: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}, Inc: ${sat.inclination?.toFixed(1) || "N/A"}°, Source: ${sat.source || "CelesTrak"}). Include: mission purpose, military/intelligence significance, coverage area over Middle East, operator details, and any known OSINT about this satellite's recent activities or significance in current geopolitical context.`;
     setAiMessages([{ role: "user", content: initialQ }]);
     setAiLoading(true);
     supabase.functions.invoke("war-chat", {
