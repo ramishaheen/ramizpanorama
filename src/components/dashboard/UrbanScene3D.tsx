@@ -163,6 +163,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const containerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const mapListenersRef = useRef<any[]>([]);
   const markersRef = useRef<any[]>([]);
   const trailLinesRef = useRef<any[]>([]);
   const heatmapLayerRef = useRef<any>(null);
@@ -244,12 +245,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (!apiKey) return;
 
     const initMap = () => {
-      if (!mapDivRef.current || !(window as any).google?.maps) return;
       if (mapInstanceRef.current) {
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
         trailLinesRef.current.forEach(l => l.setMap(null));
         trailLinesRef.current = [];
+        mapListenersRef.current.forEach((listener) => (window as any).google?.maps?.event?.removeListener?.(listener));
+        mapListenersRef.current = [];
         mapInstanceRef.current = null;
       }
       const google = (window as any).google;
@@ -268,6 +270,24 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         gestureHandling: "greedy",
         maxZoom: 21,
       });
+
+      const syncMapState = () => {
+        const center = map.getCenter();
+        if (center) {
+          setLat(center.lat());
+          setLng(center.lng());
+        }
+        setZoomLevel(Math.round(map.getZoom() || 14));
+      };
+
+      mapListenersRef.current = [
+        google.maps.event.addListener(map, "idle", syncMapState),
+        google.maps.event.addListener(map, "zoom_changed", () => {
+          setZoomLevel(Math.round(map.getZoom() || 14));
+        }),
+      ];
+
+      syncMapState();
       mapInstanceRef.current = map;
     };
 
@@ -298,14 +318,19 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (!google?.maps) return;
 
     if (streetViewActive) {
-      const currentZoom = mapInstanceRef.current?.getZoom?.() || 6;
+      const currentZoom = map.getZoom?.() || 6;
       if (currentZoom < 12) {
         toast({ title: "Zoom In Required", description: "Please zoom into a city first (zoom 12+) to activate Street View. Use the preset buttons or zoom controls.", duration: 4000 });
         setStreetViewActive(false);
         return;
       }
+
+      const center = map.getCenter?.();
+      const targetLat = center?.lat?.() ?? lat;
+      const targetLng = center?.lng?.() ?? lng;
+
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ location: { lat, lng }, radius: 1000 }, (data: any, status: any) => {
+      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 5000 }, (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
           const sv = map.getStreetView();
           sv.setPosition(data.location.latLng);
@@ -317,7 +342,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           });
           return () => google.maps.event.removeListener(listener);
         } else {
-          toast({ title: "360° View Unavailable", description: `No Street View coverage at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°. Try navigating to a major road or city center.`, duration: 4000 });
+          toast({ title: "360° View Unavailable", description: `No Street View coverage near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try city center or main roads.`, duration: 4000 });
           setStreetViewActive(false);
         }
       });
@@ -1324,6 +1349,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       cityMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
       if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
+      mapListenersRef.current.forEach((listener) => (window as any).google?.maps?.event?.removeListener?.(listener));
+      mapListenersRef.current = [];
       if (interpolationRef.current) clearInterval(interpolationRef.current);
     };
   }, []);
