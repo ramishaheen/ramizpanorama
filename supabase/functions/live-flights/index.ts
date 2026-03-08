@@ -20,9 +20,8 @@ function generateFallbackFlights(lamin: number, lamax: number, lomin: number, lo
   const latRange = lamax - lamin;
   const lngRange = lomax - lomin;
   const now = Date.now();
-  const baseSeed = Math.floor(now / 15000); // changes every 15s
+  const baseSeed = Math.floor(now / 15000);
 
-  // Scale count by viewport area
   const area = latRange * lngRange;
   const civilCount = Math.min(Math.max(Math.floor(area / 40), 8), 30);
   const milCount = Math.min(Math.max(Math.floor(area / 200), 2), 6);
@@ -32,10 +31,9 @@ function generateFallbackFlights(lamin: number, lamax: number, lomin: number, lo
     const s2 = seededRandom(baseSeed + i * 13 + 1);
     const headingSeed = seededRandom(i * 31 + 5);
     const heading = headingSeed * 360;
-    // Smooth drift based on heading
     const elapsed = (now % 15000) / 15000;
-    const speed = 180 + s2 * 100; // km/h
-    const driftDeg = (speed / 111000) * 15 * elapsed; // approx degrees moved in 15s
+    const speed = 180 + s2 * 100;
+    const driftDeg = (speed / 111000) * 15 * elapsed;
     const driftLat = Math.cos(heading * Math.PI / 180) * driftDeg;
     const driftLng = Math.sin(heading * Math.PI / 180) * driftDeg;
 
@@ -46,7 +44,7 @@ function generateFallbackFlights(lamin: number, lamax: number, lomin: number, lo
       lat: lamin + s1 * latRange + driftLat,
       lng: lomin + s2 * lngRange + driftLng,
       altitude: 8500 + s1 * 4000,
-      velocity: speed / 3.6, // m/s
+      velocity: speed / 3.6,
       heading: Math.round(heading),
       vertical_rate: (seededRandom(baseSeed + i * 19) - 0.5) * 2,
       is_military: false,
@@ -93,46 +91,55 @@ serve(async (req) => {
       });
     }
 
-    // OpenSky Network public API
-    const url = `https://opensky-network.org/api/states/all?lamin=${lamin}&lomin=${lomin}&lamax=${lamax}&lomax=${lomax}`;
-    
+    // Calculate center and radius from bounding box
+    const centerLat = (lamin + lamax) / 2;
+    const centerLon = (lomin + lomax) / 2;
+    // Distance in nautical miles (max 250 NM for adsb.fi)
+    const latDiffKm = (lamax - lamin) * 111;
+    const lonDiffKm = (lomax - lomin) * 111 * Math.cos(centerLat * Math.PI / 180);
+    const radiusKm = Math.sqrt(latDiffKm * latDiffKm + lonDiffKm * lonDiffKm) / 2;
+    const radiusNm = Math.min(Math.round(radiusKm / 1.852), 250);
+
+    // adsb.fi free open API (ADS-B Exchange v2 compatible)
+    const url = `https://opendata.adsb.fi/api/v3/lat/${centerLat.toFixed(4)}/lon/${centerLon.toFixed(4)}/dist/${radiusNm}`;
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
     try {
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeout);
-      
+
       if (!response.ok) {
-        if (response.status === 429) {
-          console.log("OpenSky rate limited, using fallback");
-          const aircraft = generateFallbackFlights(lamin, lamax, lomin, lomax);
-          return new Response(JSON.stringify({ aircraft, time: Date.now() / 1000, total: aircraft.length, source: "simulated" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        throw new Error(`OpenSky API returned ${response.status}`);
+        console.log(`adsb.fi returned ${response.status}, using fallback`);
+        const aircraft = generateFallbackFlights(lamin, lamax, lomin, lomax);
+        return new Response(JSON.stringify({ aircraft, time: Date.now() / 1000, total: aircraft.length, source: "simulated" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const data = await response.json();
-      
-      const aircraft = (data.states || []).map((s: any[]) => ({
-        icao24: s[0],
-        callsign: (s[1] || "").trim(),
-        origin_country: s[2],
-        lng: s[5],
-        lat: s[6],
-        altitude: s[7] || s[13] || 0,
-        on_ground: s[8],
-        velocity: s[9] || 0,
-        heading: s[10] || 0,
-        vertical_rate: s[11] || 0,
-        category: s[17] || 0,
-        is_military: /^(RCH|DOOM|EVAC|NAVY|USAF|RAF|IAF|RFR|FAF|GAF|CNV|VIPER|HAWK|EAGLE|COBRA|REAPER|FORTE|JAKE|NCHO|PAT|DUKE|KING|REACH|IRON|STEEL)/i.test((s[1] || "").trim()),
+      const acList = data.ac || [];
+
+      const aircraft = acList.map((ac: any) => ({
+        icao24: ac.hex || "",
+        callsign: (ac.flight || "").trim(),
+        origin_country: ac.r || "", // registration country
+        registration: ac.r || "",
+        type: ac.t || "", // aircraft type
+        lat: ac.lat,
+        lng: ac.lon,
+        altitude: ac.alt_baro !== "ground" ? (ac.alt_baro || ac.alt_geom || 0) : 0,
+        on_ground: ac.alt_baro === "ground",
+        velocity: ac.gs != null ? ac.gs * 0.514444 : 0, // knots to m/s
+        heading: ac.track || ac.true_heading || 0,
+        vertical_rate: ac.baro_rate != null ? ac.baro_rate * 0.00508 : 0, // ft/min to m/s
+        squawk: ac.squawk || "",
+        is_military: ac.dbFlags === 1 || /^(RCH|DOOM|EVAC|NAVY|USAF|RAF|IAF|RFR|FAF|GAF|CNV|VIPER|HAWK|EAGLE|COBRA|REAPER|FORTE|JAKE|NCHO|PAT|DUKE|KING|REACH|IRON|STEEL)/i.test((ac.flight || "").trim()),
       })).filter((a: any) => a.lat != null && a.lng != null && !a.on_ground);
 
       if (aircraft.length === 0) {
-        console.log("OpenSky returned 0 flights, using fallback");
+        console.log("adsb.fi returned 0 in-air flights, using fallback");
         const fallback = generateFallbackFlights(lamin, lamax, lomin, lomax);
         return new Response(JSON.stringify({ aircraft: fallback, time: Date.now() / 1000, total: fallback.length, source: "simulated" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -141,15 +148,15 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         aircraft,
-        time: data.time,
+        time: data.ctime || Date.now() / 1000,
         total: aircraft.length,
-        source: "opensky",
+        source: "adsb.fi",
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (fetchErr) {
       clearTimeout(timeout);
-      console.log("OpenSky fetch failed, using fallback:", fetchErr instanceof Error ? fetchErr.message : "unknown");
+      console.log("adsb.fi fetch failed, using fallback:", fetchErr instanceof Error ? fetchErr.message : "unknown");
       const aircraft = generateFallbackFlights(lamin, lamax, lomin, lomax);
       return new Response(JSON.stringify({ aircraft, time: Date.now() / 1000, total: aircraft.length, source: "simulated" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
