@@ -13,8 +13,9 @@ import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
-import { Satellite, Building2, Camera, ShieldAlert } from "lucide-react";
+import { Satellite, Building2, Camera, ShieldAlert, Brain } from "lucide-react";
 import { ResponseMapModal } from "./ResponseMapModal";
+import { CrisisIntelModal } from "./CrisisIntelModal";
 import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
 import { SatelliteGlobe } from "./SatelliteGlobe";
@@ -1808,6 +1809,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showUrbanScene, setShowUrbanScene] = useState(false);
   const [showLiveCameras, setShowLiveCameras] = useState(false);
   const [showResponseMap, setShowResponseMap] = useState(false);
+  const [showCrisisIntel, setShowCrisisIntel] = useState(false);
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
 
   return (
@@ -1882,6 +1884,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <ShieldAlert className="h-3.5 w-3.5 text-emerald-400 group-hover:animate-pulse" />
           <span className="text-[9px] font-mono text-muted-foreground uppercase">RESPONSE MAP</span>
         </button>
+        <button
+          onClick={() => setShowCrisisIntel(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-amber-500/50 transition-all group cursor-pointer"
+          title="Crisis Intelligence — Anomaly Detection"
+        >
+          <Brain className="h-3.5 w-3.5 text-amber-400 group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">CRISIS INTEL</span>
+        </button>
       </div>
 
 
@@ -1947,6 +1957,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           onToggleLayer={(layer) => onToggleLayer?.(layer)}
         />
       )}
+
+      {showCrisisIntel && <CrisisIntelModal onClose={() => setShowCrisisIntel(false)} />}
 
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
