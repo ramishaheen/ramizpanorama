@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car } from "lucide-react";
 
 interface IntelEvent {
   title: string;
@@ -149,6 +149,18 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   
   const [showIntelCard, setShowIntelCard] = useState(!!initialEvent);
   const [nearbyIntel, setNearbyIntel] = useState<{ alerts: any[]; vessels: any[]; airspace: any[] }>({ alerts: [], vessels: [], airspace: [] });
+
+  // New real-time layers
+  const [showVessels, setShowVessels] = useState(true);
+  const [showEarthquakes, setShowEarthquakes] = useState(true);
+  const [showWeather, setShowWeather] = useState(false);
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [vessels, setVessels] = useState<any[]>([]);
+  const [earthquakes, setEarthquakes] = useState<any[]>([]);
+  const vesselMarkersRef = useRef<any[]>([]);
+  const earthquakeMarkersRef = useRef<any[]>([]);
+  const trafficLayerRef = useRef<any>(null);
+  const weatherOverlayRef = useRef<any>(null);
 
   // Fetch nearby intel
   useEffect(() => {
@@ -494,7 +506,191 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
   }, [conflictPoints, showHeatmap]);
 
-  // Map navigation helpers
+  // ===== REAL-TIME VESSEL LAYER =====
+  useEffect(() => {
+    const fetchVessels = async () => {
+      try {
+        const { data } = await supabase.from("vessels").select("*");
+        if (data) setVessels(data);
+      } catch (e) { console.error("Vessel fetch error:", e); }
+    };
+    fetchVessels();
+    const iv = setInterval(fetchVessels, 30_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    vesselMarkersRef.current.forEach(m => m.setMap(null));
+    vesselMarkersRef.current = [];
+
+    if (!showVessels || vessels.length === 0) return;
+
+    const typeColors: Record<string, string> = { MILITARY: "#ef4444", CARGO: "#3b82f6", TANKER: "#f59e0b", FISHING: "#22c55e", UNKNOWN: "#9ca3af" };
+
+    vessels.forEach((v: any) => {
+      const color = typeColors[v.type] || "#9ca3af";
+      const isMil = v.type === "MILITARY";
+      const size = isMil ? 28 : 22;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M12 10v4"/><path d="M12 2v3"/></svg>`;
+
+      const marker = new google.maps.Marker({
+        position: { lat: v.lat, lng: v.lng },
+        map,
+        icon: {
+          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg),
+          scaledSize: new google.maps.Size(size, size),
+          anchor: new google.maps.Point(size / 2, size / 2),
+        },
+        title: `${v.name} (${v.type})`,
+        zIndex: isMil ? 80 : 40,
+      });
+
+      const speedKts = (v.speed || 0).toFixed(1);
+      const infoContent = `
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:200px;border:1px solid ${color}40;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-weight:700;font-size:13px;color:${color};">🚢 ${v.name}</span>
+            <span style="font-size:8px;padding:2px 6px;border-radius:4px;background:${color}20;color:${color};font-weight:600;">${v.type}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
+            <span style="color:#7d8590;">FLAG</span><span>🏴 ${v.flag}</span>
+            <span style="color:#7d8590;">SPEED</span><span>${speedKts} kts</span>
+            <span style="color:#7d8590;">HDG</span><span>${Math.round(v.heading)}°</span>
+            <span style="color:#7d8590;">DEST</span><span>${v.destination || "Unknown"}</span>
+            <span style="color:#7d8590;">POS</span><span>${v.lat.toFixed(4)}°, ${v.lng.toFixed(4)}°</span>
+          </div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("mouseover", () => infoWindow.open(map, marker));
+      marker.addListener("mouseout", () => infoWindow.close());
+
+      vesselMarkersRef.current.push(marker);
+    });
+  }, [vessels, showVessels]);
+
+  // ===== REAL-TIME EARTHQUAKE LAYER =====
+  useEffect(() => {
+    const fetchQuakes = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("usgs-earthquakes");
+        if (!error && data?.earthquakes) setEarthquakes(data.earthquakes);
+      } catch (e) { console.error("Earthquake fetch error:", e); }
+    };
+    fetchQuakes();
+    const iv = setInterval(fetchQuakes, 300_000); // 5 min
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    earthquakeMarkersRef.current.forEach(m => m.setMap(null));
+    earthquakeMarkersRef.current = [];
+
+    if (!showEarthquakes || earthquakes.length === 0) return;
+
+    earthquakes.forEach((eq: any) => {
+      const mag = eq.magnitude || 0;
+      const size = Math.max(16, Math.min(mag * 8, 48));
+      const color = mag >= 6 ? "#ef4444" : mag >= 4.5 ? "#f59e0b" : mag >= 3 ? "#eab308" : "#22c55e";
+      const pulseSize = size + 10;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pulseSize}" height="${pulseSize}" viewBox="0 0 ${pulseSize} ${pulseSize}">
+        <circle cx="${pulseSize/2}" cy="${pulseSize/2}" r="${size/2}" fill="${color}40" stroke="${color}" stroke-width="2">
+          <animate attributeName="r" values="${size/2};${pulseSize/2};${size/2}" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="${pulseSize/2}" cy="${pulseSize/2}" r="${size/4}" fill="${color}"/>
+      </svg>`;
+
+      const marker = new google.maps.Marker({
+        position: { lat: eq.lat, lng: eq.lng },
+        map,
+        icon: {
+          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg),
+          scaledSize: new google.maps.Size(pulseSize, pulseSize),
+          anchor: new google.maps.Point(pulseSize / 2, pulseSize / 2),
+        },
+        title: `M${mag.toFixed(1)} — ${eq.place}`,
+        zIndex: 60,
+      });
+
+      const timeAgo = eq.time ? new Date(eq.time).toLocaleString() : "Unknown";
+      const infoContent = `
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:200px;border:1px solid ${color}40;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-weight:700;font-size:14px;color:${color};">🔴 M${mag.toFixed(1)}</span>
+            ${eq.tsunami ? '<span style="font-size:8px;padding:2px 6px;border-radius:4px;background:#ef444420;color:#ef4444;font-weight:600;">⚠️ TSUNAMI</span>' : ''}
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
+            <span style="color:#7d8590;">PLACE</span><span>${eq.place}</span>
+            <span style="color:#7d8590;">DEPTH</span><span>${eq.depth?.toFixed(1) || "?"} km</span>
+            <span style="color:#7d8590;">TIME</span><span>${timeAgo}</span>
+            <span style="color:#7d8590;">FELT</span><span>${eq.felt || "N/A"} reports</span>
+          </div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("mouseover", () => infoWindow.open(map, marker));
+      marker.addListener("mouseout", () => infoWindow.close());
+      marker.addListener("click", () => { if (eq.url) window.open(eq.url, "_blank"); });
+
+      earthquakeMarkersRef.current.push(marker);
+    });
+  }, [earthquakes, showEarthquakes]);
+
+  // ===== TRAFFIC LAYER =====
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    if (trafficLayerRef.current) {
+      trafficLayerRef.current.setMap(null);
+      trafficLayerRef.current = null;
+    }
+
+    if (showTraffic) {
+      trafficLayerRef.current = new google.maps.TrafficLayer();
+      trafficLayerRef.current.setMap(map);
+    }
+  }, [showTraffic]);
+
+  // ===== WEATHER OVERLAY (OpenWeatherMap precipitation tiles) =====
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    if (weatherOverlayRef.current) {
+      map.overlayMapTypes.forEach((_: any, i: number) => {
+        if (map.overlayMapTypes.getAt(i) === weatherOverlayRef.current) {
+          map.overlayMapTypes.removeAt(i);
+        }
+      });
+      weatherOverlayRef.current = null;
+    }
+
+    if (showWeather) {
+      const weatherTileType = new google.maps.ImageMapType({
+        getTileUrl: (coord: any, zoom: number) =>
+          `https://tile.openweathermap.org/map/precipitation_new/${zoom}/${coord.x}/${coord.y}.png?appid=b1b15e88fa797225412429c1c50c122a1`,
+        tileSize: new google.maps.Size(256, 256),
+        opacity: 0.6,
+        name: "Weather",
+      });
+      map.overlayMapTypes.push(weatherTileType);
+      weatherOverlayRef.current = weatherTileType;
+    }
+  }, [showWeather]);
+
+
   const handleZoomIn = useCallback(() => {
     const map = mapInstanceRef.current;
     if (map) map.setZoom(Math.min((map.getZoom() || 6) + 1, 21));
@@ -709,7 +905,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     return () => {
       markersRef.current.forEach(m => m.setMap(null));
       trailLinesRef.current.forEach(l => l.setMap(null));
+      vesselMarkersRef.current.forEach(m => m.setMap(null));
+      earthquakeMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
+      if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
       if (interpolationRef.current) clearInterval(interpolationRef.current);
     };
   }, []);
@@ -739,6 +938,20 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </button>
           <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showTrails ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Navigation className="h-3 w-3" /> Trails
+          </button>
+          <button onClick={() => setShowVessels(!showVessels)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showVessels ? "border-blue-500/60 bg-blue-500/20 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <Ship className="h-3 w-3" /> Vessels
+            {vessels.length > 0 && <span className="bg-blue-500/30 text-white text-[8px] px-1.5 rounded-full font-bold">{vessels.length}</span>}
+          </button>
+          <button onClick={() => setShowEarthquakes(!showEarthquakes)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showEarthquakes ? "border-yellow-500/60 bg-yellow-500/20 text-white shadow-[0_0_12px_rgba(234,179,8,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <Activity className="h-3 w-3" /> Quakes
+            {earthquakes.length > 0 && <span className="bg-yellow-500/30 text-white text-[8px] px-1.5 rounded-full font-bold">{earthquakes.length}</span>}
+          </button>
+          <button onClick={() => setShowWeather(!showWeather)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showWeather ? "border-cyan-500/60 bg-cyan-500/20 text-white shadow-[0_0_12px_rgba(6,182,212,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <CloudRain className="h-3 w-3" /> Weather
+          </button>
+          <button onClick={() => setShowTraffic(!showTraffic)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showTraffic ? "border-emerald-500/60 bg-emerald-500/20 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <Car className="h-3 w-3" /> Traffic
           </button>
           <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${streetViewActive ? "border-green-500/60 bg-green-500/20 text-white shadow-[0_0_12px_rgba(34,197,94,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Compass className="h-3 w-3" /> 360°
@@ -1050,7 +1263,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       {/* Bottom bar */}
       <div className="flex items-center gap-3 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
         <span className="text-[8px] font-mono text-muted-foreground uppercase">
-          SRC: Google 3D Tiles • {flightSource === "adsb.fi" ? "adsb.fi (LIVE)" : flightSource === "opensky" ? "OpenSky (LIVE)" : flightSource === "adsb.fi+opensky" ? "adsb.fi + OpenSky (LIVE)" : flightSource || "Loading…"}
+          SRC: Google 3D Tiles • {flightSource === "adsb.fi" ? "adsb.fi (LIVE)" : flightSource === "opensky" ? "OpenSky (LIVE)" : flightSource === "adsb.fi+opensky" ? "adsb.fi + OpenSky (LIVE)" : flightSource || "—"}
+          {showVessels ? ` • ${vessels.length} vessels` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showWeather ? " • Weather ON" : ""}{showTraffic ? " • Traffic ON" : ""}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
           {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
