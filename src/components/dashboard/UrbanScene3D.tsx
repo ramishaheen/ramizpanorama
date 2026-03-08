@@ -1983,15 +1983,98 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* Mapillary street-level viewer overlay */}
+        {/* Mapillary street-level viewer overlay with enhanced walking */}
         {mapillaryActive && mapillaryImageId && (
           <div className="absolute inset-0 z-[20] pointer-events-auto">
             <div id="mapillary-viewer" className="w-full h-full" />
+
+            {/* AI Detection overlay on Mapillary */}
+            {showAIDetection && aiDetections.length > 0 && (
+              <div className="absolute inset-0 pointer-events-none z-[22]">
+                {aiDetections.map((det) => (
+                  <div key={det.id} className="absolute transition-all duration-700"
+                    style={{ left: `${det.x}%`, top: `${det.y}%`, width: `${det.w}%`, height: `${det.h}%` }}>
+                    <div className="w-full h-full border-2 rounded-sm" style={{
+                      borderColor: det.color, boxShadow: `0 0 8px ${det.color}50, inset 0 0 4px ${det.color}20`,
+                    }}>
+                      <div className="absolute -top-px -left-px w-2 h-2 border-t-2 border-l-2 rounded-tl-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -top-px -right-px w-2 h-2 border-t-2 border-r-2 rounded-tr-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -bottom-px -left-px w-2 h-2 border-b-2 border-l-2 rounded-bl-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -bottom-px -right-px w-2 h-2 border-b-2 border-r-2 rounded-br-sm" style={{ borderColor: det.color }} />
+                    </div>
+                    <div className="absolute -top-4 left-0 flex items-center gap-1 px-1 py-0.5 rounded-sm text-[7px] font-mono font-bold whitespace-nowrap"
+                      style={{ background: `${det.color}dd`, color: "#fff" }}>
+                      {det.label} {(det.confidence * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                ))}
+                <div className="absolute top-14 left-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur border border-cyan-500/30">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-[8px] font-mono text-cyan-400 font-bold">AI DETECTION</span>
+                  <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
+                </div>
+              </div>
+            )}
+
+            {/* Enhanced walking HUD */}
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[21]">
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-emerald-500/40" style={{ boxShadow: "0 0 20px rgba(5,203,99,0.2)" }}>
                 <Eye className="h-4 w-4 text-emerald-400" />
-                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">MAPILLARY STREET VIEW</span>
-                <button onClick={() => { setMapillaryActive(false); setMapillaryImageId(null); }} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">STREET WALK MODE</span>
+                <span className="text-[8px] font-mono text-muted-foreground/70">|</span>
+                <span className="text-[8px] font-mono text-emerald-400/80">{walkingSteps} steps</span>
+                <button onClick={() => setShowAIDetection(!showAIDetection)} className={`px-1.5 py-0.5 rounded text-[7px] font-mono uppercase border transition-all ${showAIDetection ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400" : "border-border/40 text-muted-foreground"}`}>
+                  🔍 AI
+                </button>
+                <button onClick={() => { setMapillaryActive(false); setMapillaryImageId(null); }} className="ml-1 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+              </div>
+            </div>
+
+            {/* Walking mini-map */}
+            <div className="absolute bottom-4 left-4 z-[21] w-36 h-36 rounded-lg overflow-hidden border border-emerald-500/30 bg-black/70 backdrop-blur"
+              style={{ boxShadow: "0 0 15px rgba(5,203,99,0.15)" }}>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative w-full h-full">
+                  {/* Walking path visualization */}
+                  <svg className="absolute inset-0 w-full h-full">
+                    {walkingPath.length > 1 && walkingPath.map((p, i) => {
+                      if (i === 0) return null;
+                      const prev = walkingPath[i - 1];
+                      const cx = 68 + (p.lng - lng) * 8000;
+                      const cy = 68 + (lat - p.lat) * 8000;
+                      const px = 68 + (prev.lng - lng) * 8000;
+                      const py = 68 + (lat - prev.lat) * 8000;
+                      return <line key={i} x1={px} y1={py} x2={cx} y2={cy} stroke="#22c55e" strokeWidth="2" opacity="0.6" />;
+                    })}
+                    {/* Current position */}
+                    <circle cx="68" cy="68" r="5" fill="#22c55e" opacity="0.9">
+                      <animate attributeName="r" values="4;7;4" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <circle cx="68" cy="68" r="3" fill="white" opacity="0.9" />
+                  </svg>
+                  {/* Nearby cameras on mini-map */}
+                  {cameras.filter(c => Math.abs(c.lat - lat) < 0.01 && Math.abs(c.lng - lng) < 0.01).map((c, i) => {
+                    const cx = 68 + (c.lng - lng) * 8000;
+                    const cy = 68 + (lat - c.lat) * 8000;
+                    if (cx < 0 || cx > 136 || cy < 0 || cy > 136) return null;
+                    return (
+                      <div key={i} className="absolute w-2 h-2 rounded-full bg-amber-400 border border-amber-300" style={{ left: cx - 4, top: cy - 4, boxShadow: "0 0 6px rgba(251,191,36,0.6)" }} />
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 bg-black/80 text-center">
+                <span className="text-[7px] font-mono text-emerald-400/80">📍 {lat.toFixed(4)}°, {lng.toFixed(4)}°</span>
+              </div>
+            </div>
+
+            {/* Walking controls hint */}
+            <div className="absolute bottom-4 right-4 z-[21] pointer-events-none">
+              <div className="bg-black/70 backdrop-blur rounded-lg px-3 py-2 border border-border/30 space-y-1">
+                <span className="text-[8px] font-mono text-foreground/80 font-bold block">Navigation</span>
+                <span className="text-[7px] font-mono text-muted-foreground/70 block">🖱️ Click arrows to walk</span>
+                <span className="text-[7px] font-mono text-muted-foreground/70 block">🔄 Drag to look around</span>
+                <span className="text-[7px] font-mono text-muted-foreground/70 block">⬆️⬇️ Scroll to zoom</span>
               </div>
             </div>
           </div>
