@@ -448,7 +448,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           const chunks = splitRoadByLength(fullPoints, zoom >= 21 ? 140 : zoom >= 20 ? 170 : 220);
 
           return chunks.map((chunkPoints, chunkIdx) => ({
-            id: Number(`${el.id}${chunkIdx}`),
+            id: el.id * 1000 + chunkIdx,
             highway,
             points: chunkPoints,
             lanes,
