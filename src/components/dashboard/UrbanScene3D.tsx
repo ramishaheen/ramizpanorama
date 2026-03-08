@@ -408,6 +408,40 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           </div>
         )}
 
+        {/* ===== TRAIL LINES ===== */}
+        {showFlights && showMarkers && showTrails && markerPositions.length > 0 && (
+          <svg className="absolute inset-0 w-full h-full z-[9] pointer-events-none overflow-hidden">
+            <defs>
+              <linearGradient id="trail-civ" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(96,165,250,0)" />
+                <stop offset="100%" stopColor="rgba(96,165,250,0.7)" />
+              </linearGradient>
+              <linearGradient id="trail-mil" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(239,68,68,0)" />
+                <stop offset="100%" stopColor="rgba(239,68,68,0.7)" />
+              </linearGradient>
+            </defs>
+            {markerPositions.map((ac) => {
+              if (ac.trail.length < 2) return null;
+              const points = [...ac.trail, { x: ac.px, y: ac.py }];
+              const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+              return (
+                <path
+                  key={`trail-${ac.icao24}`}
+                  d={d}
+                  fill="none"
+                  stroke={`url(#trail-${ac.is_military ? "mil" : "civ"})`}
+                  strokeWidth={ac.is_military ? 2 : 1.5}
+                  strokeLinecap="round"
+                  strokeDasharray={ac.is_military ? "none" : "4 2"}
+                  opacity={0.8}
+                  style={{ filter: `drop-shadow(0 0 3px ${ac.is_military ? "rgba(239,68,68,0.5)" : "rgba(96,165,250,0.4)"})` }}
+                />
+              );
+            })}
+          </svg>
+        )}
+
         {/* ===== AIRCRAFT MARKERS OVERLAY ===== */}
         {showFlights && showMarkers && markerPositions.length > 0 && (
           <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
