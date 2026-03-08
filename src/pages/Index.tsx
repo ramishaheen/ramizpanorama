@@ -26,6 +26,7 @@ import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
 import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
+import { WeatherTrafficPanel } from "@/components/dashboard/WeatherTrafficPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
