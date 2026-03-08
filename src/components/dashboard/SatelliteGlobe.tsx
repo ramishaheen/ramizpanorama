@@ -963,15 +963,24 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const dt = (now - lastFrameTime) / 1000; // seconds
           lastFrameTime = now;
           const t = now * 0.003;
+          const highlightSet = countrySatNamesRef.current;
           scene.traverse((obj: any) => {
             if (obj.userData?.isSatGroup) {
-              // Glow pulse
               const phase = t + (obj.userData.time || 0);
               const pulse = 0.85 + Math.sin(phase) * 0.25;
               obj.userData.glow.scale.set(pulse, pulse, pulse);
               obj.userData.glowMat.opacity = 0.1 + Math.sin(phase) * 0.12;
               // Slow spin
               obj.rotation.y += (obj.userData.spinSpeed || 0.3) * dt;
+              // Blink effect for country-highlighted satellites
+              if (highlightSet.size > 0 && obj.userData.satId && highlightSet.has(obj.userData.satId)) {
+                const blink = (Math.sin(t * 4 + (obj.userData.time || 0)) + 1) * 0.5; // 0-1 fast blink
+                const scale = 1.0 + blink * 0.5; // pulse between 1x and 1.5x
+                obj.scale.set(scale, scale, scale);
+                obj.userData.glowMat.opacity = 0.15 + blink * 0.35;
+              } else {
+                obj.scale.set(1, 1, 1);
+              }
             }
           });
           pulseFrameRef.current = requestAnimationFrame(animatePulse);
