@@ -609,7 +609,42 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* ===== CONFLICT HEATMAP CANVAS ===== */}
+        {/* ===== MAP NAVIGATION CONTROLS ===== */}
+        {apiKey && !streetViewActive && (
+          <div className="absolute right-3 bottom-16 z-[12] flex flex-col gap-1.5 pointer-events-auto">
+            {[
+              { icon: <ZoomIn className="h-3.5 w-3.5" />, action: handleZoomIn, tip: "Zoom In" },
+              { icon: <ZoomOut className="h-3.5 w-3.5" />, action: handleZoomOut, tip: "Zoom Out" },
+              { icon: <RotateCcw className="h-3.5 w-3.5" />, action: handleRotate, tip: "Rotate 45°" },
+              { icon: <Maximize2 className="h-3.5 w-3.5" />, action: handleToggleTilt, tip: "Toggle 3D Tilt" },
+              { icon: <Compass className="h-3.5 w-3.5" />, action: handleResetView, tip: "Reset View" },
+              { icon: <span className="text-[10px] font-bold">360°</span>, action: () => setStreetViewActive(true), tip: "Enter 360° Street View" },
+            ].map((btn, i) => (
+              <button
+                key={i}
+                onClick={btn.action}
+                title={btn.tip}
+                className="w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border border-primary/25 text-primary hover:bg-primary/15 hover:border-primary/50 transition-all"
+                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
+              >
+                {btn.icon}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ===== STREET VIEW ACTIVE INDICATOR ===== */}
+        {streetViewActive && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
+              <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
+              <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
+              <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">
+                EXIT
+              </button>
+            </div>
+          </div>
+        )}
         <canvas
           ref={heatCanvasRef}
           className="absolute inset-0 w-full h-full z-[8] pointer-events-none"
