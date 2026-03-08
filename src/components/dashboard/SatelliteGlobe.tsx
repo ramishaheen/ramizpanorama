@@ -373,6 +373,51 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     setAiMessages(prev => [...prev, { role: "assistant", content: reply }]);
   }, [aiInput, aiLoading, aiMessages]);
 
+  const runPrediction = useCallback(async (sat: SatelliteData) => {
+    setPredicting(true);
+    setPredictionData(null);
+    setPredictionTrack(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("orbit-predict", {
+        body: {
+          action: "full_analysis",
+          satellite: {
+            name: sat.name,
+            noradId: sat.noradId,
+            category: sat.category,
+            country: sat.country,
+            operator: sat.operator,
+            lat: sat.lat,
+            lng: sat.lng,
+            alt: sat.alt,
+            inclination: sat.inclination,
+            raan: sat.raan,
+            meanAnomaly: sat.meanAnomaly,
+            meanMotion: sat.meanMotion,
+            eccentricity: sat.eccentricity,
+            epochYear: sat.epochYear,
+            epochDay: sat.epochDay,
+          },
+          hoursAhead: 24,
+          targetLat: 31.5,
+          targetLng: 34.8,
+          radiusKm: 1500,
+        },
+      });
+      if (error) throw error;
+      setPredictionData(data);
+      // Show predicted track on globe
+      if (data?.positions) {
+        setPredictionTrack(data.positions.map((p: any) => ({ lat: p.lat, lng: p.lng })));
+      }
+    } catch (err) {
+      console.error("Prediction failed:", err);
+      setPredictionData({ ai_analysis: "⚠️ Prediction failed. Try again." });
+    } finally {
+      setPredicting(false);
+    }
+  }, []);
+
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
