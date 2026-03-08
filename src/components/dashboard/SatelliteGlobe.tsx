@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2 } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -310,6 +310,14 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [aiLoading, setAiLoading] = useState(false);
   const aiScrollRef = useRef<HTMLDivElement>(null);
   const satsRef = useRef<SatelliteData[]>([]);
+  const [predicting, setPredicting] = useState(false);
+  const [predictionData, setPredictionData] = useState<{
+    positions?: { time: string; lat: number; lng: number; alt: number }[];
+    passes?: { startTime: string; closestTime: string; endTime: string; minDistKm: number; maxElevation: number }[];
+    ai_analysis?: string;
+    satellite_name?: string;
+  } | null>(null);
+  const [predictionTrack, setPredictionTrack] = useState<{ lat: number; lng: number }[] | null>(null);
 
   useEffect(() => {
     satsRef.current = satellites;
@@ -364,6 +372,51 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     const reply = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
     setAiMessages(prev => [...prev, { role: "assistant", content: reply }]);
   }, [aiInput, aiLoading, aiMessages]);
+
+  const runPrediction = useCallback(async (sat: SatelliteData) => {
+    setPredicting(true);
+    setPredictionData(null);
+    setPredictionTrack(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("orbit-predict", {
+        body: {
+          action: "full_analysis",
+          satellite: {
+            name: sat.name,
+            noradId: sat.noradId,
+            category: sat.category,
+            country: sat.country,
+            operator: sat.operator,
+            lat: sat.lat,
+            lng: sat.lng,
+            alt: sat.alt,
+            inclination: sat.inclination,
+            raan: sat.raan,
+            meanAnomaly: sat.meanAnomaly,
+            meanMotion: sat.meanMotion,
+            eccentricity: sat.eccentricity,
+            epochYear: sat.epochYear,
+            epochDay: sat.epochDay,
+          },
+          hoursAhead: 24,
+          targetLat: 31.5,
+          targetLng: 34.8,
+          radiusKm: 1500,
+        },
+      });
+      if (error) throw error;
+      setPredictionData(data);
+      // Show predicted track on globe
+      if (data?.positions) {
+        setPredictionTrack(data.positions.map((p: any) => ({ lat: p.lat, lng: p.lng })));
+      }
+    } catch (err) {
+      console.error("Prediction failed:", err);
+      setPredictionData({ ai_analysis: "⚠️ Prediction failed. Try again." });
+    } finally {
+      setPredicting(false);
+    }
+  }, []);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -767,40 +820,59 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     const globe = globeRef.current;
     if (!globe) return;
 
-    if (orbitPath && orbitPath.length > 1 && selectedSat) {
-      const segments: { coords: { lat: number; lng: number }[] }[] = [];
-      let currentSegment: { lat: number; lng: number }[] = [orbitPath[0]];
+    const allSegments: { coords: { lat: number; lng: number }[]; type: string }[] = [];
 
+    // Current orbit path
+    if (orbitPath && orbitPath.length > 1 && selectedSat) {
+      let currentSegment: { lat: number; lng: number }[] = [orbitPath[0]];
       for (let i = 1; i < orbitPath.length; i++) {
         const prev = orbitPath[i - 1];
         const curr = orbitPath[i];
         if (Math.abs(curr.lng - prev.lng) > 90) {
-          if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+          if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "orbit" });
           currentSegment = [curr];
         } else {
           currentSegment.push(curr);
         }
       }
-      if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+      if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "orbit" });
+    }
 
-      const altitude = Math.min(selectedSat.alt / 6371 * 0.3 + 0.01, 0.7);
+    // Predicted future track (green dashed)
+    if (predictionTrack && predictionTrack.length > 1) {
+      let currentSegment: { lat: number; lng: number }[] = [predictionTrack[0]];
+      for (let i = 1; i < predictionTrack.length; i++) {
+        const prev = predictionTrack[i - 1];
+        const curr = predictionTrack[i];
+        if (Math.abs(curr.lng - prev.lng) > 90) {
+          if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "predict" });
+          currentSegment = [curr];
+        } else {
+          currentSegment.push(curr);
+        }
+      }
+      if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "predict" });
+    }
+
+    if (allSegments.length > 0) {
+      const altitude = selectedSat ? Math.min(selectedSat.alt / 6371 * 0.3 + 0.01, 0.7) : 0.05;
 
       globe
-        .pathsData(segments)
+        .pathsData(allSegments)
         .pathPoints('coords')
         .pathPointLat((p: any) => p.lat)
         .pathPointLng((p: any) => p.lng)
         .pathPointAlt(() => altitude)
-        .pathColor(() => [orbitColor + 'cc', orbitColor + '33'])
-        .pathStroke(1.5)
+        .pathColor((seg: any) => seg.type === "predict" ? ['#22c55ecc', '#22c55e33'] : [orbitColor + 'cc', orbitColor + '33'])
+        .pathStroke((seg: any) => seg.type === "predict" ? 2 : 1.5)
         .pathDashLength(0.02)
         .pathDashGap(0.01)
-        .pathDashAnimateTime(4000)
+        .pathDashAnimateTime((seg: any) => seg.type === "predict" ? 6000 : 4000)
         .pathTransitionDuration(300);
     } else {
       globe.pathsData([]);
     }
-  }, [orbitPath, selectedSat, orbitColor]);
+  }, [orbitPath, selectedSat, orbitColor, predictionTrack]);
 
   // Resize
   useEffect(() => {
@@ -1170,6 +1242,94 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 EPOCH: {selectedSat.epochYear} DAY{" "}
                 {selectedSat.epochDay?.toFixed(2)} • CELESTRAK
               </div>
+              {/* Prediction Buttons */}
+              <div className="flex gap-1 pt-1.5">
+                <button
+                  onClick={() => runPrediction(selectedSat)}
+                  disabled={predicting}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 disabled:opacity-40 transition-all"
+                >
+                  {predicting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crosshair className="h-3 w-3" />}
+                  {predicting ? "PREDICTING..." : "AI PREDICT"}
+                </button>
+                <button
+                  onClick={() => openAiChat(selectedSat)}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all"
+                >
+                  <Bot className="h-3 w-3" /> ASK AI
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Prediction Results Panel */}
+        {predictionData && (
+          <div
+            className="absolute top-20 left-[340px] z-[2004] w-80 rounded border backdrop-blur-md pointer-events-auto animate-fade-in"
+            style={{ background: "rgba(5,10,18,0.94)", borderColor: "#22c55e40", boxShadow: "0 0 25px #22c55e15" }}
+          >
+            <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: "#22c55e30", background: "#22c55e08" }}>
+              <div className="flex items-center gap-1.5">
+                <Crosshair className="h-3 w-3 text-green-400" />
+                <span className="text-[10px] font-mono font-bold text-green-400">
+                  ORBIT PREDICTION: {predictionData.satellite_name}
+                </span>
+              </div>
+              <button
+                onClick={() => { setPredictionData(null); setPredictionTrack(null); }}
+                className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"
+              >
+                <X className="h-2.5 w-2.5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-3 space-y-3">
+              {/* Passes */}
+              {predictionData.passes && predictionData.passes.length > 0 && (
+                <div>
+                  <div className="text-[8px] font-mono text-green-400/80 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <MapPin className="h-2.5 w-2.5" /> MIDDLE EAST PASSES (NEXT 48H)
+                  </div>
+                  <div className="space-y-1">
+                    {predictionData.passes.slice(0, 6).map((pass, i) => (
+                      <div key={i} className="bg-white/5 rounded px-2 py-1.5 border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono text-white/90 flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5 text-green-400" />
+                            {new Date(pass.closestTime).toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" })} UTC
+                          </span>
+                          <span className="text-[8px] font-mono text-green-400">{Math.round(pass.minDistKm)} km</span>
+                        </div>
+                        <div className="text-[8px] font-mono text-white/50 mt-0.5">
+                          {new Date(pass.startTime).toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" })} → {new Date(pass.endTime).toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" })}
+                          {pass.maxElevation && <span className="ml-1">• EL: {pass.maxElevation.toFixed(1)}°</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Analysis */}
+              {predictionData.ai_analysis && (
+                <div>
+                  <div className="text-[8px] font-mono text-green-400/80 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <Bot className="h-2.5 w-2.5" /> AI ORBITAL ANALYSIS
+                  </div>
+                  <div className="bg-white/5 rounded px-2.5 py-2 border border-white/10">
+                    <div className="prose prose-sm prose-invert max-w-none text-[9px] font-mono text-white/80 leading-relaxed [&_h1]:text-[11px] [&_h2]:text-[10px] [&_h3]:text-[9px] [&_p]:mb-1.5 [&_li]:mb-0.5 [&_ul]:pl-3 [&_ol]:pl-3 [&_strong]:text-green-400">
+                      <ReactMarkdown>{predictionData.ai_analysis}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Track info */}
+              {predictionData.positions && (
+                <div className="text-[7px] font-mono text-white/30 pt-1 border-t border-white/10">
+                  {predictionData.positions.length} PREDICTED POSITIONS • 24H TRACK PLOTTED ON GLOBE
+                </div>
+              )}
             </div>
           </div>
         )}
