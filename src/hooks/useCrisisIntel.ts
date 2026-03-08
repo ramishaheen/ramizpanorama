@@ -202,27 +202,27 @@ export function useCrisisIntel(city: string) {
       let aiSuccess = false;
 
       try {
-        const { data: fnData, error: fnError } = await supabase.functions.invoke("crisis-intel", {
+        const res = await supabase.functions.invoke("crisis-intel", {
           body: { city },
         });
 
+        const fnError = res?.error;
+        const fnData = res?.data;
+
         if (fnError) {
-          const msg = fnError.message || String(fnError);
-          if (msg.includes("402") || msg.includes("credits") || msg.includes("503") || msg.includes("No AI provider") || msg.includes("non-2xx")) {
-            // Silent — DB data will fill in
-          } else if (msg.includes("429") || msg.includes("Rate limit")) {
-            // Silent — DB data will fill in
-          } else {
-            console.warn("Crisis AI error:", msg);
-          }
+          // All AI errors are silent — DB data fills in
+          console.log("Crisis AI unavailable:", fnError.message || fnError);
         } else if (fnData && !fnData.error) {
           aiEvents = fnData.events || [];
           aiSummary = fnData.city_summary || "";
           aiThreatLevel = fnData.threat_level || "moderate";
           aiSuccess = true;
+        } else if (fnData?.error) {
+          console.log("Crisis AI returned error:", fnData.error);
         }
-      } catch (e) {
-        console.warn("Crisis AI unavailable, using DB incidents:", e);
+      } catch (e: any) {
+        // Completely swallow — DB data is the fallback
+        console.log("Crisis AI call failed, using DB incidents:", e?.message || e);
       }
 
       // Merge: AI events + DB events (deduplicate by proximity)
