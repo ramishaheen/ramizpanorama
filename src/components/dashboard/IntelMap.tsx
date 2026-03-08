@@ -251,11 +251,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const telegramGroupRef = useRef<L.LayerGroup | null>(null);
   const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const fusionGroupRef = useRef<L.LayerGroup | null>(null);
+  const cctvGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
   const [up42Features, setUp42Features] = useState<UP42Feature[]>([]);
   const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
+  const [showArabCCTV, setShowArabCCTV] = useState(false);
+  const [arabCameras, setArabCameras] = useState<any[]>([]);
+  const [loadingCCTV, setLoadingCCTV] = useState(false);
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
@@ -513,6 +517,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     conflictGroupRef.current = L.layerGroup().addTo(map);
     up42GroupRef.current = L.layerGroup().addTo(map);
     fusionGroupRef.current = L.layerGroup().addTo(map);
+    cctvGroupRef.current = L.layerGroup().addTo(map);
     newsGroupRef.current = L.layerGroup().addTo(map);
     telegramGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
