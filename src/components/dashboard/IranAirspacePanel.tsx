@@ -103,6 +103,40 @@ interface IranAirspacePanelProps {
   onFlyTo?: (lat: number, lng: number) => void;
 }
 
+// Proximity alert sound — urgent radar warning tone
+function playProximityAlert() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Triple beep pattern — ascending urgent tone
+    for (let i = 0; i < 3; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 800 + i * 200; // 800, 1000, 1200 Hz ascending
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + i * 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.2 + 0.15);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.2);
+      osc.stop(ctx.currentTime + i * 0.2 + 0.15);
+    }
+    // Low warning rumble underneath
+    const rumble = ctx.createOscillator();
+    const rumbleGain = ctx.createGain();
+    rumble.type = "sawtooth";
+    rumble.frequency.value = 120;
+    rumbleGain.gain.setValueAtTime(0.08, ctx.currentTime);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    rumble.connect(rumbleGain).connect(ctx.destination);
+    rumble.start(ctx.currentTime);
+    rumble.stop(ctx.currentTime + 0.8);
+    setTimeout(() => ctx.close(), 2000);
+  } catch (e) {
+    // Audio not available
+  }
+}
+
+const PROXIMITY_THRESHOLD_KM = 50; // Alert radius around sensitive sites
+
 export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAirspacePanelProps) => {
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,8 +147,11 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
   const [showMilOnly, setShowMilOnly] = useState(false);
   const [selectedAc, setSelectedAc] = useState<Aircraft | null>(null);
   const [expanded, setExpanded] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [proximityAlerts, setProximityAlerts] = useState<{ callsign: string; base: string; dist: number; time: number }[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const prevAircraftRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const alertedIcaosRef = useRef<Set<string>>(new Set()); // Track already-alerted aircraft to avoid spam
 
   const fetchIranAirspace = async () => {
     setLoading(true);
