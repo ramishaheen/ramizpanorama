@@ -556,7 +556,7 @@ export const CrisisIntelModal = ({ onClose }: CrisisIntelModalProps) => {
       </div>
 
       {error && (
-        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-destructive/90 text-destructive-foreground text-[10px] font-mono px-3 py-1 rounded z-[10000]">
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-destructive/90 text-destructive-foreground text-[10px] font-mono px-3 py-1 rounded z-[9999999]">
           {error}
         </div>
       )}
