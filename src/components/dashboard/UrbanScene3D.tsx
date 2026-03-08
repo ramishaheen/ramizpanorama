@@ -146,7 +146,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: 12, // wider zoom so flights are visible
+        zoom: initialEvent ? 18 : 12, // street-level when from event, wider for general view
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
