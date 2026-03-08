@@ -67,12 +67,14 @@ function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: bool
     <animate attributeName="r" values="${center - 4};${center}" dur="2s" repeatCount="indefinite"/>
     <animate attributeName="opacity" values="0.4;0" dur="2s" repeatCount="indefinite"/>
   </circle>`;
+  // Realistic airplane silhouette path (top-down view, nose pointing up)
+  const planePath = `M${center} ${center - 11} l-1.2 3.5 l-8 4 l0 1.8 l8-2.5 l0 5 l-3 2.2 l0 1.5 l3-1 l1.2 1.5 l1.2-1.5 l3 1 l0-1.5 l-3-2.2 l0-5 l8 2.5 l0-1.8 l-8-4 l-1.2-3.5z`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <defs><filter id="g${isTracked ? 't' : 'n'}"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="${glowColor}"/></filter></defs>
     ${trackRing}
     ${pulseRing}
     <g transform="rotate(${heading} ${center} ${center})" filter="url(#g${isTracked ? 't' : 'n'})">
-      <path d="M${center} ${center - 10}l-3.5 8h-7l2 3-2 3h7l3.5 8 3.5-8h7l-2-3 2-3h-7l-3.5-8z" fill="${color}" stroke="rgba(255,255,255,0.25)" stroke-width="0.5"/>
+      <path d="${planePath}" fill="${color}" stroke="rgba(255,255,255,0.2)" stroke-width="0.4"/>
     </g>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;

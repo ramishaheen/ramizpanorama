@@ -1065,14 +1065,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         }).addTo(group);
       }
 
-      // Clean aircraft SVG — proper airplane shape
-      const aircraftSvg = isMil
-        ? `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg" style="--flight-color:${color};transform:rotate(${ac.heading}deg);">
-            <path d="M16 2l-3 8h-9l2 4-2 4h9l3 8 3-8h9l-2-4 2-4h-9l-3-8z" fill="${color}" stroke="${color}" stroke-width="0.5"/>
-            <circle cx="16" cy="14" r="2" fill="rgba(0,0,0,0.3)"/>
-          </svg>`
-        : `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg" style="--flight-color:${color};transform:rotate(${ac.heading}deg);">
-            <path d="M16 3l-2.5 10H5l1.5 3L5 19h8.5L16 29l2.5-10H27l-1.5-3L27 13h-8.5L16 3z" fill="${color}" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+      // Realistic airplane silhouette (top-down, nose up)
+      const planePath = "M16 3 l-1.5 4.5 l-10 5 l0 2.2 l10-3 l0 6.5 l-3.5 2.8 l0 1.8 l3.5-1.2 l1.5 2 l1.5-2 l3.5 1.2 l0-1.8 l-3.5-2.8 l0-6.5 l10 3 l0-2.2 l-10-5 l-1.5-4.5z";
+      const aircraftSvg = `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg" style="--flight-color:${color};transform:rotate(${ac.heading}deg);">
+            <path d="${planePath}" fill="${color}" stroke="rgba(255,255,255,0.2)" stroke-width="0.4"/>
           </svg>`;
 
       const trackedRingHtml = isTracked
