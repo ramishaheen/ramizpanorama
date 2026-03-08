@@ -87,7 +87,7 @@ function getTimeDensityFactor(): { factor: number; period: string } {
   if (hour >= 16 && hour < 19) return { factor: 0.95, period: "RUSH HOUR" };
   if (hour >= 9 && hour < 16) return { factor: 0.7, period: "MIDDAY" };
   if (hour >= 19 && hour < 23) return { factor: 0.55, period: "EVENING" };
-  return { factor: 0.35, period: "NIGHT" };
+  return { factor: 0.65, period: "NIGHT" };
 }
 
 /** Estimate road length in meters from coordinate array */
