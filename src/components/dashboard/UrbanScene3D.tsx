@@ -406,6 +406,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
                 {conflictPoints.length}
               </span>
             )}
+          </button>
           <button
             onClick={() => setShowTrails(!showTrails)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
