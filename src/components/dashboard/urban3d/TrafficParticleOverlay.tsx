@@ -13,6 +13,8 @@ interface Road {
   highway: string;
   lanes: number;
   oneway: boolean;
+  onewayDirection: 1 | -1 | 0;
+  laneDirections: (1 | -1)[];
   progressStops: number[]; // normalized cumulative distance [0..1] per point
 }
 
