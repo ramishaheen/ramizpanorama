@@ -24,6 +24,7 @@ import { WarUpdatesPanel } from "@/components/dashboard/WarUpdatesPanel";
 import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
+import { RocketEntryPanel } from "@/components/dashboard/RocketEntryPanel";
 import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
 import { WeatherTrafficPanel } from "@/components/dashboard/WeatherTrafficPanel";
@@ -45,7 +46,7 @@ import {
 } from "@dnd-kit/sortable";
 
 const STORAGE_KEY = "waros-layout";
-const DEFAULT_LEFT_ORDER = ["risk", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
+const DEFAULT_LEFT_ORDER = ["rockets", "risk", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 interface LayoutState {
@@ -215,6 +216,7 @@ const Index = () => {
   }, []);
 
   const leftWidgets: Record<string, ReactNode> = {
+    rockets: <RocketEntryPanel rockets={rockets} />,
     risk: <RiskScoreGauge score={riskScore} />,
     "geo-fusion": <CountryStatusPanel data={geoFusion.data} loading={geoFusion.loading} error={geoFusion.error} onRefresh={geoFusion.refresh} />,
     weather: <WeatherTrafficPanel />,
