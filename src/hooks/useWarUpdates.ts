@@ -45,9 +45,10 @@ export function useWarUpdates() {
   }, []);
 
   useEffect(() => {
-    fetch_();
-    const interval = setInterval(fetch_, 90000); // refresh every 90s
-    return () => clearInterval(interval);
+    // Stagger: war-updates loads after 4s
+    const initialDelay = setTimeout(fetch_, 4000);
+    const interval = setInterval(fetch_, 120000);
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetch_]);
 
   return { data, loading, error, refresh: fetch_ };

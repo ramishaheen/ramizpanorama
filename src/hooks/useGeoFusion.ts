@@ -151,9 +151,10 @@ export function useGeoFusion() {
   }, [data]);
 
   useEffect(() => {
-    fetchFusion();
-    const interval = setInterval(fetchFusion, 180000); // 3 min refresh
-    return () => clearInterval(interval);
+    // Stagger: geo-fusion loads after 6s
+    const initialDelay = setTimeout(fetchFusion, 6000);
+    const interval = setInterval(fetchFusion, 240000); // 4 min refresh
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, []);
 
   return { data, loading, error, refresh: fetchFusion };

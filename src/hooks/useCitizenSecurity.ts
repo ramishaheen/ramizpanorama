@@ -54,12 +54,13 @@ export function useCitizenSecurity() {
     debounceRef.current = setTimeout(() => {
       console.log("[CitizenSecurity] New incident detected — auto-recalculating...");
       fetchSecurity();
-    }, 5000); // 5s debounce to batch rapid changes
+    }, 15000); // 15s debounce to avoid rate limits
   }, [fetchSecurity]);
 
   useEffect(() => {
-    fetchSecurity();
-    const interval = setInterval(fetchSecurity, 120000); // 2 min interval
+    // Stagger initial fetch to avoid Gemini rate limits
+    const initialDelay = setTimeout(fetchSecurity, 8000);
+    const interval = setInterval(fetchSecurity, 180000); // 3 min interval
 
     // Subscribe to realtime changes on incident-related tables
     const channel = supabase
@@ -89,6 +90,7 @@ export function useCitizenSecurity() {
       .subscribe();
 
     return () => {
+      clearTimeout(initialDelay);
       clearInterval(interval);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
