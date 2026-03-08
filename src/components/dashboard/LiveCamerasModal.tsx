@@ -143,6 +143,20 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
     }
   }, [embeddableUrl, embedState]);
 
+  // Listen for YouTube postMessage "unavailable" signals
+  useEffect(() => {
+    if (!embeddableUrl?.includes("youtube.com")) return;
+    const handler = (e: MessageEvent) => {
+      try {
+        if (typeof e.data === "string" && e.data.includes('"event":"onError"')) {
+          setEmbedState("blocked");
+        }
+      } catch {}
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [embeddableUrl]);
+
   // Embeddable iframe available
   if (embeddableUrl && embedState !== "blocked") {
     return (
@@ -157,7 +171,7 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
         )}
         <iframe
           key={cam.id}
-          src={embeddableUrl}
+          src={embeddableUrl + (embeddableUrl.includes("youtube.com") ? "&enablejsapi=1" : "")}
           className="w-full h-full border-0"
           allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
           allowFullScreen
