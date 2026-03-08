@@ -806,7 +806,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
   }, [weatherData, showWeather]);
 
-
+  const handleZoomIn = useCallback(() => {
     const map = mapInstanceRef.current;
     if (map) map.setZoom(Math.min((map.getZoom() || 6) + 1, 21));
   }, []);
