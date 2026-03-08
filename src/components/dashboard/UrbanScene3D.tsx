@@ -797,6 +797,125 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             </div>
           </div>
         )}
+
+        {/* ===== INTEL BRIEFING CARD ===== */}
+        {showIntelCard && initialEvent && (
+          <div className="absolute bottom-14 right-3 z-[15] pointer-events-auto w-72 max-h-[60vh] overflow-y-auto">
+            <div
+              className="bg-black/90 backdrop-blur-xl border rounded-lg p-3 space-y-2"
+              style={{
+                borderColor: initialEvent.severity === "critical" ? "rgba(239,68,68,0.6)" : initialEvent.severity === "high" ? "rgba(251,146,36,0.6)" : "hsl(var(--primary) / 0.4)",
+                boxShadow: initialEvent.severity === "critical" ? "0 0 25px rgba(239,68,68,0.2)" : "0 0 20px hsl(var(--primary) / 0.1)",
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" style={{
+                    color: initialEvent.severity === "critical" ? "#ef4444" : initialEvent.severity === "high" ? "#f59e0b" : "hsl(var(--primary))"
+                  }} />
+                  <span className="text-[9px] font-mono font-bold text-primary uppercase">Intel Briefing</span>
+                </div>
+                <button onClick={() => setShowIntelCard(false)} className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10">
+                  <X className="h-2.5 w-2.5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Severity badge */}
+              {initialEvent.severity && (
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[7px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${
+                    initialEvent.severity === "critical" ? "bg-red-500/20 text-red-400" :
+                    initialEvent.severity === "high" ? "bg-orange-500/20 text-orange-400" :
+                    initialEvent.severity === "medium" ? "bg-yellow-500/20 text-yellow-400" :
+                    "bg-green-500/20 text-green-400"
+                  }`}>
+                    {initialEvent.severity} SEVERITY
+                  </span>
+                  {initialEvent.type && (
+                    <span className="text-[7px] font-mono text-muted-foreground/70 uppercase px-1.5 py-0.5 rounded border border-border/30">
+                      {initialEvent.type}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Event title */}
+              <div className="text-[10px] font-mono font-bold text-foreground/90 leading-tight">
+                {initialEvent.title}
+              </div>
+
+              {/* Summary */}
+              {initialEvent.summary && (
+                <p className="text-[8px] font-mono text-muted-foreground/80 leading-relaxed">
+                  {initialEvent.summary}
+                </p>
+              )}
+
+              {/* Coordinates */}
+              <div className="flex items-center gap-2 text-[7px] font-mono text-muted-foreground/60">
+                <MapPin className="h-2.5 w-2.5" />
+                <span>{initialEvent.lat.toFixed(4)}°N, {initialEvent.lng.toFixed(4)}°E</span>
+              </div>
+
+              {/* Source */}
+              {initialEvent.source && (
+                <div className="text-[7px] font-mono text-muted-foreground/50 italic">
+                  SRC: {initialEvent.source}
+                </div>
+              )}
+
+              {/* Nearby Intel Summary */}
+              <div className="border-t border-border/30 pt-2 mt-1 space-y-1">
+                <span className="text-[8px] font-mono font-bold text-primary/80 uppercase">Nearby Activity</span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
+                    <Shield className="h-3 w-3 text-orange-400 mb-0.5" />
+                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.alerts.length}</span>
+                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Alerts</span>
+                  </div>
+                  <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
+                    <Anchor className="h-3 w-3 text-blue-400 mb-0.5" />
+                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.vessels.length}</span>
+                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Vessels</span>
+                  </div>
+                  <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
+                    <Radio className="h-3 w-3 text-yellow-400 mb-0.5" />
+                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.airspace.length}</span>
+                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Airspace</span>
+                  </div>
+                </div>
+
+                {/* Nearby alerts list */}
+                {nearbyIntel.alerts.length > 0 && (
+                  <div className="space-y-0.5 max-h-24 overflow-y-auto">
+                    {nearbyIntel.alerts.slice(0, 5).map((a: any, i: number) => (
+                      <div key={a.id || i} className="flex items-start gap-1 px-1 py-0.5 rounded bg-white/3">
+                        <span className={`w-1 h-1 rounded-full mt-1 flex-shrink-0 ${
+                          a.severity === "critical" ? "bg-red-500" : a.severity === "high" ? "bg-orange-400" : "bg-yellow-400"
+                        }`} />
+                        <span className="text-[7px] font-mono text-foreground/70 leading-tight">{a.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Nearby vessels */}
+                {nearbyIntel.vessels.length > 0 && (
+                  <div className="space-y-0.5">
+                    {nearbyIntel.vessels.slice(0, 3).map((v: any, i: number) => (
+                      <div key={v.id || i} className="flex items-center gap-1 px-1 py-0.5 text-[7px] font-mono text-blue-400/80">
+                        <Anchor className="h-2 w-2 flex-shrink-0" />
+                        <span className="truncate">{v.name}</span>
+                        <span className="text-muted-foreground/50 ml-auto">{v.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom bar */}
