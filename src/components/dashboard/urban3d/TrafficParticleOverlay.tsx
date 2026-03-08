@@ -236,19 +236,50 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           const jitter = 0.85 + Math.random() * 0.3;
           const densityLevel = Math.min(1, baseWeight * factor * jitter);
 
+          const pts = el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon }));
           return {
             id: el.id,
             highway,
-            points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
+            points: pts,
             lanes,
             densityLevel,
+            progressStops: buildProgressStops(pts),
           };
         });
 
       roadsRef.current = roads;
       setRoadCount(roads.length);
-    } catch (e) {
-      console.error("[TrafficOverlay] Parse error:", e);
+
+      // Generate particles per road
+      const SPEED_MAP: Record<string, number> = {
+        motorway: 0.004, trunk: 0.0035, primary: 0.003, secondary: 0.0025,
+        tertiary: 0.002, residential: 0.0015, service: 0.001,
+      };
+      const particles: Particle[] = [];
+      roads.forEach((road, ri) => {
+        const totalLanes = Math.max(1, road.lanes);
+        const carsPerLane = Math.max(4, Math.round(road.densityLevel * 12));
+        const baseSpeed = SPEED_MAP[road.highway] ?? 0.002;
+        const laneSpreadPx = zoom >= 20 ? 3.5 : zoom >= 18 ? 2.5 : 1.8;
+
+        for (let lane = 0; lane < totalLanes; lane++) {
+          const dir: 1 | -1 = lane < Math.ceil(totalLanes / 2) ? 1 : -1;
+          const normalizedLane = totalLanes <= 1 ? 0 : lane / (totalLanes - 1) - 0.5;
+          const laneOffset = normalizedLane * laneSpreadPx * 2;
+
+          for (let i = 0; i < carsPerLane; i++) {
+            particles.push({
+              roadIdx: ri,
+              progress: (i + lane * 0.15) / carsPerLane,
+              speed: baseSpeed * (0.7 + Math.random() * 0.6),
+              direction: dir,
+              laneOffset,
+            });
+          }
+        }
+      });
+      particlesRef.current = particles;
+      setParticleCount(particles.length);
     } finally {
       setLoading(false);
     }
