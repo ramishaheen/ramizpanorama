@@ -57,30 +57,50 @@ export function useCrisisIntel(city: string) {
       const { data: fnData, error: fnError } = await supabase.functions.invoke("crisis-intel", {
         body: { city },
       });
-      if (fnError) throw fnError;
+
+      // Handle edge function errors gracefully — keep existing data
+      if (fnError) {
+        const msg = fnError.message || String(fnError);
+        if (msg.includes("402") || msg.includes("credits")) {
+          toast.error("AI credits exhausted — showing cached data");
+          if (!data) setError("AI credits exhausted. Data will refresh when credits are available.");
+          return;
+        }
+        if (msg.includes("429") || msg.includes("Rate limit")) {
+          toast.warning("Crisis Intel rate limited — retrying shortly");
+          return;
+        }
+        throw fnError;
+      }
+
       if (fnData?.error) {
-        if (fnData.error.includes("Rate limited")) {
-          toast.error("Crisis Intel rate limited — retrying shortly");
-        } else if (fnData.error.includes("credits")) {
-          toast.error("AI credits exhausted for Crisis Intel");
+        if (fnData.error.includes("credits") || fnData.error.includes("402")) {
+          toast.error("AI credits exhausted — showing cached data");
+          if (!data) setError("AI credits exhausted. Data will refresh when credits are available.");
+          return;
+        }
+        if (fnData.error.includes("Rate limit") || fnData.error.includes("429")) {
+          toast.warning("Rate limited — retrying shortly");
+          return;
         }
         throw new Error(fnData.error);
       }
+
       setData(fnData);
-      // Append to history for timeline replay
+      setError(null);
       if (fnData?.events?.length) {
         setHistory(prev => [
-          ...prev.slice(-19), // keep last 20 snapshots
+          ...prev.slice(-19),
           { events: fnData.events, timestamp: fnData.timestamp },
         ]);
       }
     } catch (e) {
       console.error("Crisis intel error:", e);
-      setError(e instanceof Error ? e.message : "Failed to load");
+      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [city]);
+  }, [city, data]);
 
   useEffect(() => {
     fetch_();
