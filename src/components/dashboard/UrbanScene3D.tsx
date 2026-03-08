@@ -196,6 +196,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const cityMarkersRef = useRef<any[]>([]);
   const cityInfoWindowRef = useRef<any>(null);
 
+  // Mapillary street-level viewer
+  const [mapillaryActive, setMapillaryActive] = useState(false);
+  const [mapillaryImageId, setMapillaryImageId] = useState<string | null>(null);
+  const [mapillaryToken, setMapillaryToken] = useState<string | null>(null);
+  const [mapillaryLoading, setMapillaryLoading] = useState(false);
+  const mapillaryViewerRef = useRef<any>(null);
+
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [viewStyle, setViewStyle] = useState<"normal" | "crt" | "nvg" | "flir" | "noir" | "snow">("normal");
