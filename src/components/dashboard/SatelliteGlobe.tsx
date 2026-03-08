@@ -407,6 +407,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const aiScrollRef = useRef<HTMLDivElement>(null);
+  const pulseFrameRef = useRef<number>(0);
   const satsRef = useRef<SatelliteData[]>([]);
   const [predicting, setPredicting] = useState(false);
   const [predictionData, setPredictionData] = useState<{
@@ -840,6 +841,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const body = new THREE.Mesh(bodyGeo, bodyMat);
           group.add(body);
 
+          // Outer glow sphere (pulse effect)
+          const glowGeo = new THREE.SphereGeometry(bodySize * 0.9, 16, 16);
+          const glowMat = new THREE.MeshBasicMaterial({
+            color,
+            transparent: true,
+            opacity: 0.18,
+            side: THREE.BackSide,
+          });
+          const glow = new THREE.Mesh(glowGeo, glowMat);
+          group.add(glow);
+
           const haloGeo = new THREE.RingGeometry(bodySize * 0.7, bodySize * 0.95, 24);
           const haloMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide });
           const halo = new THREE.Mesh(haloGeo, haloMat);
@@ -847,7 +859,29 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           group.add(halo);
 
           group.rotation.y = Math.random() * Math.PI * 2;
+
+          // Animate pulse
+          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2 };
+
           return group;
+        };
+
+        // Animate satellite glow pulse
+        const animatePulse = () => {
+          const globe = globeRef.current;
+          if (!globe) return;
+          const scene = globe.scene();
+          if (!scene) return;
+          const t = performance.now() * 0.003;
+          scene.traverse((obj: any) => {
+            if (obj.userData?.glow) {
+              const phase = t + (obj.userData.time || 0);
+              const pulse = 0.85 + Math.sin(phase) * 0.25;
+              obj.userData.glow.scale.set(pulse, pulse, pulse);
+              obj.userData.glowMat.opacity = 0.1 + Math.sin(phase) * 0.12;
+            }
+          });
+          pulseFrameRef.current = requestAnimationFrame(animatePulse);
         };
 
         const globe = new Globe(el)
@@ -999,6 +1033,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         globe.controls().dampingFactor = 0.15;
 
         globeRef.current = globe;
+        animatePulse();
         setGlobeInitError(null);
       } catch (error) {
         console.error("[ORBITAL INTEL] Globe initialization failed:", error);
@@ -1010,6 +1045,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
     return () => {
       cancelled = true;
+      if (pulseFrameRef.current) cancelAnimationFrame(pulseFrameRef.current);
     };
   }, []);
 
@@ -1084,31 +1120,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type });
     };
 
+    // Only show orbit trail for the clicked/selected satellite
     if (orbitPath && orbitPath.length > 1 && selectedSat) {
       pushSegmentedPath(orbitPath, "orbit");
-    }
-
-    if (rawTLERef.current.length > 0) {
-      const source = selectedCat
-        ? rawTLERef.current.filter((r) => r.category === selectedCat)
-        : rawTLERef.current;
-
-      // When a category is selected, show ALL orbits for that type; otherwise limit baseline trails
-      const baselineLimit = selectedCat ? source.length : (selectedSat ? 140 : 300);
-      source.slice(0, baselineLimit).forEach((r) => {
-        const baselinePath = computeOrbitPath(
-          r.inclination,
-          r.raan,
-          r.meanAnomaly,
-          r.meanMotion,
-          r.eccentricity,
-          r.epochYear,
-          r.epochDay,
-          r.alt,
-          180
-        );
-        pushSegmentedPath(baselinePath, selectedCat ? "catOrbit" : "baseline");
-      });
     }
 
     if (predictionTrack && predictionTrack.length > 1) {
@@ -1127,16 +1141,12 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .pathColor((seg: any) =>
           seg.type === "predict"
             ? ["#22c55ecc", "#22c55e33"]
-            : seg.type === "catOrbit"
-              ? [orbitColor || "rgba(255,255,255,0.5)", (orbitColor || "rgba(255,255,255,0.5)") + "44"]
-              : seg.type === "baseline"
-                ? ["rgba(255,255,255,0.24)", "rgba(255,255,255,0.05)"]
-                : [orbitColor + "cc", orbitColor + "33"]
+            : [orbitColor + "cc", orbitColor + "33"]
         )
-        .pathStroke((seg: any) => (seg.type === "predict" ? 2.8 : seg.type === "catOrbit" ? 1.8 : seg.type === "baseline" ? 1.2 : 2.2))
-        .pathDashLength((seg: any) => (seg.type === "baseline" || seg.type === "catOrbit" ? 0.014 : 0.02))
+        .pathStroke((seg: any) => (seg.type === "predict" ? 2.8 : 2.5))
+        .pathDashLength(0.02)
         .pathDashGap(0.01)
-        .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : seg.type === "catOrbit" ? 4000 : seg.type === "baseline" ? 0 : 3500))
+        .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : 3500))
         .pathTransitionDuration(250);
     } else {
       globe.pathsData([]);
