@@ -7,6 +7,7 @@ import { FlightStat, DataRow, LayerControl } from "./urban3d/LayerControl";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
 import { SatelliteTimestampHUD } from "./urban3d/SatelliteTimestampHUD";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
+import { TrafficParticleOverlay } from "./urban3d/TrafficParticleOverlay";
 
 interface IntelEvent {
   title: string;
@@ -244,6 +245,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   // Live overlays
   const [showIncidents, setShowIncidents] = useState(true);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+  const [showTrafficParticles, setShowTrafficParticles] = useState(false);
+  const [opacityTrafficParticles, setOpacityTrafficParticles] = useState(0.85);
 
   useEffect(() => {
     const fetchNearby = async () => {
@@ -317,7 +320,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       mapListenersRef.current = [
         google.maps.event.addListener(map, "idle", syncMapState),
         google.maps.event.addListener(map, "zoom_changed", () => {
-          setZoomLevel(Math.round(map.getZoom() || 14));
+          const z = Math.round(map.getZoom() || 14);
+          setZoomLevel(z);
+          // Auto-enable traffic particle sim at street level
+          if (z >= 16) setShowTrafficParticles(true);
         }),
         google.maps.event.addListener(map, "click", (e: any) => {
           if (e.latLng) {
@@ -2088,6 +2094,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
                 <LayerControl icon={<CloudRain className="h-3 w-3" />} label="Weather" color="#06b6d4" active={showWeather} onToggle={() => setShowWeather(!showWeather)} opacity={opacityWeather} onOpacity={setOpacityWeather} source="OpenWeatherMap" />
                 <LayerControl icon={<Car className="h-3 w-3" />} label="Traffic" color="#10b981" active={showTraffic} onToggle={() => setShowTraffic(!showTraffic)} opacity={opacityTraffic} onOpacity={setOpacityTraffic} source="Google" />
+                <LayerControl icon={<Car className="h-3 w-3" />} label="Traffic Sim" color="#8b5cf6" active={showTrafficParticles} onToggle={() => setShowTrafficParticles(!showTrafficParticles)} opacity={opacityTrafficParticles} onOpacity={setOpacityTrafficParticles} source={`OSM Roads • Z≥16`} />
                 <LayerControl icon={<Compass className="h-3 w-3" />} label="360° Street View" color="#22c55e" active={streetViewActive} onToggle={() => setStreetViewActive(!streetViewActive)} opacity={1} onOpacity={() => {}} />
                 <LayerControl icon={<Eye className="h-3 w-3" />} label="Mapillary" color="#05CB63" active={mapillaryActive} onToggle={() => {
                   if (mapillaryActive) {
@@ -2140,6 +2147,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
         {/* Weather Radar Overlay */}
         <WeatherRadarOverlay mapRef={mapInstanceRef} enabled={showWeatherRadar} opacity={opacityWeather} />
+
+        {/* Traffic Particle Simulation Overlay */}
+        <TrafficParticleOverlay mapRef={mapInstanceRef} enabled={showTrafficParticles} zoom={zoomLevel} lat={lat} lng={lng} opacity={opacityTrafficParticles} />
 
         {/* Satellite Timestamp HUD */}
         <SatelliteTimestampHUD
