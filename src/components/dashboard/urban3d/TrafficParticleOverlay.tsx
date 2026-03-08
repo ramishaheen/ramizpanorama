@@ -257,8 +257,26 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   }, []);
 
   const fetchRoads = useCallback(async (centerLat: number, centerLng: number) => {
-    const delta = zoom >= 20 ? 0.003 : zoom >= 18 ? 0.005 : 0.01;
-    const bbox = `${centerLat - delta},${centerLng - delta},${centerLat + delta},${centerLng + delta}`;
+    // Use actual map viewport bounds if available, otherwise fallback to delta
+    const map = mapRef.current;
+    let bbox: string;
+    if (map && map.getBounds) {
+      try {
+        const bounds = map.getBounds();
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        // Pad slightly to avoid edge clipping
+        const padLat = (ne.lat() - sw.lat()) * 0.1;
+        const padLng = (ne.lng() - sw.lng()) * 0.1;
+        bbox = `${sw.lat() - padLat},${sw.lng() - padLng},${ne.lat() + padLat},${ne.lng() + padLng}`;
+      } catch {
+        const delta = zoom >= 20 ? 0.004 : zoom >= 18 ? 0.008 : 0.015;
+        bbox = `${centerLat - delta},${centerLng - delta},${centerLat + delta},${centerLng + delta}`;
+      }
+    } else {
+      const delta = zoom >= 20 ? 0.004 : zoom >= 18 ? 0.008 : 0.015;
+      bbox = `${centerLat - delta},${centerLng - delta},${centerLat + delta},${centerLng + delta}`;
+    }
 
     if (bbox === lastFetchRef.current) return;
     lastFetchRef.current = bbox;
@@ -386,7 +404,21 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     overlay.setMap(map);
     overlayRef.current = overlay;
 
-    return () => { overlay.setMap(null); overlayRef.current = null; };
+    // Re-fetch roads when map stops moving (pan/zoom)
+    const idleListener = map.addListener("idle", () => {
+      if (!enabled || zoom < MIN_ZOOM) return;
+      const center = map.getCenter();
+      if (center) {
+        lastFetchRef.current = ""; // force re-fetch with new bounds
+        fetchRoads(center.lat(), center.lng());
+      }
+    });
+
+    return () => {
+      overlay.setMap(null);
+      overlayRef.current = null;
+      google.maps.event.removeListener(idleListener);
+    };
   }, [enabled, zoom >= MIN_ZOOM, mapRef.current]);
 
   useEffect(() => {
