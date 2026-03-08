@@ -557,13 +557,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         // Try live AIS API first
         const { data, error } = await supabase.functions.invoke("ais-vessels", { body: bbox });
         if (!error && data?.vessels && data.vessels.length > 0) {
-          setVessels(data.vessels);
+          const seaSafe = sanitizeVesselsToWater(data.vessels);
+          setVessels(seaSafe);
           setVesselSource(data.source || "live");
         } else {
           // Fallback to DB
           const { data: dbData } = await supabase.from("vessels").select("*");
           if (dbData && dbData.length > 0) {
-            setVessels(dbData);
+            const seaSafe = sanitizeVesselsToWater(dbData);
+            setVessels(seaSafe);
             setVesselSource("database");
           }
         }
@@ -571,7 +573,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         console.error("Vessel fetch error:", e);
         // DB fallback
         const { data: dbData } = await supabase.from("vessels").select("*");
-        if (dbData) { setVessels(dbData); setVesselSource("database"); }
+        if (dbData) {
+          const seaSafe = sanitizeVesselsToWater(dbData);
+          setVessels(seaSafe);
+          setVesselSource("database");
+        }
       }
     };
     fetchVessels();
