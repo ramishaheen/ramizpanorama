@@ -505,7 +505,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       data: heatmapData,
       map,
       radius: 40,
-      opacity: 0.7,
+      opacity: opacityHeatmap,
       gradient: [
         "rgba(0,0,0,0)",
         "rgba(251,191,36,0.4)",
@@ -720,7 +720,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         getTileUrl: (coord: any, zoom: number) =>
           `https://tile.openweathermap.org/map/precipitation_new/${zoom}/${coord.x}/${coord.y}.png?appid=b1b15e88fa797225412429c1c50c122a1`,
         tileSize: new google.maps.Size(256, 256),
-        opacity: 0.6,
+        opacity: opacityWeather,
         name: "Weather",
       });
       map.overlayMapTypes.push(weatherTileType);
