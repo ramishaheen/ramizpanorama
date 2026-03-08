@@ -56,6 +56,8 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const [showFlights, setShowFlights] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
+  const [showTrails, setShowTrails] = useState(true);
+  const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -193,6 +195,25 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
             duration: 8000,
           });
         }
+        // Record trail history
+        const now = Date.now();
+        const history = { ...trailHistoryRef.current };
+        const MAX_TRAIL = 8;
+        const TRAIL_EXPIRE = 5 * 60 * 1000; // 5 min
+        newAircraft.forEach((ac) => {
+          const trail = history[ac.icao24] || [];
+          const last = trail[trail.length - 1];
+          if (!last || last.lat !== ac.lat || last.lng !== ac.lng) {
+            trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
+          }
+          // Trim old points
+          history[ac.icao24] = trail.filter(p => now - p.ts < TRAIL_EXPIRE).slice(-MAX_TRAIL);
+        });
+        // Remove stale aircraft from history
+        const activeIds = new Set(newAircraft.map(a => a.icao24));
+        Object.keys(history).forEach(id => { if (!activeIds.has(id)) delete history[id]; });
+        trailHistoryRef.current = history;
+
         setAircraft(newAircraft);
       }
     } catch (e) {
@@ -248,7 +269,11 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
     return aircraft.map((ac) => {
       const pos = latLngToPixel(ac.lat, ac.lng, lat, lng, containerSize.w, containerSize.h, VIEWPORT_DEG);
       const visible = pos.x >= -20 && pos.x <= containerSize.w + 20 && pos.y >= -20 && pos.y <= containerSize.h + 20;
-      return { ...ac, px: pos.x, py: pos.y, visible };
+      // Compute trail pixel positions
+      const trail = (trailHistoryRef.current[ac.icao24] || []).map((p) =>
+        latLngToPixel(p.lat, p.lng, lat, lng, containerSize.w, containerSize.h, VIEWPORT_DEG)
+      );
+      return { ...ac, px: pos.x, py: pos.y, visible, trail };
     }).filter((m) => m.visible);
   }, [aircraft, lat, lng, containerSize, showMarkers, showFlights]);
 
@@ -291,6 +316,14 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           >
             {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             Markers
+          </button>
+          <button
+            onClick={() => setShowTrails(!showTrails)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
+            title="Toggle flight trail lines"
+          >
+            <Navigation className="h-3 w-3" />
+            Trails
           </button>
           <button
             onClick={() => fetchFlights()}
@@ -373,6 +406,40 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
               </p>
             </div>
           </div>
+        )}
+
+        {/* ===== TRAIL LINES ===== */}
+        {showFlights && showMarkers && showTrails && markerPositions.length > 0 && (
+          <svg className="absolute inset-0 w-full h-full z-[9] pointer-events-none overflow-hidden">
+            <defs>
+              <linearGradient id="trail-civ" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(96,165,250,0)" />
+                <stop offset="100%" stopColor="rgba(96,165,250,0.7)" />
+              </linearGradient>
+              <linearGradient id="trail-mil" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(239,68,68,0)" />
+                <stop offset="100%" stopColor="rgba(239,68,68,0.7)" />
+              </linearGradient>
+            </defs>
+            {markerPositions.map((ac) => {
+              if (ac.trail.length < 2) return null;
+              const points = [...ac.trail, { x: ac.px, y: ac.py }];
+              const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+              return (
+                <path
+                  key={`trail-${ac.icao24}`}
+                  d={d}
+                  fill="none"
+                  stroke={`url(#trail-${ac.is_military ? "mil" : "civ"})`}
+                  strokeWidth={ac.is_military ? 2 : 1.5}
+                  strokeLinecap="round"
+                  strokeDasharray={ac.is_military ? "none" : "4 2"}
+                  opacity={0.8}
+                  style={{ filter: `drop-shadow(0 0 3px ${ac.is_military ? "rgba(239,68,68,0.5)" : "rgba(96,165,250,0.4)"})` }}
+                />
+              );
+            })}
+          </svg>
         )}
 
         {/* ===== AIRCRAFT MARKERS OVERLAY ===== */}
