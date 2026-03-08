@@ -1847,9 +1847,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           rockets={rockets}
           flightCount={flightData.length}
           layers={layers}
-          onToggleLayer={(layer) => {
-            // Propagate toggle to parent — need to pass through
-          }}
+          onToggleLayer={(layer) => onToggleLayer?.(layer)}
         />
       )}
 
