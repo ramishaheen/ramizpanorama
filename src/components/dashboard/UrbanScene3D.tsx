@@ -1,11 +1,22 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio } from "lucide-react";
+
+interface IntelEvent {
+  title: string;
+  lat: number;
+  lng: number;
+  severity?: string;
+  source?: string;
+  type?: string;
+  summary?: string;
+}
 
 interface UrbanSceneProps {
   onClose: () => void;
   initialCoords?: { lat: number; lng: number };
+  initialEvent?: IntelEvent;
 }
 
 interface Aircraft {
@@ -38,16 +49,17 @@ const PRESETS = [
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
 ];
 
-export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
-  const [lat, setLat] = useState(initialCoords?.lat || 25.2048);
-  const [lng, setLng] = useState(initialCoords?.lng || 55.2708);
+export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanSceneProps) => {
+  const [lat, setLat] = useState(initialCoords?.lat || initialEvent?.lat || 25.2048);
+  const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 55.2708);
+  
   const [searchInput, setSearchInput] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [showFlights, setShowFlights] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [showTrails, setShowTrails] = useState(true);
-  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(!!initialEvent); // auto-enable heatmap when coming from event
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
@@ -63,6 +75,38 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const mapInstanceRef = useRef<any>(null);
   const overlayRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
+  const [showIntelCard, setShowIntelCard] = useState(!!initialEvent);
+  const [nearbyIntel, setNearbyIntel] = useState<{ alerts: any[]; vessels: any[]; airspace: any[] }>({ alerts: [], vessels: [], airspace: [] });
+
+  // Fetch nearby intel when we have an event or location
+  useEffect(() => {
+    const fetchNearby = async () => {
+      const radius = 5; // degrees
+      try {
+        const [alertsRes, vesselsRes, airspaceRes] = await Promise.all([
+          supabase.from("geo_alerts").select("*")
+            .gte("lat", lat - radius).lte("lat", lat + radius)
+            .gte("lng", lng - radius).lte("lng", lng + radius),
+          supabase.from("vessels").select("*")
+            .gte("lat", lat - radius).lte("lat", lat + radius)
+            .gte("lng", lng - radius).lte("lng", lng + radius),
+          supabase.from("airspace_alerts").select("*")
+            .gte("lat", lat - radius).lte("lat", lat + radius)
+            .gte("lng", lng - radius).lte("lng", lng + radius),
+        ]);
+        setNearbyIntel({
+          alerts: alertsRes.data || [],
+          vessels: vesselsRes.data || [],
+          airspace: airspaceRes.data || [],
+        });
+      } catch (e) {
+        console.error("Nearby intel fetch error:", e);
+      }
+    };
+    fetchNearby();
+    const iv = setInterval(fetchNearby, 60_000);
+    return () => clearInterval(iv);
+  }, [lat, lng]);
 
   // Track container size
   useEffect(() => {
@@ -102,7 +146,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: 12, // wider zoom so flights are visible
+        zoom: initialEvent ? 18 : 12, // street-level when from event, wider for general view
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
@@ -750,6 +794,125 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
               <DataRow label="V/S" value={`${selectedAircraft.vertical_rate > 0 ? "+" : ""}${selectedAircraft.vertical_rate.toFixed(1)} m/s`} />
               <DataRow label="LAT" value={selectedAircraft.lat.toFixed(4)} />
               <DataRow label="LNG" value={selectedAircraft.lng.toFixed(4)} />
+            </div>
+          </div>
+        )}
+
+        {/* ===== INTEL BRIEFING CARD ===== */}
+        {showIntelCard && initialEvent && (
+          <div className="absolute bottom-14 right-3 z-[15] pointer-events-auto w-72 max-h-[60vh] overflow-y-auto">
+            <div
+              className="bg-black/90 backdrop-blur-xl border rounded-lg p-3 space-y-2"
+              style={{
+                borderColor: initialEvent.severity === "critical" ? "rgba(239,68,68,0.6)" : initialEvent.severity === "high" ? "rgba(251,146,36,0.6)" : "hsl(var(--primary) / 0.4)",
+                boxShadow: initialEvent.severity === "critical" ? "0 0 25px rgba(239,68,68,0.2)" : "0 0 20px hsl(var(--primary) / 0.1)",
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" style={{
+                    color: initialEvent.severity === "critical" ? "#ef4444" : initialEvent.severity === "high" ? "#f59e0b" : "hsl(var(--primary))"
+                  }} />
+                  <span className="text-[9px] font-mono font-bold text-primary uppercase">Intel Briefing</span>
+                </div>
+                <button onClick={() => setShowIntelCard(false)} className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10">
+                  <X className="h-2.5 w-2.5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Severity badge */}
+              {initialEvent.severity && (
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[7px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${
+                    initialEvent.severity === "critical" ? "bg-red-500/20 text-red-400" :
+                    initialEvent.severity === "high" ? "bg-orange-500/20 text-orange-400" :
+                    initialEvent.severity === "medium" ? "bg-yellow-500/20 text-yellow-400" :
+                    "bg-green-500/20 text-green-400"
+                  }`}>
+                    {initialEvent.severity} SEVERITY
+                  </span>
+                  {initialEvent.type && (
+                    <span className="text-[7px] font-mono text-muted-foreground/70 uppercase px-1.5 py-0.5 rounded border border-border/30">
+                      {initialEvent.type}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Event title */}
+              <div className="text-[10px] font-mono font-bold text-foreground/90 leading-tight">
+                {initialEvent.title}
+              </div>
+
+              {/* Summary */}
+              {initialEvent.summary && (
+                <p className="text-[8px] font-mono text-muted-foreground/80 leading-relaxed">
+                  {initialEvent.summary}
+                </p>
+              )}
+
+              {/* Coordinates */}
+              <div className="flex items-center gap-2 text-[7px] font-mono text-muted-foreground/60">
+                <MapPin className="h-2.5 w-2.5" />
+                <span>{initialEvent.lat.toFixed(4)}°N, {initialEvent.lng.toFixed(4)}°E</span>
+              </div>
+
+              {/* Source */}
+              {initialEvent.source && (
+                <div className="text-[7px] font-mono text-muted-foreground/50 italic">
+                  SRC: {initialEvent.source}
+                </div>
+              )}
+
+              {/* Nearby Intel Summary */}
+              <div className="border-t border-border/30 pt-2 mt-1 space-y-1">
+                <span className="text-[8px] font-mono font-bold text-primary/80 uppercase">Nearby Activity</span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
+                    <Shield className="h-3 w-3 text-orange-400 mb-0.5" />
+                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.alerts.length}</span>
+                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Alerts</span>
+                  </div>
+                  <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
+                    <Anchor className="h-3 w-3 text-blue-400 mb-0.5" />
+                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.vessels.length}</span>
+                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Vessels</span>
+                  </div>
+                  <div className="flex flex-col items-center p-1.5 rounded bg-white/5 border border-border/20">
+                    <Radio className="h-3 w-3 text-yellow-400 mb-0.5" />
+                    <span className="text-[9px] font-mono font-bold text-foreground/80">{nearbyIntel.airspace.length}</span>
+                    <span className="text-[6px] font-mono text-muted-foreground/50 uppercase">Airspace</span>
+                  </div>
+                </div>
+
+                {/* Nearby alerts list */}
+                {nearbyIntel.alerts.length > 0 && (
+                  <div className="space-y-0.5 max-h-24 overflow-y-auto">
+                    {nearbyIntel.alerts.slice(0, 5).map((a: any, i: number) => (
+                      <div key={a.id || i} className="flex items-start gap-1 px-1 py-0.5 rounded bg-white/3">
+                        <span className={`w-1 h-1 rounded-full mt-1 flex-shrink-0 ${
+                          a.severity === "critical" ? "bg-red-500" : a.severity === "high" ? "bg-orange-400" : "bg-yellow-400"
+                        }`} />
+                        <span className="text-[7px] font-mono text-foreground/70 leading-tight">{a.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Nearby vessels */}
+                {nearbyIntel.vessels.length > 0 && (
+                  <div className="space-y-0.5">
+                    {nearbyIntel.vessels.slice(0, 3).map((v: any, i: number) => (
+                      <div key={v.id || i} className="flex items-center gap-1 px-1 py-0.5 text-[7px] font-mono text-blue-400/80">
+                        <Anchor className="h-2 w-2 flex-shrink-0" />
+                        <span className="truncate">{v.name}</span>
+                        <span className="text-muted-foreground/50 ml-auto">{v.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
