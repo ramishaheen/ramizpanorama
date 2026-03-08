@@ -170,6 +170,42 @@ function getOrbitType(alt: number, _inc?: number, ecc?: number): string {
   return "Other";
 }
 
+// Compute full orbital path (one revolution) as array of {lat, lng}
+function computeOrbitPath(
+  inclination: number, raan: number, meanAnomaly: number,
+  meanMotion: number, eccentricity: number, epochYear: number,
+  epochDay: number, alt: number, steps = 120
+): { lat: number; lng: number }[] {
+  const periodDays = 1 / meanMotion; // one revolution in days
+  const points: { lat: number; lng: number }[] = [];
+  const now = new Date();
+  const startOfYear = new Date(epochYear, 0, 1);
+  const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+
+  for (let i = 0; i <= steps; i++) {
+    const fraction = i / steps;
+    const dayOffset = -periodDays * 0.5 + fraction * periodDays; // half rev behind, half ahead
+    const day = currentDayOfYear + dayOffset;
+    const elapsedDays = day - epochDay;
+    const totalRevs = elapsedDays * meanMotion;
+    const currentMA = (((meanAnomaly + totalRevs * 360) % 360) + 360) % 360;
+    const E = currentMA + (eccentricity * 180) / Math.PI * Math.sin((currentMA * Math.PI) / 180);
+    const nu = E;
+    const argLat = (nu * Math.PI) / 180;
+    const incRad = (inclination * Math.PI) / 180;
+    const lat = Math.asin(Math.sin(incRad) * Math.sin(argLat)) * (180 / Math.PI);
+
+    // Use the time-shifted greenwich offset
+    const shiftedTime = new Date(now.getTime() + dayOffset * 86400000);
+    const greenwichOffset = shiftedTime.getUTCHours() * 15 + shiftedTime.getUTCMinutes() * 0.25 + shiftedTime.getUTCSeconds() * (0.25 / 60);
+    const ascNode = raan - greenwichOffset;
+    const lng = (((ascNode + Math.atan2(Math.cos(incRad) * Math.sin(argLat), Math.cos(argLat)) * (180 / Math.PI)) % 360) + 540) % 360 - 180;
+
+    points.push({ lat: Math.max(-85, Math.min(85, lat)), lng });
+  }
+  return points;
+}
+
 const CITY_PRESETS = [
   { name: "Jordan", lat: 31.95, lng: 35.93 },
   { name: "Israel", lat: 31.77, lng: 35.23 },
