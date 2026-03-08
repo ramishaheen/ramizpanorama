@@ -146,7 +146,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showTrails, setShowTrails] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(!!initialEvent);
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
-  const [streetViewActive, setStreetViewActive] = useState(false);
+  const [streetViewActive, setStreetViewActive] = useState(true);
   const streetViewRef = useRef<any>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
@@ -252,7 +252,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: initialEvent ? 16 : 6,
+        zoom: initialEvent ? 16 : 14,
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
