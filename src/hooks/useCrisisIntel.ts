@@ -61,9 +61,9 @@ export function useCrisisIntel(city: string) {
       // Handle edge function errors gracefully — keep existing data
       if (fnError) {
         const msg = fnError.message || String(fnError);
-        if (msg.includes("402") || msg.includes("credits")) {
-          toast.error("AI credits exhausted — showing cached data");
-          if (!data) setError("AI credits exhausted. Data will refresh when credits are available.");
+        if (msg.includes("402") || msg.includes("credits") || msg.includes("503") || msg.includes("No AI provider") || msg.includes("non-2xx")) {
+          toast.error("AI providers busy — showing cached data");
+          if (!data) setError("AI providers temporarily unavailable. Will retry shortly.");
           return;
         }
         if (msg.includes("429") || msg.includes("Rate limit")) {
@@ -74,12 +74,13 @@ export function useCrisisIntel(city: string) {
       }
 
       if (fnData?.error) {
-        if (fnData.error.includes("credits") || fnData.error.includes("402")) {
-          toast.error("AI credits exhausted — showing cached data");
-          if (!data) setError("AI credits exhausted. Data will refresh when credits are available.");
+        const errStr = String(fnData.error);
+        if (errStr.includes("credits") || errStr.includes("402") || errStr.includes("No AI provider") || errStr.includes("503")) {
+          toast.error("AI providers busy — showing cached data");
+          if (!data) setError("AI providers temporarily unavailable. Will retry shortly.");
           return;
         }
-        if (fnData.error.includes("Rate limit") || fnData.error.includes("429")) {
+        if (errStr.includes("Rate limit") || errStr.includes("429")) {
           toast.warning("Rate limited — retrying shortly");
           return;
         }
