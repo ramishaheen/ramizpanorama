@@ -8,13 +8,21 @@ const corsHeaders = {
 // Capital cities of focus countries
 const CITIES = [
   { name: "Tehran", country: "Iran", lat: 35.6892, lng: 51.389, code: "IR" },
+  { name: "Isfahan", country: "Iran", lat: 32.6546, lng: 51.6680, code: "IR2" },
   { name: "Tel Aviv", country: "Israel", lat: 32.0853, lng: 34.7818, code: "IL" },
+  { name: "Jerusalem", country: "Israel", lat: 31.7683, lng: 35.2137, code: "IL2" },
   { name: "Amman", country: "Jordan", lat: 31.9454, lng: 35.9284, code: "JO" },
+  { name: "Baghdad", country: "Iraq", lat: 33.3152, lng: 44.3661, code: "IQ" },
+  { name: "Basra", country: "Iraq", lat: 30.5085, lng: 47.7804, code: "IQ2" },
+  { name: "Damascus", country: "Syria", lat: 33.5138, lng: 36.2765, code: "SY" },
+  { name: "Aleppo", country: "Syria", lat: 36.2021, lng: 37.1343, code: "SY2" },
+  { name: "Beirut", country: "Lebanon", lat: 33.8938, lng: 35.5018, code: "LB" },
   { name: "Abu Dhabi", country: "UAE", lat: 24.4539, lng: 54.3773, code: "AE" },
   { name: "Manama", country: "Bahrain", lat: 26.2285, lng: 50.5860, code: "BH" },
   { name: "Kuwait City", country: "Kuwait", lat: 29.3759, lng: 47.9774, code: "KW" },
   { name: "Doha", country: "Qatar", lat: 25.2854, lng: 51.5310, code: "QA" },
   { name: "Muscat", country: "Oman", lat: 23.5880, lng: 58.3829, code: "OM" },
+  { name: "Riyadh", country: "Saudi Arabia", lat: 24.7136, lng: 46.6753, code: "SA" },
 ];
 
 serve(async (req) => {
