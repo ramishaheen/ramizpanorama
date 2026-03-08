@@ -355,12 +355,12 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       const filtered = catFilter
         ? updated.filter((s) => s.category === catFilter)
         : updated;
-      globe.pointsData(filtered);
+      globe.objectsData(filtered);
     }, 4000);
     return () => clearInterval(interval);
   }, [satellites.length, selectedCat]);
 
-  // Init globe - clean, no arcs
+  // Init globe with 3D satellite objects
   useEffect(() => {
     if (!wrapperRef.current || satellites.length === 0) return;
 
@@ -374,7 +374,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     let cancelled = false;
 
     const initGlobe = async () => {
-      const mod = await import("globe.gl");
+      const [mod, THREE] = await Promise.all([
+        import("globe.gl"),
+        import("three"),
+      ]);
       const Globe = mod.default;
       if (cancelled || !globeElRef.current) return;
 
@@ -386,6 +389,82 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       const filtered = selectedCat
         ? satellites.filter((s) => s.category === selectedCat)
         : satellites;
+
+      // Create a reusable satellite 3D mesh factory
+      const createSatMesh = (sat: SatelliteData) => {
+        const color = new THREE.Color(CATEGORY_COLORS[sat.category] || "#d4a843");
+        const group = new THREE.Group();
+
+        // Main satellite body
+        const isMilOrISR = sat.category === "Military" || sat.category === "ISR";
+        const isNav = sat.category === "Navigation";
+        const bodySize = isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
+
+        const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
+        const bodyMat = new THREE.MeshPhongMaterial({
+          color: color,
+          emissive: color,
+          emissiveIntensity: 0.6,
+          transparent: true,
+          opacity: 0.9,
+          shininess: 100,
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        group.add(body);
+
+        // Solar panels (two flat rectangles extending from body)
+        const panelWidth = bodySize * 1.8;
+        const panelHeight = bodySize * 0.7;
+        const panelGeo = new THREE.BoxGeometry(panelWidth, 0.04, panelHeight);
+        const panelMat = new THREE.MeshPhongMaterial({
+          color: 0x1a3a5c,
+          emissive: new THREE.Color(0x0a1a2e),
+          emissiveIntensity: 0.3,
+          transparent: true,
+          opacity: 0.85,
+          shininess: 150,
+        });
+
+        const panelLeft = new THREE.Mesh(panelGeo, panelMat);
+        panelLeft.position.set(-(bodySize * 0.5 + panelWidth * 0.5), 0, 0);
+        group.add(panelLeft);
+
+        const panelRight = new THREE.Mesh(panelGeo, panelMat);
+        panelRight.position.set(bodySize * 0.5 + panelWidth * 0.5, 0, 0);
+        group.add(panelRight);
+
+        // Antenna dish for comm/ISR satellites
+        if (sat.category === "Communication" || sat.category === "ISR") {
+          const dishGeo = new THREE.ConeGeometry(bodySize * 0.3, bodySize * 0.4, 8);
+          const dishMat = new THREE.MeshPhongMaterial({
+            color: 0xcccccc,
+            emissive: color,
+            emissiveIntensity: 0.2,
+            transparent: true,
+            opacity: 0.8,
+          });
+          const dish = new THREE.Mesh(dishGeo, dishMat);
+          dish.position.set(0, bodySize * 0.4, 0);
+          dish.rotation.x = Math.PI;
+          group.add(dish);
+        }
+
+        // Glow point at center
+        const glowGeo = new THREE.SphereGeometry(bodySize * 0.15, 8, 8);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.8,
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        group.add(glow);
+
+        // Random slight rotation for visual variety
+        group.rotation.y = Math.random() * Math.PI * 2;
+        group.rotation.z = (Math.random() - 0.5) * 0.3;
+
+        return group;
+      };
 
       const globe = new Globe(el)
         .globeImageUrl(
@@ -401,27 +480,16 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .height(el.clientHeight)
         .atmosphereColor("#1a6b8a")
         .atmosphereAltitude(0.18)
-        // Satellite points — clean dots at correct altitudes
-        .pointsData(filtered)
-        .pointLat("lat")
-        .pointLng("lng")
-        .pointAltitude((d: any) => {
+        // 3D satellite objects at real orbital positions
+        .objectsData(filtered)
+        .objectLat("lat")
+        .objectLng("lng")
+        .objectAltitude((d: any) => {
           const s = d as SatelliteData;
-          // Scale altitude: LEO tight shell, GEO further out
           return Math.min(s.alt / 6371 * 0.3 + 0.01, 0.7);
         })
-        .pointRadius((d: any) => {
-          const s = d as SatelliteData;
-          if (s.category === "Military" || s.category === "ISR") return 0.12;
-          if (s.category === "Navigation") return 0.08;
-          return 0.05;
-        })
-        .pointColor((d: any) => {
-          const s = d as SatelliteData;
-          return CATEGORY_COLORS[s.category] || "#d4a843";
-        })
-        .pointsMerge(false) // Keep individual for clicking
-        .onPointClick((d: any) => {
+        .objectThreeObject((d: any) => createSatMesh(d as SatelliteData))
+        .onObjectClick((d: any) => {
           const s = d as SatelliteData;
           setSelectedSat(s);
           globe.pointOfView(
@@ -460,7 +528,13 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           );
         });
 
-      // NO arcsData — no random lines
+      // Add ambient + directional light for 3D objects
+      const scene = globe.scene();
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 3, 5);
+      scene.add(dirLight);
 
       globe.pointOfView({ lat: 25, lng: 55, altitude: 2.8 }, 1500);
       globe.controls().autoRotate = true;
