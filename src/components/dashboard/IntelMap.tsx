@@ -1065,17 +1065,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       {/* 3D Mode buttons */}
       <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1.5">
-        {satCount > 0 && (
-          <button
+        <button
             onClick={() => setShowSatGlobe(true)}
             className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
-            title="Open 3D Satellite Globe"
+            title="Open Orbital Intelligence Globe"
           >
             <Satellite className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
-            <span className="text-xs font-mono font-bold text-primary">{satCount}</span>
-            <span className="text-[9px] font-mono text-muted-foreground uppercase">SAT 3D</span>
+            <span className="text-[9px] font-mono text-muted-foreground uppercase">ORBITAL INTEL</span>
           </button>
-        )}
         <button
           onClick={() => setShowUrbanScene(true)}
           className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
