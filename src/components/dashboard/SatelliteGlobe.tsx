@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SatelliteData {
   name: string;
@@ -254,11 +256,68 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
   const [orbitColor, setOrbitColor] = useState<string>("#ffffff");
+  const [hoveredSat, setHoveredSat] = useState<SatelliteData | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [aiChatSat, setAiChatSat] = useState<SatelliteData | null>(null);
+  const [aiMessages, setAiMessages] = useState<{ role: string; content: string }[]>([]);
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiScrollRef = useRef<HTMLDivElement>(null);
   const satsRef = useRef<SatelliteData[]>([]);
 
   useEffect(() => {
     satsRef.current = satellites;
   }, [satellites]);
+
+  // Track mouse position for tooltip
+  useEffect(() => {
+    const handler = (e: MouseEvent) => setHoverPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", handler);
+    return () => window.removeEventListener("mousemove", handler);
+  }, []);
+
+  // Scroll AI chat
+  useEffect(() => {
+    aiScrollRef.current?.scrollTo({ top: aiScrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [aiMessages]);
+
+  const openAiChat = useCallback((sat: SatelliteData) => {
+    setAiChatSat(sat);
+    setHoveredSat(null);
+    const initialQ = `Tell me about the satellite "${sat.name}" (NORAD ID: ${sat.noradId || "N/A"}, Category: ${sat.category}, Altitude: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}). What is its purpose, operator, and strategic significance?`;
+    setAiMessages([{ role: "user", content: initialQ }]);
+    setAiLoading(true);
+    supabase.functions.invoke("war-chat", {
+      body: { messages: [{ role: "user", content: initialQ }] },
+    }).then(({ data, error }) => {
+      setAiLoading(false);
+      if (error || !data) {
+        setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Unable to reach AI. Try again later." }]);
+        return;
+      }
+      const text = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
+      setAiMessages(prev => [...prev, { role: "assistant", content: text }]);
+    });
+  }, []);
+
+  const sendAiMessage = useCallback(async () => {
+    const text = aiInput.trim();
+    if (!text || aiLoading) return;
+    const newMsgs = [...aiMessages, { role: "user", content: text }];
+    setAiMessages(newMsgs);
+    setAiInput("");
+    setAiLoading(true);
+    const { data, error } = await supabase.functions.invoke("war-chat", {
+      body: { messages: newMsgs },
+    });
+    setAiLoading(false);
+    if (error || !data) {
+      setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error connecting to AI." }]);
+      return;
+    }
+    const reply = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
+    setAiMessages(prev => [...prev, { role: "assistant", content: reply }]);
+  }, [aiInput, aiLoading, aiMessages]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -543,6 +602,13 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             { lat: s.lat, lng: s.lng, altitude: 1.5 },
             1000
           );
+        })
+        .onObjectHover((d: any) => {
+          if (d) {
+            setHoveredSat(d as SatelliteData);
+          } else {
+            setHoveredSat(null);
+          }
         })
         // Labels
         .labelsData(
@@ -999,6 +1065,107 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           </div>
         )}
       </div>
+
+      {/* Hover Tooltip */}
+      {hoveredSat && !selectedSat && (
+        <div
+          className="fixed z-[2010] pointer-events-auto animate-fade-in"
+          style={{
+            left: Math.min(hoverPos.x + 16, window.innerWidth - 260),
+            top: Math.max(hoverPos.y - 40, 10),
+          }}
+        >
+          <div className="bg-black/90 backdrop-blur-md border border-white/20 rounded-lg px-3 py-2 min-w-[200px] shadow-xl">
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className="w-2 h-2 rounded-full animate-pulse"
+                style={{ backgroundColor: CATEGORY_COLORS[hoveredSat.category] || "#d4a843" }}
+              />
+              <span className="text-[11px] font-mono font-bold text-white truncate">
+                {hoveredSat.name}
+              </span>
+            </div>
+            <div className="text-[9px] font-mono text-white/60 space-y-0.5">
+              <div>TYPE: <span className="text-white/90">{hoveredSat.category}</span></div>
+              <div>ALT: <span className="text-white/90">{Math.round(hoveredSat.alt)} km</span> • ORBIT: <span className="text-white/90">{getOrbitType(hoveredSat.alt, hoveredSat.inclination, hoveredSat.eccentricity)}</span></div>
+              {hoveredSat.noradId && <div>NORAD: <span className="text-white/90">{hoveredSat.noradId}</span></div>}
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openAiChat(hoveredSat);
+              }}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-white/10 border border-white/20 text-[10px] font-mono font-semibold text-white hover:bg-white/20 transition-all"
+            >
+              <Bot className="h-3 w-3" /> Ask AI
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* AI Chat Panel */}
+      {aiChatSat && (
+        <div className="absolute top-16 right-36 z-[2005] w-80 pointer-events-auto animate-fade-in">
+          <div
+            className="rounded-lg border border-white/20 bg-black/92 backdrop-blur-md shadow-2xl flex flex-col"
+            style={{ maxHeight: "70vh" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+              <div className="flex items-center gap-2 min-w-0">
+                <Bot className="h-3.5 w-3.5 text-white flex-shrink-0" />
+                <span className="text-[10px] font-mono font-bold text-white truncate">
+                  AI INTEL: {aiChatSat.name}
+                </span>
+              </div>
+              <button
+                onClick={() => { setAiChatSat(null); setAiMessages([]); setAiInput(""); }}
+                className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10"
+              >
+                <X className="h-3 w-3 text-white/70" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div ref={aiScrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-2" style={{ maxHeight: "50vh" }}>
+              {aiMessages.map((msg, i) => (
+                <div key={i} className={`text-[10px] font-mono ${msg.role === "user" ? "text-white/50 italic" : "text-white/90"}`}>
+                  {msg.role === "assistant" ? (
+                    <div className="prose prose-sm prose-invert max-w-none text-[10px]">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="bg-white/5 rounded px-2 py-1">{msg.content}</div>
+                  )}
+                </div>
+              ))}
+              {aiLoading && (
+                <div className="flex items-center gap-1.5 text-[10px] font-mono text-white/50">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Analyzing satellite data…
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="flex items-center gap-1.5 px-2 py-1.5 border-t border-white/10">
+              <input
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendAiMessage()}
+                placeholder="Ask about this satellite…"
+                className="flex-1 bg-transparent text-[10px] font-mono text-white placeholder:text-white/30 outline-none"
+              />
+              <button
+                onClick={sendAiMessage}
+                disabled={aiLoading || !aiInput.trim()}
+                className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 disabled:opacity-30"
+              >
+                <Send className="h-3 w-3 text-white/70" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation & Zoom Controls - bottom right */}
       <div className="absolute bottom-16 right-3 z-[2002] pointer-events-auto flex flex-col items-center gap-1.5">
