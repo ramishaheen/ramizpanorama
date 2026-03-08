@@ -99,19 +99,41 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString();
   const actions: string[] = [];
 
-  // 1. Randomly update a vessel position
+  // 1. Drift a vessel slightly from its current position (realistic movement)
   const vesselId = `v-00${Math.ceil(Math.random() * 8)}`;
-  // Middle East bounding box: lat 12-42, lng 24-63
-  const meLat = rand(12, 42);
-  const meLng = rand(24, 63);
-  await supabase.from("vessels").update({
-    lat: meLat,
-    lng: meLng,
-    heading: rand(0, 360),
-    speed: rand(5, 25),
-    timestamp: now,
-  }).eq("id", vesselId);
-  actions.push(`Updated vessel ${vesselId}`);
+  const { data: currentVessel } = await supabase.from("vessels").select("lat,lng,heading,speed").eq("id", vesselId).single();
+  if (currentVessel) {
+    // Convert heading to radians and drift by ~0.05-0.15 degrees based on speed
+    const headingRad = (currentVessel.heading || 0) * Math.PI / 180;
+    const drift = 0.02 + Math.random() * 0.08; // small realistic drift
+    let newLat = currentVessel.lat + drift * Math.cos(headingRad);
+    let newLng = currentVessel.lng + drift * Math.sin(headingRad);
+    // Keep within Middle East operational area (lat 12-42, lng 24-63)
+    if (newLat < 12 || newLat > 42 || newLng < 24 || newLng > 63) {
+      // Reverse heading if hitting bounds
+      const newHeading = (currentVessel.heading + 180) % 360;
+      newLat = currentVessel.lat - drift * Math.cos(headingRad);
+      newLng = currentVessel.lng - drift * Math.sin(headingRad);
+      await supabase.from("vessels").update({
+        lat: Math.max(12, Math.min(42, newLat)),
+        lng: Math.max(24, Math.min(63, newLng)),
+        heading: newHeading,
+        speed: rand(5, 22),
+        timestamp: now,
+      }).eq("id", vesselId);
+    } else {
+      // Small random heading adjustment (±5 degrees)
+      const headingDrift = (Math.random() - 0.5) * 10;
+      await supabase.from("vessels").update({
+        lat: newLat,
+        lng: newLng,
+        heading: Math.round(((currentVessel.heading + headingDrift) % 360 + 360) % 360 * 10) / 10,
+        speed: rand(5, 22),
+        timestamp: now,
+      }).eq("id", vesselId);
+    }
+  }
+  actions.push(`Drifted vessel ${vesselId}`);
 
   // 2. Add a new geo alert
   const geoType = pick(geoTypes);

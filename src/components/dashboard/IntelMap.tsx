@@ -1225,30 +1225,19 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         { opacity: 0.25, maxZoom: 18 }
       ).addTo(map);
 
-      // Weather city markers for focus region
+      // Weather city markers + wind arrows for focus region
       const weatherGroup = L.layerGroup().addTo(map);
       weatherMarkersRef.current = weatherGroup;
 
-      const focusCities = [
-        { name: "Tehran", lat: 35.69, lng: 51.39 },
-        { name: "Tel Aviv", lat: 32.09, lng: 34.78 },
-        { name: "Amman", lat: 31.95, lng: 35.93 },
-        { name: "Abu Dhabi", lat: 24.45, lng: 54.38 },
-        { name: "Manama", lat: 26.23, lng: 50.59 },
-        { name: "Kuwait City", lat: 29.38, lng: 47.98 },
-        { name: "Doha", lat: 25.29, lng: 51.53 },
-        { name: "Muscat", lat: 23.59, lng: 58.38 },
-      ];
-
-      // Fetch live temps from edge function
+      // Fetch live weather from edge function
       supabase.functions.invoke("weather-data").then(({ data }) => {
         if (!data?.weather) return;
-        const weatherMap = new Map(data.weather.map((w: any) => [w.city, w]));
-        focusCities.forEach((city) => {
-          const w = weatherMap.get(city.name) as any;
-          if (!w) return;
+        data.weather.forEach((w: any) => {
+          if (!w.lat || !w.lng) return;
           const tempColor = w.temp >= 40 ? "#ef4444" : w.temp >= 30 ? "#f97316" : w.temp >= 20 ? "#eab308" : "#22d3ee";
-          const condEmoji: Record<string, string> = { Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Thunderstorm: "⛈️", Dust: "🌪️", Haze: "🌫️", Mist: "🌫️" };
+          const condEmoji: Record<string, string> = { Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Thunderstorm: "⛈️", Dust: "🌪️", Haze: "🌫️", Mist: "🌫️", Snow: "❄️", Drizzle: "🌦️" };
+
+          // City weather marker
           const icon = L.divIcon({
             className: "weather-city-marker",
             html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
@@ -1256,16 +1245,16 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
                 <span style="font-size:10px;">${condEmoji[w.condition] || "🌤️"}</span>
                 <span style="font-size:10px;font-weight:700;color:${tempColor};font-family:monospace;">${w.temp}°</span>
               </div>
-              <span style="font-size:7px;color:rgba(255,255,255,0.5);font-family:monospace;margin-top:1px;">${city.name}</span>
+              <span style="font-size:7px;color:rgba(255,255,255,0.5);font-family:monospace;margin-top:1px;">${w.city}</span>
             </div>`,
             iconSize: [50, 30],
             iconAnchor: [25, 15],
           });
-          const marker = L.marker([city.lat, city.lng], { icon, zIndexOffset: 300 });
+          const marker = L.marker([w.lat, w.lng], { icon, zIndexOffset: 300 });
           const windArrows = ["↓", "↙", "←", "↖", "↑", "↗", "→", "↘"];
           const windDir = windArrows[Math.round(w.wind_deg / 45) % 8];
           bindHoverPopup(marker, `<div style="${popupStyle}">
-            <div style="font-weight:700;font-size:13px;color:${tempColor};margin-bottom:4px;">${condEmoji[w.condition] || "🌤️"} ${city.name} — ${w.temp}°C</div>
+            <div style="font-weight:700;font-size:13px;color:${tempColor};margin-bottom:4px;">${condEmoji[w.condition] || "🌤️"} ${w.city} — ${w.temp}°C</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10px;">
               <div>🌡️ Feels: ${w.feels_like}°C</div>
               <div>💨 Wind: ${w.wind_speed}km/h ${windDir}</div>
@@ -1277,6 +1266,41 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             <div style="font-size:9px;color:#888;margin-top:4px;text-transform:capitalize;">${w.description}</div>
           </div>`);
           weatherGroup.addLayer(marker);
+
+          // Wind direction arrow marker (offset slightly from city)
+          if (w.wind_speed > 0) {
+            const arrowLen = Math.min(w.wind_speed, 60);
+            const windRad = ((w.wind_deg + 180) % 360) * Math.PI / 180; // wind blows FROM this direction
+            const arrowColor = w.wind_speed >= 40 ? "#ef4444" : w.wind_speed >= 25 ? "#f97316" : w.wind_speed >= 15 ? "#eab308" : "#22d3ee";
+            const arrowSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" style="overflow:visible;">
+              <defs>
+                <filter id="wg-${w.code}"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${arrowColor}" flood-opacity="0.6"/></filter>
+              </defs>
+              <g transform="rotate(${w.wind_deg}, 24, 24)" filter="url(#wg-${w.code})">
+                <line x1="24" y1="38" x2="24" y2="10" stroke="${arrowColor}" stroke-width="2.5" stroke-linecap="round">
+                  <animate attributeName="y2" values="10;8;10" dur="1.5s" repeatCount="indefinite"/>
+                </line>
+                <polygon points="24,6 18,16 30,16" fill="${arrowColor}">
+                  <animate attributeName="points" values="24,6 18,16 30,16;24,4 18,14 30,14;24,6 18,16 30,16" dur="1.5s" repeatCount="indefinite"/>
+                </polygon>
+                <text x="24" y="46" text-anchor="middle" fill="${arrowColor}" font-size="8" font-family="monospace" font-weight="bold">${w.wind_speed}</text>
+              </g>
+            </svg>`;
+            const windIcon = L.divIcon({
+              className: "wind-arrow-marker",
+              html: arrowSvg,
+              iconSize: [48, 48],
+              iconAnchor: [24, 24],
+            });
+            // Offset arrow slightly east of city
+            const arrowMarker = L.marker([w.lat - 0.3, w.lng + 0.6], { icon: windIcon, zIndexOffset: 250 });
+            bindHoverPopup(arrowMarker, `<div style="${popupStyle}">
+              <div style="color:${arrowColor};font-weight:700;">💨 ${w.city} Wind</div>
+              <div style="margin-top:4px;">Speed: ${w.wind_speed} km/h</div>
+              <div>Direction: ${w.wind_deg}° (${windDir})</div>
+            </div>`);
+            weatherGroup.addLayer(arrowMarker);
+          }
         });
       });
     }

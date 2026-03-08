@@ -424,3 +424,21 @@
   border: none !important;
   box-shadow: none !important;
 }
+
+/* Wind direction arrow markers */
+.wind-arrow-marker {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: auto;
+}
+
+.wind-arrow-marker svg {
+  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.3));
+  transition: transform 0.3s ease;
+}
+
+.wind-arrow-marker:hover svg {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.5));
+}
