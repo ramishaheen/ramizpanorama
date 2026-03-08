@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff, Mountain, Flame, Cloud, Crosshair, Navigation, Car } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff, Mountain, Flame, Cloud, Crosshair, Navigation, Car, Radiation, Wind, Anchor } from "lucide-react";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 export interface LayerState {
@@ -13,6 +13,9 @@ export interface LayerState {
   traffic: boolean;
   conflicts: boolean;
   flights: boolean;
+  nuclear: boolean;
+  airQuality: boolean;
+  aisVessels: boolean;
 }
 
 interface LayerControlsProps {
@@ -24,11 +27,14 @@ const layerConfig = [
   { key: "flights" as const, trKey: "layer.flights", icon: Navigation, color: "text-primary" },
   { key: "airspace" as const, trKey: "layer.airspace", icon: Plane, color: "text-primary" },
   { key: "maritime" as const, trKey: "layer.maritime", icon: Ship, color: "text-primary" },
+  { key: "aisVessels" as const, trKey: "layer.aisVessels", icon: Anchor, color: "text-primary" },
   { key: "alerts" as const, trKey: "layer.alerts", icon: AlertTriangle, color: "text-warning" },
   { key: "rockets" as const, trKey: "layer.rockets", icon: Rocket, color: "text-critical" },
+  { key: "nuclear" as const, trKey: "layer.nuclear", icon: Radiation, color: "text-warning" },
   { key: "earthquakes" as const, trKey: "layer.earthquakes", icon: Mountain, color: "text-warning" },
   { key: "wildfires" as const, trKey: "layer.wildfires", icon: Flame, color: "text-critical" },
   { key: "weather" as const, trKey: "layer.weather", icon: Cloud, color: "text-primary" },
+  { key: "airQuality" as const, trKey: "layer.airQuality", icon: Wind, color: "text-accent" },
   { key: "traffic" as const, trKey: "layer.traffic", icon: Car, color: "text-accent" },
   { key: "conflicts" as const, trKey: "layer.conflicts", icon: Crosshair, color: "text-warning" },
   { key: "heatmap" as const, trKey: "layer.heatmap", icon: Radio, color: "text-critical" },
@@ -58,7 +64,7 @@ export const LayerControls = ({ layers, onToggle }: LayerControlsProps) => {
             )}
             <Icon className={`h-3.5 w-3.5 ${layers[key] ? color : "text-muted-foreground"}`} />
             <span className={`text-xs ${layers[key] ? "text-foreground" : "text-muted-foreground"}`}>
-              {t(tr[trKey].en, tr[trKey].ar)}
+              {t(tr[trKey]?.en || key, tr[trKey]?.ar || key)}
             </span>
           </button>
         ))}
