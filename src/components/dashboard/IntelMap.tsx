@@ -1121,7 +1121,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       // Hover popup
       const altFt = Math.round(ac.altitude * 3.281);
       const speedKts = Math.round(ac.velocity * 1.944);
-      const speedKmh = Math.round(ac.velocity * 3.6);
+      const speedKmhDisplay = Math.round(ac.velocity * 3.6);
       const vsArrow = ac.vertical_rate > 0.5 ? "↑" : ac.vertical_rate < -0.5 ? "↓" : "→";
       const vsColor = ac.vertical_rate > 0.5 ? "#22c55e" : ac.vertical_rate < -0.5 ? "#ef4444" : "#888";
 
