@@ -48,7 +48,7 @@ const riskColor = {
   EXTREME: "bg-critical/30 text-critical animate-pulse",
 };
 
-const AUTO_REFRESH_MS = 60_000;
+
 
 export const AIPredictions = () => {
   const [data, setData] = useState<PredictionData | null>(null);
@@ -74,9 +74,9 @@ export const AIPredictions = () => {
   }, [t]);
 
   useEffect(() => {
-    fetchPredictions();
-    const interval = setInterval(fetchPredictions, AUTO_REFRESH_MS);
-    return () => clearInterval(interval);
+    const initialDelay = setTimeout(fetchPredictions, 10000);
+    const interval = setInterval(fetchPredictions, 180_000);
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetchPredictions]);
 
   return (

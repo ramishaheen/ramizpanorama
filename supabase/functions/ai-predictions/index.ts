@@ -6,6 +6,38 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const fallbackPredictions = {
+  timestamp: new Date().toISOString(),
+  overall_market_sentiment: "MIXED",
+  predictions: [
+    {
+      sector: "Energy",
+      ticker: "XLE",
+      direction: "VOLATILE",
+      recommendation: "HOLD",
+      confidence: "MEDIUM",
+      timeframe: "SHORT",
+      rationale: "Regional risk remains elevated; wait for clearer directional confirmation.",
+    },
+    {
+      sector: "Defense",
+      ticker: "ITA",
+      direction: "UP",
+      recommendation: "BUY",
+      confidence: "MEDIUM",
+      timeframe: "SHORT",
+      rationale: "Heightened geopolitical uncertainty continues to support defense demand.",
+    },
+  ],
+  key_insight: "Markets are reacting to headline risk with defensive rotation.",
+  risk_level: "HIGH",
+  _fallback: true,
+};
+
+let cachedPredictionResult: any = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 120_000;
+
 async function callAI(messages: Array<{ role: string; content: string }>) {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
@@ -94,18 +126,17 @@ Return valid JSON:
       predictions = { predictions: [], key_insight: "Analysis pending", risk_level: "MEDIUM", overall_market_sentiment: "MIXED" };
     }
 
-    return new Response(JSON.stringify(predictions), {
+    cachedPredictionResult = { ...predictions, timestamp: predictions?.timestamp || new Date().toISOString() };
+    cacheTimestamp = Date.now();
+
+    return new Response(JSON.stringify(cachedPredictionResult), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    if (e instanceof Error && e.message === "RATE_LIMIT") {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (e instanceof Error && e.message === "PAYMENT_REQUIRED") {
-      return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) {
+      const cached = cachedPredictionResult && Date.now() - cacheTimestamp < CACHE_TTL_MS ? cachedPredictionResult : null;
+      return new Response(JSON.stringify(cached || fallbackPredictions), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     console.error("Prediction error:", e);

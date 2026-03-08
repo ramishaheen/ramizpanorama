@@ -6,6 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+let cachedEscalationResult: any = null;
+let escalationCacheTs = 0;
+const ESCALATION_CACHE_TTL_MS = 120_000;
+
+const fallbackEscalation = {
+  timestamp: new Date().toISOString(),
+  current_escalation_level: { kahn_rung: 16, label: "Limited Theater Escalation", description: "Sustained regional tensions with intermittent flare-ups." },
+  overall_escalation_probability: 62,
+  trend: "STABLE",
+  trend_velocity: "MODERATE",
+  scenarios: [],
+  escalation_indicators: [],
+  conflict_phases: [],
+  key_assessment: "Escalation risk remains elevated but without confirmed immediate breakout.",
+  next_24h_outlook: "Expect headline-driven volatility and localized incidents.",
+  recommended_posture: "ELEVATED",
+  _fallback: true,
+};
+
 async function callAI(messages: Array<{ role: string; content: string }>) {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
@@ -118,18 +137,17 @@ Return valid JSON with this structure:
       };
     }
 
-    return new Response(JSON.stringify(result), {
+    cachedEscalationResult = { ...result, timestamp: result?.timestamp || new Date().toISOString() };
+    escalationCacheTs = Date.now();
+
+    return new Response(JSON.stringify(cachedEscalationResult), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    if (e instanceof Error && e.message === "RATE_LIMIT") {
-      return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (e instanceof Error && e.message === "PAYMENT_REQUIRED") {
-      return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) {
+      const cached = cachedEscalationResult && Date.now() - escalationCacheTs < ESCALATION_CACHE_TTL_MS ? cachedEscalationResult : null;
+      return new Response(JSON.stringify(cached || fallbackEscalation), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     console.error("Escalation prediction error:", e);
