@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car, Layers, ChevronLeft, ChevronRight, Rocket, Video, Camera, Signal } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car, Layers, ChevronLeft, ChevronRight, Rocket, Video, Camera, Signal, Newspaper, Satellite } from "lucide-react";
+import { PRESETS, MARITIME_CORRIDORS, CITY_LANDMARKS_3D } from "./urban3d/constants";
+import { FlightStat, DataRow, LayerControl } from "./urban3d/LayerControl";
+import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
+import { SatelliteTimestampHUD } from "./urban3d/SatelliteTimestampHUD";
+import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 
 interface IntelEvent {
   title: string;
