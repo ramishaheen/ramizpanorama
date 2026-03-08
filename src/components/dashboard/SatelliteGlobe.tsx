@@ -533,6 +533,12 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .onObjectClick((d: any) => {
           const s = d as SatelliteData;
           setSelectedSat(s);
+          // Compute orbital trail
+          if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
+            const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
+            setOrbitPath(path);
+            setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
+          }
           globe.pointOfView(
             { lat: s.lat, lng: s.lng, altitude: 1.5 },
             1000
