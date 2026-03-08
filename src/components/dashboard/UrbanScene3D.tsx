@@ -55,29 +55,61 @@ const PRESETS = [
 
 function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: boolean): string {
   const color = isMilitary ? "#ef4444" : "#3b82f6";
-  const glowColor = isMilitary ? "rgba(239,68,68,0.7)" : "rgba(59,130,246,0.6)";
-  const size = isTracked ? 36 : 28;
-  const center = size / 2;
+  const glow = isMilitary ? "rgba(239,68,68,0.8)" : "rgba(59,130,246,0.7)";
+  const size = isTracked ? 40 : 30;
+  const c = size / 2;
   const trackRing = isTracked
-    ? `<circle cx="${center}" cy="${center}" r="${center - 2}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="4 2" opacity="0.6">
-        <animateTransform attributeName="transform" type="rotate" from="0 ${center} ${center}" to="360 ${center} ${center}" dur="3s" repeatCount="indefinite"/>
+    ? `<circle cx="${c}" cy="${c}" r="${c - 2}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="4 3" opacity="0.7">
+        <animateTransform attributeName="transform" type="rotate" from="0 ${c} ${c}" to="360 ${c} ${c}" dur="3s" repeatCount="indefinite"/>
       </circle>`
     : "";
-  const pulseRing = `<circle cx="${center}" cy="${center}" r="${center - 4}" fill="none" stroke="${color}" stroke-width="1" opacity="0.3">
-    <animate attributeName="r" values="${center - 4};${center}" dur="2s" repeatCount="indefinite"/>
+  const pulse = `<circle cx="${c}" cy="${c}" r="${c * 0.5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.4">
+    <animate attributeName="r" values="${c * 0.5};${c - 1}" dur="2s" repeatCount="indefinite"/>
     <animate attributeName="opacity" values="0.4;0" dur="2s" repeatCount="indefinite"/>
   </circle>`;
-  // Realistic airplane silhouette path (top-down view, nose pointing up)
-  const planePath = `M${center} ${center - 11} l-1.2 3.5 l-8 4 l0 1.8 l8-2.5 l0 5 l-3 2.2 l0 1.5 l3-1 l1.2 1.5 l1.2-1.5 l3 1 l0-1.5 l-3-2.2 l0-5 l8 2.5 l0-1.8 l-8-4 l-1.2-3.5z`;
+  // Clear airplane silhouette — fuselage + swept wings + tail
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <defs><filter id="g${isTracked ? 't' : 'n'}"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="${glowColor}"/></filter></defs>
-    ${trackRing}
-    ${pulseRing}
-    <g transform="rotate(${heading} ${center} ${center})" filter="url(#g${isTracked ? 't' : 'n'})">
-      <path d="${planePath}" fill="${color}" stroke="rgba(255,255,255,0.2)" stroke-width="0.4"/>
+    <defs><filter id="af${isTracked?1:0}"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${glow}"/></filter></defs>
+    ${trackRing}${pulse}
+    <g transform="rotate(${heading} ${c} ${c})" filter="url(#af${isTracked?1:0})">
+      <!-- fuselage -->
+      <ellipse cx="${c}" cy="${c}" rx="${size * 0.06}" ry="${size * 0.35}" fill="${color}"/>
+      <!-- wings -->
+      <polygon points="${c},${c - size * 0.02} ${c - size * 0.35},${c + size * 0.08} ${c - size * 0.3},${c + size * 0.12} ${c},${c + size * 0.05}" fill="${color}" opacity="0.95"/>
+      <polygon points="${c},${c - size * 0.02} ${c + size * 0.35},${c + size * 0.08} ${c + size * 0.3},${c + size * 0.12} ${c},${c + size * 0.05}" fill="${color}" opacity="0.95"/>
+      <!-- tail fin -->
+      <polygon points="${c},${c + size * 0.22} ${c - size * 0.12},${c + size * 0.32} ${c - size * 0.1},${c + size * 0.35} ${c},${c + size * 0.28}" fill="${color}" opacity="0.85"/>
+      <polygon points="${c},${c + size * 0.22} ${c + size * 0.12},${c + size * 0.32} ${c + size * 0.1},${c + size * 0.35} ${c},${c + size * 0.28}" fill="${color}" opacity="0.85"/>
+      <!-- cockpit -->
+      <ellipse cx="${c}" cy="${c - size * 0.28}" rx="${size * 0.035}" ry="${size * 0.05}" fill="rgba(255,255,255,0.35)"/>
     </g>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+// Generate a projected route backward from current position using heading & speed
+function generateProjectedRoute(ac: Aircraft, trailHistory: { lat: number; lng: number; ts: number }[]): { lat: number; lng: number }[] {
+  const points: { lat: number; lng: number }[] = [];
+  // Use trail history if available
+  if (trailHistory.length > 0) {
+    trailHistory.forEach(p => points.push({ lat: p.lat, lng: p.lng }));
+  }
+  // If fewer than 3 trail points, project backward from heading to create a visible route
+  if (points.length < 3) {
+    const headingRad = ((ac.heading + 180) % 360) * Math.PI / 180; // reverse heading
+    const speedKmh = ac.velocity * 3.6;
+    const distKm = Math.max(speedKmh * 0.05, 15); // ~3 min of flight or 15km min
+    for (let i = 5; i >= 1; i--) {
+      const d = (distKm * i) / 111.32;
+      points.unshift({
+        lat: ac.lat + Math.cos(headingRad) * d,
+        lng: ac.lng + Math.sin(headingRad) * d / Math.cos(ac.lat * Math.PI / 180),
+      });
+    }
+  }
+  // Add current position
+  points.push({ lat: ac.lat, lng: ac.lng });
+  return points;
 }
 
 export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanSceneProps) => {
@@ -242,7 +274,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const isTracked = trackedAircraftId === ac.icao24;
       const isMil = ac.is_military;
       const color = isMil ? "#ef4444" : "#3b82f6";
-      const size = isTracked ? 36 : 28;
+      const size = isTracked ? 40 : 30;
 
       const marker = new google.maps.Marker({
         position: { lat: ac.lat, lng: ac.lng },
@@ -303,7 +335,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     markersRef.current = newMarkers;
   }, [aircraft, showFlights, showMarkers, trackedAircraftId]);
 
-  // ===== RENDER TRAILS =====
+  // ===== RENDER FLIGHT ROUTES & TRAILS =====
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
@@ -317,35 +349,70 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     const newLines: any[] = [];
     aircraft.forEach((ac) => {
       const history = trailHistoryRef.current[ac.icao24] || [];
-      if (history.length < 2) return;
       const isMil = ac.is_military;
       const isTracked = trackedAircraftId === ac.icao24;
       const color = isMil ? "#ef4444" : "#3b82f6";
-      const fullPath = [...history.map(p => ({ lat: p.lat, lng: p.lng })), { lat: ac.lat, lng: ac.lng }];
 
-      // Faded old trail
-      if (fullPath.length > 3) {
+      // Generate full route — uses trail history + projected backward path
+      const routePath = generateProjectedRoute(ac, history);
+
+      // Projected/old portion (dashed, faded)
+      if (routePath.length > 3) {
+        const oldPortion = routePath.slice(0, -2);
         const fadedLine = new google.maps.Polyline({
-          path: fullPath.slice(0, -2),
+          path: oldPortion,
           map,
           strokeColor: color,
-          strokeOpacity: 0.2,
-          strokeWeight: isTracked ? 2 : 1.2,
+          strokeOpacity: isTracked ? 0.35 : 0.2,
+          strokeWeight: isTracked ? 2.5 : 1.5,
           geodesic: true,
+          icons: [{
+            icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: 0.5, strokeColor: color, scale: 3 },
+            offset: "0",
+            repeat: "14px",
+          }],
         });
         newLines.push(fadedLine);
       }
 
-      // Bright recent trail
+      // Recent solid trail (last few points to current position)
+      const recentPath = routePath.slice(Math.max(0, routePath.length - 6));
       const recentLine = new google.maps.Polyline({
-        path: fullPath.slice(Math.max(0, fullPath.length - 5)),
+        path: recentPath,
         map,
         strokeColor: color,
-        strokeOpacity: isTracked ? 0.9 : 0.6,
-        strokeWeight: isTracked ? 3.5 : 2,
+        strokeOpacity: isTracked ? 0.95 : 0.7,
+        strokeWeight: isTracked ? 3.5 : 2.5,
         geodesic: true,
       });
       newLines.push(recentLine);
+
+      // Forward projection line (dotted, lighter) — shows where aircraft is heading
+      if (isTracked) {
+        const headingRad = ac.heading * Math.PI / 180;
+        const projDist = Math.max(ac.velocity * 3.6 * 0.03, 10) / 111.32; // ~2min or 10km
+        const fwdPoints = [
+          { lat: ac.lat, lng: ac.lng },
+          { lat: ac.lat + Math.cos(headingRad) * projDist, lng: ac.lng + Math.sin(headingRad) * projDist / Math.cos(ac.lat * Math.PI / 180) },
+        ];
+        const fwdLine = new google.maps.Polyline({
+          path: fwdPoints,
+          map,
+          strokeColor: "#22c55e",
+          strokeOpacity: 0.5,
+          strokeWeight: 2,
+          geodesic: true,
+          icons: [{
+            icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2.5, strokeColor: "#22c55e", strokeOpacity: 0.7 },
+            offset: "100%",
+          }, {
+            icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: 0.4, strokeColor: "#22c55e", scale: 2.5 },
+            offset: "0",
+            repeat: "10px",
+          }],
+        });
+        newLines.push(fwdLine);
+      }
     });
     trailLinesRef.current = newLines;
   }, [aircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
