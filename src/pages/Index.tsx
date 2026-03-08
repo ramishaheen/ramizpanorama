@@ -127,6 +127,9 @@ const Index = () => {
     traffic: true,
     conflicts: true,
     flights: true,
+    nuclear: true,
+    airQuality: false,
+    aisVessels: true,
   });
 
   const initialLayout = loadLayout();
