@@ -20,6 +20,21 @@ const CITIES = [
   "Riyadh", "Dubai", "Cairo", "Sanaa", "Gaza", "Khartoum", "Tripoli",
 ];
 
+const CITY_COORDS: Record<string, { lat: number; lng: number; zoom: number }> = {
+  Baghdad: { lat: 33.31, lng: 44.37, zoom: 12 },
+  Tehran: { lat: 35.69, lng: 51.39, zoom: 12 },
+  Beirut: { lat: 33.89, lng: 35.50, zoom: 13 },
+  Damascus: { lat: 33.51, lng: 36.29, zoom: 12 },
+  Amman: { lat: 31.95, lng: 35.93, zoom: 12 },
+  Riyadh: { lat: 24.71, lng: 46.67, zoom: 12 },
+  Dubai: { lat: 25.20, lng: 55.27, zoom: 12 },
+  Cairo: { lat: 30.04, lng: 31.24, zoom: 12 },
+  Sanaa: { lat: 15.37, lng: 44.21, zoom: 12 },
+  Gaza: { lat: 31.50, lng: 34.47, zoom: 13 },
+  Khartoum: { lat: 15.60, lng: 32.53, zoom: 12 },
+  Tripoli: { lat: 32.90, lng: 13.18, zoom: 12 },
+};
+
 const EVENT_COLORS: Record<string, string> = {
   evacuation: "#3b82f6",
   protest: "#f97316",
@@ -100,7 +115,16 @@ export const CrisisIntelModal = ({ onClose }: CrisisIntelModalProps) => {
     };
   }, []);
 
-  // Fly to city
+  // Fly to city immediately on selection (before API response)
+  useEffect(() => {
+    if (!mapRef.current || !city) return;
+    const coords = CITY_COORDS[city];
+    if (coords) {
+      mapRef.current.flyTo([coords.lat, coords.lng], coords.zoom, { duration: 1.8, easeLinearity: 0.25 });
+    }
+  }, [city]);
+
+  // Also fly when API returns (in case coords differ)
   useEffect(() => {
     if (!mapRef.current || !data?.city_coords) return;
     mapRef.current.flyTo([data.city_coords.lat, data.city_coords.lng], data.city_coords.zoom, { duration: 1.2 });
