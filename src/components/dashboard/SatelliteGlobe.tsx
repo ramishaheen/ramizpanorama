@@ -252,6 +252,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [showSearch, setShowSearch] = useState(false);
   const [activeCity, setActiveCity] = useState<string | null>(null);
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
+  const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [orbitColor, setOrbitColor] = useState<string>("#ffffff");
   const satsRef = useRef<SatelliteData[]>([]);
 
   useEffect(() => {
