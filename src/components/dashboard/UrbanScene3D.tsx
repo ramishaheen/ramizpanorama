@@ -609,7 +609,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         const activeIds = new Set(newAircraft.map(a => a.icao24));
         Object.keys(history).forEach(id => { if (!activeIds.has(id)) delete history[id]; });
         trailHistoryRef.current = history;
+        aircraftSnapshotRef.current = newAircraft;
+        lastPollTimeRef.current = Date.now();
         setAircraft(newAircraft);
+        setInterpolatedAircraft(newAircraft);
       }
     } catch (e) {
       console.error("Failed to fetch flights:", e);
