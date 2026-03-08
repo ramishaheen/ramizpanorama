@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 export interface FusionEvent {
   event_id: string;
@@ -142,6 +143,7 @@ export function useGeoFusion() {
       setData(normalized);
     } catch (e) {
       console.error("GeoFusion fetch error:", e);
+      handleAIError(e, "Geo Fusion");
       if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);

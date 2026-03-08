@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 interface SectorCost {
   name: string;
@@ -50,7 +51,8 @@ export function useWarCosts() {
       setData(fnData);
     } catch (e) {
       console.error("War costs fetch error:", e);
-      setError(e instanceof Error ? e.message : "Failed to load");
+      handleAIError(e, "War Costs");
+      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }

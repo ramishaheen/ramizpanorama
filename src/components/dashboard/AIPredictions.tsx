@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, TrendingDown, Activity, RefreshCw, AlertTriangle, Loader2 } from "lucide-react";
+import { handleAIError } from "@/lib/ai-error-handler";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 interface Prediction {
@@ -64,7 +65,9 @@ export const AIPredictions = () => {
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Failed to fetch predictions:", err);
-      setData({ error: t("Failed to load predictions", "فشل تحميل التوقعات") });
+      if (!handleAIError(err, "AI Predictions")) {
+        setData({ error: t("Failed to load predictions", "فشل تحميل التوقعات") });
+      }
     } finally {
       setLoading(false);
     }
