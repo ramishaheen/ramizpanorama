@@ -272,6 +272,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [flightData, setFlightData] = useState<FlightAircraft[]>([]);
   const flightTrailsRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [trackedFlightId, setTrackedFlightId] = useState<string | null>(null);
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
