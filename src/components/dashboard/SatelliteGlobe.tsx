@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Radar, Zap, Rocket, Cpu, Anchor, FlaskConical, Orbit, Wifi } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,10 +33,21 @@ interface SatelliteGlobeProps {
 const CATEGORY_COLORS: Record<string, string> = {
   Military: "#ef4444",
   ISR: "#ff6b00",
+  "Early Warning": "#ff3366",
+  "SIGINT/ELINT": "#e879f9",
   Communication: "#ffd54f",
+  "Data Relay": "#fbbf24",
   Navigation: "#22c55e",
   Weather: "#a855f7",
   "Earth Observation": "#ffb800",
+  "SAR Imaging": "#f97316",
+  Scientific: "#06b6d4",
+  "Space Station": "#f0f0f0",
+  "Technology Demo": "#14b8a6",
+  "Amateur/Ham": "#84cc16",
+  "Search & Rescue": "#fb7185",
+  Debris: "#6b7280",
+  "Launch Vehicle": "#78716c",
   Unknown: "#d4a843",
 };
 
@@ -160,18 +171,48 @@ function categorizeSatellite(name: string, sourceGroup?: string): string {
   const n = name.toUpperCase();
   // Source group overrides
   if (sourceGroup === "military") return "Military";
-  if (sourceGroup === "isr") return "ISR";
+  if (sourceGroup === "stations") return "Space Station";
+  if (sourceGroup === "science") return "Scientific";
+  if (sourceGroup === "amateur") return "Amateur/Ham";
+  // Name-based — most specific first
+  // Space stations
+  if (n.includes("ISS (ZARYA)") || n.includes("TIANGONG") || n.includes("CSS ") || n === "ISS") return "Space Station";
+  // Early warning / missile defense
+  if (n.includes("SBIRS") || n.includes("DSP") || n.includes("STSS") || n.includes("MIDAS") || n.includes("OPIR")) return "Early Warning";
+  // SIGINT / ELINT
+  if (n.includes("MENTOR") || n.includes("TRUMPET") || n.includes("ORION") || n.includes("INTRUDER") || n.includes("PROWLER") || n.includes("MERCURY") || n.includes("NEMESIS") || n.includes("SHARP") || n.includes("NOSS") || n.includes("POPPY") || n.includes("PARCAE") || n.includes("LUCH") || n.includes("OLYMP")) return "SIGINT/ELINT";
+  // ISR / Reconnaissance
+  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("MISTY") || n.includes("TOPAZ") || n.includes("SAPPHIRE") || n.includes("YAOGAN") || n.includes("OFEK") || n.includes("EROS") || n.includes("SHIJIAN") || n.includes("COSMOS 2") || n.includes("GSSAP") || n.includes("GOKTURK") || n.includes("FALCON EYE") || n.includes("CARTOSAT") || n.includes("KONDOR") || n.includes("PERSONA") || n.includes("BARS-M") || n.includes("IGS")) return "ISR";
+  // Military comms / C2
+  if (n.includes("USA ") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("WGS") || n.includes("AEHF") || n.includes("MUOS") || n.includes("MILSTAR") || n.includes("NROL") || n.includes("SKYNET") || n.includes("SICRAL") || n.includes("ANASIS") || n.includes("XTAR") || n.includes("UFO ") || n.includes("FLTSATCOM") || n.includes("DSCS") || n.includes("MERIDIAN") || n.includes("RODNIK") || n.includes("GONETS") || n.includes("STRELA")) return "Military";
+  // SAR imaging
+  if (n.includes("RADARSAT") || n.includes("COSMO-SKYMED") || n.includes("ICEYE") || n.includes("CAPELLA") || n.includes("SAR") || n.includes("SAOCOM") || n.includes("TANDEM") || n.includes("PAZ ") || n.includes("RISAT") || n.includes("KONDOR")) return "SAR Imaging";
+  // Data relay
+  if (n.includes("TDRS") || n.includes("TIANLIAN") || n.includes("EDRS") || n.includes("LUCH")) return "Data Relay";
+  // Communication
+  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB") || n.includes("THURAYA") || n.includes("ARABSAT") || n.includes("BADR") || n.includes("ASTRA") || n.includes("EUTELSAT") || n.includes("TELSTAR") || n.includes("GLOBALSTAR") || n.includes("O3B") || n.includes("ORBCOMM") || n.includes("TURKSAT") || n.includes("NILESAT") || n.includes("MEASAT") || n.includes("JCSAT") || n.includes("APSTAR") || n.includes("CHINASAT") || n.includes("ZHONGXING") || n.includes("PAKSAT") || n.includes("EXPRESS") || n.includes("YAMAL") || n.includes("BANGABANDHU") || n.includes("AMOS") || n.includes("KOREASAT") || n.includes("ECHOSTAR") || n.includes("DIRECTV") || n.includes("SIRIUS") || n.includes("XM ") || n.includes("NIGCOMSAT") || n.includes("RASCOM")) return "Communication";
+  // Navigation
+  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU") || n.includes("IRNSS") || n.includes("QZSS") || n.includes("NAVIC")) return "Navigation";
+  // Weather
+  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP") || n.includes("METEOR-M") || n.includes("FENGYUN") || n.includes("INSAT") || n.includes("METOP") || n.includes("SUOMI") || n.includes("JPSS") || n.includes("ELEKTRO") || n.includes("KALPANA") || n.includes("COMS") || n.includes("GEO-KOMPSAT") || n.includes("FY-")) return "Weather";
+  // Earth Observation
+  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA") || n.includes("RESOURCESAT") || n.includes("KOMPSAT") || n.includes("ALOS") || n.includes("GAOFEN") || n.includes("CBERS") || n.includes("DEIMOS") || n.includes("RAPIDEYE") || n.includes("PLANET") || n.includes("DOVE") || n.includes("SUPERVIEW") || n.includes("TRIPLESAT") || n.includes("JILIN") || n.includes("ZIYUAN") || n.includes("KHALIFASAT") || n.includes("DUBAISAT") || n.includes("SAUDISAT")) return "Earth Observation";
+  // Search & Rescue
+  if (sourceGroup === "sarsat" || n.includes("COSPAS") || n.includes("SARSAT")) return "Search & Rescue";
+  // Scientific
+  if (n.includes("HUBBLE") || n.includes("CHANDRA") || n.includes("FERMI") || n.includes("SWIFT") || n.includes("NUSTAR") || n.includes("WISE") || n.includes("TESS") || n.includes("JWST") || n.includes("GAIA") || n.includes("PLANCK") || n.includes("CLUSTER") || n.includes("INTEGRAL") || n.includes("XMM") || n.includes("SPEKTR") || n.includes("ASTROSAT") || n.includes("DAMPE") || n.includes("HXMT") || n.includes("EINSTEIN") || n.includes("DSCOVR") || n.includes("ACE ") || n.includes("SOHO") || n.includes("SDO ") || n.includes("STEREO") || n.includes("WIND ") || n.includes("SWARM") || n.includes("GRACE") || n.includes("GOCE") || n.includes("LISA") || n.includes("PROBA")) return "Scientific";
+  // Technology demo
+  if (n.includes("CUBESAT") || n.includes("NANOSAT") || n.includes("MICROSAT") || n.includes("LEMUR") || n.includes("FLOCK") || n.includes("SPIRE") || n.includes("AISSAT") || n.includes("TET-") || n.includes("BRITE") || n.includes("OPS-SAT") || n.includes("RANGE")) return "Technology Demo";
+  // Amateur
+  if (n.includes("AMSAT") || n.includes("OSCAR") || n.includes("FUNCUBE") || n.includes("HAMSAT") || n.includes("CUBESAT") || sourceGroup === "amateur") return "Amateur/Ham";
+  // Debris / rocket bodies
+  if (n.includes(" DEB") || n.includes("DEBRIS") || n.includes(" R/B") || n.includes("ROCKET BODY")) return "Debris";
+  if (n.includes("ATLAS") || n.includes("DELTA") || n.includes("FALCON") || n.includes("CENTAUR") || n.includes("BREEZE") || n.includes("FREGAT") || n.includes("BLOCK D")) return "Launch Vehicle";
+  // Fallback by source group
   if (sourceGroup === "geo") return "Communication";
   if (sourceGroup === "gnss") return "Navigation";
   if (sourceGroup === "weather") return "Weather";
-  if (sourceGroup === "resource" || sourceGroup === "sarsat") return "Earth Observation";
-  // Name-based detection
-  if (n.includes("USA ") || n.includes("NOSS") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("MISTY") || n.includes("SBIRS") || n.includes("DSP") || n.includes("WGS") || n.includes("AEHF") || n.includes("MUOS") || n.includes("MILSTAR") || n.includes("NROL") || n.includes("GSSAP")) return "Military";
-  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("ORION") || n.includes("MENTOR") || n.includes("TRUMPET") || n.includes("INTRUDER") || n.includes("PROWLER") || n.includes("SHARP") || n.includes("MISTY") || n.includes("TOPAZ") || n.includes("SAPPHIRE") || n.includes("YAOGAN") || n.includes("OFEK") || n.includes("EROS") || n.includes("SHIJIAN") || n.includes("COSMOS 2")) return "ISR";
-  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB") || n.includes("THURAYA") || n.includes("ARABSAT") || n.includes("BADR") || n.includes("ASTRA") || n.includes("EUTELSAT") || n.includes("TELSTAR") || n.includes("GLOBALSTAR") || n.includes("O3B")) return "Communication";
-  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU") || n.includes("IRNSS") || n.includes("QZSS") || n.includes("NAVIC")) return "Navigation";
-  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP") || n.includes("METEOR-M") || n.includes("FENGYUN") || n.includes("INSAT") || n.includes("METOP") || n.includes("SUOMI") || n.includes("JPSS")) return "Weather";
-  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA") || n.includes("CARTOSAT") || n.includes("RESOURCESAT") || n.includes("KOMPSAT") || n.includes("RADARSAT") || n.includes("COSMO-SKYMED") || n.includes("ALOS") || n.includes("GAOFEN")) return "Earth Observation";
+  if (sourceGroup === "resource") return "Earth Observation";
   return "Unknown";
 }
 
@@ -207,11 +248,27 @@ function detectCountry(name: string, intlDesignator?: string): { country: string
   return { country: "Unknown", operator: "Unknown" };
 }
 
-function getOrbitType(alt: number, _inc?: number, ecc?: number): string {
-  if (alt < 2000) return "LEO";
-  if (alt >= 2000 && alt < 35000) return "MEO";
-  if (alt >= 35000 && alt <= 36500) return "GEO";
-  if ((ecc || 0) > 0.1) return "HEO";
+function getOrbitType(alt: number, inc?: number, ecc?: number): string {
+  const i = inc || 0;
+  const e = ecc || 0;
+  if (e > 0.5) return "HEO (Highly Elliptical)";
+  if (e > 0.1 && alt > 20000) return "Molniya";
+  if (alt >= 35000 && alt <= 36500) {
+    if (i < 5) return "GEO (Geostationary)";
+    return "GSO (Geosynchronous)";
+  }
+  if (alt < 450) return "VLEO (Very Low)";
+  if (alt < 2000) {
+    if (i > 95 && i < 100) return "SSO (Sun-Synch)";
+    if (i > 50 && i < 55) return "LEO (ISS-type)";
+    if (i > 85) return "LEO (Polar)";
+    if (i > 60 && i < 70) return "LEO (Mid-Inc)";
+    return "LEO";
+  }
+  if (alt >= 2000 && alt < 20200) return "MEO";
+  if (alt >= 20200 && alt < 24000) return "MEO (Nav)";
+  if (alt >= 24000 && alt < 35000) return "MEO (High)";
+  if (alt > 36500) return "Super-GEO";
   return "Other";
 }
 
@@ -508,6 +565,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gnss&FORMAT=tle", group: "gnss" },
         { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=tle", group: "geo" },
         { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=sarsat&FORMAT=tle", group: "sarsat" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle", group: "stations" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=tle", group: "science" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle", group: "amateur" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=engineering&FORMAT=tle", group: "engineering" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=radar&FORMAT=tle", group: "radar" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=cubesat&FORMAT=tle", group: "cubesat" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=other-comm&FORMAT=tle", group: "other-comm" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=molniya&FORMAT=tle", group: "molniya" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium&FORMAT=tle", group: "iridium" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=globalstar&FORMAT=tle", group: "globalstar" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=orbcomm&FORMAT=tle", group: "orbcomm" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle", group: "starlink" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=tle", group: "oneweb" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=planet&FORMAT=tle", group: "planet" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=spire&FORMAT=tle", group: "spire" },
         { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=last-30-days&FORMAT=tle", group: "recent" },
       ];
 
@@ -567,12 +639,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         }
       }
 
-      // Prioritize: Military & ISR first, then others
+      // Prioritize: Military & ISR first, then strategic, then bulk
       const prioritized = [
-        ...allSats.filter((s) => s.category === "Military" || s.category === "ISR"),
+        ...allSats.filter((s) => s.category === "Military" || s.category === "ISR" || s.category === "Early Warning" || s.category === "SIGINT/ELINT"),
         ...allSats.filter((s) => s.category === "Navigation"),
+        ...allSats.filter((s) => s.category === "SAR Imaging"),
         ...allSats.filter((s) => s.category === "Weather" || s.category === "Earth Observation"),
-        ...allSats.filter((s) => s.category === "Communication").slice(0, 500),
+        ...allSats.filter((s) => s.category === "Data Relay" || s.category === "Search & Rescue"),
+        ...allSats.filter((s) => s.category === "Scientific" || s.category === "Space Station"),
+        ...allSats.filter((s) => s.category === "Communication").slice(0, 800),
+        ...allSats.filter((s) => s.category === "Technology Demo" || s.category === "Amateur/Ham").slice(0, 200),
+        ...allSats.filter((s) => s.category === "Debris" || s.category === "Launch Vehicle").slice(0, 100),
         ...allSats.filter((s) => s.category === "Unknown").slice(0, 200),
       ];
 
@@ -584,10 +661,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         return true;
       });
 
-      const limited = deduped.slice(0, 3500);
-      rawTLERef.current = rawTLEs.filter((r) => deduped.some((d) => d.name === r.name)).slice(0, 3500);
+      const limited = deduped.slice(0, 5000);
+      rawTLERef.current = rawTLEs.filter((r) => deduped.some((d) => d.name === r.name)).slice(0, 5000);
       setSatellites(limited);
-      console.log(`[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter(r => r.status === 'fulfilled').length} CelesTrak groups`);
+      console.log(`[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter(r => r.status === 'fulfilled').length} CelesTrak groups (${Object.keys(CATEGORY_COLORS).length} categories)`);
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
     } finally {
@@ -681,9 +758,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         const group = new THREE.Group();
 
         // Main satellite body
-        const isMilOrISR = sat.category === "Military" || sat.category === "ISR";
+        const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
         const isNav = sat.category === "Navigation";
-        const bodySize = isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
+        const isStation = sat.category === "Space Station";
+        const bodySize = isStation ? 0.9 : isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
 
         const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
         const bodyMat = new THREE.MeshPhongMaterial({
@@ -719,7 +797,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         group.add(panelRight);
 
         // Antenna dish for comm/ISR satellites
-        if (sat.category === "Communication" || sat.category === "ISR") {
+        if (sat.category === "Communication" || sat.category === "ISR" || sat.category === "SIGINT/ELINT" || sat.category === "Data Relay" || sat.category === "SAR Imaging") {
           const dishGeo = new THREE.ConeGeometry(bodySize * 0.3, bodySize * 0.4, 8);
           const dishMat = new THREE.MeshPhongMaterial({
             color: 0xcccccc,
@@ -799,8 +877,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .labelsData(
           showLabels
             ? filtered
-                .filter((s) => s.category === "Military" || s.category === "ISR" || s.category === "Navigation")
-                .slice(0, 150)
+                .filter((s) => ["Military", "ISR", "Early Warning", "SIGINT/ELINT", "Navigation", "SAR Imaging", "Space Station", "Scientific"].includes(s.category))
+                .slice(0, 200)
             : []
         )
         .labelLat("lat")
@@ -1049,21 +1127,25 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         <div className="mt-2 space-y-0.5 text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.55)" }}>
           <div style={{ color: "rgba(239,68,68,0.7)" }}>⬤ TOP SECRET // SI-TK // NOFORN</div>
           <div>
-            ▸ TRACKING {satellites.length} OBJECTS • MIL:{" "}
-            {satellites.filter((s) => s.category === "Military").length} ISR:{" "}
-            {satellites.filter((s) => s.category === "ISR").length} NAV:{" "}
-            {satellites.filter((s) => s.category === "Navigation").length}
+            ▸ TRACKING {satellites.length} OBJECTS across {Object.keys(CATEGORY_COLORS).length} TYPES
           </div>
           <div>
-            ▸ LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
-            {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO:{" "}
-            {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
+            ▸ MIL: {satellites.filter((s) => s.category === "Military").length} • ISR: {satellites.filter((s) => s.category === "ISR").length} • EW: {satellites.filter((s) => s.category === "Early Warning").length} • SIGINT: {satellites.filter((s) => s.category === "SIGINT/ELINT").length}
+          </div>
+          <div>
+            ▸ NAV: {satellites.filter((s) => s.category === "Navigation").length} • COMM: {satellites.filter((s) => s.category === "Communication").length} • WX: {satellites.filter((s) => s.category === "Weather").length} • EO: {satellites.filter((s) => s.category === "Earth Observation").length}
+          </div>
+          <div>
+            ▸ SAR: {satellites.filter((s) => s.category === "SAR Imaging").length} • SCI: {satellites.filter((s) => s.category === "Scientific").length} • RELAY: {satellites.filter((s) => s.category === "Data Relay").length} • S&R: {satellites.filter((s) => s.category === "Search & Rescue").length}
+          </div>
+          <div>
+            ▸ VLEO: {satellites.filter((s) => s.alt < 450).length} • LEO: {satellites.filter((s) => s.alt >= 450 && s.alt < 2000).length} • MEO: {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO: {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
           </div>
           <div>
             ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
           </div>
           <div>
-            ▸ SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+            ▸ SOURCES: CELESTRAK × 23 GROUPS • NORAD TLE
           </div>
           <div style={{ color: "rgba(255,255,255,0.45)" }}>
             ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
@@ -1111,10 +1193,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             if (count === 0) return null;
             const CatIcon = cat === "Military" ? Shield
               : cat === "ISR" ? Eye
+              : cat === "Early Warning" ? Zap
+              : cat === "SIGINT/ELINT" ? Radar
               : cat === "Communication" ? Radio
+              : cat === "Data Relay" ? Wifi
               : cat === "Navigation" ? Navigation
               : cat === "Weather" ? Cloud
               : cat === "Earth Observation" ? Globe
+              : cat === "SAR Imaging" ? Radar
+              : cat === "Scientific" ? FlaskConical
+              : cat === "Space Station" ? Orbit
+              : cat === "Technology Demo" ? Cpu
+              : cat === "Amateur/Ham" ? Radio
+              : cat === "Search & Rescue" ? Anchor
+              : cat === "Debris" ? HelpCircle
+              : cat === "Launch Vehicle" ? Rocket
               : HelpCircle;
             return (
               <button
