@@ -263,6 +263,44 @@ const CITY_PRESETS = [
   { name: "Beijing", lat: 39.9, lng: 116.4 },
 ];
 
+// OSINT Intelligence Markers — conflict zones, military bases, naval choke points, radar sites
+const OSINT_MARKERS = [
+  // Active conflict zones
+  { lat: 31.5, lng: 34.47, label: "GAZA", type: "conflict", severity: "critical", info: "Active combat zone • IDF operations" },
+  { lat: 33.27, lng: 35.2, label: "S. LEBANON", type: "conflict", severity: "high", info: "Hezbollah front line • Artillery exchanges" },
+  { lat: 15.35, lng: 44.2, label: "YEMEN/HOUTHI", type: "conflict", severity: "high", info: "Houthi launch sites • Anti-ship ops" },
+  { lat: 36.2, lng: 37.16, label: "ALEPPO", type: "conflict", severity: "medium", info: "Syrian conflict zone • Russian presence" },
+  // Military bases
+  { lat: 32.4, lng: 34.88, label: "PALMACHIM AFB", type: "military", severity: "high", info: "🇮🇱 Arrow/Iron Dome • Ofek launch site" },
+  { lat: 30.12, lng: 35.24, label: "NEVATIM AFB", type: "military", severity: "high", info: "🇮🇱 F-35I Adir • Main strike base" },
+  { lat: 32.57, lng: 51.68, label: "ISFAHAN NUC", type: "military", severity: "critical", info: "🇮🇷 Nuclear facility • Natanz nearby" },
+  { lat: 35.23, lng: 53.94, label: "SEMNAN SPACE", type: "military", severity: "high", info: "🇮🇷 IRGC space launch center" },
+  { lat: 27.18, lng: 56.17, label: "BANDAR ABBAS", type: "military", severity: "high", info: "🇮🇷 IRIN naval HQ • Strait of Hormuz" },
+  { lat: 25.61, lng: 55.09, label: "AL DHAFRA AFB", type: "military", severity: "medium", info: "🇺🇸 USAF base • F-22/KC-135" },
+  { lat: 25.38, lng: 51.3, label: "AL UDEID AB", type: "military", severity: "medium", info: "🇺🇸 CENTCOM forward HQ • Qatar" },
+  { lat: 35.4, lng: 35.95, label: "HMEIMIM AFB", type: "military", severity: "medium", info: "🇷🇺 Russian air base • Syria" },
+  { lat: 34.89, lng: 35.89, label: "TARTUS NAVAL", type: "military", severity: "medium", info: "🇷🇺 Naval facility • Mediterranean" },
+  { lat: 39.82, lng: 32.69, label: "AKINCI AFB", type: "military", severity: "low", info: "🇹🇷 TAI drone base • TB2 ops" },
+  // Naval choke points
+  { lat: 26.57, lng: 56.25, label: "STRAIT OF HORMUZ", type: "naval", severity: "critical", info: "21M bbl/day oil transit • IRGC patrols" },
+  { lat: 12.6, lng: 43.26, label: "BAB EL-MANDEB", type: "naval", severity: "critical", info: "Red Sea chokepoint • Houthi threat" },
+  { lat: 30.46, lng: 32.34, label: "SUEZ CANAL", type: "naval", severity: "high", info: "12% global trade • Diversion risk" },
+  // Radar / SIGINT sites
+  { lat: 30.97, lng: 34.78, label: "DIMONA RADAR", type: "radar", severity: "high", info: "🇮🇱 AN/TPY-2 X-band • BMD radar" },
+  { lat: 21.42, lng: 39.83, label: "KHAMIS MUSHAIT", type: "military", severity: "medium", info: "🇸🇦 RSAF base • Patriot battery" },
+  { lat: 36.14, lng: 32.99, label: "KÜRECIK RADAR", type: "radar", severity: "high", info: "🇺🇸/🇹🇷 NATO BMD radar • AN/TPY-2" },
+];
+
+// Arc connections (supply lines, threat vectors)
+const OSINT_ARCS = [
+  { startLat: 27.18, startLng: 56.17, endLat: 12.6, endLng: 43.26, color: "#ef4444", label: "IRGC-Houthi corridor" },
+  { startLat: 35.69, startLng: 51.39, endLat: 33.85, endLng: 35.86, color: "#ef4444", label: "Iran-Hezbollah supply" },
+  { startLat: 35.69, startLng: 51.39, endLat: 36.2, endLng: 37.16, color: "#ff6b00", label: "Iran-Syria axis" },
+  { startLat: 25.61, startLng: 55.09, endLat: 26.57, endLng: 56.25, color: "#22c55e", label: "USAF patrol route" },
+  { startLat: 34.89, startLng: 35.89, endLat: 35.4, endLng: 35.95, color: "#a855f7", label: "RU naval-air link" },
+  { startLat: 15.35, startLng: 44.2, endLat: 12.6, endLng: 43.26, color: "#ef4444", label: "Houthi ASM threat" },
+];
+
 // Store raw TLE data for re-propagation
 interface RawSatTLE {
   name: string;
