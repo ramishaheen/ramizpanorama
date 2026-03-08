@@ -504,7 +504,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       ctx.lineJoin = "round";
 
       // 1. Draw TDI-coloured road lines
-      roads.forEach((road) => {
+      roads.forEach((road, ri) => {
         const baseW = ROAD_LINE_WIDTH[road.highway] ?? 3;
         const zoomScale = zoom >= 21 ? 2.2 : zoom >= 20 ? 1.7 : zoom >= 19 ? 1.3 : zoom >= 18 ? 1.0 : 0.75;
         const lineW = baseW * zoomScale * dpr;
