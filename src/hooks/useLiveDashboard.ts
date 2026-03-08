@@ -94,19 +94,8 @@ export function useLiveDashboard() {
     };
   }, [flashFresh]);
 
-  // Auto-simulate live intel every 60 seconds
-  useEffect(() => {
-    const simulate = () => {
-      supabase.functions.invoke("simulate-intel").catch(console.error);
-    };
-    // Initial trigger after 5s
-    const initialTimeout = setTimeout(simulate, 5000);
-    const interval = setInterval(simulate, 60000);
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, []);
+  // Simulation disabled — dashboard uses only real OSINT data sources
+  // (USGS, NASA FIRMS, GDELT, OpenSky, OpenAQ, AIS, WarsLeaks, etc.)
 
   // Daily filtered counts
   const todayStart = useMemo(() => {
