@@ -89,8 +89,8 @@ Deno.serve(async (req) => {
 
 ${context ? `Current dashboard data context:\n${context}\n` : ''}
 
-FOCUS AREA: Your updates MUST be located ONLY within these 5 regions:
-1. JORDAN 2. IRAQ 3. ISRAEL 4. GULF AREA 5. IRAN
+FOCUS AREA: Your updates MUST be located ONLY within these regions:
+1. IRAN 2. ISRAEL 3. JORDAN 4. GULF AREA (UAE, Bahrain, Kuwait, Qatar, Oman, Saudi Arabia) 5. IRAQ 6. SYRIA 7. LEBANON
 
 Generate exactly 8 intelligence updates in JSON format — at least 1 update per region above.
 

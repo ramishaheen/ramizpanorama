@@ -105,12 +105,14 @@ export function WeatherTrafficPanel() {
       </div>
 
       {/* Traffic status summary */}
-      <div className="px-3 py-1.5 bg-secondary/10 border-b border-border/30 flex items-center gap-3 text-[9px] font-mono">
+      <div className="px-3 py-1.5 bg-secondary/10 border-b border-border/30 flex items-center gap-3 text-[9px] font-mono flex-wrap">
         <MapPin className="h-3 w-3 text-accent" />
         <span className="text-muted-foreground uppercase">Traffic:</span>
         <span className="text-green-400 flex items-center gap-0.5">● Suez: <span className="text-foreground">Restricted</span></span>
         <span className="text-yellow-400 flex items-center gap-0.5">● Hormuz: <span className="text-foreground">Heavy</span></span>
         <span className="text-red-400 flex items-center gap-0.5">● Red Sea: <span className="text-foreground">Diverted</span></span>
+        <span className="text-orange-400 flex items-center gap-0.5">● Bab el-Mandeb: <span className="text-foreground">Alert</span></span>
+        <span className="text-cyan-400 flex items-center gap-0.5">● E.Med: <span className="text-foreground">Active</span></span>
       </div>
 
       {/* Weather grid */}
