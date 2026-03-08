@@ -7,16 +7,16 @@ import { supabase } from "@/integrations/supabase/client";
  * Multi-factor Traffic Density Index (TDI):
  *   TDI = (VehicleFlow / RoadCapacity) × SpeedFactor × WeatherImpact × TimeOfDayFactor
  *
- * FULL ROAD COVERAGE: Densifies polylines, stitches connected segments,
- * filters drivable-only roads, spawns particles across the entire road length.
+ * FULL ROAD COVERAGE: Canvas appended directly to map container (not overlayLayer),
+ * 100% bbox padding, time-throttled re-fetch, regex Overpass query, ref-based closures.
  */
 
 // ── Types ────────────────────────────────────────────────────────
 
 interface Road {
   id: number;
-  points: { lat: number; lng: number }[];       // densified points
-  rawPoints: { lat: number; lng: number }[];     // original OSM nodes
+  points: { lat: number; lng: number }[];
+  rawPoints: { lat: number; lng: number }[];
   highway: string;
   lanes: number;
   maxspeed: number;
@@ -61,16 +61,9 @@ const OVERPASS_ENDPOINTS = [
   "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
 
-// Only fetch drivable road types
-const DRIVABLE_HIGHWAY_TYPES = new Set([
-  "motorway", "motorway_link",
-  "trunk", "trunk_link",
-  "primary", "primary_link",
-  "secondary", "secondary_link",
-  "tertiary", "tertiary_link",
-  "residential", "service",
-  "unclassified", "living_street",
-]);
+const HIGHWAY_REGEX = "motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|residential|service|unclassified|living_street";
+
+const DRIVABLE_HIGHWAY_TYPES = new Set(HIGHWAY_REGEX.split("|"));
 
 const ROAD_CAPACITY_PER_LANE: Record<string, number> = {
   motorway: 2200, motorway_link: 1800,
@@ -102,8 +95,9 @@ const ROAD_LINE_WIDTH: Record<string, number> = {
   unclassified: 3.5, living_street: 3,
 };
 
-// Densification interval in meters — smaller = smoother curves
 const DENSIFY_INTERVAL_M = 5;
+const FETCH_THROTTLE_MS = 2000;
+const MIN_ZOOM = 17;
 
 // ── Utility Functions ────────────────────────────────────────────
 
@@ -161,23 +155,19 @@ function parseMaxSpeed(tags: Record<string, any> = {}, highway: string): number 
   return FREE_FLOW_SPEED[highway] ?? 50;
 }
 
-/** Haversine distance in meters between two lat/lng points */
 function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const dLat = (b.lat - a.lat) * 111320;
   const dLng = (b.lng - a.lng) * 111320 * Math.cos((a.lat * Math.PI) / 180);
   return Math.sqrt(dLat * dLat + dLng * dLng);
 }
 
-/** Densify a polyline by interpolating points every `intervalM` meters */
 function densifyPolyline(points: { lat: number; lng: number }[], intervalM: number): { lat: number; lng: number }[] {
   if (points.length < 2) return [...points];
   const result: { lat: number; lng: number }[] = [points[0]];
-
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1];
     const curr = points[i];
     const segDist = distanceM(prev, curr);
-
     if (segDist > intervalM) {
       const numInserts = Math.floor(segDist / intervalM);
       for (let j = 1; j <= numInserts; j++) {
@@ -193,73 +183,52 @@ function densifyPolyline(points: { lat: number; lng: number }[], intervalM: numb
   return result;
 }
 
-/** Stitch connected road segments of the same type by matching endpoints */
 function stitchRoads(
   segments: Array<{ id: number; points: { lat: number; lng: number }[]; highway: string; tags: Record<string, any> }>
 ): Array<{ id: number; points: { lat: number; lng: number }[]; highway: string; tags: Record<string, any> }> {
-  // Group by highway type for stitching
   const byType = new Map<string, typeof segments>();
   for (const seg of segments) {
     const arr = byType.get(seg.highway) || [];
     arr.push(seg);
     byType.set(seg.highway, arr);
   }
-
   const result: typeof segments = [];
-  const STITCH_THRESHOLD = 0.00005; // ~5m in degrees
-
+  const STITCH_THRESHOLD = 0.00005;
   for (const [, group] of byType) {
     const used = new Set<number>();
-    
     for (let i = 0; i < group.length; i++) {
       if (used.has(i)) continue;
       used.add(i);
-      
       let chain = [...group[i].points];
       let merged = true;
-
       while (merged) {
         merged = false;
         for (let j = 0; j < group.length; j++) {
           if (used.has(j)) continue;
           const other = group[j].points;
           if (other.length < 2) continue;
-
           const chainStart = chain[0];
           const chainEnd = chain[chain.length - 1];
           const otherStart = other[0];
           const otherEnd = other[other.length - 1];
-
-          // Check 4 connection cases
           const dEndStart = Math.abs(chainEnd.lat - otherStart.lat) + Math.abs(chainEnd.lng - otherStart.lng);
           const dEndEnd = Math.abs(chainEnd.lat - otherEnd.lat) + Math.abs(chainEnd.lng - otherEnd.lng);
           const dStartStart = Math.abs(chainStart.lat - otherStart.lat) + Math.abs(chainStart.lng - otherStart.lng);
           const dStartEnd = Math.abs(chainStart.lat - otherEnd.lat) + Math.abs(chainStart.lng - otherEnd.lng);
-
           if (dEndStart < STITCH_THRESHOLD) {
-            chain = [...chain, ...other.slice(1)];
-            used.add(j);
-            merged = true;
+            chain = [...chain, ...other.slice(1)]; used.add(j); merged = true;
           } else if (dEndEnd < STITCH_THRESHOLD) {
-            chain = [...chain, ...[...other].reverse().slice(1)];
-            used.add(j);
-            merged = true;
+            chain = [...chain, ...[...other].reverse().slice(1)]; used.add(j); merged = true;
           } else if (dStartEnd < STITCH_THRESHOLD) {
-            chain = [...other, ...chain.slice(1)];
-            used.add(j);
-            merged = true;
+            chain = [...other, ...chain.slice(1)]; used.add(j); merged = true;
           } else if (dStartStart < STITCH_THRESHOLD) {
-            chain = [...[...other].reverse(), ...chain.slice(1)];
-            used.add(j);
-            merged = true;
+            chain = [...[...other].reverse(), ...chain.slice(1)]; used.add(j); merged = true;
           }
         }
       }
-
       result.push({ ...group[i], points: chain, id: group[i].id });
     }
   }
-
   return result;
 }
 
@@ -276,9 +245,7 @@ function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
 
 function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
   let total = 0;
-  for (let i = 1; i < points.length; i++) {
-    total += distanceM(points[i - 1], points[i]);
-  }
+  for (let i = 1; i < points.length; i++) total += distanceM(points[i - 1], points[i]);
   return total;
 }
 
@@ -329,17 +296,16 @@ interface Props {
   opacity?: number;
 }
 
-const MIN_ZOOM = 17;
-
 export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacity = 0.85 }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<any>(null);
   const roadsRef = useRef<Road[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number>(0);
-  const lastFetchRef = useRef<string>("");
+  const lastFetchTimeRef = useRef<number>(0);
   const endpointIdx = useRef(0);
   const intelRef = useRef<IntelData | null>(null);
+  const fetchRoadsRef = useRef<(centerLat: number, centerLng: number) => void>(() => {});
 
   const [roadCount, setRoadCount] = useState(0);
   const [particleCount, setParticleCount] = useState(0);
@@ -384,8 +350,13 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     return () => clearInterval(iv);
   }, [enabled, lat, lng, zoom, fetchIntel]);
 
-  // Fetch roads from Overpass — drivable only, stitch + densify
+  // Fetch roads from Overpass — single regex query, 100% bbox padding, time-throttled
   const fetchRoads = useCallback(async (centerLat: number, centerLng: number) => {
+    // Time-based throttle: skip if last fetch was < FETCH_THROTTLE_MS ago
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < FETCH_THROTTLE_MS) return;
+    lastFetchTimeRef.current = now;
+
     const map = mapRef.current;
     let bbox: string;
     if (map && map.getBounds) {
@@ -393,28 +364,23 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const bounds = map.getBounds();
         const ne = bounds.getNorthEast();
         const sw = bounds.getSouthWest();
-        // Pad viewport by 50% for seamless tile boundaries
-        const padLat = (ne.lat() - sw.lat()) * 0.5;
-        const padLng = (ne.lng() - sw.lng()) * 0.5;
+        // 100% padding for seamless coverage during pan
+        const padLat = (ne.lat() - sw.lat()) * 1.0;
+        const padLng = (ne.lng() - sw.lng()) * 1.0;
         bbox = `${sw.lat() - padLat},${sw.lng() - padLng},${ne.lat() + padLat},${ne.lng() + padLng}`;
       } catch {
-        const delta = zoom >= 20 ? 0.01 : zoom >= 18 ? 0.02 : 0.04;
+        const delta = zoom >= 20 ? 0.015 : zoom >= 18 ? 0.03 : 0.06;
         bbox = `${centerLat - delta},${centerLng - delta},${centerLat + delta},${centerLng + delta}`;
       }
     } else {
-      const delta = zoom >= 20 ? 0.01 : zoom >= 18 ? 0.02 : 0.04;
+      const delta = zoom >= 20 ? 0.015 : zoom >= 18 ? 0.03 : 0.06;
       bbox = `${centerLat - delta},${centerLng - delta},${centerLat + delta},${centerLng + delta}`;
     }
 
-    if (bbox === lastFetchRef.current) return;
-    lastFetchRef.current = bbox;
     setLoading(true);
 
-    // Filter to drivable road types only
-    const highwayFilter = Array.from(DRIVABLE_HIGHWAY_TYPES)
-      .map(t => `way["highway"="${t}"](${bbox});`)
-      .join("");
-    const query = `[out:json][timeout:20];(${highwayFilter});out geom;`;
+    // Single regex filter instead of 14 separate clauses
+    const query = `[out:json][timeout:25];(way["highway"~"^(${HIGHWAY_REGEX})$"](${bbox}););out geom;`;
     const body = `data=${encodeURIComponent(query)}`;
     let data: any = null;
 
@@ -437,7 +403,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
     if (!data) {
       setLoading(false);
-      lastFetchRef.current = "";
       return;
     }
 
@@ -446,13 +411,9 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       const weatherImpact = intel?.weather.weatherImpactFactor ?? 1.0;
       const timeOfDayFactor = intel?.timeFactors.timeOfDayFactor ?? 0.6;
 
-      // 1. Parse raw segments
       const rawSegments = (data.elements || [])
         .filter((el: any) => el.type === "way" && el.geometry?.length >= 2)
-        .filter((el: any) => {
-          const hw = el.tags?.highway || "";
-          return DRIVABLE_HIGHWAY_TYPES.has(hw);
-        })
+        .filter((el: any) => DRIVABLE_HIGHWAY_TYPES.has(el.tags?.highway || ""))
         .map((el: any) => ({
           id: el.id,
           points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
@@ -460,11 +421,9 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           tags: el.tags || {},
         }));
 
-      // 2. Stitch connected segments of same type
       const stitched = stitchRoads(rawSegments);
-      setStitchedCount(rawSegments.length - stitched.length); // how many were merged
+      setStitchedCount(rawSegments.length - stitched.length);
 
-      // 3. Densify + build road objects
       let totalDensifiedPts = 0;
       const roads: Road[] = stitched.map((seg) => {
         const highway = seg.highway;
@@ -472,18 +431,13 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const maxspeed = parseMaxSpeed(seg.tags, highway);
         const capacity = (ROAD_CAPACITY_PER_LANE[highway] ?? 600) * lanes;
         const rawPoints = seg.points;
-
-        // Densify polyline for full curve coverage
         const densified = densifyPolyline(rawPoints, DENSIFY_INTERVAL_M);
         totalDensifiedPts += densified.length;
-
         const tdi = calculateTDI(highway, lanes, maxspeed, weatherImpact, timeOfDayFactor);
         const lengthM = estimateRoadLengthM(densified);
-
         return {
           id: seg.id, highway, lanes, maxspeed, capacity, tdi, lengthM,
-          points: densified,
-          rawPoints,
+          points: densified, rawPoints,
           progressStops: buildProgressStops(densified),
         };
       });
@@ -492,18 +446,16 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       setRoadCount(roads.length);
       setDensifiedPointCount(totalDensifiedPts);
 
-      // Compute average TDI
       if (roads.length > 0) {
         const sum = roads.reduce((s, r) => s + r.tdi, 0);
         setAvgTDI(sum / roads.length);
       }
 
-      // 4. Generate particles — uniform distribution across full road length
+      // Generate particles — full road length coverage
       const particles: Particle[] = [];
       roads.forEach((road, ri) => {
         const totalLanes = Math.max(1, road.lanes);
-        // More particles for longer roads, scaled by TDI
-        const baseDensity = road.lengthM / 8; // 1 particle per 8m base
+        const baseDensity = road.lengthM / 8;
         const tdiMultiplier = Math.max(0.4, road.tdi);
         const carsPerLane = Math.max(4, Math.round(baseDensity * tdiMultiplier));
         const particleSpeed = tdiToParticleSpeed(road.tdi, road.highway);
@@ -513,9 +465,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           const dir: 1 | -1 = lane < Math.ceil(totalLanes / 2) ? 1 : -1;
           const normalizedLane = totalLanes <= 1 ? 0 : lane / (totalLanes - 1) - 0.5;
           const laneOffset = normalizedLane * laneSpreadPx * 2;
-
           for (let i = 0; i < carsPerLane; i++) {
-            // Uniform distribution across full road length
             const baseProgress = i / carsPerLane;
             const jitter = (Math.random() - 0.5) * (1 / carsPerLane) * 0.5;
             particles.push({
@@ -536,9 +486,14 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     } finally {
       setLoading(false);
     }
-  }, [zoom]);
+  }, [zoom, mapRef]);
 
-  // Google Maps OverlayView setup
+  // Keep ref updated so idle listener always calls latest fetchRoads
+  useEffect(() => {
+    fetchRoadsRef.current = fetchRoads;
+  }, [fetchRoads]);
+
+  // Google Maps OverlayView — canvas appended to MAP CONTAINER (not overlayLayer)
   useEffect(() => {
     if (!enabled || zoom < MIN_ZOOM) return;
     const map = mapRef.current;
@@ -547,17 +502,26 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
     class TrafficOverlay extends google.maps.OverlayView {
       canvas: HTMLCanvasElement | null = null;
+
       onAdd() {
         const canvas = document.createElement("canvas");
         canvas.style.position = "absolute";
         canvas.style.top = "0";
         canvas.style.left = "0";
         canvas.style.pointerEvents = "none";
-        canvas.style.zIndex = "5";
+        // Append to map container with high z-index so it renders ON TOP of 3D tiles
+        canvas.style.zIndex = "1000";
         this.canvas = canvas;
         canvasRef.current = canvas;
-        this.getPanes()?.overlayLayer?.appendChild(canvas);
+
+        // Use map container div directly instead of overlayLayer pane
+        const mapDiv = map.getDiv();
+        if (mapDiv) {
+          mapDiv.style.position = "relative";
+          mapDiv.appendChild(canvas);
+        }
       }
+
       draw() {
         const div = map.getDiv();
         if (this.canvas && div) {
@@ -568,6 +532,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           this.canvas.style.height = div.offsetHeight + "px";
         }
       }
+
       onRemove() {
         this.canvas?.remove();
         this.canvas = null;
@@ -579,12 +544,11 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     overlay.setMap(map);
     overlayRef.current = overlay;
 
+    // Use ref-based callback to avoid stale closure
     const idleListener = map.addListener("idle", () => {
-      if (!enabled || zoom < MIN_ZOOM) return;
       const center = map.getCenter();
       if (center) {
-        lastFetchRef.current = "";
-        fetchRoads(center.lat(), center.lng());
+        fetchRoadsRef.current(center.lat(), center.lng());
       }
     });
 
@@ -593,10 +557,14 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       overlayRef.current = null;
       google.maps.event.removeListener(idleListener);
     };
-  }, [enabled, zoom >= MIN_ZOOM, mapRef.current]);
+    // Depend on actual zoom number, not boolean
+  }, [enabled, zoom, mapRef]);
 
+  // Initial fetch on mount / zoom change
   useEffect(() => {
     if (!enabled || zoom < MIN_ZOOM) return;
+    // Reset throttle so initial fetch always fires
+    lastFetchTimeRef.current = 0;
     fetchRoads(lat, lng);
   }, [enabled, lat, lng, zoom, fetchRoads]);
 
@@ -622,6 +590,20 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       if (!ctx) { animFrameRef.current = requestAnimationFrame(animate); return; }
 
       const dpr = window.devicePixelRatio || 1;
+
+      // Ensure canvas stays synced with map size on every frame
+      const mapDiv = mapRef.current?.getDiv?.();
+      if (mapDiv) {
+        const w = mapDiv.offsetWidth;
+        const h = mapDiv.offsetHeight;
+        if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+          canvas.width = w * dpr;
+          canvas.height = h * dpr;
+          canvas.style.width = w + "px";
+          canvas.style.height = h + "px";
+        }
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.globalAlpha = opacity;
       ctx.lineCap = "round";
@@ -633,7 +615,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const zoomScale = zoom >= 21 ? 2.5 : zoom >= 20 ? 2.0 : zoom >= 19 ? 1.5 : zoom >= 18 ? 1.1 : 0.8;
         const lineW = baseW * zoomScale * dpr;
 
-        // Convert ALL densified points to pixels
         const pixels: { x: number; y: number }[] = [];
         for (const p of road.points) {
           const px = latLngToPixel(p.lat, p.lng, mapRef.current, overlay);
@@ -641,22 +622,18 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         }
         if (pixels.length < 2) return;
 
-        // Outer glow — full polyline
+        // Outer glow
         ctx.beginPath();
         ctx.moveTo(pixels[0].x, pixels[0].y);
-        for (let i = 1; i < pixels.length; i++) {
-          ctx.lineTo(pixels[i].x, pixels[i].y);
-        }
+        for (let i = 1; i < pixels.length; i++) ctx.lineTo(pixels[i].x, pixels[i].y);
         ctx.strokeStyle = tdiToColor(road.tdi, 0.15);
         ctx.lineWidth = lineW * 2.5;
         ctx.stroke();
 
-        // Main road line — full polyline
+        // Main road line
         ctx.beginPath();
         ctx.moveTo(pixels[0].x, pixels[0].y);
-        for (let i = 1; i < pixels.length; i++) {
-          ctx.lineTo(pixels[i].x, pixels[i].y);
-        }
+        for (let i = 1; i < pixels.length; i++) ctx.lineTo(pixels[i].x, pixels[i].y);
         ctx.strokeStyle = tdiToColor(road.tdi, 0.55);
         ctx.lineWidth = lineW;
         ctx.stroke();
@@ -664,24 +641,21 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         // Inner bright center line
         ctx.beginPath();
         ctx.moveTo(pixels[0].x, pixels[0].y);
-        for (let i = 1; i < pixels.length; i++) {
-          ctx.lineTo(pixels[i].x, pixels[i].y);
-        }
+        for (let i = 1; i < pixels.length; i++) ctx.lineTo(pixels[i].x, pixels[i].y);
         ctx.strokeStyle = tdiToColor(road.tdi, 0.8);
         ctx.lineWidth = lineW * 0.4;
         ctx.stroke();
 
         // ── Debug overlays ──
         if (debugMode) {
-          // Show densified points as tiny dots
-          for (let i = 0; i < pixels.length; i++) {
+          // Densified points
+          for (const px of pixels) {
             ctx.beginPath();
-            ctx.arc(pixels[i].x, pixels[i].y, 1.5 * dpr, 0, Math.PI * 2);
+            ctx.arc(px.x, px.y, 1.5 * dpr, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(0,255,200,0.4)";
             ctx.fill();
           }
-
-          // Show original OSM nodes as larger cyan dots
+          // Original OSM nodes
           for (const rp of road.rawPoints) {
             const rpx = latLngToPixel(rp.lat, rp.lng, mapRef.current, overlay);
             if (rpx) {
@@ -694,19 +668,15 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               ctx.stroke();
             }
           }
-
-          // Segment boundary markers (first and last point)
-          const first = pixels[0];
-          const last = pixels[pixels.length - 1];
-          for (const ep of [first, last]) {
+          // Segment boundaries
+          for (const ep of [pixels[0], pixels[pixels.length - 1]]) {
             ctx.beginPath();
             ctx.rect(ep.x - 4 * dpr, ep.y - 4 * dpr, 8 * dpr, 8 * dpr);
             ctx.strokeStyle = "rgba(255,100,0,0.8)";
             ctx.lineWidth = 1.5 * dpr;
             ctx.stroke();
           }
-
-          // Label at midpoint: L:<lanes> P:<particles> D:<densified pts>
+          // Label
           const midPx = pixels[Math.floor(pixels.length / 2)];
           if (midPx) {
             const pCount = particles.filter(pp => pp.roadIdx === ri).length;
@@ -717,7 +687,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
             const pad = 3 * dpr;
             const bw = tw + pad * 2;
             const bh = fontSize + pad * 2;
-
             ctx.fillStyle = "rgba(0,0,0,0.85)";
             ctx.strokeStyle = "rgba(0,255,200,0.6)";
             ctx.lineWidth = 1 * dpr;
@@ -725,7 +694,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
             ctx.roundRect(midPx.x - bw / 2, midPx.y - bh / 2, bw, bh, 2 * dpr);
             ctx.fill();
             ctx.stroke();
-
             ctx.fillStyle = "rgba(0,255,200,0.95)";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -734,22 +702,18 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         }
       });
 
-      // 2. Animate particles along roads — full coverage
+      // 2. Animate particles
       const dotR = (zoom >= 20 ? 3 : 2.2) * dpr;
-
       particles.forEach((p) => {
         p.progress += p.speed * p.direction;
         if (p.progress > 1) p.progress = 0;
         if (p.progress < 0) p.progress = 1;
-
         const road = roads[p.roadIdx];
         if (!road || road.points.length < 2) return;
-
         const geo = interpolateRoad(road, p.progress);
         const px = latLngToPixel(geo.lat, geo.lng, mapRef.current, overlay);
         if (!px) return;
 
-        // Road angle for lane offset
         const stops = road.progressStops;
         let segIdx = 0;
         while (segIdx < stops.length - 2 && p.progress > stops[segIdx + 1]) segIdx++;
@@ -764,7 +728,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const x = (px.x + Math.cos(perpAngle) * p.laneOffset) * dpr;
         const y = (px.y + Math.sin(perpAngle) * p.laneOffset) * dpr;
 
-        // Particle glow
         const glow = ctx.createRadialGradient(x, y, 0, x, y, dotR * 2.5);
         glow.addColorStop(0, tdiToColor(road.tdi, 0.5));
         glow.addColorStop(1, tdiToColor(road.tdi, 0));
@@ -773,25 +736,20 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         ctx.arc(x, y, dotR * 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Particle dot
         ctx.beginPath();
         ctx.fillStyle = tdiToColor(road.tdi, 0.95);
         ctx.arc(x, y, dotR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Debug: show spawn positions as small crosses
         if (debugMode) {
           ctx.strokeStyle = "rgba(255,255,0,0.5)";
           ctx.lineWidth = 0.5 * dpr;
           ctx.beginPath();
-          ctx.moveTo(x - 2 * dpr, y);
-          ctx.lineTo(x + 2 * dpr, y);
-          ctx.moveTo(x, y - 2 * dpr);
-          ctx.lineTo(x, y + 2 * dpr);
+          ctx.moveTo(x - 2 * dpr, y); ctx.lineTo(x + 2 * dpr, y);
+          ctx.moveTo(x, y - 2 * dpr); ctx.lineTo(x, y + 2 * dpr);
           ctx.stroke();
         }
 
-        // Coordinate label at high zoom
         if (zoom >= 20) {
           const fontSize = Math.round(5.5 * dpr);
           const label = `${geo.lat.toFixed(4)},${geo.lng.toFixed(4)}`;
@@ -799,7 +757,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           const boxH = 14 * dpr;
           const rectX = x - boxW / 2;
           const rectY = y - boxH - dotR - 2 * dpr;
-
           ctx.fillStyle = "rgba(0,0,0,0.7)";
           ctx.strokeStyle = tdiToColor(road.tdi, 0.6);
           ctx.lineWidth = 0.8 * dpr;
@@ -807,7 +764,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           ctx.rect(rectX, rectY, boxW, boxH);
           ctx.fill();
           ctx.stroke();
-
           ctx.fillStyle = "#fff";
           ctx.font = `${fontSize}px monospace`;
           ctx.textAlign = "center";
@@ -822,7 +778,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
     animFrameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [enabled, zoom, opacity, debugMode]);
+  }, [enabled, zoom, opacity, debugMode, mapRef]);
 
   // Cleanup
   useEffect(() => {
@@ -831,7 +787,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       particlesRef.current = [];
       setRoadCount(0);
       setParticleCount(0);
-      lastFetchRef.current = "";
+      lastFetchTimeRef.current = 0;
     }
   }, [enabled]);
 
@@ -843,7 +799,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     <div className="absolute top-14 right-14 z-[15] pointer-events-none">
       <div className="flex flex-col gap-1 px-3 py-2 rounded-lg bg-black/90 backdrop-blur-sm border border-accent/30"
         style={{ boxShadow: "0 0 20px rgba(139,92,246,0.2)", minWidth: 200 }}>
-        {/* Header */}
         <div className="flex items-center gap-1.5">
           <div className={`w-1.5 h-1.5 rounded-full ${loading ? "bg-warning animate-pulse" : "bg-accent animate-pulse"}`} />
           <span className="text-[8px] font-mono text-accent font-bold uppercase">
@@ -853,7 +808,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
         {!loading && (
           <>
-            {/* TDI Score */}
             <div className="flex items-center justify-between">
               <span className="text-[7px] font-mono text-muted-foreground">TDI</span>
               <div className="flex items-center gap-1">
@@ -867,7 +821,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               </div>
             </div>
 
-            {/* Stats + Debug toggle */}
             <div className="flex items-center gap-2">
               <span className="text-[7px] font-mono text-muted-foreground">
                 {roadCount} roads · {particleCount} pts
@@ -884,7 +837,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               </button>
             </div>
 
-            {/* Debug info panel */}
             {debugMode && (
               <div className="border-t border-accent/20 pt-1 mt-0.5 space-y-0.5">
                 <span className="text-[7px] font-mono text-accent block">── DEBUG ──</span>
@@ -916,7 +868,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               </div>
             )}
 
-            {/* Weather info */}
             {intelInfo && (
               <div className="flex items-center gap-1.5 border-t border-accent/10 pt-1 mt-0.5">
                 <span className="text-[7px] font-mono text-muted-foreground">
@@ -928,7 +879,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               </div>
             )}
 
-            {/* Time info */}
             {intelInfo && (
               <div className="flex items-center gap-1.5">
                 <span className="text-[7px] font-mono text-muted-foreground">
@@ -945,7 +895,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               </div>
             )}
 
-            {/* Density legend */}
             <div className="flex items-center gap-1 border-t border-accent/10 pt-1 mt-0.5">
               <div className="flex items-center gap-0.5">
                 <div className="w-2 h-1.5 rounded-sm" style={{ background: tdiToColor(0.3, 1) }} />
