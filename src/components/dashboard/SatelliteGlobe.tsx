@@ -1262,9 +1262,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       </div>
 
-      {/* Category filters - bottom center, above city presets */}
-      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
-        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
+      {/* Category filters - centered and wrapped for readability */}
+      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto w-[min(96vw,1400px)] px-2">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1.5">
           <button
             onClick={() => setSelectedCat(null)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
