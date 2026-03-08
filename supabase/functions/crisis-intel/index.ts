@@ -107,30 +107,14 @@ serve(async (req) => {
       `• ${m.headline} (${m.severity}) at ${m.lat},${m.lng}`
     ).join("\n");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are a crisis intelligence analyst specializing in urban anomaly detection for the Middle East. Analyze incoming intelligence and traffic patterns to detect: evacuation patterns, protests, road closures, abnormal city activity, incidents, and logistics disruptions.
+    const systemPrompt = `You are a crisis intelligence analyst specializing in urban anomaly detection for the Middle East. Analyze incoming intelligence and traffic patterns to detect: evacuation patterns, protests, road closures, abnormal city activity, incidents, and logistics disruptions.
 
 Scoring formula: 35% source corroboration + 20% source reliability + 20% traffic anomaly + 15% geographic agreement + 10% recency.
 Confidence: 0-39 = low, 40-69 = medium, 70-100 = high.
 
-IMPORTANT: Never present single-source claims as facts. Always classify unverified claims as "rumor".`,
-          },
-          {
-            role: "user",
-            content: `Analyze crisis intelligence for ${city} (${cityInfo.lat}, ${cityInfo.lng}).
+IMPORTANT: Never present single-source claims as facts. Always classify unverified claims as "rumor".`;
+
+    const userPrompt = `Analyze crisis intelligence for ${city} (${cityInfo.lat}, ${cityInfo.lng}).
 
 RECENT TELEGRAM INTEL:
 ${postsText || "No recent posts available"}
@@ -142,80 +126,131 @@ Based on this intelligence AND your knowledge of current events in ${city}, gene
 
 Generate 4-8 realistic events for ${city} covering different types. Include at least one of each type if intelligence supports it: protest, evacuation, road_closure, abnormal_activity, incident, disruption.
 
-Use precise coordinates within the city bounds (±0.05 of city center).`,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "report_crisis_events",
-              description: "Report detected crisis anomaly events for the city",
-              parameters: {
+Use precise coordinates within the city bounds (±0.05 of city center).`;
+
+    const toolDef = {
+      type: "function",
+      function: {
+        name: "report_crisis_events",
+        description: "Report detected crisis anomaly events for the city",
+        parameters: {
+          type: "object",
+          properties: {
+            events: {
+              type: "array",
+              items: {
                 type: "object",
                 properties: {
-                  events: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        type: { type: "string", enum: ["protest", "evacuation", "road_closure", "disruption", "incident", "abnormal_activity", "rumor"] },
-                        lat: { type: "number" },
-                        lng: { type: "number" },
-                        radius_km: { type: "number", description: "Affected radius in km" },
-                        polygon: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Optional polygon [[lat,lng]...]" },
-                        headline: { type: "string", description: "Max 80 chars" },
-                        summary: { type: "string", description: "Max 200 chars" },
-                        confidence: { type: "number", description: "0-100 score" },
-                        confidence_label: { type: "string", enum: ["low", "medium", "high"] },
-                        source_count: { type: "number" },
-                        sources: { type: "array", items: { type: "object", properties: { name: { type: "string" }, reliability: { type: "string", enum: ["high", "medium", "low"] } }, required: ["name", "reliability"] } },
-                        affected_roads: { type: "array", items: { type: "string" } },
-                        district: { type: "string" },
-                        trend: { type: "string", enum: ["rising", "stable", "declining"] },
-                        evacuation_direction: { type: "string", description: "Only for evacuation type" },
-                        verified: { type: "boolean" },
-                      },
-                      required: ["type", "lat", "lng", "radius_km", "headline", "summary", "confidence", "confidence_label", "source_count", "district", "trend", "verified"],
-                    },
-                  },
-                  city_summary: { type: "string", description: "Brief overall city assessment" },
-                  threat_level: { type: "string", enum: ["low", "moderate", "elevated", "high", "critical"] },
+                  type: { type: "string", enum: ["protest", "evacuation", "road_closure", "disruption", "incident", "abnormal_activity", "rumor"] },
+                  lat: { type: "number" },
+                  lng: { type: "number" },
+                  radius_km: { type: "number", description: "Affected radius in km" },
+                  polygon: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Optional polygon [[lat,lng]...]" },
+                  headline: { type: "string", description: "Max 80 chars" },
+                  summary: { type: "string", description: "Max 200 chars" },
+                  confidence: { type: "number", description: "0-100 score" },
+                  confidence_label: { type: "string", enum: ["low", "medium", "high"] },
+                  source_count: { type: "number" },
+                  sources: { type: "array", items: { type: "object", properties: { name: { type: "string" }, reliability: { type: "string", enum: ["high", "medium", "low"] } }, required: ["name", "reliability"] } },
+                  affected_roads: { type: "array", items: { type: "string" } },
+                  district: { type: "string" },
+                  trend: { type: "string", enum: ["rising", "stable", "declining"] },
+                  evacuation_direction: { type: "string", description: "Only for evacuation type" },
+                  verified: { type: "boolean" },
                 },
-                required: ["events", "city_summary", "threat_level"],
+                required: ["type", "lat", "lng", "radius_km", "headline", "summary", "confidence", "confidence_label", "source_count", "district", "trend", "verified"],
               },
             },
+            city_summary: { type: "string", description: "Brief overall city assessment" },
+            threat_level: { type: "string", enum: ["low", "moderate", "elevated", "high", "critical"] },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "report_crisis_events" } },
-      }),
-    });
+          required: ["events", "city_summary", "threat_level"],
+        },
+      },
+    };
 
-    if (!response.ok) {
-      const status = response.status;
-      const text = await response.text();
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited, try again shortly", events: [] }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Try Lovable AI first, fallback to direct Gemini API
+    let result = { events: [], city_summary: "Analysis unavailable", threat_level: "moderate" };
+    let aiSuccess = false;
+
+    // Attempt 1: Lovable AI Gateway
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (LOVABLE_API_KEY) {
+      try {
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            tools: [toolDef],
+            tool_choice: { type: "function", function: { name: "report_crisis_events" } },
+          }),
         });
+
+        if (response.ok) {
+          const aiData = await response.json();
+          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            result = JSON.parse(toolCall.function.arguments);
+            aiSuccess = true;
+          }
+        } else {
+          console.log(`Lovable AI returned ${response.status}, falling back to Gemini`);
+        }
+      } catch (e) {
+        console.error("Lovable AI error, falling back:", e);
       }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted", events: [] }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI gateway error ${status}: ${text}`);
     }
 
-    const aiData = await response.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    let result = { events: [], city_summary: "Analysis unavailable", threat_level: "moderate" };
+    // Attempt 2: Direct Gemini API
+    if (!aiSuccess) {
+      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+      if (!GEMINI_API_KEY) {
+        return new Response(JSON.stringify({ error: "No AI provider available", events: [] }), {
+          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    if (toolCall?.function?.arguments) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
       try {
-        result = JSON.parse(toolCall.function.arguments);
-      } catch {
-        console.error("Failed to parse tool call arguments");
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${GEMINI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            tools: [toolDef],
+            tool_choice: { type: "function", function: { name: "report_crisis_events" } },
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Gemini error ${response.status}: ${text}`);
+        }
+
+        const aiData = await response.json();
+        const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+        if (toolCall?.function?.arguments) {
+          result = JSON.parse(toolCall.function.arguments);
+        }
+      } finally {
+        clearTimeout(timeout);
       }
     }
 
