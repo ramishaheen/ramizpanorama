@@ -1252,6 +1252,21 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
           <div className="w-px h-5 bg-border/40" />
 
+          {/* Missiles */}
+          <div className="flex items-center gap-1">
+            <span className="text-[8px] font-mono text-muted-foreground/60 uppercase mr-0.5">Threat</span>
+            <button onClick={() => setShowRockets(!showRockets)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showRockets ? "border-red-500/60 bg-red-500/20 text-white shadow-[0_0_8px_rgba(239,68,68,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Rocket className="h-3 w-3" /> Missiles
+              {rockets.filter(r => r.status === "launched" || r.status === "in_flight").length > 0 && (
+                <span className="bg-red-500/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5 animate-pulse">
+                  {rockets.filter(r => r.status === "launched" || r.status === "in_flight").length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-border/40" />
+
           {/* Layers */}
           <div className="flex items-center gap-1">
             <span className="text-[8px] font-mono text-muted-foreground/60 uppercase mr-0.5">Layers</span>
