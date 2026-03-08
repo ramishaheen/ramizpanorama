@@ -704,6 +704,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       markersRef.current.forEach(m => m.setMap(null));
       trailLinesRef.current.forEach(l => l.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
+      if (interpolationRef.current) clearInterval(interpolationRef.current);
     };
   }, []);
 
