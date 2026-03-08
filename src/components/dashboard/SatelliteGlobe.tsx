@@ -1188,10 +1188,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             if (count === 0) return null;
             const CatIcon = cat === "Military" ? Shield
               : cat === "ISR" ? Eye
+              : cat === "Early Warning" ? Zap
+              : cat === "SIGINT/ELINT" ? Radar
               : cat === "Communication" ? Radio
+              : cat === "Data Relay" ? Wifi
               : cat === "Navigation" ? Navigation
               : cat === "Weather" ? Cloud
               : cat === "Earth Observation" ? Globe
+              : cat === "SAR Imaging" ? Radar
+              : cat === "Scientific" ? FlaskConical
+              : cat === "Space Station" ? Orbit
+              : cat === "Technology Demo" ? Cpu
+              : cat === "Amateur/Ham" ? Radio
+              : cat === "Search & Rescue" ? Anchor
+              : cat === "Debris" ? HelpCircle
+              : cat === "Launch Vehicle" ? Rocket
               : HelpCircle;
             return (
               <button
