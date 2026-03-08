@@ -13,7 +13,8 @@ import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
-import { Satellite, Building2, Camera } from "lucide-react";
+import { Satellite, Building2, Camera, ShieldAlert } from "lucide-react";
+import { ResponseMapModal } from "./ResponseMapModal";
 import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
 import { SatelliteGlobe } from "./SatelliteGlobe";
@@ -1708,6 +1709,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showSatGlobe, setShowSatGlobe] = useState(false);
   const [showUrbanScene, setShowUrbanScene] = useState(false);
   const [showLiveCameras, setShowLiveCameras] = useState(false);
+  const [showResponseMap, setShowResponseMap] = useState(false);
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
 
   return (
@@ -1774,6 +1776,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             {loadingCCTV ? "LOADING..." : showArabCCTV ? `ARAB CCTV (${arabCameras.length})` : "ARAB CCTV"}
           </span>
         </button>
+        <button
+          onClick={() => setShowResponseMap(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+          title="Crisis Awareness — Response Map"
+        >
+          <ShieldAlert className="h-3.5 w-3.5 text-emerald-400 group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">RESPONSE MAP</span>
+        </button>
       </div>
 
 
@@ -1810,6 +1820,16 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
                 }),
               }).addTo(mapRef.current).bindPopup(`<b style="font-family:monospace;font-size:11px">📹 ${name}</b>`).openPopup();
             }
+          }}
+        />
+      )}
+
+      {showResponseMap && (
+        <ResponseMapModal
+          onClose={() => setShowResponseMap(false)}
+          onFlyTo={(lat, lng, zoom) => {
+            setShowResponseMap(false);
+            mapRef.current?.flyTo([lat, lng], zoom || 8, { duration: 1.5 });
           }}
         />
       )}
