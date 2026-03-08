@@ -162,6 +162,75 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
     }
   }, [lat, lng]);
 
+  // Fetch conflict data for heatmap
+  useEffect(() => {
+    const fetchConflicts = async () => {
+      try {
+        const [geoRes, conflictRes] = await Promise.all([
+          supabase.from("geo_alerts").select("lat,lng,severity"),
+          supabase.functions.invoke("conflict-events"),
+        ]);
+        const points: ConflictPoint[] = [];
+        // Geo alerts
+        const sevMap: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+        (geoRes.data || []).forEach((g: any) => {
+          if (g.lat && g.lng) points.push({ lat: g.lat, lng: g.lng, severity: sevMap[g.severity] || 2 });
+        });
+        // Conflict events
+        const events = conflictRes.data?.data || [];
+        events.forEach((e: any) => {
+          if (e.lat && e.lng) points.push({ lat: e.lat, lng: e.lng, severity: sevMap[e.severity] || 2 });
+        });
+        setConflictPoints(points);
+      } catch (e) {
+        console.error("Heatmap data error:", e);
+      }
+    };
+    fetchConflicts();
+    const iv = setInterval(fetchConflicts, 300_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Render heatmap on canvas
+  useEffect(() => {
+    const canvas = heatCanvasRef.current;
+    if (!canvas || !showHeatmap || conflictPoints.length === 0) {
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      return;
+    }
+    const { w, h } = containerSize;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw radial gradients for each point
+    conflictPoints.forEach((pt) => {
+      const pos = latLngToPixel(pt.lat, pt.lng, lat, lng, w, h, VIEWPORT_DEG);
+      if (pos.x < -100 || pos.x > w + 100 || pos.y < -100 || pos.y > h + 100) return;
+      const radius = 30 + pt.severity * 20;
+      const intensity = 0.15 + pt.severity * 0.08;
+      const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, radius);
+      if (pt.severity >= 3) {
+        grad.addColorStop(0, `rgba(239, 68, 68, ${intensity})`);
+        grad.addColorStop(0.5, `rgba(239, 68, 68, ${intensity * 0.4})`);
+        grad.addColorStop(1, "rgba(239, 68, 68, 0)");
+      } else {
+        grad.addColorStop(0, `rgba(251, 191, 36, ${intensity})`);
+        grad.addColorStop(0.5, `rgba(251, 146, 36, ${intensity * 0.4})`);
+        grad.addColorStop(1, "rgba(251, 146, 36, 0)");
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
+    });
+  }, [conflictPoints, showHeatmap, lat, lng, containerSize]);
+
+  const VIEWPORT_DEG = 6;
+
   // Fetch Google Maps API key from backend
   useEffect(() => {
     const fetchKey = async () => {
