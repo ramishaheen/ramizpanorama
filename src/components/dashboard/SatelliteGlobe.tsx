@@ -580,23 +580,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     setLoading(true);
     setGlobeInitError(null);
     try {
-      const fetchTextWithTimeout = async (url: string, timeoutMs = 9000) => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          const resp = await fetch(url, {
-            signal: controller.signal,
-            cache: "no-store",
-          });
-          if (!resp.ok) return "";
-          return await resp.text();
-        } catch {
-          return "";
-        } finally {
-          clearTimeout(timeout);
-        }
-      };
-
       const parseTLEBatch = (text: string) => {
         const lines = text
           .split(/\r?\n/)
@@ -622,47 +605,49 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         return rows;
       };
 
-      // Fetch from multiple specialized CelesTrak groups for comprehensive OSINT coverage
-      const TLE_SOURCES: { url: string; group: string }[] = [
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle", group: "active" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=military&FORMAT=tle", group: "military" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle", group: "resource" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle", group: "weather" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gnss&FORMAT=tle", group: "gnss" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=tle", group: "geo" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=sarsat&FORMAT=tle", group: "sarsat" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle", group: "stations" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=tle", group: "science" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle", group: "amateur" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=engineering&FORMAT=tle", group: "engineering" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=radar&FORMAT=tle", group: "radar" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=cubesat&FORMAT=tle", group: "cubesat" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=other-comm&FORMAT=tle", group: "other-comm" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=molniya&FORMAT=tle", group: "molniya" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium&FORMAT=tle", group: "iridium" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=globalstar&FORMAT=tle", group: "globalstar" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=orbcomm&FORMAT=tle", group: "orbcomm" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle", group: "starlink" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=oneweb&FORMAT=tle", group: "oneweb" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=planet&FORMAT=tle", group: "planet" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=spire&FORMAT=tle", group: "spire" },
-        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=last-30-days&FORMAT=tle", group: "recent" },
-      ];
-
-      const responses = await Promise.allSettled(
-        TLE_SOURCES.map(async (src) => {
-          const resp = await fetchTextWithTimeout(src.url);
-          return { text: resp, group: src.group };
-        })
-      );
+      // Fetch TLE data via backend proxy to avoid CORS issues
+      let tleData: Record<string, string> = {};
+      try {
+        const { data, error } = await supabase.functions.invoke("tle-proxy", {
+          body: {},
+        });
+        if (error) throw error;
+        tleData = data?.data || {};
+      } catch (proxyErr) {
+        console.warn("[ORBITAL INTEL] Proxy failed, trying direct fetch:", proxyErr);
+        // Fallback: try direct fetch (may work outside iframe)
+        const directGroups = ["active", "military", "gnss", "geo", "weather", "stations"];
+        const directResults = await Promise.allSettled(
+          directGroups.map(async (group) => {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 9000);
+            try {
+              const resp = await fetch(
+                `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`,
+                { signal: controller.signal, cache: "no-store" }
+              );
+              if (!resp.ok) return { group, text: "" };
+              const text = await resp.text();
+              return { group, text };
+            } catch {
+              return { group, text: "" };
+            } finally {
+              clearTimeout(timeout);
+            }
+          })
+        );
+        for (const result of directResults) {
+          if (result.status === "fulfilled" && result.value.text) {
+            tleData[result.value.group] = result.value.text;
+          }
+        }
+      }
 
       const allSats: SatelliteData[] = [];
       const rawByKey = new Map<string, RawSatTLE>();
       const seen = new Set<string>();
 
-      for (const result of responses) {
-        if (result.status !== "fulfilled") continue;
-        const { text, group } = result.value;
+      for (const [group, text] of Object.entries(tleData)) {
         if (!text.trim()) continue;
 
         const tleRows = parseTLEBatch(text);
