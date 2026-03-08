@@ -407,6 +407,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const aiScrollRef = useRef<HTMLDivElement>(null);
+  const pulseFrameRef = useRef<number>(0);
   const satsRef = useRef<SatelliteData[]>([]);
   const [predicting, setPredicting] = useState(false);
   const [predictionData, setPredictionData] = useState<{
@@ -1032,6 +1033,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         globe.controls().dampingFactor = 0.15;
 
         globeRef.current = globe;
+        animatePulse();
         setGlobeInitError(null);
       } catch (error) {
         console.error("[ORBITAL INTEL] Globe initialization failed:", error);
@@ -1043,6 +1045,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
     return () => {
       cancelled = true;
+      if (pulseFrameRef.current) cancelAnimationFrame(pulseFrameRef.current);
     };
   }, []);
 
@@ -1117,31 +1120,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type });
     };
 
+    // Only show orbit trail for the clicked/selected satellite
     if (orbitPath && orbitPath.length > 1 && selectedSat) {
       pushSegmentedPath(orbitPath, "orbit");
-    }
-
-    if (rawTLERef.current.length > 0) {
-      const source = selectedCat
-        ? rawTLERef.current.filter((r) => r.category === selectedCat)
-        : rawTLERef.current;
-
-      // When a category is selected, show ALL orbits for that type; otherwise limit baseline trails
-      const baselineLimit = selectedCat ? source.length : (selectedSat ? 140 : 300);
-      source.slice(0, baselineLimit).forEach((r) => {
-        const baselinePath = computeOrbitPath(
-          r.inclination,
-          r.raan,
-          r.meanAnomaly,
-          r.meanMotion,
-          r.eccentricity,
-          r.epochYear,
-          r.epochDay,
-          r.alt,
-          180
-        );
-        pushSegmentedPath(baselinePath, selectedCat ? "catOrbit" : "baseline");
-      });
     }
 
     if (predictionTrack && predictionTrack.length > 1) {
