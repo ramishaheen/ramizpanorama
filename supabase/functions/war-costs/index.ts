@@ -28,9 +28,20 @@ const fallbackWarCosts = {
   _fallback: true,
 };
 
+// 24-hour in-memory cache
+let cachedWarCosts: { data: unknown; timestamp: number } | null = null;
+const WAR_COSTS_CACHE_TTL = 86_400_000;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Return cached if fresh
+  if (cachedWarCosts && Date.now() - cachedWarCosts.timestamp < WAR_COSTS_CACHE_TTL) {
+    return new Response(JSON.stringify(cachedWarCosts.data), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -132,6 +143,9 @@ Return ONLY valid JSON (no markdown, no code blocks):
     } catch {
       costs = { error: "Failed to parse AI response" };
     }
+
+    // Cache successful result
+    cachedWarCosts = { data: costs, timestamp: Date.now() };
 
     return new Response(JSON.stringify(costs), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

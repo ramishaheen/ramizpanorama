@@ -49,7 +49,7 @@ function getCountryForPoint(lat: number, lng: number): string | null {
 
 // In-memory cache
 let cachedResult: { data: unknown; timestamp: number } | null = null;
-const CACHE_TTL_MS = 180_000; // 3 minutes
+const CACHE_TTL_MS = 86_400_000; // 24 hours
 
 // ── Perplexity Web Search ──
 async function searchWarNews(): Promise<{ content: string; citations: string[] }> {

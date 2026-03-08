@@ -59,9 +59,8 @@ export function useWarCosts() {
   }, []);
 
   useEffect(() => {
-    // Stagger initial fetch to avoid Gemini rate limits (all hooks fire at once)
     const initialDelay = setTimeout(fetchCosts, 2000);
-    const interval = setInterval(fetchCosts, 180_000);
+    const interval = setInterval(fetchCosts, 86_400_000); // once per day
     return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetchCosts]);
 

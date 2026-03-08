@@ -7,7 +7,7 @@ const corsHeaders = {
 
 let cachedResponse: any = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 300_000; // 5 min
+const CACHE_TTL = 86_400_000; // 24 hours
 
 const FALLBACK_DATA = {
   last_analyzed: new Date().toISOString(),
