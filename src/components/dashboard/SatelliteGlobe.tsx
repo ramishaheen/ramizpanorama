@@ -1088,7 +1088,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         ? rawTLERef.current.filter((r) => r.category === selectedCat)
         : rawTLERef.current;
 
-      const baselineLimit = selectedSat ? 140 : 300;
+      // When a category is selected, show ALL orbits for that type; otherwise limit baseline trails
+      const baselineLimit = selectedCat ? source.length : (selectedSat ? 140 : 300);
       source.slice(0, baselineLimit).forEach((r) => {
         const baselinePath = computeOrbitPath(
           r.inclination,
@@ -1101,7 +1102,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           r.alt,
           180
         );
-        pushSegmentedPath(baselinePath, "baseline");
+        pushSegmentedPath(baselinePath, selectedCat ? "catOrbit" : "baseline");
       });
     }
 
