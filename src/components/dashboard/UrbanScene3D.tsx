@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car } from "lucide-react";
 
 interface IntelEvent {
   title: string;
@@ -149,6 +149,18 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   
   const [showIntelCard, setShowIntelCard] = useState(!!initialEvent);
   const [nearbyIntel, setNearbyIntel] = useState<{ alerts: any[]; vessels: any[]; airspace: any[] }>({ alerts: [], vessels: [], airspace: [] });
+
+  // New real-time layers
+  const [showVessels, setShowVessels] = useState(true);
+  const [showEarthquakes, setShowEarthquakes] = useState(true);
+  const [showWeather, setShowWeather] = useState(false);
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [vessels, setVessels] = useState<any[]>([]);
+  const [earthquakes, setEarthquakes] = useState<any[]>([]);
+  const vesselMarkersRef = useRef<any[]>([]);
+  const earthquakeMarkersRef = useRef<any[]>([]);
+  const trafficLayerRef = useRef<any>(null);
+  const weatherOverlayRef = useRef<any>(null);
 
   // Fetch nearby intel
   useEffect(() => {
