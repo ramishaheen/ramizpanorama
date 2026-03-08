@@ -23,7 +23,7 @@ interface Particle {
   size: number;
   direction: 1 | -1;
   vehicleType: VehicleType;
-  angle: number; // heading angle for shape rendering
+  angle: number;
 }
 
 const HIGHWAY_COLORS: Record<string, string> = {
@@ -32,7 +32,6 @@ const HIGHWAY_COLORS: Record<string, string> = {
   service: "#6b7280", unclassified: "#a855f7", living_street: "#14b8a6",
 };
 
-// Base density per road type (will be multiplied by time-of-day factor)
 const HIGHWAY_BASE_DENSITY: Record<string, number> = {
   motorway: 10, trunk: 8, primary: 6, secondary: 5,
   tertiary: 4, residential: 3, service: 2,
@@ -45,38 +44,31 @@ const HIGHWAY_SPEED: Record<string, number> = {
   unclassified: 0.002, living_street: 0.001,
 };
 
-// Vehicle type configs
 const VEHICLE_CONFIG: Record<VehicleType, { speedMult: number; sizeBase: number; weight: number; color?: string }> = {
   car:   { speedMult: 1.0, sizeBase: 2.5, weight: 0.70 },
   truck: { speedMult: 0.65, sizeBase: 4.0, weight: 0.15, color: "#f59e0b" },
   bus:   { speedMult: 0.55, sizeBase: 5.0, weight: 0.15, color: "#3b82f6" },
 };
 
-// Allowed vehicle types per road class
 const ROAD_VEHICLES: Record<string, VehicleType[]> = {
-  motorway: ["car", "truck", "bus"],
-  trunk: ["car", "truck", "bus"],
-  primary: ["car", "truck", "bus"],
-  secondary: ["car", "truck", "bus"],
-  tertiary: ["car", "truck"],
-  residential: ["car"],
-  service: ["car"],
-  unclassified: ["car"],
-  living_street: ["car"],
+  motorway: ["car", "truck", "bus"], trunk: ["car", "truck", "bus"],
+  primary: ["car", "truck", "bus"], secondary: ["car", "truck", "bus"],
+  tertiary: ["car", "truck"], residential: ["car"],
+  service: ["car"], unclassified: ["car"], living_street: ["car"],
 };
 
-/** Returns a 0-1 density multiplier based on current hour (simulated local time) */
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+];
+
 function getTimeDensityFactor(): { factor: number; period: string } {
   const hour = new Date().getHours();
-  // Morning rush: 7-9
   if (hour >= 7 && hour < 9) return { factor: 1.0, period: "RUSH HOUR" };
-  // Evening rush: 16-19
   if (hour >= 16 && hour < 19) return { factor: 0.95, period: "RUSH HOUR" };
-  // Midday: 9-16
   if (hour >= 9 && hour < 16) return { factor: 0.65, period: "MIDDAY" };
-  // Evening: 19-23
   if (hour >= 19 && hour < 23) return { factor: 0.4, period: "EVENING" };
-  // Night: 23-7
   return { factor: 0.15, period: "NIGHT" };
 }
 
@@ -101,16 +93,21 @@ function latLngToPixel(
   return point ? { x: point.x, y: point.y } : null;
 }
 
-interface Props {
-  mapRef: React.MutableRefObject<any>;
-  enabled: boolean;
-  zoom: number;
-  lat: number;
-  lng: number;
-  opacity?: number;
-}
+// ── Polyfill-safe rounded rect ──────────────────────────────────
 
-const MIN_ZOOM = 16;
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
 
 // ── Shape renderers ──────────────────────────────────────────────
 
@@ -120,12 +117,12 @@ function drawCar(ctx: CanvasRenderingContext2D, x: number, y: number, s: number,
   ctx.rotate(angle);
   // body
   ctx.beginPath();
-  ctx.roundRect(-s * 1.2, -s * 0.7, s * 2.4, s * 1.4, s * 0.4);
+  roundedRect(ctx, -s * 1.2, -s * 0.7, s * 2.4, s * 1.4, s * 0.4);
   ctx.fillStyle = color;
   ctx.fill();
   // windshield
   ctx.beginPath();
-  ctx.roundRect(s * 0.3, -s * 0.45, s * 0.7, s * 0.9, s * 0.15);
+  roundedRect(ctx, s * 0.3, -s * 0.45, s * 0.7, s * 0.9, s * 0.15);
   ctx.fillStyle = "#ffffff50";
   ctx.fill();
   // headlights
@@ -133,6 +130,12 @@ function drawCar(ctx: CanvasRenderingContext2D, x: number, y: number, s: number,
   ctx.arc(s * 1.15, -s * 0.35, s * 0.18, 0, Math.PI * 2);
   ctx.arc(s * 1.15, s * 0.35, s * 0.18, 0, Math.PI * 2);
   ctx.fillStyle = "#fef08a";
+  ctx.fill();
+  // tail lights
+  ctx.beginPath();
+  ctx.arc(-s * 1.1, -s * 0.35, s * 0.15, 0, Math.PI * 2);
+  ctx.arc(-s * 1.1, s * 0.35, s * 0.15, 0, Math.PI * 2);
+  ctx.fillStyle = "#ef444490";
   ctx.fill();
   ctx.restore();
 }
@@ -151,7 +154,7 @@ function drawTruck(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.stroke();
   // cab
   ctx.beginPath();
-  ctx.roundRect(s * 0.8, -s * 0.7, s * 1.0, s * 1.4, s * 0.2);
+  roundedRect(ctx, s * 0.8, -s * 0.7, s * 1.0, s * 1.4, s * 0.2);
   ctx.fillStyle = "#d97706";
   ctx.fill();
   // headlights
@@ -159,6 +162,12 @@ function drawTruck(ctx: CanvasRenderingContext2D, x: number, y: number, s: numbe
   ctx.arc(s * 1.75, -s * 0.4, s * 0.2, 0, Math.PI * 2);
   ctx.arc(s * 1.75, s * 0.4, s * 0.2, 0, Math.PI * 2);
   ctx.fillStyle = "#fef08a";
+  ctx.fill();
+  // tail lights
+  ctx.beginPath();
+  ctx.arc(-s * 1.7, -s * 0.5, s * 0.18, 0, Math.PI * 2);
+  ctx.arc(-s * 1.7, s * 0.5, s * 0.18, 0, Math.PI * 2);
+  ctx.fillStyle = "#ef444490";
   ctx.fill();
   ctx.restore();
 }
@@ -169,7 +178,7 @@ function drawBus(ctx: CanvasRenderingContext2D, x: number, y: number, s: number,
   ctx.rotate(angle);
   // body
   ctx.beginPath();
-  ctx.roundRect(-s * 2.2, -s * 0.8, s * 4.4, s * 1.6, s * 0.3);
+  roundedRect(ctx, -s * 2.2, -s * 0.8, s * 4.4, s * 1.6, s * 0.3);
   ctx.fillStyle = color;
   ctx.fill();
   // windows
@@ -185,10 +194,27 @@ function drawBus(ctx: CanvasRenderingContext2D, x: number, y: number, s: number,
   ctx.arc(s * 2.1, s * 0.4, s * 0.2, 0, Math.PI * 2);
   ctx.fillStyle = "#fef08a";
   ctx.fill();
+  // tail lights
+  ctx.beginPath();
+  ctx.arc(-s * 2.1, -s * 0.4, s * 0.18, 0, Math.PI * 2);
+  ctx.arc(-s * 2.1, s * 0.4, s * 0.18, 0, Math.PI * 2);
+  ctx.fillStyle = "#ef444490";
+  ctx.fill();
   ctx.restore();
 }
 
 const SHAPE_RENDERERS: Record<VehicleType, typeof drawCar> = { car: drawCar, truck: drawTruck, bus: drawBus };
+
+interface Props {
+  mapRef: React.MutableRefObject<any>;
+  enabled: boolean;
+  zoom: number;
+  lat: number;
+  lng: number;
+  opacity?: number;
+}
+
+const MIN_ZOOM = 16;
 
 // ── Component ────────────────────────────────────────────────────
 
@@ -199,12 +225,12 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number>(0);
   const lastFetchRef = useRef<string>("");
+  const endpointIdx = useRef(0);
   const [roadCount, setRoadCount] = useState(0);
   const [particleCount, setParticleCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const timeFactor = useMemo(() => getTimeDensityFactor(), []);
-  // Refresh time factor every minute
   const [timeInfo, setTimeInfo] = useState(timeFactor);
   useEffect(() => {
     const iv = setInterval(() => setTimeInfo(getTimeDensityFactor()), 60_000);
@@ -219,16 +245,40 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     lastFetchRef.current = bbox;
 
     setLoading(true);
-    try {
-      const query = `[out:json][timeout:10];way["highway"~"^(motorway|trunk|primary|secondary|tertiary|residential|service|unclassified|living_street)$"](${bbox});out geom;`;
-      const resp = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        body: `data=${encodeURIComponent(query)}`,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      if (!resp.ok) throw new Error(`Overpass ${resp.status}`);
-      const data = await resp.json();
+    const query = `[out:json][timeout:15];way["highway"~"^(motorway|trunk|primary|secondary|tertiary|residential|service|unclassified|living_street)$"](${bbox});out geom;`;
+    const body = `data=${encodeURIComponent(query)}`;
 
+    let data: any = null;
+
+    // Try multiple Overpass endpoints with retry
+    for (let attempt = 0; attempt < OVERPASS_ENDPOINTS.length; attempt++) {
+      const url = OVERPASS_ENDPOINTS[(endpointIdx.current + attempt) % OVERPASS_ENDPOINTS.length];
+      try {
+        const resp = await fetch(url, {
+          method: "POST", body,
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
+        if (resp.status === 429 || resp.status === 504) {
+          console.warn(`[TrafficParticles] ${url} returned ${resp.status}, trying next…`);
+          continue;
+        }
+        if (!resp.ok) throw new Error(`Overpass ${resp.status}`);
+        data = await resp.json();
+        endpointIdx.current = (endpointIdx.current + attempt) % OVERPASS_ENDPOINTS.length;
+        break;
+      } catch (e) {
+        console.warn(`[TrafficParticles] endpoint ${url} failed:`, e);
+      }
+    }
+
+    if (!data) {
+      console.error("[TrafficParticles] All Overpass endpoints failed");
+      setLoading(false);
+      lastFetchRef.current = ""; // allow retry
+      return;
+    }
+
+    try {
       const roads: Road[] = (data.elements || [])
         .filter((el: any) => el.type === "way" && el.geometry?.length >= 2)
         .map((el: any) => ({
@@ -240,7 +290,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       roadsRef.current = roads;
       setRoadCount(roads.length);
 
-      // Spawn particles with time-based density
       const { factor } = getTimeDensityFactor();
       const particles: Particle[] = [];
       roads.forEach((road, ri) => {
@@ -267,7 +316,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       particlesRef.current = particles;
       setParticleCount(particles.length);
     } catch (e) {
-      console.error("[TrafficParticles] Overpass fetch error:", e);
+      console.error("[TrafficParticles] Parse error:", e);
     } finally {
       setLoading(false);
     }
@@ -364,7 +413,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         ctx.stroke();
       });
 
-      // Update and draw particles with vehicle shapes
+      // Update and draw particles
       particles.forEach((p) => {
         p.progress += p.speed * p.direction;
         if (p.progress > 1) p.progress = 0;
@@ -383,11 +432,13 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const interpLat = p1.lat + (p2.lat - p1.lat) * segProgress;
         const interpLng = p1.lng + (p2.lng - p1.lng) * segProgress;
 
-        // Compute heading angle
+        // Compute heading angle from segment direction
         const px1 = latLngToPixel(p1.lat, p1.lng, mapRef.current, overlay);
         const px2 = latLngToPixel(p2.lat, p2.lng, mapRef.current, overlay);
         if (px1 && px2) {
-          p.angle = Math.atan2((px2.y - px1.y), (px2.x - px1.x)) * (p.direction === -1 ? -1 : 1);
+          const dx = px2.x - px1.x;
+          const dy = px2.y - px1.y;
+          p.angle = Math.atan2(dy, dx);
           if (p.direction === -1) p.angle += Math.PI;
         }
 
@@ -396,7 +447,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
         const x = px.x * dpr;
         const y = px.y * dpr;
-        const s = p.size * dpr * (zoom >= 20 ? 1.2 : zoom >= 18 ? 1.0 : 0.8);
+        const s = p.size * dpr * (zoom >= 20 ? 1.3 : zoom >= 18 ? 1.0 : 0.7);
 
         // Glow under vehicle
         ctx.beginPath();
@@ -433,7 +484,6 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
   if (!enabled || zoom < MIN_ZOOM) return null;
 
-  // Count vehicles by type
   const counts = particlesRef.current.reduce(
     (acc, p) => { acc[p.vehicleType] = (acc[p.vehicleType] || 0) + 1; return acc; },
     {} as Record<string, number>
