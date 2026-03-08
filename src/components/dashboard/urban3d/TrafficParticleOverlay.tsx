@@ -37,16 +37,16 @@ const HIGHWAY_COLORS: Record<string, string> = {
 
 // Particles per ~100m of road (scaled by road length)
 const HIGHWAY_DENSITY_PER_100M: Record<string, number> = {
-  motorway: 6, trunk: 5, primary: 4, secondary: 4,
-  tertiary: 3, residential: 2.5, service: 2,
-  unclassified: 2, living_street: 1.5,
+  motorway: 12, trunk: 10, primary: 8, secondary: 8,
+  tertiary: 6, residential: 4, service: 3,
+  unclassified: 3, living_street: 2,
 };
 
 // Minimum particles per road regardless of length
 const HIGHWAY_MIN_PARTICLES: Record<string, number> = {
-  motorway: 8, trunk: 6, primary: 5, secondary: 4,
-  tertiary: 3, residential: 2, service: 2,
-  unclassified: 2, living_street: 1,
+  motorway: 15, trunk: 12, primary: 10, secondary: 8,
+  tertiary: 6, residential: 4, service: 3,
+  unclassified: 3, living_street: 2,
 };
 
 const HIGHWAY_SPEED: Record<string, number> = {
