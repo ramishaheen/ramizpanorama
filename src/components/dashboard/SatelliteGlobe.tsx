@@ -263,6 +263,44 @@ const CITY_PRESETS = [
   { name: "Beijing", lat: 39.9, lng: 116.4 },
 ];
 
+// OSINT Intelligence Markers — conflict zones, military bases, naval choke points, radar sites
+const OSINT_MARKERS = [
+  // Active conflict zones
+  { lat: 31.5, lng: 34.47, label: "GAZA", type: "conflict", severity: "critical", info: "Active combat zone • IDF operations" },
+  { lat: 33.27, lng: 35.2, label: "S. LEBANON", type: "conflict", severity: "high", info: "Hezbollah front line • Artillery exchanges" },
+  { lat: 15.35, lng: 44.2, label: "YEMEN/HOUTHI", type: "conflict", severity: "high", info: "Houthi launch sites • Anti-ship ops" },
+  { lat: 36.2, lng: 37.16, label: "ALEPPO", type: "conflict", severity: "medium", info: "Syrian conflict zone • Russian presence" },
+  // Military bases
+  { lat: 32.4, lng: 34.88, label: "PALMACHIM AFB", type: "military", severity: "high", info: "🇮🇱 Arrow/Iron Dome • Ofek launch site" },
+  { lat: 30.12, lng: 35.24, label: "NEVATIM AFB", type: "military", severity: "high", info: "🇮🇱 F-35I Adir • Main strike base" },
+  { lat: 32.57, lng: 51.68, label: "ISFAHAN NUC", type: "military", severity: "critical", info: "🇮🇷 Nuclear facility • Natanz nearby" },
+  { lat: 35.23, lng: 53.94, label: "SEMNAN SPACE", type: "military", severity: "high", info: "🇮🇷 IRGC space launch center" },
+  { lat: 27.18, lng: 56.17, label: "BANDAR ABBAS", type: "military", severity: "high", info: "🇮🇷 IRIN naval HQ • Strait of Hormuz" },
+  { lat: 25.61, lng: 55.09, label: "AL DHAFRA AFB", type: "military", severity: "medium", info: "🇺🇸 USAF base • F-22/KC-135" },
+  { lat: 25.38, lng: 51.3, label: "AL UDEID AB", type: "military", severity: "medium", info: "🇺🇸 CENTCOM forward HQ • Qatar" },
+  { lat: 35.4, lng: 35.95, label: "HMEIMIM AFB", type: "military", severity: "medium", info: "🇷🇺 Russian air base • Syria" },
+  { lat: 34.89, lng: 35.89, label: "TARTUS NAVAL", type: "military", severity: "medium", info: "🇷🇺 Naval facility • Mediterranean" },
+  { lat: 39.82, lng: 32.69, label: "AKINCI AFB", type: "military", severity: "low", info: "🇹🇷 TAI drone base • TB2 ops" },
+  // Naval choke points
+  { lat: 26.57, lng: 56.25, label: "STRAIT OF HORMUZ", type: "naval", severity: "critical", info: "21M bbl/day oil transit • IRGC patrols" },
+  { lat: 12.6, lng: 43.26, label: "BAB EL-MANDEB", type: "naval", severity: "critical", info: "Red Sea chokepoint • Houthi threat" },
+  { lat: 30.46, lng: 32.34, label: "SUEZ CANAL", type: "naval", severity: "high", info: "12% global trade • Diversion risk" },
+  // Radar / SIGINT sites
+  { lat: 30.97, lng: 34.78, label: "DIMONA RADAR", type: "radar", severity: "high", info: "🇮🇱 AN/TPY-2 X-band • BMD radar" },
+  { lat: 21.42, lng: 39.83, label: "KHAMIS MUSHAIT", type: "military", severity: "medium", info: "🇸🇦 RSAF base • Patriot battery" },
+  { lat: 36.14, lng: 32.99, label: "KÜRECIK RADAR", type: "radar", severity: "high", info: "🇺🇸/🇹🇷 NATO BMD radar • AN/TPY-2" },
+];
+
+// Arc connections (supply lines, threat vectors)
+const OSINT_ARCS = [
+  { startLat: 27.18, startLng: 56.17, endLat: 12.6, endLng: 43.26, color: "#ef4444", label: "IRGC-Houthi corridor" },
+  { startLat: 35.69, startLng: 51.39, endLat: 33.85, endLng: 35.86, color: "#ef4444", label: "Iran-Hezbollah supply" },
+  { startLat: 35.69, startLng: 51.39, endLat: 36.2, endLng: 37.16, color: "#ff6b00", label: "Iran-Syria axis" },
+  { startLat: 25.61, startLng: 55.09, endLat: 26.57, endLng: 56.25, color: "#22c55e", label: "USAF patrol route" },
+  { startLat: 34.89, startLng: 35.89, endLat: 35.4, endLng: 35.95, color: "#a855f7", label: "RU naval-air link" },
+  { startLat: 15.35, startLng: 44.2, endLat: 12.6, endLng: 43.26, color: "#ef4444", label: "Houthi ASM threat" },
+];
+
 // Store raw TLE data for re-propagation
 interface RawSatTLE {
   name: string;
@@ -791,6 +829,50 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             { lat: s.lat, lng: s.lng, altitude: 1.5 },
             1000
           );
+        })
+        // OSINT rings — conflict zones, military bases, naval choke points
+        .ringsData(OSINT_MARKERS)
+        .ringLat((d: any) => d.lat)
+        .ringLng((d: any) => d.lng)
+        .ringAltitude(0.002)
+        .ringMaxRadius((d: any) => d.type === "conflict" ? 3 : d.type === "naval" ? 2.5 : 1.5)
+        .ringPropagationSpeed((d: any) => d.severity === "critical" ? 4 : d.severity === "high" ? 2.5 : 1.5)
+        .ringRepeatPeriod((d: any) => d.severity === "critical" ? 600 : d.severity === "high" ? 900 : 1200)
+        .ringColor((d: any) => {
+          const colors: Record<string, (t: number) => string> = {
+            conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
+            military: (t: number) => `rgba(251,146,60,${0.8 - t * 0.8})`,
+            naval: (t: number) => `rgba(56,189,248,${0.9 - t * 0.9})`,
+            radar: (t: number) => `rgba(168,85,247,${0.8 - t * 0.8})`,
+          };
+          return colors[d.type] || colors.military;
+        })
+        // Threat arcs — supply lines, patrol routes
+        .arcsData(OSINT_ARCS)
+        .arcStartLat((d: any) => d.startLat)
+        .arcStartLng((d: any) => d.startLng)
+        .arcEndLat((d: any) => d.endLat)
+        .arcEndLng((d: any) => d.endLng)
+        .arcColor((d: any) => [d.color + 'cc', d.color + '44'])
+        .arcAltitudeAutoScale(0.3)
+        .arcStroke(0.6)
+        .arcDashLength(0.4)
+        .arcDashGap(0.15)
+        .arcDashAnimateTime(3000)
+        // OSINT location labels (HTML)
+        .htmlElementsData(OSINT_MARKERS)
+        .htmlLat((d: any) => d.lat)
+        .htmlLng((d: any) => d.lng)
+        .htmlAltitude(0.005)
+        .htmlElement((d: any) => {
+          const el = document.createElement('div');
+          el.style.cssText = `pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;`;
+          const colors: Record<string, string> = { conflict: '#ef4444', military: '#fb923c', naval: '#38bdf8', radar: '#a855f7' };
+          el.style.color = colors[d.type] || '#fb923c';
+          el.style.backgroundColor = 'rgba(0,0,0,0.5)';
+          el.style.borderLeft = `2px solid ${colors[d.type] || '#fb923c'}`;
+          el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
+          return el;
         });
 
       // Add ambient + directional light for 3D objects
@@ -911,49 +993,95 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
   return (
     <div className="absolute inset-0 z-[2000] bg-[#050a12] flex flex-col overflow-hidden">
-      {/* Scanline overlay */}
+      {/* Holographic scanline overlay */}
       <div
-        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.03]"
+        className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)",
+          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,200,0.015) 2px, rgba(0,255,200,0.015) 4px)",
+          mixBlendMode: "screen",
+        }}
+      />
+      {/* Holographic sweep line */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none"
+        style={{
+          background: "linear-gradient(180deg, transparent 0%, transparent 45%, rgba(0,255,200,0.06) 50%, transparent 55%, transparent 100%)",
+          animation: "holoSweep 8s linear infinite",
+        }}
+      />
+      {/* Corner brackets — holographic frame */}
+      <div className="absolute inset-0 z-[2001] pointer-events-none">
+        {/* Top-left */}
+        <div className="absolute top-2 left-2 w-12 h-12 border-t border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {/* Top-right */}
+        <div className="absolute top-2 right-2 w-12 h-12 border-t border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {/* Bottom-left */}
+        <div className="absolute bottom-2 left-2 w-12 h-12 border-b border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {/* Bottom-right */}
+        <div className="absolute bottom-2 right-2 w-12 h-12 border-b border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+      </div>
+      {/* Holographic vignette glow */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,20,30,0.6) 100%)",
+        }}
+      />
+      {/* Holographic grid overlay (subtle) */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.02]"
+        style={{
+          backgroundImage: "linear-gradient(rgba(0,255,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,200,0.3) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
         }}
       />
 
-      {/* Top-left HUD */}
-      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1">
+      {/* Top-left HUD — holographic */}
+      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1 holo-flicker">
         <div
-          className="font-mono text-[11px] font-bold tracking-[0.2em] text-primary/90"
-          style={{ textShadow: "0 0 10px hsl(190 100% 50% / 0.5)" }}
+          className="font-mono text-[11px] font-bold tracking-[0.2em] holo-text"
         >
-          ORBITAL INTELLIGENCE
+          ◈ ORBITAL INTELLIGENCE
         </div>
-        <div className="text-[8px] font-mono text-muted-foreground/60 tracking-wider">
-          REAL-TIME SATELLITE TRACKING
+        <div className="text-[8px] font-mono tracking-wider" style={{ color: "rgba(0,255,200,0.5)" }}>
+          REAL-TIME SATELLITE TRACKING • OSINT FUSION
         </div>
-        <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/60">
-          <div>TOP SECRET // SI-TK // NOFORN</div>
+        <div className="mt-2 space-y-0.5 text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.55)" }}>
+          <div style={{ color: "rgba(239,68,68,0.7)" }}>⬤ TOP SECRET // SI-TK // NOFORN</div>
           <div>
-            TRACKING {satellites.length} OBJECTS • MIL:{" "}
+            ▸ TRACKING {satellites.length} OBJECTS • MIL:{" "}
             {satellites.filter((s) => s.category === "Military").length} ISR:{" "}
             {satellites.filter((s) => s.category === "ISR").length} NAV:{" "}
             {satellites.filter((s) => s.category === "Navigation").length}
           </div>
           <div>
-            LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
+            ▸ LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
             {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO:{" "}
             {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
           </div>
           <div>
-            SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+            ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
           </div>
-          <div className="text-white/60">
-            LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
+          <div>
+            ▸ SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.45)" }}>
+            ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
+          </div>
+        </div>
+        {/* OSINT Legend */}
+        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid rgba(0,255,200,0.1)" }}>
+          <div className="text-[7px] font-mono uppercase tracking-widest" style={{ color: "rgba(0,255,200,0.4)" }}>OSINT LAYER</div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            <span className="text-[7px] font-mono flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> CONFLICT</span>
+            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#fb923c" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#fb923c" }} /> MILITARY</span>
+            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#38bdf8" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#38bdf8" }} /> NAVAL</span>
+            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#a855f7" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#a855f7" }} /> RADAR</span>
           </div>
         </div>
       </div>
 
-      {/* Top-right timestamp */}
+      {/* Top-right timestamp — holographic */}
       <div className="absolute top-3 right-3 z-[2002] pointer-events-none text-right space-y-0.5">
         <div className="flex items-center gap-1.5 justify-end">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -961,8 +1089,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             {timestamp}
           </span>
         </div>
-        <div className="text-[8px] font-mono text-muted-foreground/50">
-          CELESTRAK NORAD TLE • LIVE
+        <div className="text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.4)" }}>
+          CELESTRAK NORAD TLE • LIVE OSINT
         </div>
       </div>
 
@@ -1125,11 +1253,11 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         {/* Selected satellite detail panel */}
         {selectedSat && (
           <div
-            className="absolute top-20 left-36 z-[2003] w-64 rounded border backdrop-blur-md pointer-events-auto animate-fade-in"
+            className="absolute top-20 left-36 z-[2003] w-64 rounded border backdrop-blur-md pointer-events-auto animate-fade-in holo-flicker"
             style={{
-              borderColor: CATEGORY_COLORS[selectedSat.category] + "60",
-              background: "rgba(5,10,18,0.92)",
-              boxShadow: `0 0 20px ${CATEGORY_COLORS[selectedSat.category]}22`,
+              borderColor: CATEGORY_COLORS[selectedSat.category] + "40",
+              background: "rgba(0,15,20,0.92)",
+              boxShadow: `0 0 25px ${CATEGORY_COLORS[selectedSat.category]}18, inset 0 0 40px rgba(0,255,200,0.02)`,
             }}
           >
             <div
