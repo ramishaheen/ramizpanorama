@@ -315,6 +315,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         google.maps.event.addListener(map, "zoom_changed", () => {
           setZoomLevel(Math.round(map.getZoom() || 14));
         }),
+        google.maps.event.addListener(map, "click", (e: any) => {
+          if (e.latLng) {
+            const clickedLat = e.latLng.lat();
+            const clickedLng = e.latLng.lng();
+            setStreetViewTarget({ lat: clickedLat, lng: clickedLng });
+            setStreetViewActive(true);
+          }
+        }),
       ];
 
       syncMapState();
