@@ -1925,7 +1925,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       </div>
     </div>
   );
-}
+};
 
 const DataRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex flex-col">
