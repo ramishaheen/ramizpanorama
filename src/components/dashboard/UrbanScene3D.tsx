@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, RotateCcw, Eye, EyeOff } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, RotateCcw, Eye, EyeOff, Flame } from "lucide-react";
 
 interface UrbanSceneProps {
   onClose: () => void;
@@ -19,6 +19,12 @@ interface Aircraft {
   heading: number;
   vertical_rate: number;
   is_military: boolean;
+}
+
+interface ConflictPoint {
+  lat: number;
+  lng: number;
+  severity: number; // 1-4
 }
 
 const PRESETS = [
@@ -57,6 +63,9 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [showTrails, setShowTrails] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
+  const heatCanvasRef = useRef<HTMLCanvasElement>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
@@ -152,6 +161,75 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       mapInstanceRef.current.panTo({ lat, lng });
     }
   }, [lat, lng]);
+
+  // Fetch conflict data for heatmap
+  useEffect(() => {
+    const fetchConflicts = async () => {
+      try {
+        const [geoRes, conflictRes] = await Promise.all([
+          supabase.from("geo_alerts").select("lat,lng,severity"),
+          supabase.functions.invoke("conflict-events"),
+        ]);
+        const points: ConflictPoint[] = [];
+        // Geo alerts
+        const sevMap: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+        (geoRes.data || []).forEach((g: any) => {
+          if (g.lat && g.lng) points.push({ lat: g.lat, lng: g.lng, severity: sevMap[g.severity] || 2 });
+        });
+        // Conflict events
+        const events = conflictRes.data?.data || [];
+        events.forEach((e: any) => {
+          if (e.lat && e.lng) points.push({ lat: e.lat, lng: e.lng, severity: sevMap[e.severity] || 2 });
+        });
+        setConflictPoints(points);
+      } catch (e) {
+        console.error("Heatmap data error:", e);
+      }
+    };
+    fetchConflicts();
+    const iv = setInterval(fetchConflicts, 300_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Render heatmap on canvas
+  useEffect(() => {
+    const canvas = heatCanvasRef.current;
+    if (!canvas || !showHeatmap || conflictPoints.length === 0) {
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      return;
+    }
+    const { w, h } = containerSize;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw radial gradients for each point
+    conflictPoints.forEach((pt) => {
+      const pos = latLngToPixel(pt.lat, pt.lng, lat, lng, w, h, VIEWPORT_DEG);
+      if (pos.x < -100 || pos.x > w + 100 || pos.y < -100 || pos.y > h + 100) return;
+      const radius = 30 + pt.severity * 20;
+      const intensity = 0.15 + pt.severity * 0.08;
+      const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, radius);
+      if (pt.severity >= 3) {
+        grad.addColorStop(0, `rgba(239, 68, 68, ${intensity})`);
+        grad.addColorStop(0.5, `rgba(239, 68, 68, ${intensity * 0.4})`);
+        grad.addColorStop(1, "rgba(239, 68, 68, 0)");
+      } else {
+        grad.addColorStop(0, `rgba(251, 191, 36, ${intensity})`);
+        grad.addColorStop(0.5, `rgba(251, 146, 36, ${intensity * 0.4})`);
+        grad.addColorStop(1, "rgba(251, 146, 36, 0)");
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(pos.x - radius, pos.y - radius, radius * 2, radius * 2);
+    });
+  }, [conflictPoints, showHeatmap, lat, lng, containerSize]);
+
+  const VIEWPORT_DEG = 6;
 
   // Fetch Google Maps API key from backend
   useEffect(() => {
@@ -260,8 +338,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const militaryCount = aircraft.filter((a) => a.is_military).length;
   const civilCount = aircraft.length - militaryCount;
 
-  // Viewport degrees for marker projection (matches our 6-degree fetch bbox)
-  const VIEWPORT_DEG = 6;
+  // Compute marker positions (uses VIEWPORT_DEG defined above)
 
   // Compute marker positions
   const markerPositions = useMemo(() => {
@@ -316,6 +393,19 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           >
             {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             Markers
+          </button>
+          <button
+            onClick={() => setShowHeatmap(!showHeatmap)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showHeatmap ? "border-orange-500/50 bg-orange-500/10 text-orange-400" : "border-border text-muted-foreground hover:bg-secondary"}`}
+            title="Toggle conflict heatmap"
+          >
+            <Flame className="h-3 w-3" />
+            Heatmap
+            {conflictPoints.length > 0 && (
+              <span className="bg-orange-500/20 text-orange-400 text-[8px] px-1 rounded-full font-bold">
+                {conflictPoints.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setShowTrails(!showTrails)}
@@ -407,6 +497,13 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
             </div>
           </div>
         )}
+
+        {/* ===== CONFLICT HEATMAP CANVAS ===== */}
+        <canvas
+          ref={heatCanvasRef}
+          className="absolute inset-0 w-full h-full z-[8] pointer-events-none"
+          style={{ opacity: showHeatmap ? 0.85 : 0, transition: "opacity 0.5s ease" }}
+        />
 
         {/* ===== TRAIL LINES ===== */}
         {showFlights && showMarkers && showTrails && markerPositions.length > 0 && (
