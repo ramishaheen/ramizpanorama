@@ -423,6 +423,119 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     satellite_name?: string;
   } | null>(null);
   const [predictionTrack, setPredictionTrack] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [globeStyle, setGlobeStyle] = useState<string>("normal");
+
+  // Globe style presets — change texture, atmosphere, lighting
+  const GLOBE_STYLES = [
+    { id: "normal", label: "Normal", icon: "🌍", desc: "Blue marble" },
+    { id: "crt", label: "CRT", icon: "🌙", desc: "Retro green CRT" },
+    { id: "nvg", label: "NVG", icon: "👁", desc: "Night vision" },
+    { id: "flir", label: "FLIR", icon: "🔥", desc: "Thermal infrared" },
+    { id: "noir", label: "Noir", icon: "🖤", desc: "Dark monochrome" },
+    { id: "snow", label: "Snow", icon: "❄️", desc: "Arctic white" },
+  ] as const;
+
+  const applyGlobeStyle = useCallback((styleId: string) => {
+    const globe = globeRef.current;
+    if (!globe) return;
+    setGlobeStyle(styleId);
+
+    const scene = globe.scene();
+    if (!scene) return;
+
+    // Remove existing CSS filters on the canvas
+    const canvas = globeElRef.current?.querySelector("canvas");
+
+    // Style definitions: globe texture + atmosphere + scene background + CSS filter
+    const styles: Record<string, {
+      texture: string; bump: string; bg: string;
+      atmosphere: string; atmosphereAlt: number;
+      filter: string; ambientColor: number; ambientIntensity: number;
+      dirColor: number; dirIntensity: number;
+    }> = {
+      normal: {
+        texture: "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
+        bump: "https://unpkg.com/three-globe/example/img/earth-topology.png",
+        bg: "https://unpkg.com/three-globe/example/img/night-sky.png",
+        atmosphere: "#1a6b8a", atmosphereAlt: 0.18,
+        filter: "none",
+        ambientColor: 0xffffff, ambientIntensity: 0.7,
+        dirColor: 0xffffff, dirIntensity: 0.9,
+      },
+      crt: {
+        texture: "https://unpkg.com/three-globe/example/img/earth-night.jpg",
+        bump: "https://unpkg.com/three-globe/example/img/earth-topology.png",
+        bg: "https://unpkg.com/three-globe/example/img/night-sky.png",
+        atmosphere: "#00ff88", atmosphereAlt: 0.22,
+        filter: "saturate(0.3) brightness(0.7) contrast(1.4) sepia(0.3) hue-rotate(90deg)",
+        ambientColor: 0x00ff66, ambientIntensity: 0.4,
+        dirColor: 0x00ff88, dirIntensity: 0.6,
+      },
+      nvg: {
+        texture: "https://unpkg.com/three-globe/example/img/earth-night.jpg",
+        bump: "https://unpkg.com/three-globe/example/img/earth-topology.png",
+        bg: "https://unpkg.com/three-globe/example/img/night-sky.png",
+        atmosphere: "#22ff44", atmosphereAlt: 0.25,
+        filter: "saturate(0) brightness(0.6) contrast(1.5) sepia(1) hue-rotate(70deg)",
+        ambientColor: 0x44ff44, ambientIntensity: 0.5,
+        dirColor: 0x22ff22, dirIntensity: 0.4,
+      },
+      flir: {
+        texture: "https://unpkg.com/three-globe/example/img/earth-night.jpg",
+        bump: "https://unpkg.com/three-globe/example/img/earth-topology.png",
+        bg: "https://unpkg.com/three-globe/example/img/night-sky.png",
+        atmosphere: "#ff4400", atmosphereAlt: 0.2,
+        filter: "saturate(1.5) brightness(0.8) contrast(1.6) hue-rotate(-30deg)",
+        ambientColor: 0xff6600, ambientIntensity: 0.5,
+        dirColor: 0xff4400, dirIntensity: 0.7,
+      },
+      noir: {
+        texture: "https://unpkg.com/three-globe/example/img/earth-dark.jpg",
+        bump: "https://unpkg.com/three-globe/example/img/earth-topology.png",
+        bg: "https://unpkg.com/three-globe/example/img/night-sky.png",
+        atmosphere: "#666666", atmosphereAlt: 0.15,
+        filter: "saturate(0) brightness(0.5) contrast(1.8)",
+        ambientColor: 0xaaaaaa, ambientIntensity: 0.3,
+        dirColor: 0xffffff, dirIntensity: 0.5,
+      },
+      snow: {
+        texture: "https://unpkg.com/three-globe/example/img/earth-water.png",
+        bump: "https://unpkg.com/three-globe/example/img/earth-topology.png",
+        bg: "https://unpkg.com/three-globe/example/img/night-sky.png",
+        atmosphere: "#aaddff", atmosphereAlt: 0.22,
+        filter: "saturate(0.2) brightness(1.3) contrast(0.9) sepia(0.1) hue-rotate(190deg)",
+        ambientColor: 0xccddff, ambientIntensity: 0.9,
+        dirColor: 0xffffff, dirIntensity: 1.0,
+      },
+    };
+
+    const s = styles[styleId] || styles.normal;
+
+    // Apply globe textures
+    globe.globeImageUrl(s.texture);
+    globe.bumpImageUrl(s.bump);
+    globe.backgroundImageUrl(s.bg);
+    globe.atmosphereColor(s.atmosphere);
+    globe.atmosphereAltitude(s.atmosphereAlt);
+
+    // Apply CSS filter to canvas for color grading
+    if (canvas) {
+      canvas.style.filter = s.filter;
+      canvas.style.transition = "filter 0.5s ease";
+    }
+
+    // Update scene lighting
+    scene.children.forEach((child: any) => {
+      if (child.isAmbientLight) {
+        child.color.setHex(s.ambientColor);
+        child.intensity = s.ambientIntensity;
+      }
+      if (child.isDirectionalLight) {
+        child.color.setHex(s.dirColor);
+        child.intensity = s.dirIntensity;
+      }
+    });
+  }, []);
 
   useEffect(() => {
     satsRef.current = satellites;
@@ -2057,6 +2170,32 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             >
               <ChevronRight className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Style Presets — bottom center above city bar */}
+      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
+        <div className="flex flex-col items-center gap-1">
+          <div className="text-[8px] font-mono text-white/40 uppercase tracking-[0.2em]">Style Presets</div>
+          <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-xl px-2 py-1.5">
+            {GLOBE_STYLES.map((style) => (
+              <button
+                key={style.id}
+                onClick={() => applyGlobeStyle(style.id)}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-all ${
+                  globeStyle === style.id
+                    ? "bg-cyan-500/20 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,200,255,0.2)]"
+                    : "hover:bg-white/10 border border-transparent"
+                }`}
+                title={style.desc}
+              >
+                <span className="text-base">{style.icon}</span>
+                <span className={`text-[9px] font-mono tracking-wide ${
+                  globeStyle === style.id ? "text-cyan-300 font-bold" : "text-white/70"
+                }`}>{style.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
