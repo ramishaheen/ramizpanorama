@@ -258,6 +258,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   const [loading, setLoading] = useState(false);
   const [avgTDI, setAvgTDI] = useState(0);
   const [intelInfo, setIntelInfo] = useState<IntelData | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
 
   // Fetch traffic intelligence factors from edge function
   const fetchIntel = useCallback(async (centerLat: number, centerLng: number) => {
