@@ -721,10 +721,11 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     return () => clearInterval(interval);
   }, [satellites]);
 
-  const flyToCity = useCallback((city: (typeof CITY_PRESETS)[0]) => {
+  const flyToCity = useCallback((city: CityPreset) => {
     setActiveCity(city.name);
     setSelectedSat(null);
     setOrbitPath(null);
+    setSelectedCity(city);
 
     // Find satellites within ~2500km radius of the country center
     const R = 2500; // km
