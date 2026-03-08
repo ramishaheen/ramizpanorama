@@ -695,6 +695,16 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               <span className="text-[7px] font-mono text-muted-foreground">
                 {roadCount} roads · {particleCount} pts
               </span>
+              <button
+                onClick={() => setDebugMode(d => !d)}
+                className={`text-[6px] font-mono px-1 py-0.5 rounded border pointer-events-auto cursor-pointer transition-colors ${
+                  debugMode
+                    ? "bg-accent/20 border-accent/40 text-accent"
+                    : "bg-muted/20 border-muted-foreground/20 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {debugMode ? "DBG ON" : "DBG"}
+              </button>
             </div>
 
             {/* Weather info */}
