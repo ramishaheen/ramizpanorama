@@ -144,6 +144,9 @@ Return ONLY valid JSON (no markdown, no code blocks):
       costs = { error: "Failed to parse AI response" };
     }
 
+    // Cache successful result
+    cachedWarCosts = { data: costs, timestamp: Date.now() };
+
     return new Response(JSON.stringify(costs), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
