@@ -63,6 +63,9 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const [containerSize, setContainerSize] = useState({ w: 800, h: 600 });
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const mapDivRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const scriptLoadedRef = useRef(false);
 
   // Track container size for marker positioning
   useEffect(() => {
@@ -75,6 +78,78 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  // Fetch Google Maps API key from backend
+  useEffect(() => {
+    const fetchKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("google-maps-key");
+        if (!error && data?.apiKey) {
+          setApiKey(data.apiKey);
+        }
+      } catch (e) {
+        console.error("Failed to fetch Google Maps key:", e);
+      } finally {
+        setApiKeyLoading(false);
+      }
+    };
+    fetchKey();
+  }, []);
+
+  // Load Google Maps JS API and create map
+  useEffect(() => {
+    if (!apiKey || scriptLoadedRef.current) return;
+
+    const initMap = () => {
+      if (!mapDivRef.current || !(window as any).google?.maps) return;
+      const google = (window as any).google;
+      const map = new google.maps.Map(mapDivRef.current, {
+        center: { lat, lng },
+        zoom: 17,
+        mapTypeId: "satellite",
+        tilt: 45,
+        heading: 0,
+        mapId: "WAROS_3D_MAP",
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+      mapInstanceRef.current = map;
+    };
+
+    // Check if already loaded
+    if ((window as any).google?.maps) {
+      scriptLoadedRef.current = true;
+      initMap();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=maps3d`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      scriptLoadedRef.current = true;
+      initMap();
+    };
+    script.onerror = () => {
+      console.error("Failed to load Google Maps script");
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      // Don't remove script on cleanup - it stays cached
+    };
+  }, [apiKey]);
+
+  // Update map center when lat/lng changes
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.panTo({ lat, lng });
+    }
+  }, [lat, lng]);
 
   // Fetch Google Maps API key from backend
   useEffect(() => {
