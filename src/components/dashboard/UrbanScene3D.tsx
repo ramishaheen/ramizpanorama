@@ -491,11 +491,28 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       clickMarkerRef.current = pin;
 
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 1000 }, async (data: any, status: any) => {
+      svService.getPanorama({ 
+        location: { lat: targetLat, lng: targetLng }, 
+        radius: 200,
+        source: google.maps.StreetViewSource.OUTDOOR,
+        preference: google.maps.StreetViewPreference.NEAREST,
+      }, async (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
           const sv = map.getStreetView();
-          sv.setPosition(data.location.latLng);
-          sv.setPov({ heading: 0, pitch: 0 });
+          const panoLatLng = data.location.latLng;
+          sv.setPosition(panoLatLng);
+          
+          // Compute heading FROM the panorama TO the clicked point so the user looks at where they clicked
+          const panoLat = panoLatLng.lat();
+          const panoLng = panoLatLng.lng();
+          const dLng = (targetLng - panoLng) * Math.PI / 180;
+          const lat1 = panoLat * Math.PI / 180;
+          const lat2 = targetLat * Math.PI / 180;
+          const y = Math.sin(dLng) * Math.cos(lat2);
+          const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+          const heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+          
+          sv.setPov({ heading, pitch: 0 });
           sv.setVisible(true);
           streetViewRef.current = sv;
           const listener = google.maps.event.addListener(sv, "visible_changed", () => {
@@ -506,14 +523,34 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           });
           return () => google.maps.event.removeListener(listener);
         } else {
-          // Fallback to Mapillary
-          toast({ title: "Trying Mapillary…", description: "No Google Street View here. Searching Mapillary street-level imagery…", duration: 3000 });
-          const found = await activateMapillary(targetLat, targetLng);
-          if (!found) {
-            toast({ title: "360° View Unavailable", description: `No street-level imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try a city center.`, duration: 4000 });
-          }
-          setStreetViewActive(false);
-          setStreetViewTarget(null);
+          // Try again with larger radius before falling back to Mapillary
+          svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 1000 }, async (data2: any, status2: any) => {
+            if (status2 === google.maps.StreetViewStatus.OK) {
+              const sv = map.getStreetView();
+              const panoLatLng = data2.location.latLng;
+              sv.setPosition(panoLatLng);
+              const panoLat = panoLatLng.lat();
+              const panoLng = panoLatLng.lng();
+              const dLng = (targetLng - panoLng) * Math.PI / 180;
+              const lat1 = panoLat * Math.PI / 180;
+              const lat2 = targetLat * Math.PI / 180;
+              const y = Math.sin(dLng) * Math.cos(lat2);
+              const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+              const heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+              sv.setPov({ heading, pitch: 0 });
+              sv.setVisible(true);
+              streetViewRef.current = sv;
+              toast({ title: "Nearby 360°", description: `Closest panorama is ~${Math.round(google.maps.geometry?.computeDistanceBetween?.(new google.maps.LatLng(targetLat, targetLng), panoLatLng) || 0)}m from your pin.`, duration: 3000 });
+            } else {
+              toast({ title: "Trying Mapillary…", description: "No Google Street View here. Searching Mapillary…", duration: 3000 });
+              const found = await activateMapillary(targetLat, targetLng);
+              if (!found) {
+                toast({ title: "360° View Unavailable", description: `No street-level imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try a city center.`, duration: 4000 });
+              }
+              setStreetViewActive(false);
+              setStreetViewTarget(null);
+            }
+          });
         }
       });
     } else {
