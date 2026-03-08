@@ -395,6 +395,18 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
             Markers
           </button>
           <button
+            onClick={() => setShowHeatmap(!showHeatmap)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showHeatmap ? "border-orange-500/50 bg-orange-500/10 text-orange-400" : "border-border text-muted-foreground hover:bg-secondary"}`}
+            title="Toggle conflict heatmap"
+          >
+            <Flame className="h-3 w-3" />
+            Heatmap
+            {conflictPoints.length > 0 && (
+              <span className="bg-orange-500/20 text-orange-400 text-[8px] px-1 rounded-full font-bold">
+                {conflictPoints.length}
+              </span>
+            )}
+          <button
             onClick={() => setShowTrails(!showTrails)}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
             title="Toggle flight trail lines"
@@ -484,6 +496,13 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
             </div>
           </div>
         )}
+
+        {/* ===== CONFLICT HEATMAP CANVAS ===== */}
+        <canvas
+          ref={heatCanvasRef}
+          className="absolute inset-0 w-full h-full z-[8] pointer-events-none"
+          style={{ opacity: showHeatmap ? 0.85 : 0, transition: "opacity 0.5s ease" }}
+        />
 
         {/* ===== TRAIL LINES ===== */}
         {showFlights && showMarkers && showTrails && markerPositions.length > 0 && (
