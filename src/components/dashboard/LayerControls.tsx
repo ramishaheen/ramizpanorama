@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff, Mountain, Flame, Cloud, Crosshair, Navigation, Car, Radiation, Wind, Anchor } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff, Mountain, Flame, Cloud, Crosshair, Navigation, Car, Radiation, Wind, Anchor, MapPin } from "lucide-react";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 export interface LayerState {
@@ -16,6 +16,7 @@ export interface LayerState {
   nuclear: boolean;
   airQuality: boolean;
   aisVessels: boolean;
+  cities: boolean;
 }
 
 interface LayerControlsProps {
@@ -38,6 +39,7 @@ const layerConfig = [
   { key: "traffic" as const, trKey: "layer.traffic", icon: Car, color: "text-accent" },
   { key: "conflicts" as const, trKey: "layer.conflicts", icon: Crosshair, color: "text-warning" },
   { key: "heatmap" as const, trKey: "layer.heatmap", icon: Radio, color: "text-critical" },
+  { key: "cities" as const, trKey: "layer.cities", icon: MapPin, color: "text-primary" },
 ];
 
 export const LayerControls = ({ layers, onToggle }: LayerControlsProps) => {
