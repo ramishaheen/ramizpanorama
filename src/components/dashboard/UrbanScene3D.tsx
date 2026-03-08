@@ -839,7 +839,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   <span className="text-primary font-bold">{interpolatedAircraft.length}</span>
                   <span>AIRCRAFT</span>
                   <span className="text-[8px] font-mono px-1 rounded bg-primary/15">
-                    {flightSource === "opensky" ? "LIVE" : "SIM"}
+                    {flightSource === "adsb.fi" ? "LIVE" : flightSource ? flightSource.toUpperCase() : "—"}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1050,7 +1050,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       {/* Bottom bar */}
       <div className="flex items-center gap-3 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
         <span className="text-[8px] font-mono text-muted-foreground uppercase">
-          SRC: Google 3D Tiles • {flightSource === "opensky" ? "OpenSky Network (LIVE)" : "Simulated Flight Data"}
+          SRC: Google 3D Tiles • {flightSource === "adsb.fi" ? "adsb.fi (LIVE ADS-B)" : flightSource || "Loading…"}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
           {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
