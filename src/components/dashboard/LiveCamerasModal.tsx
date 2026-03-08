@@ -243,6 +243,8 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
+  const [pipCamera, setPipCamera] = useState<CameraData | null>(null);
+  const [pipSize, setPipSize] = useState<"sm" | "md" | "lg">("md");
   const [stats, setStats] = useState<Stats | null>(null);
 
   // Filters
@@ -686,6 +688,68 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
               <span className="text-sm font-bold text-cyan-400">{cameras.length}</span>
             </div>
           </div>
+
+          {/* ── PiP Floating Feed ── */}
+          {pipCamera && (() => {
+            const pipW = pipSize === "sm" ? 240 : pipSize === "lg" ? 480 : 340;
+            const pipH = pipSize === "sm" ? 135 : pipSize === "lg" ? 270 : 191;
+            const ytMatch = pipCamera.embed_url?.match(/youtube\.com\/embed\/([^?&/]+)/i);
+            const embedSrc = pipCamera.embed_url || pipCamera.stream_url;
+            return (
+              <div
+                className="absolute z-[20] rounded-lg overflow-hidden"
+                style={{
+                  bottom: 50, left: 12, width: pipW, height: pipH + 28,
+                  background: "rgba(8,12,18,0.97)", border: "1px solid rgba(6,182,212,0.3)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.7), 0 0 20px rgba(6,182,212,0.15)",
+                }}
+              >
+                {/* PiP header */}
+                <div className="flex items-center justify-between px-2" style={{ height: 28, background: "rgba(6,182,212,0.08)", borderBottom: "1px solid rgba(6,182,212,0.15)" }}>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[8px] font-mono font-bold text-cyan-400 truncate" style={{ maxWidth: pipW - 100 }}>
+                      {pipCamera.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {(["sm", "md", "lg"] as const).map(s => (
+                      <button key={s} onClick={() => setPipSize(s)}
+                        className="px-1.5 py-0.5 rounded text-[7px] font-bold font-mono transition-all"
+                        style={{
+                          background: pipSize === s ? "rgba(6,182,212,0.2)" : "transparent",
+                          color: pipSize === s ? "#06b6d4" : "#6b7280",
+                          border: pipSize === s ? "1px solid rgba(6,182,212,0.3)" : "1px solid transparent",
+                        }}>
+                        {s.toUpperCase()}
+                      </button>
+                    ))}
+                    <button onClick={() => setPipCamera(null)}
+                      className="ml-1 w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/20 transition-all"
+                      style={{ color: "#ef4444" }}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+                {/* PiP feed */}
+                <div style={{ width: pipW, height: pipH }}>
+                  {embedSrc ? (
+                    <iframe
+                      src={embedSrc}
+                      className="w-full h-full border-0"
+                      allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: "#0a0f18" }}>
+                      <span className="text-[10px] text-gray-600 font-mono">NO FEED AVAILABLE</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── RIGHT PANEL ── */}
