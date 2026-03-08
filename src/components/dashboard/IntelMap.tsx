@@ -272,6 +272,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [flightData, setFlightData] = useState<FlightAircraft[]>([]);
   const flightTrailsRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [trackedFlightId, setTrackedFlightId] = useState<string | null>(null);
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
@@ -1006,6 +1007,18 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     return () => { if (flightIntervalRef.current) { clearInterval(flightIntervalRef.current); flightIntervalRef.current = null; } };
   }, [fetchFlightData, layers.flights]);
 
+  // Click-to-track: pan to tracked aircraft on each data update
+  useEffect(() => {
+    if (!trackedFlightId || !mapRef.current) return;
+    const ac = flightData.find(f => f.icao24 === trackedFlightId);
+    if (ac) {
+      mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.5 });
+    } else {
+      // Aircraft left the viewport, stop tracking
+      setTrackedFlightId(null);
+    }
+  }, [flightData, trackedFlightId]);
+
   // Render flights on map
   useEffect(() => {
     const group = flightGroupRef.current;
@@ -1018,6 +1031,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const isMil = ac.is_military;
       const color = isMil ? "#ef4444" : "#60a5fa";
       const size = isMil ? 18 : 14;
+      const isTracked = trackedFlightId === ac.icao24;
 
       // Draw trail polyline
       const trail = flightTrailsRef.current[ac.icao24] || [];
@@ -1026,26 +1040,36 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         L.polyline(path, {
           color,
           weight: isMil ? 2 : 1.5,
-          opacity: 0.6,
+          opacity: isTracked ? 0.9 : 0.6,
           dashArray: isMil ? undefined : "4 3",
         }).addTo(group);
       }
 
       // Aircraft marker
+      const trackedRing = isTracked
+        ? `<div style="position:absolute;width:${size + 16}px;height:${size + 16}px;border-radius:50%;border:2px solid ${color};opacity:0.7;animation:pulse 1s ease-in-out infinite;"></div>`
+        : "";
       const icon = L.divIcon({
         className: "flight-marker",
-        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          ${trackedRing}
           <div style="position:absolute;width:${size + 8}px;height:${size + 8}px;border-radius:50%;border:1.5px solid ${color};opacity:0.3;animation:pulse 2.5s ease-in-out infinite;"></div>
           <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}" style="transform:rotate(${ac.heading}deg);filter:drop-shadow(0 0 4px ${color});">
             <path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z"/>
           </svg>
         </div>`,
-        iconSize: [size + 8, size + 8],
-        iconAnchor: [(size + 8) / 2, (size + 8) / 2],
+        iconSize: [size + 16, size + 16],
+        iconAnchor: [(size + 16) / 2, (size + 16) / 2],
         popupAnchor: [0, -(size / 2 + 6)],
       });
 
-      const marker = L.marker([ac.lat, ac.lng], { icon, zIndexOffset: isMil ? 800 : 400 });
+      const marker = L.marker([ac.lat, ac.lng], { icon, zIndexOffset: isTracked ? 1200 : (isMil ? 800 : 400) });
+      
+      // Click to track/untrack
+      marker.on("click", () => {
+        setTrackedFlightId(prev => prev === ac.icao24 ? null : ac.icao24);
+      });
+
       bindHoverPopup(marker, `<div style="${popupStyle}">
         <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">
           ${isMil ? "🛩️ MILITARY" : "✈️ CIVIL"} — ${ac.callsign || ac.icao24}
@@ -1053,11 +1077,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         <div>Origin: ${ac.origin_country}</div>
         <div>Alt: ${Math.round(ac.altitude)}m | Speed: ${Math.round(ac.velocity * 3.6)} km/h</div>
         <div>Heading: ${Math.round(ac.heading)}° | V/S: ${ac.vertical_rate > 0 ? "+" : ""}${ac.vertical_rate.toFixed(1)} m/s</div>
-        <div style="font-size:9px;opacity:0.5;margin-top:4px;">ICAO: ${ac.icao24}</div>
+        ${isTracked ? '<div style="color:#22c55e;font-size:10px;margin-top:4px;">📡 TRACKING — click to stop</div>' : '<div style="color:#888;font-size:10px;margin-top:4px;">Click to track</div>'}
+        <div style="font-size:9px;opacity:0.5;margin-top:2px;">ICAO: ${ac.icao24}</div>
       </div>`);
       group.addLayer(marker);
     });
-  }, [flightData, layers.flights]);
+  }, [flightData, layers.flights, trackedFlightId]);
 
 
   useEffect(() => {
@@ -1300,6 +1325,28 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           </span>
         </button>
       </div>
+
+      {/* Flight count badge */}
+      {layers.flights && flightData.length > 0 && (
+        <div className="absolute top-14 right-3 z-[1000] flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-lg">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z"/></svg>
+          <span className="text-[10px] font-mono text-foreground">
+            <span className="text-primary font-bold">{flightData.filter(f => !f.is_military).length}</span>
+            <span className="text-muted-foreground"> CIV</span>
+            <span className="text-muted-foreground mx-1">|</span>
+            <span className="text-critical font-bold">{flightData.filter(f => f.is_military).length}</span>
+            <span className="text-muted-foreground"> MIL</span>
+          </span>
+          {trackedFlightId && (
+            <button
+              onClick={() => setTrackedFlightId(null)}
+              className="ml-1 text-[9px] font-mono text-accent bg-accent/10 border border-accent/30 rounded px-1.5 py-0.5 hover:bg-accent/20 transition-colors"
+            >
+              📡 TRACKING
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 3D overlays */}
       {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
