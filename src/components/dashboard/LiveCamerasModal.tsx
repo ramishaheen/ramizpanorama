@@ -56,6 +56,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           country: selectedCountry,
           category: selectedCategory,
           search: searchQuery,
+          source: selectedSource,
         },
       });
 
