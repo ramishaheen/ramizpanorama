@@ -726,22 +726,31 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       });
 
       const limited = deduped.slice(0, 5000);
-      rawTLERef.current = limited
+      const rawTLE = limited
         .map((s) => rawByKey.get(s.noradId || s.name))
         .filter((r): r is RawSatTLE => Boolean(r));
 
+      rawTLERef.current = rawTLE;
       setSatellites(limited);
+      saveSatelliteCache({ satellites: limited, rawTLE });
       console.log(
         `[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter((r) => r.status === "fulfilled").length} CelesTrak groups`
       );
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
-      setSatellites([]);
-      rawTLERef.current = [];
+      const cached = loadSatelliteCache();
+      if (cached) {
+        rawTLERef.current = cached.rawTLE;
+        setSatellites(cached.satellites);
+        console.log(`[ORBITAL INTEL] Using cached dataset (${cached.satellites.length} satellites)`);
+      } else {
+        setSatellites([]);
+        rawTLERef.current = [];
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadSatelliteCache, saveSatelliteCache]);
 
   useEffect(() => {
     fetchSatellites();
