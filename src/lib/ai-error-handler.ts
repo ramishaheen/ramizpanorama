@@ -37,28 +37,14 @@ export function isRateLimitError(error: unknown): boolean {
 export function handleAIError(error: unknown, context?: string): boolean {
   const now = Date.now();
 
-  if (isAICreditError(error)) {
+  if (isAICreditError(error) || isRateLimitError(error)) {
     if (now - lastCreditToastTime > TOAST_COOLDOWN) {
       lastCreditToastTime = now;
       toast({
-        title: "⚠️ AI Analysis Temporarily Unavailable",
+        title: "🔥 High Demand — You're Not the Only One Watching",
         description:
-          "Live AI analysis is paused. The dashboard is showing cached intelligence data. Service will resume automatically.",
-        variant: "destructive",
-        duration: 8000,
-      });
-    }
-    return true;
-  }
-
-  if (isRateLimitError(error)) {
-    if (now - lastCreditToastTime > TOAST_COOLDOWN) {
-      lastCreditToastTime = now;
-      toast({
-        title: "📊 Analysis Rate Limited",
-        description:
-          "Too many requests — data will refresh shortly. Cached data is being displayed.",
-        duration: 5000,
+          "Our intelligence feeds are experiencing peak traffic right now. Hit refresh to grab the latest updates, or check back shortly — the situation is evolving fast and you won't want to miss what's next.",
+        duration: 10000,
       });
     }
     return true;
