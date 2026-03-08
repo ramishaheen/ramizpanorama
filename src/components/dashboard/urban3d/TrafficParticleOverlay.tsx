@@ -258,6 +258,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   const [loading, setLoading] = useState(false);
   const [avgTDI, setAvgTDI] = useState(0);
   const [intelInfo, setIntelInfo] = useState<IntelData | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
 
   // Fetch traffic intelligence factors from edge function
   const fetchIntel = useCallback(async (centerLat: number, centerLng: number) => {
@@ -503,7 +504,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       ctx.lineJoin = "round";
 
       // 1. Draw TDI-coloured road lines
-      roads.forEach((road) => {
+      roads.forEach((road, ri) => {
         const baseW = ROAD_LINE_WIDTH[road.highway] ?? 3;
         const zoomScale = zoom >= 21 ? 2.2 : zoom >= 20 ? 1.7 : zoom >= 19 ? 1.3 : zoom >= 18 ? 1.0 : 0.75;
         const lineW = baseW * zoomScale * dpr;
@@ -534,6 +535,38 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         ctx.strokeStyle = tdiToColor(road.tdi, 0.6);
         ctx.lineWidth = lineW;
         ctx.stroke();
+
+        // Debug: lane count + particle count label at road midpoint
+        if (debugMode) {
+          const midIdx = Math.floor(road.points.length / 2);
+          const midPt = road.points[midIdx];
+          const midPx = latLngToPixel(midPt.lat, midPt.lng, mapRef.current, overlay);
+          if (midPx) {
+            const mx = midPx.x * dpr;
+            const my = midPx.y * dpr;
+            const pCount = particles.filter(pp => pp.roadIdx === ri).length;
+            const debugLabel = `L:${road.lanes} P:${pCount}`;
+            const fontSize = Math.round(7 * dpr);
+            ctx.font = `bold ${fontSize}px monospace`;
+            const tw = ctx.measureText(debugLabel).width;
+            const pad = 2 * dpr;
+            const bw = tw + pad * 2;
+            const bh = fontSize + pad * 2;
+
+            ctx.fillStyle = "rgba(0,0,0,0.85)";
+            ctx.strokeStyle = "rgba(0,255,200,0.6)";
+            ctx.lineWidth = 1 * dpr;
+            ctx.beginPath();
+            ctx.roundRect(mx - bw / 2, my - bh / 2, bw, bh, 2 * dpr);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "rgba(0,255,200,0.95)";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(debugLabel, mx, my);
+          }
+        }
       });
 
       // 2. Animate particles along roads
@@ -662,6 +695,16 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
               <span className="text-[7px] font-mono text-muted-foreground">
                 {roadCount} roads · {particleCount} pts
               </span>
+              <button
+                onClick={() => setDebugMode(d => !d)}
+                className={`text-[6px] font-mono px-1 py-0.5 rounded border pointer-events-auto cursor-pointer transition-colors ${
+                  debugMode
+                    ? "bg-accent/20 border-accent/40 text-accent"
+                    : "bg-muted/20 border-muted-foreground/20 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {debugMode ? "DBG ON" : "DBG"}
+              </button>
             </div>
 
             {/* Weather info */}
