@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -178,9 +179,9 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     groupedByCountry[c.country].push(c);
   });
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="relative w-[95vw] h-[90vh] max-w-[1600px] bg-card border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative w-[95vw] h-[90vh] max-w-[1600px] bg-card border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background/80">
           <div className="flex items-center gap-3">
@@ -384,6 +385,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
