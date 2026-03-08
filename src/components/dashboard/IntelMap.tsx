@@ -1192,23 +1192,134 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   }, [interpolatedFlights, layers.flights, trackedFlightId]);
 
 
+  // ===== WEATHER OVERLAY LAYERS (precipitation + wind + cloud + city markers) =====
+  const weatherWindRef = useRef<L.TileLayer | null>(null);
+  const weatherCloudRef = useRef<L.TileLayer | null>(null);
+  const weatherMarkersRef = useRef<L.LayerGroup | null>(null);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    if (weatherTileRef.current) {
-      map.removeLayer(weatherTileRef.current);
-      weatherTileRef.current = null;
-    }
+    // Clean up
+    if (weatherTileRef.current) { map.removeLayer(weatherTileRef.current); weatherTileRef.current = null; }
+    if (weatherWindRef.current) { map.removeLayer(weatherWindRef.current); weatherWindRef.current = null; }
+    if (weatherCloudRef.current) { map.removeLayer(weatherCloudRef.current); weatherCloudRef.current = null; }
+    if (weatherMarkersRef.current) { map.removeLayer(weatherMarkersRef.current); weatherMarkersRef.current = null; }
 
     if (layers.weather) {
-      // OpenWeatherMap free precipitation tile layer
+      const OWM_KEY = "b1b15e88fa797225412429c1c50c122a1";
+      // Precipitation
       weatherTileRef.current = L.tileLayer(
-        "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=b1b15e88fa797225412429c1c50c122a1",
-        { attribution: "&copy; OpenWeatherMap", opacity: 0.5, maxZoom: 18 }
+        `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`,
+        { attribution: "&copy; OpenWeatherMap", opacity: 0.45, maxZoom: 18 }
+      ).addTo(map);
+      // Wind speed
+      weatherWindRef.current = L.tileLayer(
+        `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`,
+        { opacity: 0.3, maxZoom: 18 }
+      ).addTo(map);
+      // Cloud cover
+      weatherCloudRef.current = L.tileLayer(
+        `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${OWM_KEY}`,
+        { opacity: 0.25, maxZoom: 18 }
+      ).addTo(map);
+
+      // Weather city markers for focus region
+      const weatherGroup = L.layerGroup().addTo(map);
+      weatherMarkersRef.current = weatherGroup;
+
+      const focusCities = [
+        { name: "Tehran", lat: 35.69, lng: 51.39 },
+        { name: "Tel Aviv", lat: 32.09, lng: 34.78 },
+        { name: "Amman", lat: 31.95, lng: 35.93 },
+        { name: "Abu Dhabi", lat: 24.45, lng: 54.38 },
+        { name: "Manama", lat: 26.23, lng: 50.59 },
+        { name: "Kuwait City", lat: 29.38, lng: 47.98 },
+        { name: "Doha", lat: 25.29, lng: 51.53 },
+        { name: "Muscat", lat: 23.59, lng: 58.38 },
+      ];
+
+      // Fetch live temps from edge function
+      supabase.functions.invoke("weather-data").then(({ data }) => {
+        if (!data?.weather) return;
+        const weatherMap = new Map(data.weather.map((w: any) => [w.city, w]));
+        focusCities.forEach((city) => {
+          const w = weatherMap.get(city.name) as any;
+          if (!w) return;
+          const tempColor = w.temp >= 40 ? "#ef4444" : w.temp >= 30 ? "#f97316" : w.temp >= 20 ? "#eab308" : "#22d3ee";
+          const condEmoji: Record<string, string> = { Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Thunderstorm: "⛈️", Dust: "🌪️", Haze: "🌫️", Mist: "🌫️" };
+          const icon = L.divIcon({
+            className: "weather-city-marker",
+            html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
+              <div style="background:rgba(0,0,0,0.85);border:1px solid ${tempColor}40;border-radius:6px;padding:2px 5px;display:flex;align-items:center;gap:3px;backdrop-filter:blur(4px);">
+                <span style="font-size:10px;">${condEmoji[w.condition] || "🌤️"}</span>
+                <span style="font-size:10px;font-weight:700;color:${tempColor};font-family:monospace;">${w.temp}°</span>
+              </div>
+              <span style="font-size:7px;color:rgba(255,255,255,0.5);font-family:monospace;margin-top:1px;">${city.name}</span>
+            </div>`,
+            iconSize: [50, 30],
+            iconAnchor: [25, 15],
+          });
+          const marker = L.marker([city.lat, city.lng], { icon, zIndexOffset: 300 });
+          const windArrows = ["↓", "↙", "←", "↖", "↑", "↗", "→", "↘"];
+          const windDir = windArrows[Math.round(w.wind_deg / 45) % 8];
+          bindHoverPopup(marker, `<div style="${popupStyle}">
+            <div style="font-weight:700;font-size:13px;color:${tempColor};margin-bottom:4px;">${condEmoji[w.condition] || "🌤️"} ${city.name} — ${w.temp}°C</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10px;">
+              <div>🌡️ Feels: ${w.feels_like}°C</div>
+              <div>💨 Wind: ${w.wind_speed}km/h ${windDir}</div>
+              <div>💧 Humidity: ${w.humidity}%</div>
+              <div>👁️ Vis: ${w.visibility}km</div>
+              <div>☁️ Clouds: ${w.clouds}%</div>
+              <div>📊 Pressure: ${w.pressure}hPa</div>
+            </div>
+            <div style="font-size:9px;color:#888;margin-top:4px;text-transform:capitalize;">${w.description}</div>
+          </div>`);
+          weatherGroup.addLayer(marker);
+        });
+      });
+    }
+
+    return () => {
+      if (weatherWindRef.current && map) { map.removeLayer(weatherWindRef.current); weatherWindRef.current = null; }
+      if (weatherCloudRef.current && map) { map.removeLayer(weatherCloudRef.current); weatherCloudRef.current = null; }
+      if (weatherMarkersRef.current && map) { map.removeLayer(weatherMarkersRef.current); weatherMarkersRef.current = null; }
+    };
+  }, [layers.weather]);
+
+  // ===== TRAFFIC LAYER =====
+  const trafficTileRef = useRef<L.TileLayer | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (trafficTileRef.current) {
+      map.removeLayer(trafficTileRef.current);
+      trafficTileRef.current = null;
+    }
+
+    if (layers.traffic) {
+      // Use TomTom free traffic flow tile layer
+      trafficTileRef.current = L.tileLayer(
+        "https://{s}.api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=AKTGbMYDBPMq7GNhHErzBQa7LPHarR2w&tileSize=256",
+        {
+          subdomains: ["a", "b", "c", "d"],
+          attribution: "&copy; TomTom",
+          opacity: 0.7,
+          maxZoom: 18,
+        }
       ).addTo(map);
     }
-  }, [layers.weather]);
+
+    return () => {
+      if (trafficTileRef.current && map) {
+        map.removeLayer(trafficTileRef.current);
+        trafficTileRef.current = null;
+      }
+    };
+  }, [layers.traffic]);
 
   // Safety-level country borders
   useEffect(() => {
