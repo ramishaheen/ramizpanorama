@@ -235,6 +235,23 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [airspacePanelPos, setAirspacePanelPos] = useState({ x: 12, y: 160 });
   const airspaceDragRef = useRef<{ dragging: boolean; offsetX: number; offsetY: number }>({ dragging: false, offsetX: 0, offsetY: 0 });
 
+  // NASA NRT Satellite overlays
+  const [showNrtModis, setShowNrtModis] = useState(false);
+  const [showNrtViirs, setShowNrtViirs] = useState(false);
+  const [showNrtNoaa20, setShowNrtNoaa20] = useState(false);
+  const [showNrtFires, setShowNrtFires] = useState(false);
+  const [showNrtNightLights, setShowNrtNightLights] = useState(false);
+  const [opacityNrtModis, setOpacityNrtModis] = useState(0.6);
+  const [opacityNrtViirs, setOpacityNrtViirs] = useState(0.6);
+  const [opacityNrtNoaa20, setOpacityNrtNoaa20] = useState(0.6);
+  const [opacityNrtFires, setOpacityNrtFires] = useState(0.7);
+  const [opacityNrtNightLights, setOpacityNrtNightLights] = useState(0.6);
+  const nrtModisRef = useRef<any>(null);
+  const nrtViirsRef = useRef<any>(null);
+  const nrtNoaa20Ref = useRef<any>(null);
+  const nrtFiresRef = useRef<any>(null);
+  const nrtNightLightsRef = useRef<any>(null);
+
   // Fetch nearby intel
   useEffect(() => {
     const fetchNearby = async () => {
