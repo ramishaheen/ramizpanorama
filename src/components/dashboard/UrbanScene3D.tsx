@@ -2021,14 +2021,27 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         )}
       </div>
 
-      {/* Bottom bar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
-        <span className="text-[8px] font-mono text-muted-foreground uppercase">
-          SRC: OSINT UNIFIED • {flightSource || "—"}
-          {showVessels ? ` • ${vessels.length} vessels (${vesselSource})` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showWeather ? " • Weather ON" : ""}{showTraffic ? " • Traffic ON" : ""}
+      {/* Bottom bar with search */}
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Search className="h-3 w-3 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+            placeholder="Search city or coordinates…"
+            className="w-44 bg-secondary/30 border border-border/40 rounded px-2 py-0.5 text-[10px] font-mono text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 transition-colors"
+          />
+          <button onClick={handleSearchSubmit} className="px-1.5 py-0.5 rounded text-[8px] font-mono uppercase border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-all">Go</button>
+        </div>
+        <div className="w-px h-4 bg-border/40" />
+        <span className="text-[8px] font-mono text-muted-foreground uppercase truncate">
+          SRC: OSINT • {flightSource || "—"}
+          {showVessels ? ` • ${vessels.length} vessels` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showTraffic ? " • Traffic" : ""}
         </span>
-        <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
-          {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
+        <span className="ml-auto text-[8px] font-mono text-muted-foreground/50 flex-shrink-0">
+          {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} mil` : "Flights OFF"}
         </span>
       </div>
     </div>
