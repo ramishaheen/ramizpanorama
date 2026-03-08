@@ -1124,23 +1124,26 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       // Realistic airplane silhouette (top-down, nose up)
       const planePath = "M16 3 l-1.5 4.5 l-10 5 l0 2.2 l10-3 l0 6.5 l-3.5 2.8 l0 1.8 l3.5-1.2 l1.5 2 l1.5-2 l3.5 1.2 l0-1.8 l-3.5-2.8 l0-6.5 l10 3 l0-2.2 l-10-5 l-1.5-4.5z";
+      const glowFilter = `<defs><filter id="glow-${ac.icao24.replace(/[^a-z0-9]/gi,'')}"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="${color}" flood-opacity="0.9"/></filter></defs>`;
       const aircraftSvg = `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg" style="--flight-color:${color};transform:rotate(${ac.heading}deg);">
-            <path d="${planePath}" fill="${color}" stroke="rgba(255,255,255,0.2)" stroke-width="0.4"/>
+            ${glowFilter}
+            <path d="${planePath}" fill="${color}" stroke="rgba(255,255,255,0.4)" stroke-width="0.6" filter="url(#glow-${ac.icao24.replace(/[^a-z0-9]/gi,'')})"/>
           </svg>`;
 
       const trackedRingHtml = isTracked
         ? `<div class="flight-tracked-ring" style="--flight-color:${color};"></div>`
         : "";
 
+      const wrapSize = size + 16;
       const icon = L.divIcon({
         className: "flight-leaflet-icon",
-        html: `<div class="flight-marker-wrap" style="--flight-color:${color};width:${size + 12}px;height:${size + 12}px;">
+        html: `<div class="flight-marker-wrap" style="--flight-color:${color};width:${wrapSize}px;height:${wrapSize}px;">
           ${trackedRingHtml}
           <div class="flight-pulse-ring" style="--flight-color:${color};"></div>
           ${aircraftSvg}
         </div>`,
-        iconSize: [size + 12, size + 12],
-        iconAnchor: [(size + 12) / 2, (size + 12) / 2],
+        iconSize: [wrapSize, wrapSize],
+        iconAnchor: [wrapSize / 2, wrapSize / 2],
         popupAnchor: [0, -(size / 2 + 8)],
       });
 
