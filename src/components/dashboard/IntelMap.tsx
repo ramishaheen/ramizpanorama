@@ -35,6 +35,7 @@ interface IntelMapProps {
   geoAlerts: GeoAlert[];
   rockets: Rocket[];
   layers: LayerState;
+  onToggleLayer?: (layer: keyof LayerState) => void;
   safetyData?: CountrySafety[];
   flyToTarget?: { lat: number; lng: number; label: string } | null;
   newsMarkers?: WarUpdate[];
@@ -244,7 +245,7 @@ const createNewsIcon = (severity: string, category: string, special: boolean) =>
   });
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [] }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, onToggleLayer, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [] }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
@@ -1831,6 +1832,22 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             setShowResponseMap(false);
             mapRef.current?.flyTo([lat, lng], zoom || 8, { duration: 1.5 });
           }}
+          earthquakes={earthquakes}
+          wildfires={wildfires}
+          conflicts={conflictEvents}
+          nuclearStations={nuclearMonitors.stations}
+          nuclearFacilities={nuclearMonitors.facilities}
+          airQuality={airQuality}
+          aisVessels={aisVessels}
+          newsMarkers={newsMarkers}
+          telegramMarkers={telegramMarkers}
+          airspaceAlerts={airspaceAlerts}
+          vessels={vessels}
+          geoAlerts={geoAlerts}
+          rockets={rockets}
+          flightCount={flightData.length}
+          layers={layers}
+          onToggleLayer={(layer) => onToggleLayer?.(layer)}
         />
       )}
 
