@@ -1375,23 +1375,63 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       {/* Flight count badge */}
       {layers.flights && flightData.length > 0 && (
-        <div className="absolute top-14 right-3 z-[1000] flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-lg">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z"/></svg>
-          <span className="text-[10px] font-mono text-foreground">
-            <span className="text-primary font-bold">{flightData.filter(f => !f.is_military).length}</span>
-            <span className="text-muted-foreground"> CIV</span>
-            <span className="text-muted-foreground mx-1">|</span>
-            <span className="text-critical font-bold">{flightData.filter(f => f.is_military).length}</span>
-            <span className="text-muted-foreground"> MIL</span>
-          </span>
-          {trackedFlightId && (
-            <button
-              onClick={() => setTrackedFlightId(null)}
-              className="ml-1 text-[9px] font-mono text-accent bg-accent/10 border border-accent/30 rounded px-1.5 py-0.5 hover:bg-accent/20 transition-colors"
-            >
-              📡 TRACKING
-            </button>
-          )}
+        <div className="absolute top-[7.5rem] right-3 z-[1000] flight-badge-panel rounded-lg px-3 py-2 flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor" className="text-primary">
+              <path d="M16 3l-2.5 10H5l1.5 3L5 19h8.5L16 29l2.5-10H27l-1.5-3L27 13h-8.5L16 3z"/>
+            </svg>
+            <span className="text-[10px] font-mono font-bold text-foreground tracking-wide">
+              {flightData.length} FLIGHTS
+            </span>
+            <span className="text-[8px] font-mono text-muted-foreground px-1 py-0.5 rounded bg-secondary">
+              {flightSource === "opensky" ? "LIVE" : "SIM"}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-[9px] font-mono">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-primary inline-block"></span>
+              <span className="text-primary font-bold">{flightData.filter(f => !f.is_military).length}</span>
+              <span className="text-muted-foreground">CIV</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-critical inline-block"></span>
+              <span className="text-critical font-bold">{flightData.filter(f => f.is_military).length}</span>
+              <span className="text-muted-foreground">MIL</span>
+            </span>
+          </div>
+          {trackedFlightId && (() => {
+            const tac = flightData.find(f => f.icao24 === trackedFlightId);
+            if (!tac) return null;
+            return (
+              <div className="mt-1 pt-1.5 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold text-accent">
+                    📡 {tac.callsign || tac.icao24}
+                  </span>
+                  <button
+                    onClick={() => setTrackedFlightId(null)}
+                    className="text-[8px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    ✕ STOP
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-[9px] font-mono">
+                  <span className="text-muted-foreground">ALT</span>
+                  <span className="text-foreground">{Math.round(tac.altitude * 3.281).toLocaleString()} ft</span>
+                  <span className="text-muted-foreground">SPD</span>
+                  <span className="text-foreground">{Math.round(tac.velocity * 1.944)} kts</span>
+                  <span className="text-muted-foreground">HDG</span>
+                  <span className="text-foreground">{Math.round(tac.heading)}°</span>
+                  <span className="text-muted-foreground">V/S</span>
+                  <span className={tac.vertical_rate > 0.5 ? "text-green-400" : tac.vertical_rate < -0.5 ? "text-critical" : "text-foreground"}>
+                    {tac.vertical_rate > 0 ? "+" : ""}{tac.vertical_rate.toFixed(1)} m/s
+                  </span>
+                  <span className="text-muted-foreground">FROM</span>
+                  <span className="text-foreground">{tac.origin_country}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
