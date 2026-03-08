@@ -343,56 +343,40 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       const particles: Particle[] = [];
       roads.forEach((road, ri) => {
         const roadLenM = estimateRoadLengthM(road.points);
-        const per100m = HIGHWAY_DENSITY_PER_100M[road.highway] || 2;
-        const minP = HIGHWAY_MIN_PARTICLES[road.highway] || 2;
-        const lengthBased = Math.round((roadLenM / 100) * per100m);
-        // Scale density by number of lanes
-        const laneMultiplier = Math.max(1, road.lanes * 0.7);
-        const density = Math.max(minP, Math.round(Math.max(lengthBased, minP) * factor * laneMultiplier));
+        const spacingM = HIGHWAY_PARTICLE_SPACING_M[road.highway] || 20;
         const baseSpeed = HIGHWAY_SPEED[road.highway] || 0.003;
         const roadColor = HIGHWAY_COLORS[road.highway] || "#8b5cf6";
 
+        // Fill every lane with evenly spaced particles along the full road length
+        const totalLanes = Math.max(1, road.lanes);
+        const densityPerLane = Math.max(3, Math.round((roadLenM / spacingM) * factor));
+
         // Lane width in pixels (scaled by zoom)
         const laneWidthPx = zoom >= 20 ? 5 : zoom >= 18 ? 3.5 : 2.5;
-        const totalLanes = road.lanes;
 
-        for (let i = 0; i < density; i++) {
-          const vType = pickVehicleType(road.highway);
-          const vConf = VEHICLE_CONFIG[vType];
-          
-          // Assign to a lane
-          let lane: number;
-          let dir: 1 | -1;
-          if (road.oneway) {
-            lane = Math.floor(Math.random() * totalLanes);
-            dir = 1;
-          } else {
-            // Split lanes: first half forward, second half backward
-            const halfLanes = Math.ceil(totalLanes / 2);
-            const isForward = Math.random() > 0.5;
-            if (isForward) {
-              lane = Math.floor(Math.random() * halfLanes);
-              dir = 1;
-            } else {
-              lane = halfLanes + Math.floor(Math.random() * (totalLanes - halfLanes));
-              dir = -1;
-            }
-          }
-          
-          // Compute perpendicular offset: center lanes around 0
+        for (let lane = 0; lane < totalLanes; lane++) {
+          // On two-way roads split lanes by direction
+          const halfLanes = Math.ceil(totalLanes / 2);
+          const dir: 1 | -1 = road.oneway ? 1 : lane < halfLanes ? 1 : -1;
+
+          // Center lanes around the road centerline
           const laneOffset = (lane - (totalLanes - 1) / 2) * laneWidthPx;
 
-          particles.push({
-            roadIdx: ri,
-            progress: Math.random(),
-            speed: baseSpeed * vConf.speedMult * (0.7 + Math.random() * 0.6),
-            color: vConf.color || roadColor,
-            size: vConf.sizeBase,
-            direction: dir,
-            vehicleType: vType,
-            angle: 0,
-            laneOffset,
-          });
+          for (let i = 0; i < densityPerLane; i++) {
+            const vType = pickVehicleType(road.highway);
+            const vConf = VEHICLE_CONFIG[vType];
+            particles.push({
+              roadIdx: ri,
+              progress: ((i + Math.random() * 0.25) / densityPerLane) % 1,
+              speed: baseSpeed * vConf.speedMult * (0.8 + Math.random() * 0.4),
+              color: vConf.color || roadColor,
+              size: vConf.sizeBase,
+              direction: dir,
+              vehicleType: vType,
+              angle: 0,
+              laneOffset,
+            });
+          }
         }
       });
       particlesRef.current = particles;
