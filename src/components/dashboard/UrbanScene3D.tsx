@@ -1952,6 +1952,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <LayerControl icon={<Video className="h-3 w-3" />} label="Live Cameras" color="#f59e0b" active={showCameras} onToggle={() => setShowCameras(!showCameras)} count={cameras.length} opacity={1} onOpacity={() => {}} source={`${cameras.length} feeds`} />
 
                 <div className="border-t border-border/20 my-2" />
+                <span className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-wider">Live Intelligence</span>
+
+                <LayerControl icon={<AlertTriangle className="h-3 w-3" />} label="Incidents" color="#f59e0b" active={showIncidents} onToggle={() => setShowIncidents(!showIncidents)} opacity={1} onOpacity={() => {}} source="Geo Alerts • 30s" />
+                <LayerControl icon={<Satellite className="h-3 w-3" />} label="Weather Radar" color="#06b6d4" active={showWeatherRadar} onToggle={() => setShowWeatherRadar(!showWeatherRadar)} opacity={opacityWeather} onOpacity={setOpacityWeather} source="OWM • Animated" />
+
+                <div className="border-t border-border/20 my-2" />
                 <span className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-wider">NASA NRT Satellite</span>
 
                 <LayerControl icon={<Signal className="h-3 w-3" />} label="MODIS Aqua NRT" color="#00bcd4" active={showNrtModis} onToggle={() => setShowNrtModis(!showNrtModis)} opacity={opacityNrtModis} onOpacity={setOpacityNrtModis} source="NASA GIBS • Today" />
