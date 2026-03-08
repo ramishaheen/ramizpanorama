@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 export interface ConflictEvent {
   id: string;
@@ -34,7 +35,8 @@ export function useConflictEvents() {
       setData(fnData?.data || []);
     } catch (e) {
       console.error("Conflict events fetch error:", e);
-      setError(e instanceof Error ? e.message : "Failed to load");
+      handleAIError(e, "Conflict Events");
+      if (!data.length) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
