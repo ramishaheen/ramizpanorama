@@ -627,10 +627,29 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     return () => { if (flightIntervalRef.current) clearInterval(flightIntervalRef.current); };
   }, [fetchFlights]);
 
+  // ===== REAL-TIME INTERPOLATION ENGINE — move aircraft smoothly between polls =====
+  useEffect(() => {
+    if (!showFlights) return;
+    interpolationRef.current = setInterval(() => {
+      const snapshot = aircraftSnapshotRef.current;
+      if (snapshot.length === 0) return;
+      const elapsed = (Date.now() - lastPollTimeRef.current) / 1000; // seconds since last poll
+      const moved = snapshot.map(ac => {
+        const headingRad = ac.heading * Math.PI / 180;
+        const speedDegPerSec = ac.velocity / 111320; // m/s to deg/s approx
+        const dLat = Math.cos(headingRad) * speedDegPerSec * elapsed;
+        const dLng = Math.sin(headingRad) * speedDegPerSec * elapsed / Math.max(Math.cos(ac.lat * Math.PI / 180), 0.01);
+        return { ...ac, lat: ac.lat + dLat, lng: ac.lng + dLng };
+      });
+      setInterpolatedAircraft(moved);
+    }, 200); // update positions every 200ms
+    return () => { if (interpolationRef.current) clearInterval(interpolationRef.current); };
+  }, [showFlights]);
+
   // Auto-pan to tracked aircraft
   useEffect(() => {
     if (!trackedAircraftId || !mapInstanceRef.current) return;
-    const ac = aircraft.find(f => f.icao24 === trackedAircraftId);
+    const ac = interpolatedAircraft.find(f => f.icao24 === trackedAircraftId);
     if (ac) {
       mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
       setSelectedAircraft(ac);
