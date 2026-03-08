@@ -2157,13 +2157,39 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         )}
 
         {streetViewActive && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
-              <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
-              <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
-              <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+          <>
+            {/* Top banner with distance indicator */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
+                <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
+                <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
+                {streetViewDistance > 0 && (
+                  <span className="text-[9px] font-mono text-yellow-400 border border-yellow-500/30 rounded px-1.5 py-0.5">
+                    {streetViewDistance}m offset
+                  </span>
+                )}
+                {streetViewDistance === 0 && streetViewPanoPos && (
+                  <span className="text-[9px] font-mono text-green-400 border border-green-500/30 rounded px-1.5 py-0.5">
+                    EXACT
+                  </span>
+                )}
+                <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+              </div>
             </div>
-          </div>
+
+            {/* Mini-map overlay showing pin vs panorama position */}
+            {streetViewTarget && streetViewPanoPos && (
+              <div className="absolute bottom-4 right-4 z-[15] pointer-events-auto">
+                <div className="rounded-lg overflow-hidden border border-cyan-500/40 bg-black/60 backdrop-blur" style={{ width: 180, height: 140, boxShadow: "0 0 15px rgba(0,255,255,0.15)" }}>
+                  <div className="px-2 py-1 bg-black/80 border-b border-cyan-500/20 flex items-center justify-between">
+                    <span className="text-[8px] font-mono text-cyan-400 uppercase tracking-wider">Pin vs Panorama</span>
+                    <span className="text-[8px] font-mono text-yellow-400">{streetViewDistance}m</span>
+                  </div>
+                  <div ref={miniMapRef} className="w-full" style={{ height: 114 }} />
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Mapillary street-level viewer overlay with enhanced walking */}
