@@ -171,6 +171,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [opacityWeather, setOpacityWeather] = useState(0.6);
   const [opacityHeatmap, setOpacityHeatmap] = useState(0.7);
   const [opacityTraffic, setOpacityTraffic] = useState(0.8);
+  const [showAirspacePanel, setShowAirspacePanel] = useState(true);
 
   // Fetch nearby intel
   useEffect(() => {
