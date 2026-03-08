@@ -574,6 +574,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         clickMarkerRef.current = null;
       }
       setStreetViewTarget(null);
+      setStreetViewPanoPos(null);
     }
   }, [streetViewActive, streetViewTarget, apiKey, activateMapillary]);
 
