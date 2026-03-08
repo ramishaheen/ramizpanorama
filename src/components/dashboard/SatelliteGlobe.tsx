@@ -808,8 +808,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       const filtered = catFilter
         ? updated.filter((s) => s.category === catFilter)
         : updated;
-      globe.objectsData(filtered);
-    }, 4000);
+      globe.objectsData(filtered.slice(0, 1800));
     return () => clearInterval(interval);
   }, [satellites.length, selectedCat]);
 
