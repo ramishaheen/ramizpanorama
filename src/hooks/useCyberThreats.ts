@@ -92,10 +92,10 @@ export function useCyberThreats(): CyberThreatsState {
   }, []);
 
   useEffect(() => {
-    fetchThreats();
-    // Auto-refresh every 5 minutes
+    // Stagger: cyber threats load after 24s
+    const initialDelay = setTimeout(() => fetchThreats(), 24000);
     const interval = setInterval(() => fetchThreats(true), CACHE_DURATION);
-    return () => clearInterval(interval);
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetchThreats]);
 
   const refresh = useCallback(() => fetchThreats(true), [fetchThreats]);
