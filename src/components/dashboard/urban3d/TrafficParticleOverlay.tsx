@@ -30,28 +30,33 @@ interface Particle {
 }
 
 const HIGHWAY_COLORS: Record<string, string> = {
-  motorway: "#ef4444", trunk: "#f97316", primary: "#eab308",
-  secondary: "#22c55e", tertiary: "#06b6d4", residential: "#8b5cf6",
-  service: "#6b7280", unclassified: "#a855f7", living_street: "#14b8a6",
+  motorway: "#ef4444", motorway_link: "#ef4444",
+  trunk: "#f97316", trunk_link: "#f97316",
+  primary: "#eab308", primary_link: "#eab308",
+  secondary: "#22c55e", secondary_link: "#22c55e",
+  tertiary: "#06b6d4", tertiary_link: "#06b6d4",
+  residential: "#8b5cf6", service: "#6b7280",
+  unclassified: "#a855f7", living_street: "#14b8a6",
 };
 
-// Particles per ~100m of road (scaled by road length)
-const HIGHWAY_DENSITY_PER_100M: Record<string, number> = {
-  motorway: 12, trunk: 10, primary: 8, secondary: 8,
-  tertiary: 6, residential: 4, service: 3,
-  unclassified: 3, living_street: 2,
-};
-
-// Minimum particles per road regardless of length
-const HIGHWAY_MIN_PARTICLES: Record<string, number> = {
-  motorway: 15, trunk: 12, primary: 10, secondary: 8,
-  tertiary: 6, residential: 4, service: 3,
-  unclassified: 3, living_street: 2,
+// Approximate spacing between particles in meters (smaller = fuller coverage)
+const HIGHWAY_PARTICLE_SPACING_M: Record<string, number> = {
+  motorway: 12, motorway_link: 12,
+  trunk: 14, trunk_link: 14,
+  primary: 16, primary_link: 16,
+  secondary: 18, secondary_link: 18,
+  tertiary: 20, tertiary_link: 20,
+  residential: 22, service: 24,
+  unclassified: 24, living_street: 26,
 };
 
 const HIGHWAY_SPEED: Record<string, number> = {
-  motorway: 0.006, trunk: 0.005, primary: 0.004, secondary: 0.003,
-  tertiary: 0.0025, residential: 0.002, service: 0.0015,
+  motorway: 0.006, motorway_link: 0.006,
+  trunk: 0.005, trunk_link: 0.005,
+  primary: 0.004, primary_link: 0.004,
+  secondary: 0.003, secondary_link: 0.003,
+  tertiary: 0.0025, tertiary_link: 0.0025,
+  residential: 0.002, service: 0.0015,
   unclassified: 0.002, living_street: 0.001,
 };
 
@@ -62,10 +67,12 @@ const VEHICLE_CONFIG: Record<VehicleType, { speedMult: number; sizeBase: number;
 };
 
 const ROAD_VEHICLES: Record<string, VehicleType[]> = {
-  motorway: ["car", "truck", "bus"], trunk: ["car", "truck", "bus"],
-  primary: ["car", "truck", "bus"], secondary: ["car", "truck", "bus"],
-  tertiary: ["car", "truck"], residential: ["car"],
-  service: ["car"], unclassified: ["car"], living_street: ["car"],
+  motorway: ["car", "truck", "bus"], motorway_link: ["car", "truck", "bus"],
+  trunk: ["car", "truck", "bus"], trunk_link: ["car", "truck", "bus"],
+  primary: ["car", "truck", "bus"], primary_link: ["car", "truck", "bus"],
+  secondary: ["car", "truck", "bus"], secondary_link: ["car", "truck", "bus"],
+  tertiary: ["car", "truck"], tertiary_link: ["car", "truck"],
+  residential: ["car"], service: ["car"], unclassified: ["car"], living_street: ["car"],
 };
 
 const OVERPASS_ENDPOINTS = [
@@ -285,7 +292,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     lastFetchRef.current = bbox;
 
     setLoading(true);
-    const query = `[out:json][timeout:15];way["highway"~"^(motorway|trunk|primary|secondary|tertiary|residential|service|unclassified|living_street)$"](${bbox});out geom;`;
+    const query = `[out:json][timeout:15];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|residential|service|unclassified|living_street)$"](${bbox});out geom;`;
     const body = `data=${encodeURIComponent(query)}`;
 
     let data: any = null;
@@ -336,56 +343,40 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       const particles: Particle[] = [];
       roads.forEach((road, ri) => {
         const roadLenM = estimateRoadLengthM(road.points);
-        const per100m = HIGHWAY_DENSITY_PER_100M[road.highway] || 2;
-        const minP = HIGHWAY_MIN_PARTICLES[road.highway] || 2;
-        const lengthBased = Math.round((roadLenM / 100) * per100m);
-        // Scale density by number of lanes
-        const laneMultiplier = Math.max(1, road.lanes * 0.7);
-        const density = Math.max(minP, Math.round(Math.max(lengthBased, minP) * factor * laneMultiplier));
+        const spacingM = HIGHWAY_PARTICLE_SPACING_M[road.highway] || 20;
         const baseSpeed = HIGHWAY_SPEED[road.highway] || 0.003;
         const roadColor = HIGHWAY_COLORS[road.highway] || "#8b5cf6";
 
+        // Fill every lane with evenly spaced particles along the full road length
+        const totalLanes = Math.max(1, road.lanes);
+        const densityPerLane = Math.max(3, Math.round((roadLenM / spacingM) * factor));
+
         // Lane width in pixels (scaled by zoom)
         const laneWidthPx = zoom >= 20 ? 5 : zoom >= 18 ? 3.5 : 2.5;
-        const totalLanes = road.lanes;
 
-        for (let i = 0; i < density; i++) {
-          const vType = pickVehicleType(road.highway);
-          const vConf = VEHICLE_CONFIG[vType];
-          
-          // Assign to a lane
-          let lane: number;
-          let dir: 1 | -1;
-          if (road.oneway) {
-            lane = Math.floor(Math.random() * totalLanes);
-            dir = 1;
-          } else {
-            // Split lanes: first half forward, second half backward
-            const halfLanes = Math.ceil(totalLanes / 2);
-            const isForward = Math.random() > 0.5;
-            if (isForward) {
-              lane = Math.floor(Math.random() * halfLanes);
-              dir = 1;
-            } else {
-              lane = halfLanes + Math.floor(Math.random() * (totalLanes - halfLanes));
-              dir = -1;
-            }
-          }
-          
-          // Compute perpendicular offset: center lanes around 0
+        for (let lane = 0; lane < totalLanes; lane++) {
+          // On two-way roads split lanes by direction
+          const halfLanes = Math.ceil(totalLanes / 2);
+          const dir: 1 | -1 = road.oneway ? 1 : lane < halfLanes ? 1 : -1;
+
+          // Center lanes around the road centerline
           const laneOffset = (lane - (totalLanes - 1) / 2) * laneWidthPx;
 
-          particles.push({
-            roadIdx: ri,
-            progress: Math.random(),
-            speed: baseSpeed * vConf.speedMult * (0.7 + Math.random() * 0.6),
-            color: vConf.color || roadColor,
-            size: vConf.sizeBase,
-            direction: dir,
-            vehicleType: vType,
-            angle: 0,
-            laneOffset,
-          });
+          for (let i = 0; i < densityPerLane; i++) {
+            const vType = pickVehicleType(road.highway);
+            const vConf = VEHICLE_CONFIG[vType];
+            particles.push({
+              roadIdx: ri,
+              progress: ((i + Math.random() * 0.25) / densityPerLane) % 1,
+              speed: baseSpeed * vConf.speedMult * (0.8 + Math.random() * 0.4),
+              color: vConf.color || roadColor,
+              size: vConf.sizeBase,
+              direction: dir,
+              vehicleType: vType,
+              angle: 0,
+              laneOffset,
+            });
+          }
         }
       });
       particlesRef.current = particles;
