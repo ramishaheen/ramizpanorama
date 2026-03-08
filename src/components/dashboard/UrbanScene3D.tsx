@@ -905,7 +905,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     return () => {
       markersRef.current.forEach(m => m.setMap(null));
       trailLinesRef.current.forEach(l => l.setMap(null));
+      vesselMarkersRef.current.forEach(m => m.setMap(null));
+      earthquakeMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
+      if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
       if (interpolationRef.current) clearInterval(interpolationRef.current);
     };
   }, []);
@@ -935,6 +938,20 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </button>
           <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showTrails ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Navigation className="h-3 w-3" /> Trails
+          </button>
+          <button onClick={() => setShowVessels(!showVessels)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showVessels ? "border-blue-500/60 bg-blue-500/20 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <Ship className="h-3 w-3" /> Vessels
+            {vessels.length > 0 && <span className="bg-blue-500/30 text-white text-[8px] px-1.5 rounded-full font-bold">{vessels.length}</span>}
+          </button>
+          <button onClick={() => setShowEarthquakes(!showEarthquakes)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showEarthquakes ? "border-yellow-500/60 bg-yellow-500/20 text-white shadow-[0_0_12px_rgba(234,179,8,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <Activity className="h-3 w-3" /> Quakes
+            {earthquakes.length > 0 && <span className="bg-yellow-500/30 text-white text-[8px] px-1.5 rounded-full font-bold">{earthquakes.length}</span>}
+          </button>
+          <button onClick={() => setShowWeather(!showWeather)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showWeather ? "border-cyan-500/60 bg-cyan-500/20 text-white shadow-[0_0_12px_rgba(6,182,212,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <CloudRain className="h-3 w-3" /> Weather
+          </button>
+          <button onClick={() => setShowTraffic(!showTraffic)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showTraffic ? "border-emerald-500/60 bg-emerald-500/20 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
+            <Car className="h-3 w-3" /> Traffic
           </button>
           <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${streetViewActive ? "border-green-500/60 bg-green-500/20 text-white shadow-[0_0_12px_rgba(34,197,94,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Compass className="h-3 w-3" /> 360°
@@ -1246,7 +1263,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       {/* Bottom bar */}
       <div className="flex items-center gap-3 px-3 py-1.5 bg-card/70 backdrop-blur border-t border-border/50 z-20">
         <span className="text-[8px] font-mono text-muted-foreground uppercase">
-          SRC: Google 3D Tiles • {flightSource === "adsb.fi" ? "adsb.fi (LIVE)" : flightSource === "opensky" ? "OpenSky (LIVE)" : flightSource === "adsb.fi+opensky" ? "adsb.fi + OpenSky (LIVE)" : flightSource || "Loading…"}
+          SRC: Google 3D Tiles • {flightSource === "adsb.fi" ? "adsb.fi (LIVE)" : flightSource === "opensky" ? "OpenSky (LIVE)" : flightSource === "adsb.fi+opensky" ? "adsb.fi + OpenSky (LIVE)" : flightSource || "—"}
+          {showVessels ? ` • ${vessels.length} vessels` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showWeather ? " • Weather ON" : ""}{showTraffic ? " • Traffic ON" : ""}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
           {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} military · 15s refresh` : "Flight layer disabled"}
