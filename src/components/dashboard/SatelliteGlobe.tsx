@@ -1253,11 +1253,11 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         {/* Selected satellite detail panel */}
         {selectedSat && (
           <div
-            className="absolute top-20 left-36 z-[2003] w-64 rounded border backdrop-blur-md pointer-events-auto animate-fade-in"
+            className="absolute top-20 left-36 z-[2003] w-64 rounded border backdrop-blur-md pointer-events-auto animate-fade-in holo-flicker"
             style={{
-              borderColor: CATEGORY_COLORS[selectedSat.category] + "60",
-              background: "rgba(5,10,18,0.92)",
-              boxShadow: `0 0 20px ${CATEGORY_COLORS[selectedSat.category]}22`,
+              borderColor: CATEGORY_COLORS[selectedSat.category] + "40",
+              background: "rgba(0,15,20,0.92)",
+              boxShadow: `0 0 25px ${CATEGORY_COLORS[selectedSat.category]}18, inset 0 0 40px rgba(0,255,200,0.02)`,
             }}
           >
             <div
