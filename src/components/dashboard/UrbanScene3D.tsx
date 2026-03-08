@@ -1208,7 +1208,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         {/* Flight sidebar */}
         {showFlights && aircraft.length > 0 && (
           <div className="absolute top-3 right-14 z-10 pointer-events-auto">
-            <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg w-60 max-h-[55vh] overflow-hidden"
+            <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg w-[480px] max-h-[55vh] overflow-hidden"
               style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 20px hsl(190 100% 50% / 0.05)" }}>
               <div className="px-2.5 py-2 border-b border-border/30">
                 <div className="flex items-center justify-between mb-1">
@@ -1230,16 +1230,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   <span className="ml-auto text-[7px] font-mono text-muted-foreground/50">15s refresh</span>
                 </div>
               </div>
-              <div className="divide-y divide-border/10 max-h-[42vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-px bg-border/10 max-h-[42vh] overflow-y-auto">
                 {interpolatedAircraft
                   .sort((a, b) => {
-                    // Tracked first, then military, then by callsign
                     if (a.icao24 === trackedAircraftId) return -1;
                     if (b.icao24 === trackedAircraftId) return 1;
                     if (a.is_military !== b.is_military) return a.is_military ? -1 : 1;
                     return (a.callsign || a.icao24).localeCompare(b.callsign || b.icao24);
                   })
-                  .slice(0, 50)
+                  .slice(0, 80)
                   .map((ac) => {
                     const isTracked = trackedAircraftId === ac.icao24;
                     const color = ac.is_military ? "#ef4444" : "#3b82f6";
@@ -1250,18 +1249,18 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                           setSelectedAircraft(isTracked ? null : ac);
                           if (!isTracked && mapInstanceRef.current) mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
                         }}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-all ${
+                        className={`flex items-center gap-1.5 px-2 py-1.5 text-left transition-all bg-black/50 ${
                           isTracked ? "bg-primary/10" : "hover:bg-white/5"
                         }`}>
                         <Plane className="h-3 w-3 flex-shrink-0" style={{ color, transform: `rotate(${ac.heading}deg)` }} />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <span className="text-[9px] font-mono font-bold text-foreground/90 truncate">{ac.callsign || ac.icao24}</span>
                             {ac.is_military && <span className="text-[6px] font-mono font-bold px-1 rounded" style={{ color: "#ef4444", background: "rgba(239,68,68,0.15)" }}>MIL</span>}
                             {isTracked && <Target className="h-2.5 w-2.5 text-green-400 flex-shrink-0" />}
                           </div>
-                          <span className="text-[7px] font-mono text-muted-foreground/60">
-                            {ac.type ? `${ac.type} · ` : ""}{Math.round(ac.altitude * 3.281).toLocaleString()}ft · {Math.round(ac.velocity * 1.944)}kts · {ac.origin_country}{ac.registration ? ` · ${ac.registration}` : ""}
+                          <span className="text-[7px] font-mono text-muted-foreground/60 truncate block">
+                            {ac.type ? `${ac.type} · ` : ""}{Math.round(ac.altitude * 3.281).toLocaleString()}ft · {Math.round(ac.velocity * 1.944)}kts
                           </span>
                         </div>
                       </button>
