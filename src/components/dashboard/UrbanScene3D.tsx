@@ -39,19 +39,21 @@ interface ConflictPoint {
 }
 
 const PRESETS = [
-  { name: "Dubai", lat: 25.2048, lng: 55.2708 },
+  { name: "Middle East", lat: 29.5, lng: 47.5 },
   { name: "Tehran", lat: 35.6892, lng: 51.389 },
   { name: "Tel Aviv", lat: 32.0853, lng: 34.7818 },
   { name: "Beirut", lat: 33.8938, lng: 35.5018 },
   { name: "Damascus", lat: 33.5138, lng: 36.2765 },
   { name: "Riyadh", lat: 24.7136, lng: 46.6753 },
   { name: "Baghdad", lat: 33.3152, lng: 44.3661 },
+  { name: "Dubai", lat: 25.2048, lng: 55.2708 },
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
 ];
 
 export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanSceneProps) => {
-  const [lat, setLat] = useState(initialCoords?.lat || initialEvent?.lat || 25.2048);
-  const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 55.2708);
+  // Default to Middle East center (between Iran/Israel/Gulf)
+  const [lat, setLat] = useState(initialCoords?.lat || initialEvent?.lat || 29.5);
+  const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 47.5);
   
   const [searchInput, setSearchInput] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -74,7 +76,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const overlayRef = useRef<any>(null);
-  const scriptLoadedRef = useRef(false);
+  
   const [showIntelCard, setShowIntelCard] = useState(!!initialEvent);
   const [nearbyIntel, setNearbyIntel] = useState<{ alerts: any[]; vessels: any[]; airspace: any[] }>({ alerts: [], vessels: [], airspace: [] });
 
@@ -139,14 +141,19 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   // Load Google Maps JS API and create map
   useEffect(() => {
-    if (!apiKey || scriptLoadedRef.current) return;
+    if (!apiKey) return;
 
     const initMap = () => {
       if (!mapDivRef.current || !(window as any).google?.maps) return;
+      // Clean up previous instance
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current = null;
+        overlayRef.current = null;
+      }
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: initialEvent ? 18 : 12, // street-level when from event, wider for general view
+        zoom: initialEvent ? 16 : 6, // street-level for events, regional for default Middle East view
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
@@ -174,8 +181,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       map.addListener("bounds_changed", updateOverlays);
     };
 
+    // Google Maps script may already be loaded from a previous mount
     if ((window as any).google?.maps) {
-      scriptLoadedRef.current = true;
       initMap();
       return;
     }
@@ -185,7 +192,6 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      scriptLoadedRef.current = true;
       initMap();
     };
     script.onerror = () => {
