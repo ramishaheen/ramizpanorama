@@ -291,6 +291,7 @@ const Index = () => {
                   geoAlerts={geoAlerts}
                   rockets={rockets}
                   layers={layers}
+                  onToggleLayer={toggleLayer}
                   safetyData={citizenSecurity.data?.countries}
                   flyToTarget={flyToTarget}
                   newsMarkers={warUpdates.data?.updates}
@@ -441,6 +442,7 @@ const Index = () => {
                   geoAlerts={geoAlerts}
                   rockets={rockets}
                   layers={layers}
+                  onToggleLayer={toggleLayer}
                   safetyData={citizenSecurity.data?.countries}
                   flyToTarget={flyToTarget}
                   newsMarkers={warUpdates.data?.updates}
