@@ -1094,7 +1094,56 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* Street View active indicator */}
+        {/* Layer Panel Sidebar */}
+        <div className={`absolute top-0 left-0 z-[16] h-full transition-all duration-300 pointer-events-auto ${showLayerPanel ? "w-64" : "w-0"}`}>
+          {showLayerPanel && (
+            <div className="h-full w-64 bg-black/90 backdrop-blur-xl border-r border-border/40 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/30">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">Layer Control</span>
+                </div>
+                <button onClick={() => setShowLayerPanel(false)} className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10">
+                  <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+                {/* Flight layer */}
+                <LayerControl icon={<Plane className="h-3 w-3" />} label="Flights" color="hsl(var(--primary))" active={showFlights} onToggle={() => setShowFlights(!showFlights)} count={interpolatedAircraft.length} opacity={opacityFlights} onOpacity={setOpacityFlights} source={flightSource || "adsb.fi"} />
+                <LayerControl icon={<Navigation className="h-3 w-3" />} label="Trails" color="hsl(var(--accent))" active={showTrails} onToggle={() => setShowTrails(!showTrails)} opacity={1} onOpacity={() => {}} />
+                <LayerControl icon={showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} label="Markers" color="hsl(var(--accent))" active={showMarkers} onToggle={() => setShowMarkers(!showMarkers)} opacity={1} onOpacity={() => {}} />
+
+                <div className="border-t border-border/20 my-2" />
+
+                <LayerControl icon={<Ship className="h-3 w-3" />} label="Vessels" color="#3b82f6" active={showVessels} onToggle={() => setShowVessels(!showVessels)} count={vessels.length} opacity={opacityVessels} onOpacity={setOpacityVessels} source={vesselSource === "database" ? "DB Fallback" : vesselSource === "loading" ? "Loading…" : `AIS (${vesselSource})`} />
+
+                <div className="border-t border-border/20 my-2" />
+
+                <LayerControl icon={<Activity className="h-3 w-3" />} label="Earthquakes" color="#eab308" active={showEarthquakes} onToggle={() => setShowEarthquakes(!showEarthquakes)} count={earthquakes.length} opacity={opacityEarthquakes} onOpacity={setOpacityEarthquakes} source="USGS" />
+                <LayerControl icon={<Flame className="h-3 w-3" />} label="Heatmap" color="#f97316" active={showHeatmap} onToggle={() => setShowHeatmap(!showHeatmap)} opacity={opacityHeatmap} onOpacity={setOpacityHeatmap} source="Conflict data" />
+
+                <div className="border-t border-border/20 my-2" />
+
+                <LayerControl icon={<CloudRain className="h-3 w-3" />} label="Weather" color="#06b6d4" active={showWeather} onToggle={() => setShowWeather(!showWeather)} opacity={opacityWeather} onOpacity={setOpacityWeather} source="OpenWeatherMap" />
+                <LayerControl icon={<Car className="h-3 w-3" />} label="Traffic" color="#10b981" active={showTraffic} onToggle={() => setShowTraffic(!showTraffic)} opacity={opacityTraffic} onOpacity={setOpacityTraffic} source="Google" />
+                <LayerControl icon={<Compass className="h-3 w-3" />} label="360° Street View" color="#22c55e" active={streetViewActive} onToggle={() => setStreetViewActive(!streetViewActive)} opacity={1} onOpacity={() => {}} />
+              </div>
+              <div className="px-3 py-2 border-t border-border/30">
+                <span className="text-[7px] font-mono text-muted-foreground/50">Real-time data • Auto-refresh</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Layer panel toggle button */}
+        {!showLayerPanel && apiKey && (
+          <button onClick={() => setShowLayerPanel(true)} className="absolute top-3 left-[calc(theme(spacing.3)+250px)] z-[16] pointer-events-auto flex items-center gap-1 px-2 py-1.5 rounded-md bg-black/80 backdrop-blur border border-primary/30 text-primary hover:bg-primary/15 transition-all" style={{ left: "calc(0.75rem + 250px)", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }} title="Open Layer Panel">
+            <Layers className="h-3.5 w-3.5" />
+            <span className="text-[9px] font-mono uppercase">Layers</span>
+          </button>
+        )}
+
+
         {streetViewActive && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
