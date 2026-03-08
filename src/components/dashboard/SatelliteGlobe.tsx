@@ -1308,6 +1308,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 el.style.backgroundColor = "rgba(0,20,40,0.7)";
                 el.style.borderColor = "rgba(0,220,255,0.3)";
                 el.style.transform = "scale(1)";
+              el.addEventListener("click", () => {
+                window.dispatchEvent(new CustomEvent("globe-city-click", { detail: d.cityData }));
               });
               return el;
             }
