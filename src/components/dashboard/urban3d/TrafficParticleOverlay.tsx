@@ -535,6 +535,38 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         ctx.strokeStyle = tdiToColor(road.tdi, 0.6);
         ctx.lineWidth = lineW;
         ctx.stroke();
+
+        // Debug: lane count + particle count label at road midpoint
+        if (debugMode) {
+          const midIdx = Math.floor(road.points.length / 2);
+          const midPt = road.points[midIdx];
+          const midPx = latLngToPixel(midPt.lat, midPt.lng, mapRef.current, overlay);
+          if (midPx) {
+            const mx = midPx.x * dpr;
+            const my = midPx.y * dpr;
+            const pCount = particles.filter(pp => pp.roadIdx === ri).length;
+            const debugLabel = `L:${road.lanes} P:${pCount}`;
+            const fontSize = Math.round(7 * dpr);
+            ctx.font = `bold ${fontSize}px monospace`;
+            const tw = ctx.measureText(debugLabel).width;
+            const pad = 2 * dpr;
+            const bw = tw + pad * 2;
+            const bh = fontSize + pad * 2;
+
+            ctx.fillStyle = "rgba(0,0,0,0.85)";
+            ctx.strokeStyle = "rgba(0,255,200,0.6)";
+            ctx.lineWidth = 1 * dpr;
+            ctx.beginPath();
+            ctx.roundRect(mx - bw / 2, my - bh / 2, bw, bh, 2 * dpr);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "rgba(0,255,200,0.95)";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(debugLabel, mx, my);
+          }
+        }
       });
 
       // 2. Animate particles along roads
