@@ -31,61 +31,37 @@ serve(async (req) => {
     }
 
     const cacheKey = `${country}|${topic}|${date_range}|${platforms.join(",")}`;
+
+    // Return cache if fresh
     if (cachedResult && cachedResult.key === cacheKey && Date.now() - cachedResult.ts < CACHE_TTL) {
-      return new Response(JSON.stringify(cachedResult.data), {
+      return new Response(JSON.stringify({ ...cachedResult.data, _cached: true, _cached_at: new Date(cachedResult.ts).toISOString() }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "Gemini API not configured" }), {
+    const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
+    if (!PERPLEXITY_API_KEY) {
+      // Fallback to cache even if stale
+      if (cachedResult) {
+        return new Response(JSON.stringify({ ...cachedResult.data, _cached: true, _stale: true, _cached_at: new Date(cachedResult.ts).toISOString() }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "Perplexity API not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Step 1: Quick Perplexity context (single query, 15s timeout)
-    let webContext = "";
-    const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
-    if (PERPLEXITY_API_KEY) {
-      try {
-        const pController = new AbortController();
-        const pTimeout = setTimeout(() => pController.abort(), 15000);
-        const pResp = await fetch("https://api.perplexity.ai/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${PERPLEXITY_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "sonar",
-            messages: [
-              { role: "system", content: "Report social media sentiment data briefly with percentages and key themes." },
-              { role: "user", content: `${topic} ${country} social media sentiment public opinion ${new Date().getFullYear()}` },
-            ],
-            max_tokens: 800,
-          }),
-          signal: pController.signal,
-        });
-        clearTimeout(pTimeout);
-        if (pResp.ok) {
-          const pData = await pResp.json();
-          webContext = pData.choices?.[0]?.message?.content || "";
-        } else {
-          await pResp.text(); // consume body
-        }
-      } catch (e) {
-        console.warn("Perplexity skipped:", e instanceof Error ? e.message : "timeout");
-      }
-    }
-
-    // Step 2: Gemini analysis (30s timeout)
     const structurePrompt = `Analyze social media sentiment about "${topic}" in "${country}".
-DATE RANGE: ${date_range} | PLATFORMS: ${platforms.join(", ")} | LANGUAGE: ${language} | SAMPLE: ${max_posts}
-${webContext ? `WEB CONTEXT:\n${webContext}` : "Use current knowledge."}
+DATE RANGE: ${date_range} | PLATFORMS: ${platforms.join(", ")} | LANGUAGE: ${language} | SAMPLE TARGET: ${max_posts}
 
-Return ONLY valid JSON:
+Search for recent social media posts, news articles, and public discussions about this topic in this country. Analyze the sentiment breakdown.
+
+Return ONLY valid JSON with this exact structure:
 {
   "query": { "country": "${country}", "topic": "${topic}", "date_range": "${date_range}", "platforms": ${JSON.stringify(platforms)} },
-  "collection_summary": { "posts_collected": <n>, "posts_used": <n>, "country_match_confidence": "high"|"medium"|"low", "sampling_note": "Sampled from public online discussion." },
-  "sentiment_summary": { "with_percent": <n>, "against_percent": <n>, "neutral_percent": <n>, "unclear_percent": <n>, "overall_label": "With"|"Against"|"Neutral"|"Mixed", "overall_confidence": "high"|"medium"|"low" },
+  "collection_summary": { "posts_collected": <number>, "posts_used": <number>, "country_match_confidence": "high"|"medium"|"low", "sampling_note": "Sampled from public online discussion via web search." },
+  "sentiment_summary": { "with_percent": <number>, "against_percent": <number>, "neutral_percent": <number>, "unclear_percent": <number>, "overall_label": "With"|"Against"|"Neutral"|"Mixed", "overall_confidence": "high"|"medium"|"low" },
   "diagram_data": {
     "pie": [{"label":"With","value":<n>},{"label":"Against","value":<n>},{"label":"Neutral","value":<n>},{"label":"Unclear","value":<n>}],
     "bar": [${platforms.map(p => `{"label":"${p}","with":0,"against":0,"neutral":0,"unclear":0}`).join(",")}],
@@ -94,51 +70,61 @@ Return ONLY valid JSON:
   "themes": [{"theme":"<theme>","share":<percent>}],
   "sample_insights": [{"theme":"<theme>","summary":"<sentence>","confidence":"high"|"medium"|"low"}],
   "ui_box": { "title": "Country Sentiment", "country": "${country}", "topic": "${topic}", "headline_result": "<label>", "headline_percent": <n>, "sample_size": <n>, "confidence": "<level>", "warning": "Sampled from public online sources only." }
-}`;
+}
+
+Fill in realistic numbers based on actual web search results. All percentages must sum to 100. Populate bar chart per-platform and trend data with plausible daily values.`;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
-    let aiResp;
+    let resp;
     try {
-      aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      resp = await fetch("https://api.perplexity.ai/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${GEMINI_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${PERPLEXITY_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gemini-2.0-flash",
+          model: "sonar-pro",
           messages: [
-            { role: "system", content: "Return ONLY valid JSON. No markdown, no code fences." },
+            { role: "system", content: "You are a social media sentiment analyst. Return ONLY valid JSON. No markdown, no code fences, no explanatory text." },
             { role: "user", content: structurePrompt },
           ],
-          temperature: 0.3,
+          temperature: 0.2,
+          max_tokens: 2000,
         }),
         signal: controller.signal,
       });
     } catch (fetchErr) {
       clearTimeout(timeout);
-      console.error("AI fetch error:", fetchErr);
-      return new Response(JSON.stringify({ error: "AI request timed out. Please try again." }), {
+      console.error("Perplexity fetch error:", fetchErr);
+      // Fallback to stale cache
+      if (cachedResult) {
+        return new Response(JSON.stringify({ ...cachedResult.data, _cached: true, _stale: true, _cached_at: new Date(cachedResult.ts).toISOString() }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: "Request timed out. Please try again." }), {
         status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } finally {
       clearTimeout(timeout);
     }
 
-    if (!aiResp.ok) {
-      const status = aiResp.status;
-      const errText = await aiResp.text();
-      console.error("AI error:", status, errText);
-      if (status === 429 || status === 402) {
-        return new Response(JSON.stringify({ error: status === 429 ? "Rate limit exceeded, try again shortly." : "AI quota exceeded." }), {
-          status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!resp.ok) {
+      const status = resp.status;
+      const errText = await resp.text();
+      console.error("Perplexity error:", status, errText);
+      // Fallback to stale cache on any error
+      if (cachedResult) {
+        return new Response(JSON.stringify({ ...cachedResult.data, _cached: true, _stale: true, _cached_at: new Date(cachedResult.ts).toISOString() }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: `AI error: ${status}` }), {
+      return new Response(JSON.stringify({ error: `API error: ${status}` }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const aiData = await aiResp.json();
+    const aiData = await resp.json();
     let rawContent = aiData.choices?.[0]?.message?.content || "";
 
     // Clean response
@@ -157,11 +143,21 @@ Return ONLY valid JSON:
       if (jsonMatch) {
         try { result = JSON.parse(jsonMatch[0]); } catch {
           console.error("JSON parse failed:", rawContent.slice(0, 300));
+          if (cachedResult) {
+            return new Response(JSON.stringify({ ...cachedResult.data, _cached: true, _stale: true, _cached_at: new Date(cachedResult.ts).toISOString() }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           return new Response(JSON.stringify({ error: "AI returned malformed data. Please try again." }), {
             status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
       } else {
+        if (cachedResult) {
+          return new Response(JSON.stringify({ ...cachedResult.data, _cached: true, _stale: true, _cached_at: new Date(cachedResult.ts).toISOString() }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         return new Response(JSON.stringify({ error: "AI returned non-JSON response." }), {
           status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -175,6 +171,12 @@ Return ONLY valid JSON:
     });
   } catch (e) {
     console.error("Social sentiment error:", e);
+    // Final fallback
+    if (cachedResult) {
+      return new Response(JSON.stringify({ ...cachedResult.data, _cached: true, _stale: true, _cached_at: new Date(cachedResult.ts).toISOString() }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

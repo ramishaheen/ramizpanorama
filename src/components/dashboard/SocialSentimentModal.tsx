@@ -76,7 +76,7 @@ export const SocialSentimentModal = ({ open, onClose }: Props) => {
         throw new Error("No data returned from edge function");
       }
 
-      if (fnData.error) {
+      if (fnData.error && !fnData.sentiment_summary) {
         throw new Error(`API error: ${fnData.error}`);
       }
 
@@ -327,6 +327,17 @@ export const SocialSentimentModal = ({ open, onClose }: Props) => {
                         <span className="ml-1 text-[9px] text-muted-foreground">(confidence: {ins.confidence})</span>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Cached indicator */}
+                {(data as any)._cached && (
+                  <div className="flex items-start gap-2 p-2.5 rounded bg-primary/10 border border-primary/20 text-[10px] text-primary">
+                    <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>
+                      Showing {(data as any)._stale ? "last available" : "cached"} results from {new Date((data as any)._cached_at).toLocaleString()}.
+                      {(data as any)._stale && " Live data temporarily unavailable."}
+                    </span>
                   </div>
                 )}
 
