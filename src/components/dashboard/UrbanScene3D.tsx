@@ -494,67 +494,74 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       });
       clickMarkerRef.current = pin;
 
+      const MAX_DISTANCE = 100; // metres — reject panoramas farther than this
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ 
-        location: { lat: targetLat, lng: targetLng }, 
-        radius: 200,
+
+      const computeDist = (la1: number, lo1: number, la2: number, lo2: number) => {
+        if (google.maps.geometry?.spherical?.computeDistanceBetween) {
+          return google.maps.geometry.spherical.computeDistanceBetween(
+            new google.maps.LatLng(la1, lo1), new google.maps.LatLng(la2, lo2)
+          );
+        }
+        const R = 6371000, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
+        const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      };
+
+      const activatePano = (data: any) => {
+        const sv = map.getStreetView();
+        const panoLatLng = data.location.latLng;
+        const panoLat = panoLatLng.lat();
+        const panoLng = panoLatLng.lng();
+        const dist = Math.round(computeDist(targetLat, targetLng, panoLat, panoLng));
+
+        if (dist > MAX_DISTANCE) {
+          toast({ title: "Too Far", description: `Nearest panorama is ${dist}m away (max ${MAX_DISTANCE}m). Click closer to a road.`, variant: "destructive", duration: 4000 });
+          setStreetViewActive(false);
+          setStreetViewTarget(null);
+          setStreetViewPanoPos(null);
+          return;
+        }
+
+        setStreetViewPanoPos({ lat: panoLat, lng: panoLng });
+        setStreetViewDistance(dist);
+        sv.setPosition(panoLatLng);
+        const dLng = (targetLng - panoLng) * Math.PI / 180;
+        const lat1r = panoLat * Math.PI / 180;
+        const lat2r = targetLat * Math.PI / 180;
+        const yy = Math.sin(dLng) * Math.cos(lat2r);
+        const xx = Math.cos(lat1r) * Math.sin(lat2r) - Math.sin(lat1r) * Math.cos(lat2r) * Math.cos(dLng);
+        const heading = (Math.atan2(yy, xx) * 180 / Math.PI + 360) % 360;
+        sv.setPov({ heading, pitch: 0 });
+        sv.setVisible(true);
+        streetViewRef.current = sv;
+        const listener = google.maps.event.addListener(sv, "visible_changed", () => {
+          if (!sv.getVisible()) {
+            setStreetViewActive(false);
+            setStreetViewTarget(null);
+            setStreetViewPanoPos(null);
+          }
+        });
+        return () => google.maps.event.removeListener(listener);
+      };
+
+      svService.getPanorama({
+        location: { lat: targetLat, lng: targetLng },
+        radius: MAX_DISTANCE,
         source: google.maps.StreetViewSource.OUTDOOR,
         preference: google.maps.StreetViewPreference.NEAREST,
       }, async (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
-          const sv = map.getStreetView();
-          const panoLatLng = data.location.latLng;
-          sv.setPosition(panoLatLng);
-          
-          // Compute heading FROM the panorama TO the clicked point so the user looks at where they clicked
-          const panoLat = panoLatLng.lat();
-          const panoLng = panoLatLng.lng();
-          const dLng = (targetLng - panoLng) * Math.PI / 180;
-          const lat1 = panoLat * Math.PI / 180;
-          const lat2 = targetLat * Math.PI / 180;
-          const y = Math.sin(dLng) * Math.cos(lat2);
-          const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-          const heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-          
-          sv.setPov({ heading, pitch: 0 });
-          sv.setVisible(true);
-          streetViewRef.current = sv;
-          const listener = google.maps.event.addListener(sv, "visible_changed", () => {
-            if (!sv.getVisible()) {
-              setStreetViewActive(false);
-              setStreetViewTarget(null);
-            }
-          });
-          return () => google.maps.event.removeListener(listener);
+          activatePano(data);
         } else {
-          // Try again with larger radius before falling back to Mapillary
-          svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 1000 }, async (data2: any, status2: any) => {
-            if (status2 === google.maps.StreetViewStatus.OK) {
-              const sv = map.getStreetView();
-              const panoLatLng = data2.location.latLng;
-              sv.setPosition(panoLatLng);
-              const panoLat = panoLatLng.lat();
-              const panoLng = panoLatLng.lng();
-              const dLng = (targetLng - panoLng) * Math.PI / 180;
-              const lat1 = panoLat * Math.PI / 180;
-              const lat2 = targetLat * Math.PI / 180;
-              const y = Math.sin(dLng) * Math.cos(lat2);
-              const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-              const heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-              sv.setPov({ heading, pitch: 0 });
-              sv.setVisible(true);
-              streetViewRef.current = sv;
-              toast({ title: "Nearby 360°", description: `Closest panorama is ~${Math.round(google.maps.geometry?.computeDistanceBetween?.(new google.maps.LatLng(targetLat, targetLng), panoLatLng) || 0)}m from your pin.`, duration: 3000 });
-            } else {
-              toast({ title: "Trying Mapillary…", description: "No Google Street View here. Searching Mapillary…", duration: 3000 });
-              const found = await activateMapillary(targetLat, targetLng);
-              if (!found) {
-                toast({ title: "360° View Unavailable", description: `No street-level imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try a city center.`, duration: 4000 });
-              }
-              setStreetViewActive(false);
-              setStreetViewTarget(null);
-            }
-          });
+          toast({ title: "No Street View", description: `No panorama within ${MAX_DISTANCE}m. Click on or near a road.`, variant: "destructive", duration: 4000 });
+          const found = await activateMapillary(targetLat, targetLng);
+          if (!found) {
+            toast({ title: "360° Unavailable", description: `No imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}.`, duration: 4000 });
+          }
+          setStreetViewActive(false);
+          setStreetViewTarget(null);
+          setStreetViewPanoPos(null);
         }
       });
     } else {
