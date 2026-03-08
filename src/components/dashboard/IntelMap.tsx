@@ -1036,19 +1036,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
   const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
-  // Satellite count badge - fetch from edge function
-  const [satCount, setSatCount] = useState(0);
-  useEffect(() => {
-    const fetchSats = async () => {
-      try {
-        const { data } = await import("@/integrations/supabase/client").then(m => m.supabase.functions.invoke("celestrak-satellites"));
-        if (data?.satellites) setSatCount(data.satellites.length);
-      } catch {}
-    };
-    fetchSats();
-    const interval = setInterval(fetchSats, 120_000);
-    return () => clearInterval(interval);
-  }, []);
+  // Satellite globe is always available (data loaded internally by SatelliteGlobe)
 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
