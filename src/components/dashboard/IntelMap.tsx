@@ -1131,7 +1131,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         : "";
 
       const icon = L.divIcon({
-        className: "",
+        className: "flight-leaflet-icon",
         html: `<div class="flight-marker-wrap" style="--flight-color:${color};width:${size + 12}px;height:${size + 12}px;">
           ${trackedRingHtml}
           <div class="flight-pulse-ring" style="--flight-color:${color};"></div>
