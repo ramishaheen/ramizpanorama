@@ -348,33 +348,26 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     fetchRoads(lat, lng);
   }, [enabled, lat, lng, zoom, fetchRoads]);
 
-  // Render loop — paint coloured road lines
+  // Render loop — density roads + moving red particles with coordinate labels
   useEffect(() => {
     if (!enabled || zoom < MIN_ZOOM) {
       cancelAnimationFrame(animFrameRef.current);
       return;
     }
 
-    let lastDraw = 0;
-    const draw = (ts: number) => {
-      // Throttle to ~20 fps since we're not animating particles
-      if (ts - lastDraw < 48) {
-        animFrameRef.current = requestAnimationFrame(draw);
-        return;
-      }
-      lastDraw = ts;
-
+    const animate = () => {
       const canvas = canvasRef.current;
       const overlay = overlayRef.current;
       const roads = roadsRef.current;
+      const particles = particlesRef.current;
 
       if (!canvas || !overlay || roads.length === 0) {
-        animFrameRef.current = requestAnimationFrame(draw);
+        animFrameRef.current = requestAnimationFrame(animate);
         return;
       }
 
       const ctx = canvas.getContext("2d");
-      if (!ctx) { animFrameRef.current = requestAnimationFrame(draw); return; }
+      if (!ctx) { animFrameRef.current = requestAnimationFrame(animate); return; }
 
       const dpr = window.devicePixelRatio || 1;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -382,14 +375,12 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
-      // Draw each road as a coloured line proportional to its density
+      // 1. Draw density-coloured road lines
       roads.forEach((road) => {
         const baseWidthPx = HIGHWAY_LINE_WIDTH[road.highway] ?? 3;
-        // Scale line width with zoom for natural look
         const zoomScale = zoom >= 21 ? 2.2 : zoom >= 20 ? 1.7 : zoom >= 19 ? 1.3 : zoom >= 18 ? 1.0 : 0.75;
         const lineW = baseWidthPx * zoomScale * dpr;
 
-        // Build path
         ctx.beginPath();
         let started = false;
         for (const p of road.points) {
@@ -398,15 +389,11 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           if (!started) { ctx.moveTo(px.x * dpr, px.y * dpr); started = true; }
           else ctx.lineTo(px.x * dpr, px.y * dpr);
         }
-
         if (!started) return;
-
-        // Outer glow for depth
         ctx.strokeStyle = densityColor(road.densityLevel, 0.25);
         ctx.lineWidth = lineW * 1.8;
         ctx.stroke();
 
-        // Main coloured road
         ctx.beginPath();
         started = false;
         for (const p of road.points) {
@@ -418,26 +405,75 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         ctx.strokeStyle = densityColor(road.densityLevel, 0.65);
         ctx.lineWidth = lineW;
         ctx.stroke();
+      });
 
-        // Bright center line for shine
-        ctx.beginPath();
-        started = false;
-        for (const p of road.points) {
-          const px = latLngToPixel(p.lat, p.lng, mapRef.current, overlay);
-          if (!px) continue;
-          if (!started) { ctx.moveTo(px.x * dpr, px.y * dpr); started = true; }
-          else ctx.lineTo(px.x * dpr, px.y * dpr);
+      // 2. Update and draw particles as red dots with bounding rect + lat/lng label
+      const boxW = 52 * dpr;
+      const boxH = 20 * dpr;
+      const dotR = 3 * dpr;
+      const fontSize = Math.round(6.5 * dpr);
+
+      particles.forEach((p) => {
+        p.progress += p.speed * p.direction;
+        if (p.progress > 1) p.progress = 0;
+        if (p.progress < 0) p.progress = 1;
+
+        const road = roads[p.roadIdx];
+        if (!road || road.points.length < 2) return;
+
+        const geo = interpolateRoad(road, p.progress);
+        const px = latLngToPixel(geo.lat, geo.lng, mapRef.current, overlay);
+        if (!px) return;
+
+        // Road angle for lane offset
+        const stops = road.progressStops;
+        let segIdx = 0;
+        while (segIdx < stops.length - 2 && p.progress > stops[segIdx + 1]) segIdx++;
+        const p1 = road.points[segIdx];
+        const p2 = road.points[segIdx + 1];
+        const px1 = latLngToPixel(p1.lat, p1.lng, mapRef.current, overlay);
+        const px2 = latLngToPixel(p2.lat, p2.lng, mapRef.current, overlay);
+        let roadAngle = 0;
+        if (px1 && px2) {
+          roadAngle = Math.atan2(px2.y - px1.y, px2.x - px1.x);
         }
-        ctx.strokeStyle = densityColor(road.densityLevel, 0.9);
-        ctx.lineWidth = lineW * 0.35;
+
+        const perpAngle = roadAngle + Math.PI / 2;
+        const x = (px.x + Math.cos(perpAngle) * p.laneOffset) * dpr;
+        const y = (px.y + Math.sin(perpAngle) * p.laneOffset) * dpr;
+
+        // Red dot
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(239, 68, 68, 0.95)";
+        ctx.arc(x, y, dotR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bounding rectangle
+        const rectX = x - boxW / 2;
+        const rectY = y - boxH - dotR - 2 * dpr;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.rect(rectX, rectY, boxW, boxH);
+        ctx.fill();
         ctx.stroke();
+
+        // Coordinate text
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `${fontSize}px monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const label = `${geo.lat.toFixed(4)},${geo.lng.toFixed(4)}`;
+        ctx.fillText(label, x, rectY + boxH / 2);
       });
 
       ctx.globalAlpha = 1;
-      animFrameRef.current = requestAnimationFrame(draw);
+      animFrameRef.current = requestAnimationFrame(animate);
     };
 
-    animFrameRef.current = requestAnimationFrame(draw);
+    animFrameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [enabled, zoom, opacity]);
 
@@ -445,7 +481,9 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   useEffect(() => {
     if (!enabled) {
       roadsRef.current = [];
+      particlesRef.current = [];
       setRoadCount(0);
+      setParticleCount(0);
       lastFetchRef.current = "";
     }
   }, [enabled]);
@@ -459,7 +497,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         <div className="flex items-center gap-1.5">
           <div className={`w-1.5 h-1.5 rounded-full ${loading ? "bg-warning animate-pulse" : "bg-accent animate-pulse"}`} />
           <span className="text-[8px] font-mono text-accent font-bold uppercase">
-            {loading ? "LOADING ROADS…" : "TRAFFIC DENSITY"}
+            {loading ? "LOADING ROADS…" : "TRAFFIC SIM"}
           </span>
           <span className="text-[7px] font-mono text-muted-foreground ml-1">
             {timeInfo.period} · {Math.round(timeInfo.factor * 100)}%
@@ -468,18 +506,15 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         {!loading && (
           <div className="flex items-center gap-2">
             <span className="text-[7px] font-mono text-muted-foreground">
-              {roadCount} roads
+              {roadCount} roads · {particleCount} vehicles
             </span>
-            {/* Density legend */}
             <div className="flex items-center gap-0.5">
               <div className="w-2 h-1.5 rounded-sm" style={{ background: densityColor(0.1, 1) }} />
               <div className="w-2 h-1.5 rounded-sm" style={{ background: densityColor(0.4, 1) }} />
               <div className="w-2 h-1.5 rounded-sm" style={{ background: densityColor(0.7, 1) }} />
               <div className="w-2 h-1.5 rounded-sm" style={{ background: densityColor(1.0, 1) }} />
             </div>
-            <span className="text-[6px] font-mono text-muted-foreground/60">
-              FREE → JAM
-            </span>
+            <span className="text-[6px] font-mono text-muted-foreground/60">FREE→JAM</span>
           </div>
         )}
       </div>
