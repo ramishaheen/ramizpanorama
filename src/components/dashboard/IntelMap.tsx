@@ -267,6 +267,18 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     if (!flyToTarget || !mapRef.current) return;
     const { lat, lng, label } = flyToTarget;
     mapRef.current.flyTo([lat, lng], 8, { duration: 1.5 });
+
+    // Also open 3D view at this location with event context
+    // Find matching geo_alert for extra metadata
+    const matchingAlert = geoAlerts.find(g => Math.abs(g.lat - lat) < 0.5 && Math.abs(g.lng - lng) < 0.5);
+    setUrbanScene3DTarget({
+      lat, lng, label,
+      severity: matchingAlert?.severity,
+      source: matchingAlert?.source,
+      type: matchingAlert?.type,
+      summary: matchingAlert?.summary,
+    });
+    setShowUrbanScene(true);
     
     // Remove previous flyTo marker
     if (flyToMarkerRef.current) {
@@ -1040,6 +1052,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
   const [showUrbanScene, setShowUrbanScene] = useState(false);
+  const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
 
   return (
     <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
@@ -1085,7 +1098,21 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       {/* 3D overlays */}
       {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
-      {showUrbanScene && <UrbanScene3D onClose={() => setShowUrbanScene(false)} />}
+      {showUrbanScene && (
+        <UrbanScene3D
+          onClose={() => { setShowUrbanScene(false); setUrbanScene3DTarget(null); }}
+          initialCoords={urbanScene3DTarget ? { lat: urbanScene3DTarget.lat, lng: urbanScene3DTarget.lng } : undefined}
+          initialEvent={urbanScene3DTarget ? {
+            title: urbanScene3DTarget.label,
+            lat: urbanScene3DTarget.lat,
+            lng: urbanScene3DTarget.lng,
+            severity: urbanScene3DTarget.severity,
+            source: urbanScene3DTarget.source,
+            type: urbanScene3DTarget.type,
+            summary: urbanScene3DTarget.summary,
+          } : undefined}
+        />
+      )}
 
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
