@@ -45,27 +45,21 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const fetchCameras = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ action: "list" });
-      if (selectedCountry) params.set("country", selectedCountry);
-      if (selectedCategory) params.set("category", selectedCategory);
-      if (searchQuery) params.set("search", searchQuery);
-
       const { data, error } = await supabase.functions.invoke("cameras", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        body: null,
+        method: "POST",
+        body: {
+          action: "list",
+          country: selectedCountry,
+          category: selectedCategory,
+          search: searchQuery,
+        },
       });
 
-      // Fallback: query directly
-      let query = supabase.from("cameras" as any).select("*").eq("is_active", true).order("country").order("city");
-      if (selectedCountry) query = query.eq("country", selectedCountry);
-      if (selectedCategory) query = query.eq("category", selectedCategory);
-      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`);
-
-      const result = await query;
-      setCameras((result.data as any[]) || []);
+      if (error) throw error;
+      setCameras((data?.cameras as CameraData[]) || []);
     } catch (e) {
       console.error("Failed to fetch cameras:", e);
+      setCameras([]);
     } finally {
       setLoading(false);
     }
