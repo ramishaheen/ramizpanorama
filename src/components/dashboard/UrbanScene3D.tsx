@@ -1395,6 +1395,55 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [showWeather]);
 
+  // ===== NASA NRT SATELLITE OVERLAYS ON 3D MAP =====
+  const nrtToday = new Date().toISOString().split("T")[0];
+  const nrtLayers = [
+    { show: showNrtModis, ref: nrtModisRef, opacity: opacityNrtModis, name: "MODIS Aqua NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Aqua_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtViirs, ref: nrtViirsRef, opacity: opacityNrtViirs, name: "VIIRS SNPP NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtNoaa20, ref: nrtNoaa20Ref, opacity: opacityNrtNoaa20, name: "VIIRS NOAA-20 NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtFires, ref: nrtFiresRef, opacity: opacityNrtFires, name: "MODIS Fires NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Thermal_Anomalies_Day/default/${nrtToday}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png` },
+    { show: showNrtNightLights, ref: nrtNightLightsRef, opacity: opacityNrtNightLights, name: "VIIRS Night Lights", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_DayNightBand_AtSensor_M15/default/2024-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png` },
+  ];
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    // Remove all existing NRT overlays
+    nrtLayers.forEach(layer => {
+      if (layer.ref.current) {
+        const idx = map.overlayMapTypes.indexOf(layer.ref.current);
+        if (idx >= 0) map.overlayMapTypes.removeAt(idx);
+        // Fallback: iterate
+        for (let i = map.overlayMapTypes.getLength() - 1; i >= 0; i--) {
+          if (map.overlayMapTypes.getAt(i) === layer.ref.current) {
+            map.overlayMapTypes.removeAt(i);
+          }
+        }
+        layer.ref.current = null;
+      }
+    });
+
+    // Add enabled NRT overlays
+    nrtLayers.forEach(layer => {
+      if (layer.show) {
+        const tileType = new google.maps.ImageMapType({
+          getTileUrl: (coord: any, zoom: number) => {
+            const maxZoom = layer.url.includes("Level7") ? 7 : layer.url.includes("Level8") ? 8 : 9;
+            if (zoom > maxZoom) return null;
+            return layer.url.replace("{z}", zoom.toString()).replace("{y}", coord.y.toString()).replace("{x}", coord.x.toString());
+          },
+          tileSize: new google.maps.Size(256, 256),
+          opacity: layer.opacity,
+          name: layer.name,
+        });
+        map.overlayMapTypes.push(tileType);
+        layer.ref.current = tileType;
+      }
+    });
+  }, [showNrtModis, showNrtViirs, showNrtNoaa20, showNrtFires, showNrtNightLights, opacityNrtModis, opacityNrtViirs, opacityNrtNoaa20, opacityNrtFires, opacityNrtNightLights]);
+
 
   // ===== FETCH WEATHER DATA FOR CITY MARKERS =====
   useEffect(() => {
