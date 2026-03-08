@@ -39,13 +39,14 @@ interface ConflictPoint {
 }
 
 const PRESETS = [
-  { name: "Dubai", lat: 25.2048, lng: 55.2708 },
+  { name: "Middle East", lat: 29.5, lng: 47.5 },
   { name: "Tehran", lat: 35.6892, lng: 51.389 },
   { name: "Tel Aviv", lat: 32.0853, lng: 34.7818 },
   { name: "Beirut", lat: 33.8938, lng: 35.5018 },
   { name: "Damascus", lat: 33.5138, lng: 36.2765 },
   { name: "Riyadh", lat: 24.7136, lng: 46.6753 },
   { name: "Baghdad", lat: 33.3152, lng: 44.3661 },
+  { name: "Dubai", lat: 25.2048, lng: 55.2708 },
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
 ];
 
