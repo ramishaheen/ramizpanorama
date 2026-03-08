@@ -886,7 +886,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     return () => clearInterval(iv);
   }, []);
 
-  // Render camera markers on map
+  // Render camera markers on map — glowing camera icons visible at city zoom
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
@@ -897,18 +897,52 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
     if (!showCameras || cameras.length === 0) return;
 
+    // Only show camera icons when zoomed to city level (12+)
+    if (zoomLevel < 10) return;
+
     const catColors: Record<string, string> = {
       traffic: "#10b981", tourism: "#8b5cf6", ports: "#3b82f6", weather: "#06b6d4", public: "#f59e0b",
     };
 
+    const sizeBase = Math.min(48, Math.max(28, (zoomLevel - 10) * 6 + 28));
+
     cameras.forEach((cam) => {
       const color = catColors[cam.category] || "#f59e0b";
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" fill="${color}30" stroke="${color}" stroke-width="1.5"/>
-        <circle cx="12" cy="12" r="4" fill="${color}"/>
-        <circle cx="12" cy="12" r="6" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5">
-          <animate attributeName="r" values="6;10" dur="2s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0.5;0" dur="2s" repeatCount="indefinite"/>
+      const s = sizeBase;
+      const c = s / 2;
+      // Glowing camera icon SVG
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
+        <defs>
+          <filter id="camglow_${cam.id?.slice(0,4)}">
+            <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="${color}" flood-opacity="0.8"/>
+          </filter>
+          <radialGradient id="camgrad_${cam.id?.slice(0,4)}" cx="50%" cy="50%">
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <!-- Outer glow pulse -->
+        <circle cx="${c}" cy="${c}" r="${c - 2}" fill="url(#camgrad_${cam.id?.slice(0,4)})">
+          <animate attributeName="r" values="${c - 4};${c};${c - 4}" dur="2.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Scan ring -->
+        <circle cx="${c}" cy="${c}" r="${c * 0.6}" fill="none" stroke="${color}" stroke-width="1" opacity="0.5" stroke-dasharray="3 2">
+          <animateTransform attributeName="transform" type="rotate" from="0 ${c} ${c}" to="360 ${c} ${c}" dur="6s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Camera body -->
+        <g filter="url(#camglow_${cam.id?.slice(0,4)})">
+          <rect x="${c - s*0.22}" y="${c - s*0.15}" width="${s*0.35}" height="${s*0.25}" rx="2" fill="${color}" opacity="0.9"/>
+          <polygon points="${c + s*0.13},${c - s*0.08} ${c + s*0.25},${c - s*0.16} ${c + s*0.25},${c + s*0.08} ${c + s*0.13},${c + s*0.02}" fill="${color}" opacity="0.85"/>
+          <circle cx="${c - s*0.06}" cy="${c - s*0.02}" r="${s*0.06}" fill="none" stroke="white" stroke-width="1.5" opacity="0.7"/>
+          <circle cx="${c - s*0.06}" cy="${c - s*0.02}" r="${s*0.025}" fill="white" opacity="0.9"/>
+        </g>
+        <!-- LIVE badge -->
+        <rect x="${c - s*0.18}" y="${c + s*0.18}" width="${s*0.36}" height="${s*0.12}" rx="2" fill="#ef4444" opacity="0.9"/>
+        <text x="${c}" y="${c + s*0.27}" text-anchor="middle" font-family="monospace" font-size="${s*0.08}" font-weight="bold" fill="white">LIVE</text>
+        <!-- Recording dot -->
+        <circle cx="${c + s*0.22}" cy="${c + s*0.24}" r="${s*0.025}" fill="#ef4444">
+          <animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite"/>
         </circle>
       </svg>`;
 
@@ -917,25 +951,29 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         map,
         icon: {
           url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-          scaledSize: new google.maps.Size(24, 24),
-          anchor: new google.maps.Point(12, 12),
+          scaledSize: new google.maps.Size(s, s),
+          anchor: new google.maps.Point(c, c),
         },
         title: `📹 ${cam.name} (${cam.city}, ${cam.country})`,
-        zIndex: 60,
+        zIndex: 120,
+        optimized: false,
       });
 
       const infoContent = `
-        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:200px;border:1px solid ${color}40;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-            <span style="font-size:14px;">📹</span>
-            <span style="font-weight:700;font-size:12px;color:${color};">${cam.name}</span>
+        <div style="background:#0d1117;color:#e6edf3;padding:12px 16px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:240px;border:1px solid ${color}60;box-shadow:0 0 30px ${color}30,0 8px 32px rgba(0,0,0,0.6);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;animation:pulse 1s infinite;"></div>
+            <span style="font-weight:700;font-size:13px;color:${color};">${cam.name}</span>
           </div>
-          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:10px;">
-            <span style="color:#7d8590;">CITY</span><span>${cam.city}, ${cam.country}</span>
-            <span style="color:#7d8590;">TYPE</span><span style="text-transform:uppercase;">${cam.category}</span>
-            <span style="color:#7d8590;">STATUS</span><span style="color:${cam.status === 'active' ? '#22c55e' : '#ef4444'};">${cam.status?.toUpperCase()}</span>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
+            <span style="color:#7d8590;">📍 CITY</span><span>${cam.city}, ${cam.country}</span>
+            <span style="color:#7d8590;">📷 TYPE</span><span style="text-transform:uppercase;color:${color};font-weight:600;">${cam.category}</span>
+            <span style="color:#7d8590;">📡 STATUS</span><span style="color:${cam.status === 'active' ? '#22c55e' : '#ef4444'};font-weight:600;">${cam.status?.toUpperCase() || 'ACTIVE'}</span>
+            <span style="color:#7d8590;">🔗 SOURCE</span><span>${cam.source_name || 'Public'}</span>
           </div>
-          <div style="margin-top:8px;text-align:center;font-size:9px;color:${color};cursor:pointer;">▶ CLICK TO VIEW LIVE FEED</div>
+          <div style="margin-top:10px;padding:6px;background:${color}15;border:1px solid ${color}30;border-radius:6px;text-align:center;">
+            <span style="font-size:11px;color:${color};font-weight:700;cursor:pointer;">▶ TAP TO VIEW LIVE FEED</span>
+          </div>
         </div>
       `;
       const infoWindow = new google.maps.InfoWindow({ content: infoContent });
@@ -948,7 +986,70 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
       cameraMarkersRef.current.push(marker);
     });
-  }, [cameras, showCameras]);
+  }, [cameras, showCameras, zoomLevel]);
+
+  // ===== AI OBJECT DETECTION SIMULATION =====
+  useEffect(() => {
+    if (!activeCameraFeed && !streetViewActive && !mapillaryActive) {
+      setAiDetections([]);
+      if (aiDetectionIntervalRef.current) clearInterval(aiDetectionIntervalRef.current);
+      return;
+    }
+    if (!showAIDetection) { setAiDetections([]); return; }
+
+    const objectTypes = [
+      { label: "Vehicle", color: "#22c55e", minW: 8, maxW: 18, minH: 5, maxH: 12 },
+      { label: "Person", color: "#3b82f6", minW: 3, maxW: 7, minH: 6, maxH: 14 },
+      { label: "Truck", color: "#f59e0b", minW: 12, maxW: 22, minH: 6, maxH: 14 },
+      { label: "Bus", color: "#8b5cf6", minW: 14, maxW: 24, minH: 5, maxH: 12 },
+      { label: "Bicycle", color: "#06b6d4", minW: 3, maxW: 6, minH: 4, maxH: 8 },
+      { label: "Military Vehicle", color: "#ef4444", minW: 10, maxW: 20, minH: 6, maxH: 14 },
+      { label: "Building", color: "#64748b", minW: 15, maxW: 30, minH: 20, maxH: 40 },
+      { label: "Drone", color: "#f43f5e", minW: 2, maxW: 5, minH: 2, maxH: 4 },
+    ];
+
+    const generateDetections = () => {
+      const count = Math.floor(Math.random() * 8) + 3;
+      const dets = [];
+      for (let i = 0; i < count; i++) {
+        const type = objectTypes[Math.floor(Math.random() * objectTypes.length)];
+        const w = type.minW + Math.random() * (type.maxW - type.minW);
+        const h = type.minH + Math.random() * (type.maxH - type.minH);
+        dets.push({
+          id: `det-${i}-${Date.now()}`,
+          label: type.label,
+          confidence: 0.65 + Math.random() * 0.33,
+          x: 5 + Math.random() * (85 - w),
+          y: 10 + Math.random() * (80 - h),
+          w, h,
+          color: type.color,
+        });
+      }
+      setAiDetections(dets);
+    };
+
+    generateDetections();
+    aiDetectionIntervalRef.current = setInterval(generateDetections, 4000);
+    return () => { if (aiDetectionIntervalRef.current) clearInterval(aiDetectionIntervalRef.current); };
+  }, [activeCameraFeed, streetViewActive, mapillaryActive, showAIDetection]);
+
+  // ===== WALKING EXPERIENCE — track path during Mapillary =====
+  useEffect(() => {
+    if (!mapillaryActive) {
+      setWalkingPath([]);
+      setWalkingSteps(0);
+      return;
+    }
+    // Track position changes
+    setWalkingPath(prev => {
+      const last = prev[prev.length - 1];
+      if (!last || Math.abs(last.lat - lat) > 0.0001 || Math.abs(last.lng - lng) > 0.0001) {
+        return [...prev.slice(-50), { lat, lng }];
+      }
+      return prev;
+    });
+    setWalkingSteps(prev => prev + 1);
+  }, [mapillaryActive, lat, lng]);
 
   // ===== CITY INTEL HUD =====
   useEffect(() => {
