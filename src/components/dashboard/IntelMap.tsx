@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
