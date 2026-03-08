@@ -75,6 +75,38 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const mapInstanceRef = useRef<any>(null);
   const overlayRef = useRef<any>(null);
   const scriptLoadedRef = useRef(false);
+  const [showIntelCard, setShowIntelCard] = useState(!!initialEvent);
+  const [nearbyIntel, setNearbyIntel] = useState<{ alerts: any[]; vessels: any[]; airspace: any[] }>({ alerts: [], vessels: [], airspace: [] });
+
+  // Fetch nearby intel when we have an event or location
+  useEffect(() => {
+    const fetchNearby = async () => {
+      const radius = 5; // degrees
+      try {
+        const [alertsRes, vesselsRes, airspaceRes] = await Promise.all([
+          supabase.from("geo_alerts").select("*")
+            .gte("lat", lat - radius).lte("lat", lat + radius)
+            .gte("lng", lng - radius).lte("lng", lng + radius),
+          supabase.from("vessels").select("*")
+            .gte("lat", lat - radius).lte("lat", lat + radius)
+            .gte("lng", lng - radius).lte("lng", lng + radius),
+          supabase.from("airspace_alerts").select("*")
+            .gte("lat", lat - radius).lte("lat", lat + radius)
+            .gte("lng", lng - radius).lte("lng", lng + radius),
+        ]);
+        setNearbyIntel({
+          alerts: alertsRes.data || [],
+          vessels: vesselsRes.data || [],
+          airspace: airspaceRes.data || [],
+        });
+      } catch (e) {
+        console.error("Nearby intel fetch error:", e);
+      }
+    };
+    fetchNearby();
+    const iv = setInterval(fetchNearby, 60_000);
+    return () => clearInterval(iv);
+  }, [lat, lng]);
 
   // Track container size
   useEffect(() => {
