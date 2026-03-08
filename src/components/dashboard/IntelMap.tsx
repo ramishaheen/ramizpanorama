@@ -268,6 +268,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     icao24: string; callsign: string; origin_country: string;
     lat: number; lng: number; altitude: number; velocity: number;
     heading: number; vertical_rate: number; is_military: boolean;
+    registration?: string; type?: string;
   }
   const [flightData, setFlightData] = useState<FlightAircraft[]>([]);
   const flightSnapshotRef = useRef<FlightAircraft[]>([]);
