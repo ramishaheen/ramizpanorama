@@ -395,8 +395,9 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
         // Fill every lane with evenly spaced particles along the full road length
         const totalLanes = Math.max(1, road.lanes);
-        const spacingAtZoom = spacingM * (zoom >= 21 ? 0.45 : zoom >= 20 ? 0.6 : zoom >= 18 ? 0.8 : 1);
-        const densityPerLane = Math.max(8, Math.round((roadLenM / Math.max(6, spacingAtZoom)) * factor));
+        const spacingAtZoom = spacingM * (zoom >= 21 ? 0.35 : zoom >= 20 ? 0.5 : zoom >= 18 ? 0.7 : 1);
+        const coverageFactor = Math.max(0.9, factor);
+        const densityPerLane = Math.max(12, Math.round((roadLenM / Math.max(5, spacingAtZoom)) * coverageFactor));
 
         // Lane width in pixels (scaled by zoom, wider at street-level)
         const laneWidthPx = zoom >= 21 ? 9 : zoom >= 20 ? 7 : zoom >= 18 ? 5 : 3.5;
