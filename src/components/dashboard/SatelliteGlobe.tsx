@@ -551,6 +551,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       canvas.style.transition = "filter 0.5s ease";
     }
 
+  const [selectedCity, setSelectedCity] = useState<CityPreset | null>(null);
+
+  const applyGlobeStyleInner = applyGlobeStyle; // alias to avoid shadowing in callbacks
+
     // Update scene lighting
     scene.children.forEach((child: any) => {
       if (child.isAmbientLight) {
