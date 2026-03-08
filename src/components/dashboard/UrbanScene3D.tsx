@@ -1208,7 +1208,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         {/* Flight sidebar */}
         {showFlights && aircraft.length > 0 && (
           <div className="absolute top-3 right-14 z-10 pointer-events-auto">
-            <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg w-[480px] max-h-[55vh] overflow-hidden"
+            <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg w-60 max-h-[55vh] overflow-hidden"
               style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 20px hsl(190 100% 50% / 0.05)" }}>
               <div className="px-2.5 py-2 border-b border-border/30">
                 <div className="flex items-center justify-between mb-1">
