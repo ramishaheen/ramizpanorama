@@ -335,7 +335,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     markersRef.current = newMarkers;
   }, [aircraft, showFlights, showMarkers, trackedAircraftId]);
 
-  // ===== RENDER FLIGHT ROUTES & TRAILS =====
+  // ===== RENDER FLIGHT ROUTES & TRAILS WITH ANIMATED DOTS =====
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
@@ -356,48 +356,50 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       // Generate full route — uses trail history + projected backward path
       const routePath = generateProjectedRoute(ac, history);
 
-      // Projected/old portion (dashed, faded)
+      // Projected/old portion (animated dashed)
       if (routePath.length > 3) {
         const oldPortion = routePath.slice(0, -2);
         const fadedLine = new google.maps.Polyline({
           path: oldPortion,
           map,
           strokeColor: color,
-          strokeOpacity: isTracked ? 0.35 : 0.2,
+          strokeOpacity: 0,
           strokeWeight: isTracked ? 2.5 : 1.5,
           geodesic: true,
           icons: [{
-            icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: 0.5, strokeColor: color, scale: 3 },
-            offset: "0",
-            repeat: "14px",
+            icon: { path: "M 0,-1 0,1", strokeOpacity: isTracked ? 0.5 : 0.35, strokeColor: color, scale: isTracked ? 3 : 2 },
+            offset: "0%",
+            repeat: "12px",
           }],
         });
         newLines.push(fadedLine);
       }
 
-      // Recent solid trail (last few points to current position)
+      // Recent trail (animated dashed, brighter)
       const recentPath = routePath.slice(Math.max(0, routePath.length - 6));
       const recentLine = new google.maps.Polyline({
         path: recentPath,
         map,
         strokeColor: color,
-        strokeOpacity: isTracked ? 0.95 : 0.7,
+        strokeOpacity: 0,
         strokeWeight: isTracked ? 3.5 : 2.5,
         geodesic: true,
+        icons: [{
+          icon: { path: "M 0,-1 0,1", strokeOpacity: isTracked ? 0.9 : 0.65, strokeColor: color, scale: isTracked ? 3.5 : 2.5 },
+          offset: "0%",
+          repeat: "10px",
+        }],
       });
       newLines.push(recentLine);
 
-      // Forward prediction line for ALL aircraft — shows estimated future position
+      // Forward prediction line — animated dotted
       const headingRad = ac.heading * Math.PI / 180;
       const speedKmh = ac.velocity * 3.6;
-      // Prediction distance: tracked = 5min, military = 3min, civil = 2min
       const predMinutes = isTracked ? 5 : (isMil ? 3 : 2);
       const predDistKm = Math.max(speedKmh * (predMinutes / 60), 8);
       const predColor = isTracked ? "#22c55e" : (isMil ? "#f97316" : "#60a5fa");
       const predOpacity = isTracked ? 0.6 : (isMil ? 0.4 : 0.25);
-      const predWeight = isTracked ? 2.5 : (isMil ? 2 : 1.5);
 
-      // Build multi-point curved prediction (3 waypoints for smoother look)
       const fwdPoints = [{ lat: ac.lat, lng: ac.lng }];
       for (let step = 1; step <= 3; step++) {
         const d = (predDistKm * step / 3) / 111.32;
@@ -411,21 +413,42 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         path: fwdPoints,
         map,
         strokeColor: predColor,
-        strokeOpacity: predOpacity,
-        strokeWeight: predWeight,
+        strokeOpacity: 0,
+        strokeWeight: isTracked ? 2.5 : 1.5,
         geodesic: true,
         icons: [{
           icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: isTracked ? 3 : 2, strokeColor: predColor, strokeOpacity: predOpacity + 0.2 },
           offset: "100%",
         }, {
-          icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: predOpacity * 0.8, strokeColor: predColor, scale: 2 },
-          offset: "0",
+          icon: { path: "M 0,-1 0,1", strokeOpacity: predOpacity, strokeColor: predColor, scale: 2 },
+          offset: "0%",
           repeat: isTracked ? "8px" : "12px",
         }],
       });
       newLines.push(fwdLine);
     });
     trailLinesRef.current = newLines;
+
+    // Animate dash offset for flowing dot effect on Google Maps polylines
+    let animOffset = 0;
+    const animInterval = setInterval(() => {
+      animOffset = (animOffset + 0.5) % 100;
+      trailLinesRef.current.forEach(line => {
+        const icons = line.get("icons");
+        if (icons && icons.length > 0) {
+          // Shift the first dash icon offset to create movement
+          const updated = icons.map((ic: any, idx: number) => {
+            if (idx === 0 || (icons.length === 2 && idx === 1)) {
+              return { ...ic, offset: `${animOffset}%` };
+            }
+            return ic;
+          });
+          line.set("icons", updated);
+        }
+      });
+    }, 80);
+
+    return () => clearInterval(animInterval);
   }, [aircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
 
   // ===== HEATMAP LAYER =====

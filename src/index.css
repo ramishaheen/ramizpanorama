@@ -372,6 +372,26 @@
   stroke-linejoin: round;
 }
 
+.flight-trail-animated {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 8 6;
+  animation: flight-dash-flow 1s linear infinite;
+}
+
+.flight-prediction-animated {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 6 8;
+  animation: flight-dash-flow 0.8s linear infinite;
+}
+
+@keyframes flight-dash-flow {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
 .flight-info-panel {
   background: hsl(var(--card) / 0.95);
   backdrop-filter: blur(16px);

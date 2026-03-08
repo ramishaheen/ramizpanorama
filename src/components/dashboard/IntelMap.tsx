@@ -1042,28 +1042,52 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const isTracked = trackedFlightId === ac.icao24;
       const size = isTracked ? 22 : (isMil ? 18 : 14);
 
-      // Draw trail polyline with gradient opacity
+      // Draw trail polyline with animated dotted lines
       const trail = flightTrailsRef.current[ac.icao24] || [];
       if (trail.length >= 2) {
         const fullPath: L.LatLngExpression[] = [...trail.map(p => [p.lat, p.lng] as L.LatLngTuple), [ac.lat, ac.lng]];
-        // Faded older trail
+        // Faded older trail — animated dashes
         if (fullPath.length > 3) {
           L.polyline(fullPath.slice(0, -2), {
             color: trailColor,
             weight: isTracked ? 2.5 : 1.5,
-            opacity: 0.3,
-            dashArray: isMil ? undefined : "6 4",
-            className: "flight-trail",
+            opacity: 0.4,
+            dashArray: "8 6",
+            className: "flight-trail-animated",
           }).addTo(group);
         }
-        // Bright recent trail
+        // Bright recent trail — animated dashes
         L.polyline(fullPath.slice(-4), {
           color,
           weight: isTracked ? 3 : 2,
           opacity: isTracked ? 0.9 : 0.7,
-          className: "flight-trail",
+          dashArray: "10 5",
+          className: "flight-trail-animated",
         }).addTo(group);
       }
+
+      // Forward prediction line — animated dotted
+      const headingRad = ac.heading * Math.PI / 180;
+      const speedKmh = ac.velocity * 3.6;
+      const predMinutes = isTracked ? 5 : (isMil ? 3 : 2);
+      const predDistKm = Math.max(speedKmh * (predMinutes / 60), 8);
+      const predColor = isTracked ? "#22c55e" : (isMil ? "#f97316" : "#60a5fa");
+      const predOpacity = isTracked ? 0.5 : (isMil ? 0.35 : 0.2);
+      const fwdPoints: L.LatLngExpression[] = [[ac.lat, ac.lng]];
+      for (let step = 1; step <= 3; step++) {
+        const d = (predDistKm * step / 3) / 111.32;
+        fwdPoints.push([
+          ac.lat + Math.cos(headingRad) * d,
+          ac.lng + Math.sin(headingRad) * d / Math.cos(ac.lat * Math.PI / 180),
+        ]);
+      }
+      L.polyline(fwdPoints, {
+        color: predColor,
+        weight: isTracked ? 2.5 : 1.5,
+        opacity: predOpacity,
+        dashArray: "6 8",
+        className: "flight-prediction-animated",
+      }).addTo(group);
 
       // Realistic airplane silhouette (top-down, nose up)
       const planePath = "M16 3 l-1.5 4.5 l-10 5 l0 2.2 l10-3 l0 6.5 l-3.5 2.8 l0 1.8 l3.5-1.2 l1.5 2 l1.5-2 l3.5 1.2 l0-1.8 l-3.5-2.8 l0-6.5 l10 3 l0-2.2 l-10-5 l-1.5-4.5z";
