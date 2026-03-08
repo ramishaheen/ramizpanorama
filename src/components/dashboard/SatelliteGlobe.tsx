@@ -820,40 +820,59 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     const globe = globeRef.current;
     if (!globe) return;
 
-    if (orbitPath && orbitPath.length > 1 && selectedSat) {
-      const segments: { coords: { lat: number; lng: number }[] }[] = [];
-      let currentSegment: { lat: number; lng: number }[] = [orbitPath[0]];
+    const allSegments: { coords: { lat: number; lng: number }[]; type: string }[] = [];
 
+    // Current orbit path
+    if (orbitPath && orbitPath.length > 1 && selectedSat) {
+      let currentSegment: { lat: number; lng: number }[] = [orbitPath[0]];
       for (let i = 1; i < orbitPath.length; i++) {
         const prev = orbitPath[i - 1];
         const curr = orbitPath[i];
         if (Math.abs(curr.lng - prev.lng) > 90) {
-          if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+          if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "orbit" });
           currentSegment = [curr];
         } else {
           currentSegment.push(curr);
         }
       }
-      if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+      if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "orbit" });
+    }
 
-      const altitude = Math.min(selectedSat.alt / 6371 * 0.3 + 0.01, 0.7);
+    // Predicted future track (green dashed)
+    if (predictionTrack && predictionTrack.length > 1) {
+      let currentSegment: { lat: number; lng: number }[] = [predictionTrack[0]];
+      for (let i = 1; i < predictionTrack.length; i++) {
+        const prev = predictionTrack[i - 1];
+        const curr = predictionTrack[i];
+        if (Math.abs(curr.lng - prev.lng) > 90) {
+          if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "predict" });
+          currentSegment = [curr];
+        } else {
+          currentSegment.push(curr);
+        }
+      }
+      if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "predict" });
+    }
+
+    if (allSegments.length > 0) {
+      const altitude = selectedSat ? Math.min(selectedSat.alt / 6371 * 0.3 + 0.01, 0.7) : 0.05;
 
       globe
-        .pathsData(segments)
+        .pathsData(allSegments)
         .pathPoints('coords')
         .pathPointLat((p: any) => p.lat)
         .pathPointLng((p: any) => p.lng)
         .pathPointAlt(() => altitude)
-        .pathColor(() => [orbitColor + 'cc', orbitColor + '33'])
-        .pathStroke(1.5)
+        .pathColor((seg: any) => seg.type === "predict" ? ['#22c55ecc', '#22c55e33'] : [orbitColor + 'cc', orbitColor + '33'])
+        .pathStroke((seg: any) => seg.type === "predict" ? 2 : 1.5)
         .pathDashLength(0.02)
         .pathDashGap(0.01)
-        .pathDashAnimateTime(4000)
+        .pathDashAnimateTime((seg: any) => seg.type === "predict" ? 6000 : 4000)
         .pathTransitionDuration(300);
     } else {
       globe.pathsData([]);
     }
-  }, [orbitPath, selectedSat, orbitColor]);
+  }, [orbitPath, selectedSat, orbitColor, predictionTrack]);
 
   // Resize
   useEffect(() => {
