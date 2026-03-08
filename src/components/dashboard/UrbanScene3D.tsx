@@ -194,6 +194,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [viewStyle, setViewStyle] = useState<"normal" | "crt" | "nvg" | "flir" | "noir" | "snow">("normal");
   const [vesselSource, setVesselSource] = useState<string>("loading");
   const [opacityFlights, setOpacityFlights] = useState(1);
   const [opacityVessels, setOpacityVessels] = useState(1);
@@ -1431,7 +1432,19 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             </div>
           </div>
         ) : apiKey ? (
-          <div ref={mapDivRef} className="absolute inset-0 w-full h-full" />
+          <div ref={mapDivRef} className="absolute inset-0 w-full h-full" style={{
+            filter: viewStyle === "crt"
+              ? "contrast(1.3) saturate(0.6) brightness(0.9)"
+              : viewStyle === "nvg"
+              ? "brightness(0.7) contrast(1.4) saturate(0) sepia(1) hue-rotate(70deg) brightness(1.3)"
+              : viewStyle === "flir"
+              ? "saturate(0) contrast(1.6) brightness(1.1) invert(1) hue-rotate(180deg)"
+              : viewStyle === "noir"
+              ? "saturate(0) contrast(1.3) brightness(0.85)"
+              : viewStyle === "snow"
+              ? "brightness(1.3) contrast(0.85) saturate(0.3)"
+              : "none",
+          }} />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-card">
             <div className="text-center space-y-2 max-w-sm px-4">
@@ -1514,6 +1527,60 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </button>
         )}
 
+
+        {/* View Style Presets Bar */}
+        {apiKey && (
+          <div className="absolute top-[72px] left-1/2 -translate-x-1/2 z-[16] pointer-events-auto">
+            <div className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-border/40" style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>
+              {([
+                { id: "normal" as const, label: "Normal", icon: "🌍" },
+                { id: "crt" as const, label: "CRT", icon: "📺" },
+                { id: "nvg" as const, label: "NVG", icon: "🌙" },
+                { id: "flir" as const, label: "FLIR", icon: "🔥" },
+                { id: "noir" as const, label: "Noir", icon: "🎬" },
+                { id: "snow" as const, label: "Snow", icon: "❄️" },
+              ]).map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => setViewStyle(preset.id)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono uppercase transition-all duration-200 ${
+                    viewStyle === preset.id
+                      ? "bg-primary/20 text-primary border border-primary/40 shadow-[0_0_10px_hsl(190_100%_50%/0.2)]"
+                      : "text-muted-foreground/70 hover:text-foreground hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  <span className="text-sm">{preset.icon}</span>
+                  <span>{preset.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CRT scanline overlay */}
+        {viewStyle === "crt" && (
+          <div className="absolute inset-0 z-[11] pointer-events-none" style={{
+            background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px)",
+            mixBlendMode: "overlay",
+          }} />
+        )}
+
+        {/* NVG green tint overlay */}
+        {viewStyle === "nvg" && (
+          <div className="absolute inset-0 z-[11] pointer-events-none" style={{
+            background: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%)",
+            boxShadow: "inset 0 0 120px rgba(0,0,0,0.5)",
+          }} />
+        )}
+
+        {/* Snow overlay particles */}
+        {viewStyle === "snow" && (
+          <div className="absolute inset-0 z-[11] pointer-events-none overflow-hidden">
+            <div className="absolute inset-0" style={{
+              background: "radial-gradient(ellipse at center, rgba(255,255,255,0.05) 0%, transparent 70%)",
+            }} />
+          </div>
+        )}
 
         {streetViewActive && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
