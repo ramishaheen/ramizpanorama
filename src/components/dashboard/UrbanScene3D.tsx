@@ -1492,6 +1492,17 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
+        {/* Zoom level indicator */}
+        {showZoomIndicator && (
+          <div className="absolute right-14 bottom-24 z-[13] pointer-events-none animate-fade-in">
+            <div className="px-3 py-1.5 rounded-lg bg-black/85 backdrop-blur border border-primary/30 font-mono" style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.15)" }}>
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Zoom </span>
+              <span className="text-sm font-bold text-primary">{zoomLevel}</span>
+              <span className="text-[8px] text-muted-foreground/60"> / 21</span>
+            </div>
+          </div>
+        )}
+
         {/* Layer Panel Sidebar */}
         <div className={`absolute top-0 left-0 z-[16] h-full transition-all duration-300 pointer-events-auto ${showLayerPanel ? "w-64" : "w-0"}`}>
           {showLayerPanel && (
