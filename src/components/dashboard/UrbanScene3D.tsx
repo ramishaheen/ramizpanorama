@@ -578,7 +578,59 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [streetViewActive, streetViewTarget, apiKey, activateMapillary]);
 
-  // ===== RENDER AIRCRAFT MARKERS =====
+  // ===== MINI-MAP for street view pin vs panorama =====
+  useEffect(() => {
+    const google = (window as any).google;
+    if (!streetViewActive || !streetViewTarget || !streetViewPanoPos || !miniMapRef.current || !google?.maps || !apiKey) return;
+
+    // Clear previous
+    if (miniMapInstanceRef.current) {
+      miniMapInstanceRef.current = null;
+    }
+    miniMapRef.current.innerHTML = "";
+
+    const midLat = (streetViewTarget.lat + streetViewPanoPos.lat) / 2;
+    const midLng = (streetViewTarget.lng + streetViewPanoPos.lng) / 2;
+
+    const mm = new google.maps.Map(miniMapRef.current, {
+      center: { lat: midLat, lng: midLng },
+      zoom: 19,
+      disableDefaultUI: true,
+      gestureHandling: "none",
+      mapTypeId: "satellite",
+      clickableIcons: false,
+    });
+
+    // Green pin = user's click
+    new google.maps.Marker({
+      position: streetViewTarget,
+      map: mm,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#22c55e", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2 },
+      title: "Your pin",
+    });
+
+    // Blue dot = actual panorama
+    new google.maps.Marker({
+      position: streetViewPanoPos,
+      map: mm,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: "#3b82f6", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2 },
+      title: "Panorama position",
+    });
+
+    // Line connecting them
+    new google.maps.Polyline({
+      path: [streetViewTarget, streetViewPanoPos],
+      map: mm,
+      strokeColor: "#facc15",
+      strokeWeight: 2,
+      strokeOpacity: 0.8,
+      geodesic: true,
+    });
+
+    miniMapInstanceRef.current = mm;
+  }, [streetViewActive, streetViewTarget, streetViewPanoPos, apiKey]);
+
+
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
