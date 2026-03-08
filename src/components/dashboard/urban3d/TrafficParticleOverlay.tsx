@@ -396,14 +396,24 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     try {
       const roads: Road[] = (data.elements || [])
         .filter((el: any) => el.type === "way" && el.geometry?.length >= 2)
-        .map((el: any) => ({
-          id: el.id,
-          highway: el.tags?.highway || "unclassified",
-          points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
-          lanes: parseLaneCount(el.tags || {}, el.tags?.highway || "unclassified"),
-          oneway: el.tags?.oneway === "yes" || (el.tags?.oneway ?? "").toString() === "1",
-          progressStops: buildProgressStops(el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon }))),
-        }));
+        .map((el: any) => {
+          const highway = el.tags?.highway || "unclassified";
+          const lanes = parseLaneCount(el.tags || {}, highway);
+          const onewayTag = String(el.tags?.oneway ?? "").toLowerCase();
+          const onewayDirection: 1 | -1 | 0 =
+            onewayTag === "-1" ? -1 : (onewayTag === "yes" || onewayTag === "1" || onewayTag === "true" ? 1 : 0);
+
+          return {
+            id: el.id,
+            highway,
+            points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
+            lanes,
+            oneway: onewayDirection !== 0,
+            onewayDirection,
+            laneDirections: parseLaneDirections(el.tags || {}, lanes, onewayDirection),
+            progressStops: buildProgressStops(el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon }))),
+          };
+        });
 
       roadsRef.current = roads;
       setRoadCount(roads.length);
