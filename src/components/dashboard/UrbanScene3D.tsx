@@ -211,6 +211,60 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [lat, lng]);
 
+  // Toggle Street View 360°
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !apiKey) return;
+    const google = (window as any).google;
+    if (!google?.maps) return;
+
+    if (streetViewActive) {
+      const sv = map.getStreetView();
+      sv.setPosition({ lat, lng });
+      sv.setPov({ heading: 0, pitch: 0 });
+      sv.setVisible(true);
+      streetViewRef.current = sv;
+
+      // Listen for close
+      const listener = google.maps.event.addListener(sv, "visible_changed", () => {
+        if (!sv.getVisible()) setStreetViewActive(false);
+      });
+      return () => google.maps.event.removeListener(listener);
+    } else {
+      if (streetViewRef.current) {
+        streetViewRef.current.setVisible(false);
+        streetViewRef.current = null;
+      }
+    }
+  }, [streetViewActive, lat, lng, apiKey]);
+
+  // Map navigation helpers
+  const handleZoomIn = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setZoom(Math.min((map.getZoom() || 6) + 1, 21));
+  }, []);
+  const handleZoomOut = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setZoom(Math.max((map.getZoom() || 6) - 1, 1));
+  }, []);
+  const handleRotate = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setHeading((map.getHeading() || 0) + 45);
+  }, []);
+  const handleResetView = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) {
+      map.setTilt(45);
+      map.setHeading(0);
+      map.setZoom(6);
+      map.panTo({ lat: 29.5, lng: 47.5 });
+    }
+  }, []);
+  const handleToggleTilt = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setTilt(map.getTilt() === 0 ? 45 : 0);
+  }, []);
+
   // Helper: convert lat/lng to pixel using Google Maps projection
   const latLngToPixel = useCallback(
     (pLat: number, pLng: number): { x: number; y: number } | null => {
