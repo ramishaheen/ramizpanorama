@@ -153,8 +153,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   // New real-time layers
   const [showVessels, setShowVessels] = useState(true);
   const [showEarthquakes, setShowEarthquakes] = useState(true);
-  const [showWeather, setShowWeather] = useState(false);
-  const [showTraffic, setShowTraffic] = useState(false);
+  const [showWeather, setShowWeather] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(true);
   const [vessels, setVessels] = useState<any[]>([]);
   const [earthquakes, setEarthquakes] = useState<any[]>([]);
   const vesselMarkersRef = useRef<any[]>([]);

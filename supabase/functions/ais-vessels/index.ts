@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,11 +80,42 @@ serve(async (req) => {
       }
     }
 
-    // Tertiary: Try MarineTraffic-style open data or Vesselfinder proxy
+    // Tertiary: If no live API returned data, pull from Supabase DB
     if (vessels.length === 0) {
-      // Use the Supabase vessels table as fallback
-      // This means we still show DB data if no live API responds
-      console.log("No live AIS data available, client will use DB fallback");
+      try {
+        const supabase = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+        const { data: dbVessels } = await supabase
+          .from("vessels")
+          .select("*")
+          .gte("lat", lamin)
+          .lte("lat", lamax)
+          .gte("lng", lomin)
+          .lte("lng", lomax);
+        if (dbVessels && dbVessels.length > 0) {
+          dbVessels.forEach((v: any) => {
+            vessels.push({
+              mmsi: v.id,
+              name: v.name,
+              lat: v.lat,
+              lng: v.lng,
+              heading: v.heading,
+              speed: v.speed,
+              type: v.type,
+              flag: v.flag,
+              destination: v.destination,
+              source: "database",
+            });
+          });
+          console.log(`DB fallback: ${vessels.length} vessels in bbox`);
+        } else {
+          console.log("No vessels found in DB for this bbox either");
+        }
+      } catch (dbErr) {
+        console.error("DB fallback error:", dbErr);
+      }
     }
 
     return new Response(JSON.stringify({ 
