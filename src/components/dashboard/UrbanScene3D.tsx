@@ -61,8 +61,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [showTrails, setShowTrails] = useState(true);
-  const [showHeatmap, setShowHeatmap] = useState(!!initialEvent); // auto-enable heatmap when coming from event
+  const [showHeatmap, setShowHeatmap] = useState(!!initialEvent);
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
+  const [streetViewActive, setStreetViewActive] = useState(false);
+  const streetViewRef = useRef<any>(null);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
@@ -153,16 +155,18 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: initialEvent ? 16 : 6, // street-level for events, regional for default Middle East view
+        zoom: initialEvent ? 16 : 6,
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
         mapId: "WAROS_3D_MAP",
         disableDefaultUI: false,
-        zoomControl: true,
+        zoomControl: false,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        gestureHandling: "greedy",
+        maxZoom: 21,
       });
       mapInstanceRef.current = map;
 
