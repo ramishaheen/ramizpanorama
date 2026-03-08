@@ -87,7 +87,7 @@ function getTimeDensityFactor(): { factor: number; period: string } {
   if (hour >= 16 && hour < 19) return { factor: 0.95, period: "RUSH HOUR" };
   if (hour >= 9 && hour < 16) return { factor: 0.7, period: "MIDDAY" };
   if (hour >= 19 && hour < 23) return { factor: 0.55, period: "EVENING" };
-  return { factor: 0.35, period: "NIGHT" };
+  return { factor: 0.65, period: "NIGHT" };
 }
 
 /** Estimate road length in meters from coordinate array */
@@ -99,6 +99,32 @@ function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
     total += Math.sqrt(dLat * dLat + dLng * dLng);
   }
   return total;
+}
+
+function parseLaneCount(tags: Record<string, any> = {}, highway: string): number {
+  const laneRaw = String(tags?.lanes ?? "").trim();
+  const fwRaw = String(tags?.["lanes:forward"] ?? "").trim();
+  const bwRaw = String(tags?.["lanes:backward"] ?? "").trim();
+
+  const numericFrom = (val: string): number => {
+    if (!val) return 0;
+    const nums = val.split(/[;|,]/).map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
+    if (nums.length === 0) return 0;
+    return nums.reduce((a, b) => a + b, 0);
+  };
+
+  const fw = numericFrom(fwRaw);
+  const bw = numericFrom(bwRaw);
+  if (fw + bw > 0) return Math.max(1, fw + bw);
+
+  const laneVal = numericFrom(laneRaw);
+  if (laneVal > 0) return Math.max(1, laneVal);
+
+  if (highway.includes("motorway")) return 6;
+  if (highway.includes("trunk")) return 4;
+  if (highway.includes("primary")) return 4;
+  if (highway.includes("secondary")) return 3;
+  return 2;
 }
 
 function pickVehicleType(highway: string): VehicleType {
@@ -292,7 +318,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     lastFetchRef.current = bbox;
 
     setLoading(true);
-    const query = `[out:json][timeout:15];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|residential|service|unclassified|living_street)$"](${bbox});out geom;`;
+    const query = `[out:json][timeout:15];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|residential|service|unclassified|living_street|road)$"](${bbox});out geom;`;
     const body = `data=${encodeURIComponent(query)}`;
 
     let data: any = null;
@@ -332,8 +358,8 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           id: el.id,
           highway: el.tags?.highway || "unclassified",
           points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
-          lanes: parseInt(el.tags?.lanes) || (el.tags?.highway === "motorway" ? 4 : el.tags?.highway === "primary" ? 3 : 2),
-          oneway: el.tags?.oneway === "yes",
+          lanes: parseLaneCount(el.tags || {}, el.tags?.highway || "unclassified"),
+          oneway: el.tags?.oneway === "yes" || (el.tags?.oneway ?? "").toString() === "1",
         }));
 
       roadsRef.current = roads;
@@ -349,10 +375,11 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
         // Fill every lane with evenly spaced particles along the full road length
         const totalLanes = Math.max(1, road.lanes);
-        const densityPerLane = Math.max(3, Math.round((roadLenM / spacingM) * factor));
+        const spacingAtZoom = spacingM * (zoom >= 21 ? 0.45 : zoom >= 20 ? 0.6 : zoom >= 18 ? 0.8 : 1);
+        const densityPerLane = Math.max(8, Math.round((roadLenM / Math.max(6, spacingAtZoom)) * factor));
 
-        // Lane width in pixels (scaled by zoom)
-        const laneWidthPx = zoom >= 20 ? 5 : zoom >= 18 ? 3.5 : 2.5;
+        // Lane width in pixels (scaled by zoom, wider at street-level)
+        const laneWidthPx = zoom >= 21 ? 9 : zoom >= 20 ? 7 : zoom >= 18 ? 5 : 3.5;
 
         for (let lane = 0; lane < totalLanes; lane++) {
           // On two-way roads split lanes by direction
