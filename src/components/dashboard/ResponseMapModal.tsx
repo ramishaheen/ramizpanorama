@@ -99,7 +99,7 @@ export const ResponseMapModal = ({ onClose, onFlyTo }: ResponseMapProps) => {
   const filteredNews = useMemo(() => {
     const updates = warUpdates.data?.updates || [];
     return updates.filter(u => {
-      if (searchQuery && !u.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && !u.headline.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (selectedCountry !== "all" && !(u.region || "").toLowerCase().includes(selectedCountry.toLowerCase())) return false;
       return true;
     }).slice(0, 50);
@@ -150,16 +150,16 @@ export const ResponseMapModal = ({ onClose, onFlyTo }: ResponseMapProps) => {
 
     if (layerState.news) {
       filteredNews.forEach(n => events.push({
-        id: `news-${n.title.slice(0, 20)}`,
+        id: `news-${n.id}`,
         type: "news",
-        title: n.title,
+        title: n.headline,
         subtitle: n.region || "Global",
         severity: n.severity || "medium",
         lat: n.lat || 0,
         lng: n.lng || 0,
         time: n.timestamp || new Date().toISOString(),
-        details: n.summary,
-        url: n.url,
+        details: n.body,
+        url: undefined,
       }));
     }
 
