@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter } from "lucide-react";
+import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CameraData {
@@ -39,6 +39,8 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [selectedCamera, setSelectedCamera] = useState<CameraData | null>(null);
   const [embedError, setEmbedError] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
 
   const fetchCameras = useCallback(async () => {
     setLoading(true);
