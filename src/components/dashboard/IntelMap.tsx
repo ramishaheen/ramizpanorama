@@ -1053,6 +1053,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
   const [showUrbanScene, setShowUrbanScene] = useState(false);
+  const [showLiveCameras, setShowLiveCameras] = useState(false);
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
 
   return (
