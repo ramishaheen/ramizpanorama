@@ -253,6 +253,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const fusionGroupRef = useRef<L.LayerGroup | null>(null);
   const cctvGroupRef = useRef<L.LayerGroup | null>(null);
+  const flightGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
@@ -261,6 +262,16 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showArabCCTV, setShowArabCCTV] = useState(false);
   const [arabCameras, setArabCameras] = useState<any[]>([]);
   const [loadingCCTV, setLoadingCCTV] = useState(false);
+
+  // Flight tracking state
+  interface FlightAircraft {
+    icao24: string; callsign: string; origin_country: string;
+    lat: number; lng: number; altitude: number; velocity: number;
+    heading: number; vertical_rate: number; is_military: boolean;
+  }
+  const [flightData, setFlightData] = useState<FlightAircraft[]>([]);
+  const flightTrailsRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
+  const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
