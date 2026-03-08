@@ -13,6 +13,8 @@ interface Road {
   highway: string;
   lanes: number;
   oneway: boolean;
+  onewayDirection: 1 | -1 | 0;
+  laneDirections: (1 | -1)[];
   progressStops: number[]; // normalized cumulative distance [0..1] per point
 }
 
@@ -120,23 +122,44 @@ function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
   return cumulative.map((d) => d / total);
 }
 
+function parseLaneNumber(raw: unknown): number {
+  const val = String(raw ?? "").trim();
+  if (!val) return 0;
+  const nums = val
+    .split(/[;|,]/)
+    .map((x) => parseInt(x.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (nums.length === 0) return 0;
+  return nums.reduce((a, b) => a + b, 0);
+}
+
+function parseLaneDirections(tags: Record<string, any> = {}, totalLanes: number, onewayDirection: 1 | -1 | 0): (1 | -1)[] {
+  if (onewayDirection === 1) return Array.from({ length: totalLanes }, () => 1 as const);
+  if (onewayDirection === -1) return Array.from({ length: totalLanes }, () => -1 as const);
+
+  let fw = parseLaneNumber(tags?.["lanes:forward"]);
+  let bw = parseLaneNumber(tags?.["lanes:backward"]);
+
+  if (fw + bw > 0) {
+    fw = Math.min(totalLanes, fw);
+    bw = Math.min(totalLanes - fw, bw);
+    const remain = Math.max(0, totalLanes - fw - bw);
+    if (fw >= bw) fw += remain;
+    else bw += remain;
+    return [...Array.from({ length: fw }, () => 1 as const), ...Array.from({ length: bw }, () => -1 as const)];
+  }
+
+  const forward = Math.ceil(totalLanes / 2);
+  const backward = totalLanes - forward;
+  return [...Array.from({ length: forward }, () => 1 as const), ...Array.from({ length: backward }, () => -1 as const)];
+}
+
 function parseLaneCount(tags: Record<string, any> = {}, highway: string): number {
-  const laneRaw = String(tags?.lanes ?? "").trim();
-  const fwRaw = String(tags?.["lanes:forward"] ?? "").trim();
-  const bwRaw = String(tags?.["lanes:backward"] ?? "").trim();
-
-  const numericFrom = (val: string): number => {
-    if (!val) return 0;
-    const nums = val.split(/[;|,]/).map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
-    if (nums.length === 0) return 0;
-    return nums.reduce((a, b) => a + b, 0);
-  };
-
-  const fw = numericFrom(fwRaw);
-  const bw = numericFrom(bwRaw);
+  const fw = parseLaneNumber(tags?.["lanes:forward"]);
+  const bw = parseLaneNumber(tags?.["lanes:backward"]);
   if (fw + bw > 0) return Math.max(1, fw + bw);
 
-  const laneVal = numericFrom(laneRaw);
+  const laneVal = parseLaneNumber(tags?.lanes);
   if (laneVal > 0) return Math.max(1, laneVal);
 
   if (highway.includes("motorway")) return 6;
@@ -373,14 +396,24 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     try {
       const roads: Road[] = (data.elements || [])
         .filter((el: any) => el.type === "way" && el.geometry?.length >= 2)
-        .map((el: any) => ({
-          id: el.id,
-          highway: el.tags?.highway || "unclassified",
-          points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
-          lanes: parseLaneCount(el.tags || {}, el.tags?.highway || "unclassified"),
-          oneway: el.tags?.oneway === "yes" || (el.tags?.oneway ?? "").toString() === "1",
-          progressStops: buildProgressStops(el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon }))),
-        }));
+        .map((el: any) => {
+          const highway = el.tags?.highway || "unclassified";
+          const lanes = parseLaneCount(el.tags || {}, highway);
+          const onewayTag = String(el.tags?.oneway ?? "").toLowerCase();
+          const onewayDirection: 1 | -1 | 0 =
+            onewayTag === "-1" ? -1 : (onewayTag === "yes" || onewayTag === "1" || onewayTag === "true" ? 1 : 0);
+
+          return {
+            id: el.id,
+            highway,
+            points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
+            lanes,
+            oneway: onewayDirection !== 0,
+            onewayDirection,
+            laneDirections: parseLaneDirections(el.tags || {}, lanes, onewayDirection),
+            progressStops: buildProgressStops(el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon }))),
+          };
+        });
 
       roadsRef.current = roads;
       setRoadCount(roads.length);
@@ -403,20 +436,19 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const laneWidthPx = zoom >= 21 ? 9 : zoom >= 20 ? 7 : zoom >= 18 ? 5 : 3.5;
 
         for (let lane = 0; lane < totalLanes; lane++) {
-          // On two-way roads split lanes by direction
-          const halfLanes = Math.ceil(totalLanes / 2);
-          const dir: 1 | -1 = road.oneway ? 1 : lane < halfLanes ? 1 : -1;
+          const dir: 1 | -1 = road.laneDirections[lane] ?? 1;
 
           // Center lanes around the road centerline
           const laneOffset = (lane - (totalLanes - 1) / 2) * laneWidthPx;
+          const lanePhase = lane / Math.max(1, totalLanes);
 
           for (let i = 0; i < densityPerLane; i++) {
             const vType = pickVehicleType(road.highway);
             const vConf = VEHICLE_CONFIG[vType];
             particles.push({
               roadIdx: ri,
-              progress: ((i + Math.random() * 0.25) / densityPerLane) % 1,
-              speed: baseSpeed * vConf.speedMult * (0.8 + Math.random() * 0.4),
+              progress: (i + lanePhase) / densityPerLane,
+              speed: baseSpeed,
               color: vConf.color || roadColor,
               size: vConf.sizeBase,
               direction: dir,
