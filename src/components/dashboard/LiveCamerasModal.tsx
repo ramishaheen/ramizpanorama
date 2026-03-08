@@ -203,8 +203,8 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
           const ytM = rawUrl.match(/youtube\.com\/embed\/([^?&/]+)/i);
           window.open(ytM ? `https://www.youtube.com/watch?v=${ytM[1]}` : rawUrl, "_blank", "noopener,noreferrer");
         }}
-          className="px-4 py-2 rounded text-[10px] text-cyan-400 font-mono font-bold flex items-center gap-2 hover:bg-cyan-500/15 transition-all"
-          style={{ background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.25)" }}>
+          className="px-4 py-2 rounded text-[10px] text-white font-mono font-bold flex items-center gap-2 hover:bg-cyan-500/20 transition-all"
+          style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
           <Eye className="h-3.5 w-3.5" /> VIEW LIVE FEED
         </button>
       )}
@@ -438,13 +438,13 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
         {/* Actions */}
         <div className="flex items-center gap-1 ml-auto">
           <button onClick={scrapeAggregators} disabled={scraping}
-            className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-all"
-            style={{ background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.2)" }}>
+            className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-white hover:text-white transition-all"
+            style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
             <Globe className={`h-3 w-3 ${scraping ? "animate-spin" : ""}`} /> {scraping ? "SCRAPING..." : "SCRAPE SOURCES"}
           </button>
           <button onClick={discoverMore} disabled={discovering}
-            className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-all"
-            style={{ background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)" }}>
+            className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-white hover:text-white transition-all"
+            style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)" }}>
             <Sparkles className={`h-3 w-3 ${discovering ? "animate-pulse" : ""}`} /> {discovering ? "FINDING..." : "AI FIND"}
           </button>
           <button onClick={runHealthCheck} disabled={checkingHealth} className="p-1.5 rounded hover:bg-white/5 transition-all" title="Health Check">
@@ -672,8 +672,8 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                 {/* Actions */}
                 <div className="p-2 grid grid-cols-2 gap-1" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)" }}>
                   <button onClick={() => openCameraSource(selectedCamera)}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-cyan-400 font-bold hover:bg-cyan-500/10 transition-all"
-                    style={{ background: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.15)" }}>
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-white font-bold hover:bg-cyan-500/20 transition-all"
+                    style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
                     <ExternalLink className="h-3 w-3" /> OPEN LIVE
                   </button>
                   <button onClick={() => copyLink(selectedCamera)}
