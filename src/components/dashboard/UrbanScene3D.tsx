@@ -1790,6 +1790,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <div className="border-t border-border/20 my-2" />
 
                 <LayerControl icon={<MapPin className="h-3 w-3" />} label="City Landmarks" color="#00dcff" active={showCities} onToggle={() => setShowCities(!showCities)} count={CITY_LANDMARKS_3D.length} opacity={1} onOpacity={() => {}} source="32 cities" />
+                <LayerControl icon={<Video className="h-3 w-3" />} label="Live Cameras" color="#f59e0b" active={showCameras} onToggle={() => setShowCameras(!showCameras)} count={cameras.length} opacity={1} onOpacity={() => {}} source={`${cameras.length} feeds`} />
               </div>
               <div className="px-3 py-2 border-t border-border/30">
                 <span className="text-[7px] font-mono text-muted-foreground/50">Real-time data • Auto-refresh</span>
