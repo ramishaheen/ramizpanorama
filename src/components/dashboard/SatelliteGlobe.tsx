@@ -1030,47 +1030,65 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     globe.labelsData(labels);
   }, [satellites, selectedCat, showLabels]);
 
-  // Render orbit trail when a satellite is selected
+  // Render orbit trails (selected satellite + baseline orbital tracks for precise visual context)
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
 
     const allSegments: { coords: { lat: number; lng: number }[]; type: string }[] = [];
 
-    // Current orbit path
-    if (orbitPath && orbitPath.length > 1 && selectedSat) {
-      let currentSegment: { lat: number; lng: number }[] = [orbitPath[0]];
-      for (let i = 1; i < orbitPath.length; i++) {
-        const prev = orbitPath[i - 1];
-        const curr = orbitPath[i];
+    const pushSegmentedPath = (path: { lat: number; lng: number }[], type: string) => {
+      if (!path || path.length < 2) return;
+      let currentSegment: { lat: number; lng: number }[] = [path[0]];
+
+      for (let i = 1; i < path.length; i++) {
+        const prev = path[i - 1];
+        const curr = path[i];
         if (Math.abs(curr.lng - prev.lng) > 90) {
-          if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "orbit" });
+          if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type });
           currentSegment = [curr];
         } else {
           currentSegment.push(curr);
         }
       }
-      if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "orbit" });
+
+      if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type });
+    };
+
+    // Selected satellite precise trail
+    if (orbitPath && orbitPath.length > 1 && selectedSat) {
+      pushSegmentedPath(orbitPath, "orbit");
+    }
+
+    // Baseline orbital context (shown when no satellite selected)
+    if (!selectedSat && rawTLERef.current.length > 0) {
+      const source = selectedCat
+        ? rawTLERef.current.filter((r) => r.category === selectedCat)
+        : rawTLERef.current;
+
+      source.slice(0, 140).forEach((r) => {
+        const baselinePath = computeOrbitPath(
+          r.inclination,
+          r.raan,
+          r.meanAnomaly,
+          r.meanMotion,
+          r.eccentricity,
+          r.epochYear,
+          r.epochDay,
+          r.alt,
+          72
+        );
+        pushSegmentedPath(baselinePath, "baseline");
+      });
     }
 
     // Predicted future track (green dashed)
     if (predictionTrack && predictionTrack.length > 1) {
-      let currentSegment: { lat: number; lng: number }[] = [predictionTrack[0]];
-      for (let i = 1; i < predictionTrack.length; i++) {
-        const prev = predictionTrack[i - 1];
-        const curr = predictionTrack[i];
-        if (Math.abs(curr.lng - prev.lng) > 90) {
-          if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "predict" });
-          currentSegment = [curr];
-        } else {
-          currentSegment.push(curr);
-        }
-      }
-      if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type: "predict" });
+      pushSegmentedPath(predictionTrack, "predict");
     }
 
     if (allSegments.length > 0) {
-      const altitude = selectedSat ? Math.min(selectedSat.alt / 6371 * 0.3 + 0.01, 0.7) : 0.05;
+      const altitude = selectedSat ? Math.min((selectedSat.alt / 6371) * 0.3 + 0.01, 0.7) : 0.055;
 
       globe
         .pathsData(allSegments)
@@ -1078,16 +1096,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .pathPointLat((p: any) => p.lat)
         .pathPointLng((p: any) => p.lng)
         .pathPointAlt(() => altitude)
-        .pathColor((seg: any) => seg.type === "predict" ? ['#22c55ecc', '#22c55e33'] : [orbitColor + 'cc', orbitColor + '33'])
-        .pathStroke((seg: any) => seg.type === "predict" ? 2 : 1.5)
-        .pathDashLength(0.02)
-        .pathDashGap(0.01)
-        .pathDashAnimateTime((seg: any) => seg.type === "predict" ? 6000 : 4000)
-        .pathTransitionDuration(300);
+        .pathColor((seg: any) =>
+          seg.type === "predict"
+            ? ['#22c55ecc', '#22c55e33']
+            : seg.type === "baseline"
+              ? ['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.05)']
+              : [orbitColor + 'cc', orbitColor + '33']
+        )
+        .pathStroke((seg: any) => seg.type === "predict" ? 2 : seg.type === "baseline" ? 0.65 : 1.5)
+        .pathDashLength((seg: any) => seg.type === "baseline" ? 0.008 : 0.02)
+        .pathDashGap((seg: any) => seg.type === "baseline" ? 0.01 : 0.01)
+        .pathDashAnimateTime((seg: any) => seg.type === "predict" ? 6000 : seg.type === "baseline" ? 0 : 4000)
+        .pathTransitionDuration(250);
     } else {
       globe.pathsData([]);
     }
-  }, [orbitPath, selectedSat, orbitColor, predictionTrack]);
+  }, [orbitPath, selectedSat, orbitColor, predictionTrack, selectedCat, satellites.length]);
 
   // Resize
   useEffect(() => {
