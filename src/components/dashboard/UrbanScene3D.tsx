@@ -1171,7 +1171,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   <span className="text-primary font-bold">{interpolatedAircraft.length}</span>
                   <span>AIRCRAFT</span>
                   <span className="text-[8px] font-mono px-1 rounded bg-primary/15">
-                    {flightSource === "adsb.fi" ? "LIVE" : flightSource ? flightSource.toUpperCase() : "—"}
+                    OSINT UNIFIED
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1184,6 +1184,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     <span style={{ color: "#ef4444" }}>{militaryCount}</span> MIL
                   </span>
                 </div>
+                {flightSource && (
+                  <div className="text-[7px] text-muted-foreground/50 leading-tight">
+                    SRC: {flightSource}
+                  </div>
+                )}
                 {trackedAircraftId && (
                   <div className="flex items-center gap-1 text-green-400 border-t border-primary/20 pt-1">
                     <Target className="h-2.5 w-2.5" />
