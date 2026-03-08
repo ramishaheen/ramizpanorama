@@ -11,6 +11,8 @@ interface Road {
   id: number;
   points: { lat: number; lng: number }[];
   highway: string;
+  lanes: number;
+  oneway: boolean;
 }
 
 type VehicleType = "car" | "truck" | "bus";
@@ -24,6 +26,7 @@ interface Particle {
   direction: 1 | -1;
   vehicleType: VehicleType;
   angle: number;
+  laneOffset: number; // perpendicular offset in pixels for multi-lane
 }
 
 const HIGHWAY_COLORS: Record<string, string> = {
@@ -322,6 +325,8 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           id: el.id,
           highway: el.tags?.highway || "unclassified",
           points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
+          lanes: parseInt(el.tags?.lanes) || (el.tags?.highway === "motorway" ? 4 : el.tags?.highway === "primary" ? 3 : 2),
+          oneway: el.tags?.oneway === "yes",
         }));
 
       roadsRef.current = roads;
@@ -334,22 +339,52 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const per100m = HIGHWAY_DENSITY_PER_100M[road.highway] || 2;
         const minP = HIGHWAY_MIN_PARTICLES[road.highway] || 2;
         const lengthBased = Math.round((roadLenM / 100) * per100m);
-        const density = Math.max(minP, Math.round(Math.max(lengthBased, minP) * factor));
+        // Scale density by number of lanes
+        const laneMultiplier = Math.max(1, road.lanes * 0.7);
+        const density = Math.max(minP, Math.round(Math.max(lengthBased, minP) * factor * laneMultiplier));
         const baseSpeed = HIGHWAY_SPEED[road.highway] || 0.003;
         const roadColor = HIGHWAY_COLORS[road.highway] || "#8b5cf6";
+
+        // Lane width in pixels (scaled by zoom)
+        const laneWidthPx = zoom >= 20 ? 5 : zoom >= 18 ? 3.5 : 2.5;
+        const totalLanes = road.lanes;
 
         for (let i = 0; i < density; i++) {
           const vType = pickVehicleType(road.highway);
           const vConf = VEHICLE_CONFIG[vType];
+          
+          // Assign to a lane
+          let lane: number;
+          let dir: 1 | -1;
+          if (road.oneway) {
+            lane = Math.floor(Math.random() * totalLanes);
+            dir = 1;
+          } else {
+            // Split lanes: first half forward, second half backward
+            const halfLanes = Math.ceil(totalLanes / 2);
+            const isForward = Math.random() > 0.5;
+            if (isForward) {
+              lane = Math.floor(Math.random() * halfLanes);
+              dir = 1;
+            } else {
+              lane = halfLanes + Math.floor(Math.random() * (totalLanes - halfLanes));
+              dir = -1;
+            }
+          }
+          
+          // Compute perpendicular offset: center lanes around 0
+          const laneOffset = (lane - (totalLanes - 1) / 2) * laneWidthPx;
+
           particles.push({
             roadIdx: ri,
             progress: Math.random(),
             speed: baseSpeed * vConf.speedMult * (0.7 + Math.random() * 0.6),
             color: vConf.color || roadColor,
             size: vConf.sizeBase,
-            direction: Math.random() > 0.5 ? 1 : -1,
+            direction: dir,
             vehicleType: vType,
             angle: 0,
+            laneOffset,
           });
         }
       });
@@ -489,18 +524,22 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         // Compute heading angle from segment direction
         const px1 = latLngToPixel(p1.lat, p1.lng, mapRef.current, overlay);
         const px2 = latLngToPixel(p2.lat, p2.lng, mapRef.current, overlay);
+        let roadAngle = 0;
         if (px1 && px2) {
           const dx = px2.x - px1.x;
           const dy = px2.y - px1.y;
-          p.angle = Math.atan2(dy, dx);
-          if (p.direction === -1) p.angle += Math.PI;
+          roadAngle = Math.atan2(dy, dx);
+          p.angle = p.direction === -1 ? roadAngle + Math.PI : roadAngle;
         }
 
         const px = latLngToPixel(interpLat, interpLng, mapRef.current, overlay);
         if (!px) return;
 
-        const x = px.x * dpr;
-        const y = px.y * dpr;
+        // Apply perpendicular lane offset
+        const perpAngle = roadAngle + Math.PI / 2;
+        const offsetPx = p.laneOffset * dpr;
+        const x = (px.x + Math.cos(perpAngle) * p.laneOffset) * dpr;
+        const y = (px.y + Math.sin(perpAngle) * p.laneOffset) * dpr;
         const s = p.size * dpr * (zoom >= 20 ? 1.3 : zoom >= 18 ? 1.0 : 0.7);
 
         // Glow under vehicle
