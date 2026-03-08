@@ -172,6 +172,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [opacityHeatmap, setOpacityHeatmap] = useState(0.7);
   const [opacityTraffic, setOpacityTraffic] = useState(0.8);
   const [showAirspacePanel, setShowAirspacePanel] = useState(true);
+  const [airspacePanelPos, setAirspacePanelPos] = useState({ x: 12, y: 160 });
+  const airspaceDragRef = useRef<{ dragging: boolean; offsetX: number; offsetY: number }>({ dragging: false, offsetX: 0, offsetY: 0 });
 
   // Fetch nearby intel
   useEffect(() => {
@@ -1208,10 +1210,21 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
         {/* Flight sidebar — below Layers button */}
         {showFlights && aircraft.length > 0 && showAirspacePanel && (
-          <div className="absolute top-40 left-3 z-10 pointer-events-auto">
+          <div className="absolute z-10 pointer-events-auto"
+            style={{ left: airspacePanelPos.x, top: airspacePanelPos.y }}>
             <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg w-60 max-h-[50vh] overflow-hidden"
               style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 20px hsl(190 100% 50% / 0.05)" }}>
-              <div className="px-2.5 py-2 border-b border-border/30">
+              <div className="px-2.5 py-2 border-b border-border/30 cursor-grab active:cursor-grabbing select-none"
+                onMouseDown={(e) => {
+                  airspaceDragRef.current = { dragging: true, offsetX: e.clientX - airspacePanelPos.x, offsetY: e.clientY - airspacePanelPos.y };
+                  const onMove = (ev: MouseEvent) => {
+                    if (!airspaceDragRef.current.dragging) return;
+                    setAirspacePanelPos({ x: ev.clientX - airspaceDragRef.current.offsetX, y: ev.clientY - airspaceDragRef.current.offsetY });
+                  };
+                  const onUp = () => { airspaceDragRef.current.dragging = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+                  window.addEventListener("mousemove", onMove);
+                  window.addEventListener("mouseup", onUp);
+                }}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1.5">
                     <Plane className="h-3 w-3 text-primary" />
