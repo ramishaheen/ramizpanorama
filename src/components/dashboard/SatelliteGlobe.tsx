@@ -553,11 +553,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             1000
           );
         })
-        .onObjectHover((d: any, _prev: any, event: MouseEvent) => {
+        .onObjectHover((d: any) => {
           if (d) {
-            const s = d as SatelliteData;
-            setHoveredSat(s);
-            setHoverPos({ x: event?.clientX || 0, y: event?.clientY || 0 });
+            setHoveredSat(d as SatelliteData);
           } else {
             setHoveredSat(null);
           }
