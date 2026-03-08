@@ -292,6 +292,18 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {proximityAlerts.length > 0 && (
+            <span className="text-[8px] font-mono font-bold text-destructive bg-destructive/20 px-1.5 py-0.5 rounded animate-pulse">
+              {proximityAlerts.length} ⚠
+            </span>
+          )}
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`p-1 rounded transition-colors ${soundEnabled ? "text-destructive hover:bg-destructive/10" : "text-muted-foreground hover:bg-secondary"}`}
+            title={soundEnabled ? "Mute proximity alerts" : "Unmute proximity alerts"}
+          >
+            {soundEnabled ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
+          </button>
           {loading && <RefreshCw className="h-3 w-3 text-primary animate-spin" />}
           <button onClick={() => setExpanded(!expanded)} className="p-1 rounded hover:bg-secondary text-muted-foreground">
             {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -301,6 +313,21 @@ export const IranAirspacePanel = ({ onClose, onTrackAircraft, onFlyTo }: IranAir
           </button>
         </div>
       </div>
+
+      {/* Proximity alerts banner */}
+      {proximityAlerts.length > 0 && expanded && (
+        <div className="border-b border-destructive/30 bg-destructive/5 px-2 py-1.5 max-h-[80px] overflow-y-auto">
+          {proximityAlerts.slice(0, 5).map((alert, i) => (
+            <div key={`${alert.callsign}-${alert.time}-${i}`} className="flex items-center gap-1.5 text-[8px] font-mono py-0.5">
+              <AlertTriangle className="h-3 w-3 text-destructive flex-shrink-0 animate-pulse" />
+              <span className="text-destructive font-bold">{alert.callsign}</span>
+              <span className="text-muted-foreground">→</span>
+              <span className="text-foreground">{alert.base}</span>
+              <span className="text-muted-foreground ml-auto">{alert.dist}km</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats bar */}
       <div className="grid grid-cols-4 gap-px bg-border/50">
