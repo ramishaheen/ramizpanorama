@@ -1230,7 +1230,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   <span className="ml-auto text-[7px] font-mono text-muted-foreground/50">15s refresh</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-px bg-border/10 max-h-[42vh] overflow-y-auto">
+              <div className="divide-y divide-border/10 max-h-[42vh] overflow-y-auto">
                 {interpolatedAircraft
                   .sort((a, b) => {
                     if (a.icao24 === trackedAircraftId) return -1;
