@@ -298,8 +298,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (!google?.maps) return;
 
     if (streetViewActive) {
+      const currentZoom = mapInstanceRef.current?.getZoom?.() || 6;
+      if (currentZoom < 12) {
+        toast({ title: "Zoom In Required", description: "Please zoom into a city first (zoom 12+) to activate Street View. Use the preset buttons or zoom controls.", duration: 4000 });
+        setStreetViewActive(false);
+        return;
+      }
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ location: { lat, lng }, radius: 500 }, (data: any, status: any) => {
+      svService.getPanorama({ location: { lat, lng }, radius: 1000 }, (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
           const sv = map.getStreetView();
           sv.setPosition(data.location.latLng);
@@ -311,7 +317,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           });
           return () => google.maps.event.removeListener(listener);
         } else {
-          toast({ title: "360° View Unavailable", description: "No Street View coverage at this location. Try zooming into a city first.", duration: 4000 });
+          toast({ title: "360° View Unavailable", description: `No Street View coverage at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°. Try navigating to a major road or city center.`, duration: 4000 });
           setStreetViewActive(false);
         }
       });
