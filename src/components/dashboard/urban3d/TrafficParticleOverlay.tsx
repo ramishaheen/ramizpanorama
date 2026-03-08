@@ -428,18 +428,17 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
         // Fill every lane with evenly spaced particles along the full road length
         const totalLanes = Math.max(1, road.lanes);
-        const spacingAtZoom = spacingM * (zoom >= 21 ? 0.35 : zoom >= 20 ? 0.5 : zoom >= 18 ? 0.7 : 1);
-        const coverageFactor = Math.max(0.9, factor);
-        const densityPerLane = Math.max(12, Math.round((roadLenM / Math.max(5, spacingAtZoom)) * coverageFactor));
-
-        // Lane width in pixels (scaled by zoom, wider at street-level)
-        const laneWidthPx = zoom >= 21 ? 9 : zoom >= 20 ? 7 : zoom >= 18 ? 5 : 3.5;
+        const spacingAtZoom = spacingM * (zoom >= 21 ? 0.28 : zoom >= 20 ? 0.4 : zoom >= 18 ? 0.6 : 0.85);
+        const coverageFactor = Math.max(1.0, factor);
+        const densityPerLane = Math.max(18, Math.round((roadLenM / Math.max(3.5, spacingAtZoom)) * coverageFactor));
 
         for (let lane = 0; lane < totalLanes; lane++) {
           const dir: 1 | -1 = road.laneDirections[lane] ?? 1;
 
-          // Center lanes around the road centerline
-          const laneOffset = (lane - (totalLanes - 1) / 2) * laneWidthPx;
+          // Keep lane spread compact so particles stay on the road body at all lane counts
+          const normalizedLane = totalLanes <= 1 ? 0 : lane / (totalLanes - 1) - 0.5;
+          const maxSpreadPx = zoom >= 21 ? 3.5 : zoom >= 20 ? 2.7 : zoom >= 18 ? 2.1 : 1.5;
+          const laneOffset = normalizedLane * maxSpreadPx * 2;
           const lanePhase = lane / Math.max(1, totalLanes);
 
           for (let i = 0; i < densityPerLane; i++) {
@@ -447,10 +446,10 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
             const vConf = VEHICLE_CONFIG[vType];
             particles.push({
               roadIdx: ri,
-              progress: (i + lanePhase) / densityPerLane,
-              speed: baseSpeed,
+              progress: ((i + lanePhase) / densityPerLane) % 1,
+              speed: baseSpeed * vConf.speedMult,
               color: vConf.color || roadColor,
-              size: vConf.sizeBase,
+              size: Math.max(1.8, vConf.sizeBase * 0.48),
               direction: dir,
               vehicleType: vType,
               angle: 0,
