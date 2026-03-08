@@ -324,6 +324,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           >
             <Navigation className="h-3 w-3" />
             Trails
+          </button>
           <button
             onClick={() => fetchFlights()}
             className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all"
