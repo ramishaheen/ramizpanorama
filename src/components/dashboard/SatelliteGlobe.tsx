@@ -1141,16 +1141,12 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .pathColor((seg: any) =>
           seg.type === "predict"
             ? ["#22c55ecc", "#22c55e33"]
-            : seg.type === "catOrbit"
-              ? [orbitColor || "rgba(255,255,255,0.5)", (orbitColor || "rgba(255,255,255,0.5)") + "44"]
-              : seg.type === "baseline"
-                ? ["rgba(255,255,255,0.24)", "rgba(255,255,255,0.05)"]
-                : [orbitColor + "cc", orbitColor + "33"]
+            : [orbitColor + "cc", orbitColor + "33"]
         )
-        .pathStroke((seg: any) => (seg.type === "predict" ? 2.8 : seg.type === "catOrbit" ? 1.8 : seg.type === "baseline" ? 1.2 : 2.2))
-        .pathDashLength((seg: any) => (seg.type === "baseline" || seg.type === "catOrbit" ? 0.014 : 0.02))
+        .pathStroke((seg: any) => (seg.type === "predict" ? 2.8 : 2.5))
+        .pathDashLength(0.02)
         .pathDashGap(0.01)
-        .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : seg.type === "catOrbit" ? 4000 : seg.type === "baseline" ? 0 : 3500))
+        .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : 3500))
         .pathTransitionDuration(250);
     } else {
       globe.pathsData([]);
