@@ -553,6 +553,33 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     }
   }, []);
 
+  // Real-time badge updates every 10 seconds
+  useEffect(() => {
+    const computeBadges = () => {
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const result: Record<string, { total: number; breakdown: { category: string; count: number; color: string }[] }> = {};
+      CITY_PRESETS.forEach((city) => {
+        const nearby = satsRef.current.filter((s) => {
+          const dLat = toRad(s.lat - city.lat);
+          const dLng = toRad(s.lng - city.lng);
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(city.lat)) * Math.cos(toRad(s.lat)) * Math.sin(dLng / 2) ** 2;
+          const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return dist < 2500;
+        });
+        const catMap = new Map<string, number>();
+        nearby.forEach((s) => catMap.set(s.category, (catMap.get(s.category) || 0) + 1));
+        const breakdown = Array.from(catMap.entries())
+          .map(([category, count]) => ({ category, count, color: CATEGORY_COLORS[category] || "#d4a843" }))
+          .sort((a, b) => b.count - a.count);
+        result[city.name] = { total: nearby.length, breakdown };
+      });
+      setCountryBadges(result);
+    };
+    computeBadges();
+    const interval = setInterval(computeBadges, 10000);
+    return () => clearInterval(interval);
+  }, [satellites]);
+
   const flyToCity = useCallback((city: (typeof CITY_PRESETS)[0]) => {
     setActiveCity(city.name);
     setSelectedSat(null);
