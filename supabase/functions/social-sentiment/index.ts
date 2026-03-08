@@ -105,7 +105,7 @@ Return ONLY valid JSON:
         method: "POST",
         headers: { Authorization: `Bearer ${GEMINI_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gemini-2.5-flash",
+          model: "gemini-2.0-flash",
           messages: [
             { role: "system", content: "Return ONLY valid JSON. No markdown, no code fences." },
             { role: "user", content: structurePrompt },
