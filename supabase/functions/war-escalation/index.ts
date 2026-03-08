@@ -8,7 +8,7 @@ const corsHeaders = {
 
 let cachedEscalationResult: any = null;
 let escalationCacheTs = 0;
-const ESCALATION_CACHE_TTL_MS = 120_000;
+const ESCALATION_CACHE_TTL_MS = 86_400_000; // 24 hours
 
 const fallbackEscalation = {
   timestamp: new Date().toISOString(),
