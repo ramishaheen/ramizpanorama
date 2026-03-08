@@ -665,8 +665,8 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                 </div>
 
                 {/* Feed Viewer */}
-                <div className="h-44 flex-shrink-0" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)", background: "rgba(0,0,0,0.4)" }}>
-                  <FeedViewer cam={selectedCamera} />
+                <div className="h-56 flex-shrink-0" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)", background: "rgba(0,0,0,0.4)" }}>
+                  <FeedViewer cam={selectedCamera} expanded />
                 </div>
 
                 {/* Actions */}
