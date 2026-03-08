@@ -1283,13 +1283,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   // ===== LIVE FLIGHT TRACKING LAYER =====
   const fetchFlightData = useCallback(async () => {
     if (!layers.flights) return;
-    const map = mapRef.current;
-    let bbox: any;
-    if (map) {
-      const bounds = map.getBounds();
-      bbox = { lamin: bounds.getSouth(), lamax: bounds.getNorth(), lomin: bounds.getWest(), lomax: bounds.getEast() };
-    }
-    if (!bbox) bbox = { lamin: -60, lamax: 70, lomin: -180, lomax: 180 };
+    // Always fetch the whole Middle East region for comprehensive coverage
+    const bbox = { lamin: 10, lamax: 45, lomin: 25, lomax: 70 };
     try {
       const { data, error } = await supabase.functions.invoke("live-flights", { body: bbox });
       if (!error && data?.aircraft) {
