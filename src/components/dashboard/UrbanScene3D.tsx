@@ -364,7 +364,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     };
 
     const initViewer = (container: HTMLElement) => {
-      const { Viewer } = (window as any).mapillary;
+      const { Viewer, NavigationDirection } = (window as any).mapillary;
       if (mapillaryViewerRef.current) {
         mapillaryViewerRef.current.remove();
       }
@@ -372,6 +372,24 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         accessToken: mapillaryToken,
         container,
         imageId: mapillaryImageId,
+        component: {
+          cover: false,
+          direction: true,
+          sequence: true,
+          zoom: true,
+          bearing: true,
+          cache: true,
+          image: true,
+          navigation: true,
+          popup: true,
+          spatial: true,
+        },
+      });
+      // Allow walking/navigating between connected images
+      viewer.on("image", (event: any) => {
+        if (event.image?.id) {
+          setMapillaryImageId(event.image.id);
+        }
       });
       mapillaryViewerRef.current = viewer;
     };
