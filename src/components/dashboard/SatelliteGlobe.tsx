@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Radar, Zap, Rocket, Cpu, Anchor, FlaskConical, Orbit, Wifi } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Zap, Rocket, Cpu, Anchor } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -1194,15 +1194,15 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             const CatIcon = cat === "Military" ? Shield
               : cat === "ISR" ? Eye
               : cat === "Early Warning" ? Zap
-              : cat === "SIGINT/ELINT" ? Radar
+              : cat === "SIGINT/ELINT" ? Eye
               : cat === "Communication" ? Radio
-              : cat === "Data Relay" ? Wifi
+              : cat === "Data Relay" ? Radio
               : cat === "Navigation" ? Navigation
               : cat === "Weather" ? Cloud
               : cat === "Earth Observation" ? Globe
-              : cat === "SAR Imaging" ? Radar
-              : cat === "Scientific" ? FlaskConical
-              : cat === "Space Station" ? Orbit
+              : cat === "SAR Imaging" ? Satellite
+              : cat === "Scientific" ? Crosshair
+              : cat === "Space Station" ? Globe
               : cat === "Technology Demo" ? Cpu
               : cat === "Amateur/Ham" ? Radio
               : cat === "Search & Rescue" ? Anchor
