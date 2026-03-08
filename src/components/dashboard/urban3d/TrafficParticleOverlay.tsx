@@ -13,7 +13,16 @@ interface Road {
   points: { lat: number; lng: number }[];
   highway: string;
   lanes: number;
-  densityLevel: number; // 0..1 where 1 = max congestion
+  densityLevel: number;
+  progressStops: number[];
+}
+
+interface Particle {
+  roadIdx: number;
+  progress: number;
+  speed: number;
+  direction: 1 | -1;
+  laneOffset: number;
 }
 
 /* ── Traffic density colours ─────────────────────────────────── */
