@@ -825,7 +825,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
           const isNav = sat.category === "Navigation";
           const isStation = sat.category === "Space Station";
-          const bodySize = isStation ? 0.9 : isMilOrISR ? 0.62 : isNav ? 0.5 : 0.4;
+          const bodySize = isStation ? 1.6 : isMilOrISR ? 1.2 : isNav ? 1.0 : 0.85;
 
           const bodyGeo = new THREE.OctahedronGeometry(bodySize * 0.5, 0);
           const bodyMat = new THREE.MeshPhongMaterial({
@@ -1133,7 +1133,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 ? ["rgba(255,255,255,0.24)", "rgba(255,255,255,0.05)"]
                 : [orbitColor + "cc", orbitColor + "33"]
         )
-        .pathStroke((seg: any) => (seg.type === "predict" ? 2.2 : seg.type === "catOrbit" ? 1.2 : seg.type === "baseline" ? 0.95 : 1.8))
+        .pathStroke((seg: any) => (seg.type === "predict" ? 2.8 : seg.type === "catOrbit" ? 1.8 : seg.type === "baseline" ? 1.2 : 2.2))
         .pathDashLength((seg: any) => (seg.type === "baseline" || seg.type === "catOrbit" ? 0.014 : 0.02))
         .pathDashGap(0.01)
         .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : seg.type === "catOrbit" ? 4000 : seg.type === "baseline" ? 0 : 3500))
