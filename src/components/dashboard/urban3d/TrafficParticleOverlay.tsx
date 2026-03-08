@@ -157,10 +157,12 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<any>(null);
   const roadsRef = useRef<Road[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number>(0);
   const lastFetchRef = useRef<string>("");
   const endpointIdx = useRef(0);
   const [roadCount, setRoadCount] = useState(0);
+  const [particleCount, setParticleCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const [timeInfo, setTimeInfo] = useState(() => getTimeDensityFactor());
