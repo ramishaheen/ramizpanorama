@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter, Sparkles } from "lucide-react";
+import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter, Sparkles, Globe, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CameraData {
