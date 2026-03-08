@@ -144,15 +144,16 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const bounds = map.getBounds();
         const ne = bounds.getNorthEast();
         const sw = bounds.getSouthWest();
-        const padLat = (ne.lat() - sw.lat()) * 0.15;
-        const padLng = (ne.lng() - sw.lng()) * 0.15;
+        // Pad by 35% so roads extend well beyond the visible tile edges
+        const padLat = (ne.lat() - sw.lat()) * 0.35;
+        const padLng = (ne.lng() - sw.lng()) * 0.35;
         bbox = `${sw.lat() - padLat},${sw.lng() - padLng},${ne.lat() + padLat},${ne.lng() + padLng}`;
       } catch {
-        const delta = zoom >= 20 ? 0.004 : zoom >= 18 ? 0.008 : 0.015;
+        const delta = zoom >= 20 ? 0.006 : zoom >= 18 ? 0.012 : 0.025;
         bbox = `${centerLat - delta},${centerLng - delta},${centerLat + delta},${centerLng + delta}`;
       }
     } else {
-      const delta = zoom >= 20 ? 0.004 : zoom >= 18 ? 0.008 : 0.015;
+      const delta = zoom >= 20 ? 0.006 : zoom >= 18 ? 0.012 : 0.025;
       bbox = `${centerLat - delta},${centerLng - delta},${centerLat + delta},${centerLng + delta}`;
     }
 
