@@ -170,6 +170,42 @@ function getOrbitType(alt: number, _inc?: number, ecc?: number): string {
   return "Other";
 }
 
+// Compute full orbital path (one revolution) as array of {lat, lng}
+function computeOrbitPath(
+  inclination: number, raan: number, meanAnomaly: number,
+  meanMotion: number, eccentricity: number, epochYear: number,
+  epochDay: number, alt: number, steps = 120
+): { lat: number; lng: number }[] {
+  const periodDays = 1 / meanMotion; // one revolution in days
+  const points: { lat: number; lng: number }[] = [];
+  const now = new Date();
+  const startOfYear = new Date(epochYear, 0, 1);
+  const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+
+  for (let i = 0; i <= steps; i++) {
+    const fraction = i / steps;
+    const dayOffset = -periodDays * 0.5 + fraction * periodDays; // half rev behind, half ahead
+    const day = currentDayOfYear + dayOffset;
+    const elapsedDays = day - epochDay;
+    const totalRevs = elapsedDays * meanMotion;
+    const currentMA = (((meanAnomaly + totalRevs * 360) % 360) + 360) % 360;
+    const E = currentMA + (eccentricity * 180) / Math.PI * Math.sin((currentMA * Math.PI) / 180);
+    const nu = E;
+    const argLat = (nu * Math.PI) / 180;
+    const incRad = (inclination * Math.PI) / 180;
+    const lat = Math.asin(Math.sin(incRad) * Math.sin(argLat)) * (180 / Math.PI);
+
+    // Use the time-shifted greenwich offset
+    const shiftedTime = new Date(now.getTime() + dayOffset * 86400000);
+    const greenwichOffset = shiftedTime.getUTCHours() * 15 + shiftedTime.getUTCMinutes() * 0.25 + shiftedTime.getUTCSeconds() * (0.25 / 60);
+    const ascNode = raan - greenwichOffset;
+    const lng = (((ascNode + Math.atan2(Math.cos(incRad) * Math.sin(argLat), Math.cos(argLat)) * (180 / Math.PI)) % 360) + 540) % 360 - 180;
+
+    points.push({ lat: Math.max(-85, Math.min(85, lat)), lng });
+  }
+  return points;
+}
+
 const CITY_PRESETS = [
   { name: "Jordan", lat: 31.95, lng: 35.93 },
   { name: "Israel", lat: 31.77, lng: 35.23 },
@@ -216,6 +252,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [showSearch, setShowSearch] = useState(false);
   const [activeCity, setActiveCity] = useState<string | null>(null);
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
+  const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [orbitColor, setOrbitColor] = useState<string>("#ffffff");
   const satsRef = useRef<SatelliteData[]>([]);
 
   useEffect(() => {
@@ -495,6 +533,12 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .onObjectClick((d: any) => {
           const s = d as SatelliteData;
           setSelectedSat(s);
+          // Compute orbital trail
+          if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
+            const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
+            setOrbitPath(path);
+            setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
+          }
           globe.pointOfView(
             { lat: s.lat, lng: s.lng, altitude: 1.5 },
             1000
@@ -525,6 +569,11 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .onLabelClick((d: any) => {
           const s = d as SatelliteData;
           setSelectedSat(s);
+          if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
+            const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
+            setOrbitPath(path);
+            setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
+          }
           globe.pointOfView(
             { lat: s.lat, lng: s.lng, altitude: 1.5 },
             1000
@@ -552,6 +601,46 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       cancelled = true;
     };
   }, [satellites.length > 0, selectedCat, showLabels]);
+
+  // Render orbit trail when a satellite is selected
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    if (orbitPath && orbitPath.length > 1 && selectedSat) {
+      const segments: { coords: { lat: number; lng: number }[] }[] = [];
+      let currentSegment: { lat: number; lng: number }[] = [orbitPath[0]];
+
+      for (let i = 1; i < orbitPath.length; i++) {
+        const prev = orbitPath[i - 1];
+        const curr = orbitPath[i];
+        if (Math.abs(curr.lng - prev.lng) > 90) {
+          if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+          currentSegment = [curr];
+        } else {
+          currentSegment.push(curr);
+        }
+      }
+      if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+
+      const altitude = Math.min(selectedSat.alt / 6371 * 0.3 + 0.01, 0.7);
+
+      globe
+        .pathsData(segments)
+        .pathPoints('coords')
+        .pathPointLat((p: any) => p.lat)
+        .pathPointLng((p: any) => p.lng)
+        .pathPointAlt(() => altitude)
+        .pathColor(() => [orbitColor + 'cc', orbitColor + '33'])
+        .pathStroke(1.5)
+        .pathDashLength(0.02)
+        .pathDashGap(0.01)
+        .pathDashAnimateTime(4000)
+        .pathTransitionDuration(300);
+    } else {
+      globe.pathsData([]);
+    }
+  }, [orbitPath, selectedSat, orbitColor]);
 
   // Resize
   useEffect(() => {
@@ -828,7 +917,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 </span>
               </div>
               <button
-                onClick={() => setSelectedSat(null)}
+                onClick={() => { setSelectedSat(null); setOrbitPath(null); }}
                 className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"
               >
                 <X className="h-2.5 w-2.5 text-muted-foreground" />
