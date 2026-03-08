@@ -1103,7 +1103,22 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
             <span style="background:rgba(6,182,212,0.15);padding:1px 6px;border-radius:3px;font-size:9px;color:#06b6d4;text-transform:uppercase;">${cam.category}</span>
             ${cam.source_name ? `<span style="background:rgba(168,85,247,0.15);padding:1px 6px;border-radius:3px;font-size:9px;color:#a855f7;">${cam.source_name}</span>` : ""}
-          </div>
+        <button
+          onClick={toggleArabCCTV}
+          disabled={loadingCCTV}
+          className={`flex items-center gap-1.5 backdrop-blur border rounded-md px-2 py-1 shadow-lg transition-all group cursor-pointer ${
+            showArabCCTV
+              ? "bg-primary/20 border-primary/50 shadow-[0_0_12px_hsl(190_100%_50%/0.2)]"
+              : "bg-card/90 border-border hover:bg-primary/10 hover:border-primary/50"
+          }`}
+          title="Show Arab World CCTV on Map"
+        >
+          <Camera className={`h-3.5 w-3.5 ${showArabCCTV ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-primary"}`} />
+          <span className={`text-[9px] font-mono uppercase ${showArabCCTV ? "text-primary" : "text-muted-foreground"}`}>
+            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ARAB CCTV (${arabCameras.length})` : "ARAB CCTV"}
+          </span>
+        </button>
+      </div>
           ${cam.embed_url ? `<a href="${cam.embed_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.3);color:#06b6d4;padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;text-decoration:none;margin-top:4px;">▶ VIEW LIVE FEED</a>` : ""}
         </div>
       `, popupOptions);
