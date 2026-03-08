@@ -1296,6 +1296,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       weatherMarkersRef.current.forEach(m => m.setMap(null));
       rocketMarkersRef.current.forEach(m => m.setMap(null));
       rocketLinesRef.current.forEach(l => l.setMap(null));
+      cityMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
       if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
       if (interpolationRef.current) clearInterval(interpolationRef.current);
