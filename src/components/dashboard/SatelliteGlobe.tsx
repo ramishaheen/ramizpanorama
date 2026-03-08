@@ -730,7 +730,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       setSatellites(limited);
       saveSatelliteCache({ satellites: limited, rawTLE });
       console.log(
-        `[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter((r) => r.status === "fulfilled").length} CelesTrak groups`
+        `[ORBITAL INTEL] Loaded ${limited.length} satellites from ${Object.keys(tleData).length} CelesTrak groups`
       );
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
