@@ -269,7 +269,11 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
     return aircraft.map((ac) => {
       const pos = latLngToPixel(ac.lat, ac.lng, lat, lng, containerSize.w, containerSize.h, VIEWPORT_DEG);
       const visible = pos.x >= -20 && pos.x <= containerSize.w + 20 && pos.y >= -20 && pos.y <= containerSize.h + 20;
-      return { ...ac, px: pos.x, py: pos.y, visible };
+      // Compute trail pixel positions
+      const trail = (trailHistoryRef.current[ac.icao24] || []).map((p) =>
+        latLngToPixel(p.lat, p.lng, lat, lng, containerSize.w, containerSize.h, VIEWPORT_DEG)
+      );
+      return { ...ac, px: pos.x, py: pos.y, visible, trail };
     }).filter((m) => m.visible);
   }, [aircraft, lat, lng, containerSize, showMarkers, showFlights]);
 
@@ -313,6 +317,13 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
             {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
             Markers
           </button>
+          <button
+            onClick={() => setShowTrails(!showTrails)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
+            title="Toggle flight trail lines"
+          >
+            <Navigation className="h-3 w-3" />
+            Trails
           <button
             onClick={() => fetchFlights()}
             className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all"
