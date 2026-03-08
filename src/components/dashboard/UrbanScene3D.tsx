@@ -1,11 +1,22 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio } from "lucide-react";
+
+interface IntelEvent {
+  title: string;
+  lat: number;
+  lng: number;
+  severity?: string;
+  source?: string;
+  type?: string;
+  summary?: string;
+}
 
 interface UrbanSceneProps {
   onClose: () => void;
   initialCoords?: { lat: number; lng: number };
+  initialEvent?: IntelEvent;
 }
 
 interface Aircraft {
