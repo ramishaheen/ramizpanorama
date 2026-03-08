@@ -516,13 +516,41 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
   }, [conflictPoints, showHeatmap]);
 
-  // ===== REAL-TIME VESSEL LAYER =====
+  // ===== REAL-TIME VESSEL LAYER (Live AIS API) =====
   useEffect(() => {
     const fetchVessels = async () => {
       try {
-        const { data } = await supabase.from("vessels").select("*");
-        if (data) setVessels(data);
-      } catch (e) { console.error("Vessel fetch error:", e); }
+        const map = mapInstanceRef.current;
+        let bbox: any;
+        if (map) {
+          const bounds = map.getBounds();
+          if (bounds) {
+            const ne = bounds.getNorthEast();
+            const sw = bounds.getSouthWest();
+            bbox = { lamin: sw.lat(), lamax: ne.lat(), lomin: sw.lng(), lomax: ne.lng() };
+          }
+        }
+        if (!bbox) bbox = { lamin: lat - 10, lamax: lat + 10, lomin: lng - 15, lomax: lng + 15 };
+
+        // Try live AIS API first
+        const { data, error } = await supabase.functions.invoke("ais-vessels", { body: bbox });
+        if (!error && data?.vessels && data.vessels.length > 0) {
+          setVessels(data.vessels);
+          setVesselSource(data.source || "live");
+        } else {
+          // Fallback to DB
+          const { data: dbData } = await supabase.from("vessels").select("*");
+          if (dbData && dbData.length > 0) {
+            setVessels(dbData);
+            setVesselSource("database");
+          }
+        }
+      } catch (e) {
+        console.error("Vessel fetch error:", e);
+        // DB fallback
+        const { data: dbData } = await supabase.from("vessels").select("*");
+        if (dbData) { setVessels(dbData); setVesselSource("database"); }
+      }
     };
     fetchVessels();
     const iv = setInterval(fetchVessels, 30_000);
