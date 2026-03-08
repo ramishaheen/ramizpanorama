@@ -1824,6 +1824,16 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         />
       )}
 
+      {showResponseMap && (
+        <ResponseMapModal
+          onClose={() => setShowResponseMap(false)}
+          onFlyTo={(lat, lng, zoom) => {
+            setShowResponseMap(false);
+            mapRef.current?.flyTo([lat, lng], zoom || 8, { duration: 1.5 });
+          }}
+        />
+      )}
+
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
     </div>
