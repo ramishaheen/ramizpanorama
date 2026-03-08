@@ -354,6 +354,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         };
       });
       satsRef.current = updated;
+      setLastPropagated(new Date());
       const filtered = catFilter
         ? updated.filter((s) => s.category === catFilter)
         : updated;
@@ -617,6 +618,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length}{" "}
             GEO:{" "}
             {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
+          </div>
+          <div className="text-white/60">
+            LAST ORBIT UPDATE: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
           </div>
         </div>
       </div>
