@@ -1220,6 +1220,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     const group = cityGroupRef.current;
     if (!group) return;
     group.clearLayers();
+    if (!layers.cities) return;
 
     ME_CITY_LANDMARKS.forEach((city) => {
       const icon = L.divIcon({
@@ -1248,7 +1249,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);
         ">
           <div style="position:relative;height:120px;overflow:hidden;">
-            <img src="${city.image}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />
+            <img src="${city.image}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.height='0'" />
             <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,14,20,0.9),transparent 60%);"></div>
             <div style="position:absolute;bottom:6px;left:8px;right:8px;">
               <div style="font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.8);">${city.landmark}</div>
@@ -1277,7 +1278,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         });
       group.addLayer(marker);
     });
-  }, [ME_CITY_LANDMARKS]);
+  }, [ME_CITY_LANDMARKS, layers.cities]);
 
   // ===== LIVE FLIGHT TRACKING LAYER =====
   const fetchFlightData = useCallback(async () => {
