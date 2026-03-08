@@ -818,8 +818,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
     if (!globeElRef.current) {
       globeElRef.current = document.createElement("div");
-      globeElRef.current.style.cssText =
-        "width:100%;height:100%;position:absolute;inset:0;";
+      globeElRef.current.style.cssText = "width:100%;height:100%;position:absolute;inset:0;";
       wrapperRef.current.appendChild(globeElRef.current);
     }
 
@@ -827,14 +826,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
     const initGlobe = async () => {
       try {
-        const [mod, THREE] = await Promise.all([
-          import("globe.gl"),
-          import("three"),
-        ]);
+        const [mod, THREE] = await Promise.all([import("globe.gl"), import("three")]);
         const Globe = mod.default;
-        if (cancelled || !globeElRef.current) return;
-
-        if (globeRef.current) return;
+        if (cancelled || !globeElRef.current || globeRef.current) return;
 
         const el = globeElRef.current;
 
@@ -849,39 +843,28 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
           const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
           const bodyMat = new THREE.MeshPhongMaterial({
-            color: color,
+            color,
             emissive: color,
             emissiveIntensity: 0.45,
             transparent: true,
             opacity: 0.9,
             shininess: 80,
           });
-          const body = new THREE.Mesh(bodyGeo, bodyMat);
-          group.add(body);
+
+          group.add(new THREE.Mesh(bodyGeo, bodyMat));
 
           const glowGeo = new THREE.SphereGeometry(bodySize * 0.18, 6, 6);
-          const glowMat = new THREE.MeshBasicMaterial({
-            color: color,
-            transparent: true,
-            opacity: 0.75,
-          });
-          const glow = new THREE.Mesh(glowGeo, glowMat);
-          group.add(glow);
-
+          const glowMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.75 });
+          group.add(new THREE.Mesh(glowGeo, glowMat));
           group.rotation.y = Math.random() * Math.PI * 2;
+
           return group;
         };
 
         const globe = new Globe(el)
-          .globeImageUrl(
-            "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-          )
-          .bumpImageUrl(
-            "https://unpkg.com/three-globe/example/img/earth-topology.png"
-          )
-          .backgroundImageUrl(
-            "https://unpkg.com/three-globe/example/img/night-sky.png"
-          )
+          .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
+          .bumpImageUrl("https://unpkg.com/three-globe/example/img/earth-topology.png")
+          .backgroundImageUrl("https://unpkg.com/three-globe/example/img/night-sky.png")
           .width(el.clientWidth)
           .height(el.clientHeight)
           .atmosphereColor("#1a6b8a")
@@ -897,23 +880,32 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .onObjectClick((d: any) => {
             const s = d as SatelliteData;
             setSelectedSat(s);
-            if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
-              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt, 180);
+            if (
+              s.inclination != null &&
+              s.raan != null &&
+              s.meanAnomaly != null &&
+              s.meanMotion != null &&
+              s.eccentricity != null &&
+              s.epochYear != null &&
+              s.epochDay != null
+            ) {
+              const path = computeOrbitPath(
+                s.inclination,
+                s.raan,
+                s.meanAnomaly,
+                s.meanMotion,
+                s.eccentricity,
+                s.epochYear,
+                s.epochDay,
+                s.alt,
+                180
+              );
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
-            globe.pointOfView(
-              { lat: s.lat, lng: s.lng, altitude: 1.5 },
-              1000
-            );
+            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: 1.5 }, 1000);
           })
-          .onObjectHover((d: any) => {
-            if (d) {
-              setHoveredSat(d as SatelliteData);
-            } else {
-              setHoveredSat(null);
-            }
-          })
+          .onObjectHover((d: any) => setHoveredSat(d ? (d as SatelliteData) : null))
           .labelsData([])
           .labelLat("lat")
           .labelLng("lng")
@@ -932,23 +924,38 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .onLabelClick((d: any) => {
             const s = d as SatelliteData;
             setSelectedSat(s);
-            if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
-              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt, 180);
+            if (
+              s.inclination != null &&
+              s.raan != null &&
+              s.meanAnomaly != null &&
+              s.meanMotion != null &&
+              s.eccentricity != null &&
+              s.epochYear != null &&
+              s.epochDay != null
+            ) {
+              const path = computeOrbitPath(
+                s.inclination,
+                s.raan,
+                s.meanAnomaly,
+                s.meanMotion,
+                s.eccentricity,
+                s.epochYear,
+                s.epochDay,
+                s.alt,
+                180
+              );
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
-            globe.pointOfView(
-              { lat: s.lat, lng: s.lng, altitude: 1.5 },
-              1000
-            );
+            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: 1.5 }, 1000);
           })
           .ringsData(OSINT_MARKERS)
           .ringLat((d: any) => d.lat)
           .ringLng((d: any) => d.lng)
           .ringAltitude(0.002)
-          .ringMaxRadius((d: any) => d.type === "conflict" ? 3 : d.type === "naval" ? 2.5 : 1.5)
-          .ringPropagationSpeed((d: any) => d.severity === "critical" ? 4 : d.severity === "high" ? 2.5 : 1.5)
-          .ringRepeatPeriod((d: any) => d.severity === "critical" ? 600 : d.severity === "high" ? 900 : 1200)
+          .ringMaxRadius((d: any) => (d.type === "conflict" ? 3 : d.type === "naval" ? 2.5 : 1.5))
+          .ringPropagationSpeed((d: any) => (d.severity === "critical" ? 4 : d.severity === "high" ? 2.5 : 1.5))
+          .ringRepeatPeriod((d: any) => (d.severity === "critical" ? 600 : d.severity === "high" ? 900 : 1200))
           .ringColor((d: any) => {
             const colors: Record<string, (t: number) => string> = {
               conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
@@ -963,7 +970,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .arcStartLng((d: any) => d.startLng)
           .arcEndLat((d: any) => d.endLat)
           .arcEndLng((d: any) => d.endLng)
-          .arcColor((d: any) => [d.color + 'cc', d.color + '44'])
+          .arcColor((d: any) => [d.color + "cc", d.color + "44"])
           .arcAltitudeAutoScale(0.3)
           .arcStroke(0.6)
           .arcDashLength(0.4)
@@ -974,19 +981,25 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .htmlLng((d: any) => d.lng)
           .htmlAltitude(0.005)
           .htmlElement((d: any) => {
-            const el = document.createElement('div');
-            el.style.cssText = `pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;`;
-            const colors: Record<string, string> = { conflict: '#ef4444', military: '#fb923c', naval: '#38bdf8', radar: '#a855f7' };
-            el.style.color = colors[d.type] || '#fb923c';
-            el.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            el.style.borderLeft = `2px solid ${colors[d.type] || '#fb923c'}`;
-            el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
+            const el = document.createElement("div");
+            el.style.cssText =
+              "pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;";
+            const colors: Record<string, string> = {
+              conflict: "#ef4444",
+              military: "#fb923c",
+              naval: "#38bdf8",
+              radar: "#a855f7",
+            };
+            const c = colors[d.type] || "#fb923c";
+            el.style.color = c;
+            el.style.backgroundColor = "rgba(0,0,0,0.5)";
+            el.style.borderLeft = `2px solid ${c}`;
+            el.innerHTML = `<span style=\"opacity:0.7\">▸</span> ${d.label}`;
             return el;
           });
 
         const scene = globe.scene();
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
         dirLight.position.set(5, 3, 5);
         scene.add(dirLight);
@@ -1005,6 +1018,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     };
 
     initGlobe();
+
     return () => {
       cancelled = true;
     };
@@ -1014,12 +1028,12 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
+
     const filtered = selectedCat
       ? satellites.filter((s) => s.category === selectedCat)
       : satellites;
 
-    const maxRenderable = 1800;
-    globe.objectsData(filtered.slice(0, maxRenderable));
+    globe.objectsData(filtered.slice(0, 1800));
   }, [satellites, selectedCat]);
 
   // Update label layer independently
@@ -1033,7 +1047,18 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
     const labels = showLabels
       ? filtered
-          .filter((s) => ["Military", "ISR", "Early Warning", "SIGINT/ELINT", "Navigation", "SAR Imaging", "Space Station", "Scientific"].includes(s.category))
+          .filter((s) =>
+            [
+              "Military",
+              "ISR",
+              "Early Warning",
+              "SIGINT/ELINT",
+              "Navigation",
+              "SAR Imaging",
+              "Space Station",
+              "Scientific",
+            ].includes(s.category)
+          )
           .slice(0, 220)
       : [];
 
@@ -1065,12 +1090,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       if (currentSegment.length > 1) allSegments.push({ coords: currentSegment, type });
     };
 
-    // Selected satellite precise trail
     if (orbitPath && orbitPath.length > 1 && selectedSat) {
       pushSegmentedPath(orbitPath, "orbit");
     }
 
-    // Baseline orbital context (shown when no satellite selected)
     if (!selectedSat && rawTLERef.current.length > 0) {
       const source = selectedCat
         ? rawTLERef.current.filter((r) => r.category === selectedCat)
@@ -1092,7 +1115,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       });
     }
 
-    // Predicted future track (green dashed)
     if (predictionTrack && predictionTrack.length > 1) {
       pushSegmentedPath(predictionTrack, "predict");
     }
@@ -1102,21 +1124,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
       globe
         .pathsData(allSegments)
-        .pathPoints('coords')
+        .pathPoints("coords")
         .pathPointLat((p: any) => p.lat)
         .pathPointLng((p: any) => p.lng)
         .pathPointAlt(() => altitude)
         .pathColor((seg: any) =>
           seg.type === "predict"
-            ? ['#22c55ecc', '#22c55e33']
+            ? ["#22c55ecc", "#22c55e33"]
             : seg.type === "baseline"
-              ? ['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.05)']
-              : [orbitColor + 'cc', orbitColor + '33']
+              ? ["rgba(255,255,255,0.24)", "rgba(255,255,255,0.05)"]
+              : [orbitColor + "cc", orbitColor + "33"]
         )
-        .pathStroke((seg: any) => seg.type === "predict" ? 2 : seg.type === "baseline" ? 0.65 : 1.5)
-        .pathDashLength((seg: any) => seg.type === "baseline" ? 0.008 : 0.02)
-        .pathDashGap((seg: any) => seg.type === "baseline" ? 0.01 : 0.01)
-        .pathDashAnimateTime((seg: any) => seg.type === "predict" ? 6000 : seg.type === "baseline" ? 0 : 4000)
+        .pathStroke((seg: any) => (seg.type === "predict" ? 2 : seg.type === "baseline" ? 0.65 : 1.5))
+        .pathDashLength((seg: any) => (seg.type === "baseline" ? 0.008 : 0.02))
+        .pathDashGap(0.01)
+        .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : seg.type === "baseline" ? 0 : 4000))
         .pathTransitionDuration(250);
     } else {
       globe.pathsData([]);
