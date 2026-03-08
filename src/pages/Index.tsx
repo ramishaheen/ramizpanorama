@@ -130,6 +130,7 @@ const Index = () => {
     nuclear: true,
     airQuality: false,
     aisVessels: true,
+    cities: true,
   });
 
   const initialLayout = loadLayout();
