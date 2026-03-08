@@ -5,74 +5,89 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const regions = ["Eastern Mediterranean", "Red Sea", "Persian Gulf", "Strait of Hormuz", "Gulf of Aden", "Sinai Peninsula", "Golan Heights", "Southern Lebanon", "Gaza Strip", "West Bank", "Northern Iraq", "Syrian Desert", "Yemen Coast", "Saudi Border", "Iranian Plateau", "Bab el-Mandeb", "Suez Canal Zone", "Jordan Valley", "Negev Desert", "Khuzestan"];
+// All Arab capitals + conflict cities with coords
+const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+  Baghdad: { lat: 33.31, lng: 44.37 },
+  Tehran: { lat: 35.69, lng: 51.39 },
+  Beirut: { lat: 33.89, lng: 35.50 },
+  Damascus: { lat: 33.51, lng: 36.29 },
+  Amman: { lat: 31.95, lng: 35.93 },
+  Gaza: { lat: 31.50, lng: 34.47 },
+  Jerusalem: { lat: 31.77, lng: 35.23 },
+  "Tel Aviv": { lat: 32.07, lng: 34.78 },
+  Mosul: { lat: 36.34, lng: 43.13 },
+  Aleppo: { lat: 36.20, lng: 37.15 },
+  Erbil: { lat: 36.19, lng: 44.01 },
+  Riyadh: { lat: 24.71, lng: 46.67 },
+  Dubai: { lat: 25.20, lng: 55.27 },
+  "Abu Dhabi": { lat: 24.45, lng: 54.65 },
+  Doha: { lat: 25.29, lng: 51.53 },
+  "Kuwait City": { lat: 29.38, lng: 47.99 },
+  Muscat: { lat: 23.59, lng: 58.54 },
+  Manama: { lat: 26.23, lng: 50.59 },
+  Cairo: { lat: 30.04, lng: 31.24 },
+  Algiers: { lat: 36.75, lng: 3.06 },
+  Tunis: { lat: 36.81, lng: 10.18 },
+  Rabat: { lat: 34.02, lng: -6.83 },
+  Tripoli: { lat: 32.90, lng: 13.18 },
+  Sanaa: { lat: 15.37, lng: 44.21 },
+  Aden: { lat: 12.79, lng: 45.04 },
+  Khartoum: { lat: 15.60, lng: 32.53 },
+  Mogadishu: { lat: 2.05, lng: 45.32 },
+  Djibouti: { lat: 11.59, lng: 43.15 },
+};
+
+const cityNames = Object.keys(CITY_COORDS);
+
 const geoTypes = ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"] as const;
 const severities = ["low", "medium", "high", "critical"] as const;
-const vesselNames = ["USS EISENHOWER", "USS GERALD FORD", "USS BATAAN", "INS MAGEN", "IRGCN SHAHID SOLEIMANI", "HMS DIAMOND", "FS ALSACE", "HMAS HOBART", "COSCO SHIPPING ROSE", "EVER GIVEN II", "PACIFIC TRADER", "IRANIAN TANKER SUEZ", "HOUTHI PATROL 7", "SAUDI COAST GUARD 12"];
+
 const titles: Record<string, string[]> = {
   MILITARY: [
-    "IDF airstrikes reported in southern Lebanon",
-    "IRGC naval drill detected near Strait of Hormuz",
-    "Houthi anti-ship missile launch detected",
-    "Iron Dome interceptions reported in northern Israel",
-    "Hezbollah drone incursion detected",
-    "US B-52 strategic patrol over Persian Gulf",
-    "Israeli submarine movement near Iranian waters",
-    "SAM battery activation detected in Syria",
-    "Arrow-3 system test intercept confirmed",
-    "Turkish military repositioning near Iraqi border",
+    "Airstrikes reported near city center",
+    "Military convoy movement detected",
+    "Anti-aircraft system activated",
+    "Drone incursion detected over restricted zone",
+    "Explosion reported near military base",
+    "SAM battery activation detected",
+    "Artillery fire reported on outskirts",
+    "Military helicopter activity above city",
+    "Sniper fire reported in contested area",
+    "IED detonation on main highway",
   ],
   DIPLOMATIC: [
-    "UN Security Council emergency session on Iran",
-    "Qatar mediating ceasefire talks",
-    "US envoy arrives in Riyadh for de-escalation",
-    "EU sanctions package against IRGC entities",
-    "Egyptian-brokered humanitarian corridor proposed",
-    "Jordan recalls ambassador from Tehran",
-    "Saudi-Iran back-channel talks reported",
-    "Abraham Accords partner summit convened",
+    "Emergency diplomatic meeting convened",
+    "Ambassador recalled amid tensions",
+    "UN envoy arrives for de-escalation talks",
+    "Sanctions announced against local entities",
+    "Ceasefire negotiations underway",
+    "Diplomatic corridor established",
+    "Embassy staff evacuation ordered",
+    "Peace talks stalled over key demands",
   ],
   ECONOMIC: [
-    "Oil prices spike on Strait of Hormuz threat",
-    "Red Sea shipping rerouting adds $1M per vessel",
-    "Israeli shekel under pressure amid escalation",
-    "Suez Canal traffic reduced 40%",
-    "Gulf state sovereign funds reallocating",
-    "Iranian rial hits record low",
-    "Insurance premiums surge for Middle East shipping",
-    "Tourism cancellations across Levant region",
+    "Fuel prices surge amid supply disruption",
+    "Currency under pressure from regional instability",
+    "Port operations suspended due to threat",
+    "Trade route rerouted adding significant costs",
+    "Banking sector faces liquidity concerns",
+    "Power grid disruption reported",
+    "Food supply chain disrupted by conflict",
+    "Insurance premiums spike for regional transit",
   ],
   HUMANITARIAN: [
-    "UNRWA reports mass displacement in Gaza",
-    "Red Cross aid convoy blocked at Lebanese border",
-    "WHO reports hospital capacity exceeded in Beirut",
-    "Refugee flow detected toward Jordan border",
-    "Water infrastructure damaged in northern Gaza",
-    "Civilian evacuation ordered in southern Lebanon",
-    "Medical supply shortage in Yemen's Hodeidah",
-    "UNHCR emergency shelter deployment in Iraq",
+    "Mass displacement reported from conflict zone",
+    "Aid convoy blocked at checkpoint",
+    "Hospital capacity exceeded in city center",
+    "Refugee flow detected toward border crossing",
+    "Water infrastructure damaged by shelling",
+    "Civilian evacuation order issued",
+    "Medical supply shortage critical",
+    "Emergency shelter deployment underway",
   ],
 };
 
-const rocketNames = [
-  "SCUD-B", "Iskander-M", "DF-21D", "Fateh-110", "Houthi Burkan-3",
-  "KN-23", "Shahab-3", "BrahMos", "Tochka-U", "Qiam-1",
-  "Zulfiqar", "Emad", "Ghadr-110", "Sejjil-2", "Musudan",
-];
-
-const rocketTypes = ["BALLISTIC", "CRUISE", "HYPERSONIC", "ICBM", "SAM"];
-
-// Known conflict hotspot launch/target pairs
-const rocketScenarios = [
-  { origin: { lat: 15.4, lng: 44.2 }, target: { lat: 24.5, lng: 39.6 }, name: "Yemen → Saudi Arabia" },
-  { origin: { lat: 33.3, lng: 44.4 }, target: { lat: 32.0, lng: 35.8 }, name: "Iraq → Levant" },
-  { origin: { lat: 35.7, lng: 51.4 }, target: { lat: 25.3, lng: 55.3 }, name: "Iran → Gulf" },
-  { origin: { lat: 39.0, lng: 125.7 }, target: { lat: 35.9, lng: 128.6 }, name: "DPRK → Korean Peninsula" },
-  { origin: { lat: 48.5, lng: 37.5 }, target: { lat: 50.4, lng: 30.5 }, name: "Eastern Front → West" },
-  { origin: { lat: 31.5, lng: 34.5 }, target: { lat: 33.8, lng: 35.8 }, name: "Levant → Lebanon" },
-  { origin: { lat: 33.5, lng: 36.3 }, target: { lat: 32.0, lng: 35.8 }, name: "Syria → Levant" },
-  { origin: { lat: 27.0, lng: 49.6 }, target: { lat: 24.7, lng: 46.7 }, name: "Gulf → Riyadh" },
-];
+const vesselNames = ["USS EISENHOWER", "USS GERALD FORD", "USS BATAAN", "INS MAGEN", "IRGCN SHAHID SOLEIMANI", "HMS DIAMOND", "FS ALSACE", "HMAS HOBART", "COSCO SHIPPING ROSE", "EVER GIVEN II", "PACIFIC TRADER", "IRANIAN TANKER SUEZ", "HOUTHI PATROL 7", "SAUDI COAST GUARD 12"];
 
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -80,10 +95,6 @@ function pick<T>(arr: readonly T[]): T {
 
 function rand(min: number, max: number) {
   return Math.round((Math.random() * (max - min) + min) * 10) / 10;
-}
-
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
 }
 
 Deno.serve(async (req) => {
@@ -99,30 +110,26 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString();
   const actions: string[] = [];
 
-  // 1. Drift a vessel slightly from its current position (realistic movement)
+  // 1. Drift a vessel
   const vesselId = `v-00${Math.ceil(Math.random() * 8)}`;
   const { data: currentVessel } = await supabase.from("vessels").select("lat,lng,heading,speed").eq("id", vesselId).single();
   if (currentVessel) {
-    // Convert heading to radians and drift by ~0.05-0.15 degrees based on speed
     const headingRad = (currentVessel.heading || 0) * Math.PI / 180;
-    const drift = 0.02 + Math.random() * 0.08; // small realistic drift
+    const drift = 0.02 + Math.random() * 0.08;
     let newLat = currentVessel.lat + drift * Math.cos(headingRad);
     let newLng = currentVessel.lng + drift * Math.sin(headingRad);
-    // Keep within Middle East operational area (lat 12-42, lng 24-63)
-    if (newLat < 12 || newLat > 42 || newLng < 24 || newLng > 63) {
-      // Reverse heading if hitting bounds
+    if (newLat < 2 || newLat > 42 || newLng < -10 || newLng > 63) {
       const newHeading = (currentVessel.heading + 180) % 360;
       newLat = currentVessel.lat - drift * Math.cos(headingRad);
       newLng = currentVessel.lng - drift * Math.sin(headingRad);
       await supabase.from("vessels").update({
-        lat: Math.max(12, Math.min(42, newLat)),
-        lng: Math.max(24, Math.min(63, newLng)),
+        lat: Math.max(2, Math.min(42, newLat)),
+        lng: Math.max(-10, Math.min(63, newLng)),
         heading: newHeading,
         speed: rand(5, 22),
         timestamp: now,
       }).eq("id", vesselId);
     } else {
-      // Small random heading adjustment (±5 degrees)
       const headingDrift = (Math.random() - 0.5) * 10;
       await supabase.from("vessels").update({
         lat: newLat,
@@ -135,37 +142,52 @@ Deno.serve(async (req) => {
   }
   actions.push(`Drifted vessel ${vesselId}`);
 
-  // 2. Add a new geo alert
-  const geoType = pick(geoTypes);
-  const region = pick(regions);
-  const alertId = `ga-live-${Date.now()}`;
-  await supabase.from("geo_alerts").insert({
-    id: alertId,
-    type: geoType,
-    region,
-    title: pick(titles[geoType]),
-    summary: `Live intelligence update for ${region}. Automated monitoring detected activity change.`,
-    severity: pick(severities),
-    source: "WarOS-RamiZPanorma Auto-Monitor",
-    timestamp: now,
-    lat: rand(12, 42),
-    lng: rand(24, 63),
-  });
-  actions.push(`Inserted geo alert ${alertId}`);
+  // 2. Generate geo alerts for 2-3 random cities
+  const selectedCities = [];
+  const shuffled = [...cityNames].sort(() => Math.random() - 0.5);
+  const numCities = 2 + Math.floor(Math.random() * 2); // 2-3 cities per tick
+  for (let i = 0; i < numCities && i < shuffled.length; i++) {
+    selectedCities.push(shuffled[i]);
+  }
 
-  // 3. Add a timeline event
-  const teId = `te-live-${Date.now()}`;
-  const teTypes = ["airspace", "maritime", "alert", "diplomatic"] as const;
-  await supabase.from("timeline_events").insert({
-    id: teId,
-    type: pick(teTypes),
-    title: `${pick(titles[geoType])} — ${region}`,
-    severity: pick(severities),
-    timestamp: now,
-  });
-  actions.push(`Inserted timeline event ${teId}`);
+  for (const cityName of selectedCities) {
+    const coords = CITY_COORDS[cityName];
+    const geoType = pick(geoTypes);
+    const severity = pick(severities);
+    const alertId = `ga-live-${cityName.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    // Small random offset within city (±0.05 degrees ≈ 5km)
+    const lat = coords.lat + (Math.random() - 0.5) * 0.1;
+    const lng = coords.lng + (Math.random() - 0.5) * 0.1;
 
-  // 4. Update risk score
+    await supabase.from("geo_alerts").insert({
+      id: alertId,
+      type: geoType,
+      region: cityName,
+      title: `[${cityName}] ${pick(titles[geoType])}`,
+      summary: `Live intelligence update for ${cityName}. Automated monitoring detected activity change.`,
+      severity,
+      source: "WarOS Auto-Monitor",
+      timestamp: now,
+      lat,
+      lng,
+    });
+    actions.push(`Inserted geo alert for ${cityName}`);
+
+    // Also insert a timeline event for each alert
+    const teId = `te-live-${cityName.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const teTypes = ["airspace", "maritime", "alert", "diplomatic"] as const;
+    const teType = geoType === "MILITARY" ? "alert" : geoType === "DIPLOMATIC" ? "diplomatic" : geoType === "ECONOMIC" ? "maritime" : pick(teTypes);
+    await supabase.from("timeline_events").insert({
+      id: teId,
+      type: teType,
+      title: `[${cityName}] ${pick(titles[geoType])}`,
+      severity,
+      timestamp: now,
+    });
+    actions.push(`Inserted timeline event for ${cityName}`);
+  }
+
+  // 3. Update risk score
   const { data: currentRisk } = await supabase
     .from("risk_scores")
     .select("*")
@@ -195,8 +217,8 @@ Deno.serve(async (req) => {
     .like("id", "ga-live-%")
     .order("timestamp", { ascending: false });
 
-  if (oldAlerts && oldAlerts.length > 20) {
-    const toDelete = oldAlerts.slice(20).map((a) => a.id);
+  if (oldAlerts && oldAlerts.length > 50) {
+    const toDelete = oldAlerts.slice(50).map((a) => a.id);
     await supabase.from("geo_alerts").delete().in("id", toDelete);
     actions.push(`Pruned ${toDelete.length} old alerts`);
   }
@@ -207,8 +229,8 @@ Deno.serve(async (req) => {
     .like("id", "te-live-%")
     .order("timestamp", { ascending: false });
 
-  if (oldEvents && oldEvents.length > 30) {
-    const toDelete = oldEvents.slice(30).map((e) => e.id);
+  if (oldEvents && oldEvents.length > 80) {
+    const toDelete = oldEvents.slice(80).map((e) => e.id);
     await supabase.from("timeline_events").delete().in("id", toDelete);
     actions.push(`Pruned ${toDelete.length} old timeline events`);
   }

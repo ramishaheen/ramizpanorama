@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 export interface CrisisSource {
   name: string;
@@ -42,22 +41,41 @@ export interface CrisisIntelData {
   timestamp: string;
 }
 
-const CITY_COORDS: Record<string, { lat: number; lng: number; zoom: number }> = {
+export const CITY_COORDS: Record<string, { lat: number; lng: number; zoom: number }> = {
+  // Levant & Conflict
   Baghdad: { lat: 33.31, lng: 44.37, zoom: 12 },
   Tehran: { lat: 35.69, lng: 51.39, zoom: 12 },
   Beirut: { lat: 33.89, lng: 35.50, zoom: 13 },
   Damascus: { lat: 33.51, lng: 36.29, zoom: 12 },
   Amman: { lat: 31.95, lng: 35.93, zoom: 12 },
+  Gaza: { lat: 31.50, lng: 34.47, zoom: 13 },
+  Jerusalem: { lat: 31.77, lng: 35.23, zoom: 13 },
+  "Tel Aviv": { lat: 32.07, lng: 34.78, zoom: 13 },
+  Mosul: { lat: 36.34, lng: 43.13, zoom: 12 },
+  Aleppo: { lat: 36.20, lng: 37.15, zoom: 12 },
+  Erbil: { lat: 36.19, lng: 44.01, zoom: 12 },
+  // Gulf
   Riyadh: { lat: 24.71, lng: 46.67, zoom: 12 },
   Dubai: { lat: 25.20, lng: 55.27, zoom: 12 },
+  "Abu Dhabi": { lat: 24.45, lng: 54.65, zoom: 12 },
+  Doha: { lat: 25.29, lng: 51.53, zoom: 12 },
+  "Kuwait City": { lat: 29.38, lng: 47.99, zoom: 12 },
+  Muscat: { lat: 23.59, lng: 58.54, zoom: 12 },
+  Manama: { lat: 26.23, lng: 50.59, zoom: 13 },
+  // Egypt & North Africa
   Cairo: { lat: 30.04, lng: 31.24, zoom: 12 },
-  Sanaa: { lat: 15.37, lng: 44.21, zoom: 12 },
-  Gaza: { lat: 31.50, lng: 34.47, zoom: 13 },
-  Khartoum: { lat: 15.60, lng: 32.53, zoom: 12 },
+  Algiers: { lat: 36.75, lng: 3.06, zoom: 12 },
+  Tunis: { lat: 36.81, lng: 10.18, zoom: 12 },
+  Rabat: { lat: 34.02, lng: -6.83, zoom: 12 },
   Tripoli: { lat: 32.90, lng: 13.18, zoom: 12 },
+  // Yemen & Horn of Africa
+  Sanaa: { lat: 15.37, lng: 44.21, zoom: 12 },
+  Aden: { lat: 12.79, lng: 45.04, zoom: 12 },
+  Khartoum: { lat: 15.60, lng: 32.53, zoom: 12 },
+  Mogadishu: { lat: 2.05, lng: 45.32, zoom: 12 },
+  Djibouti: { lat: 11.59, lng: 43.15, zoom: 12 },
 };
 
-// Map geo_alert types to crisis event types
 function mapAlertType(geoType: string): CrisisEvent["type"] {
   switch (geoType) {
     case "MILITARY": return "incident";
@@ -81,28 +99,25 @@ function mapSeverityToConfidence(severity: string): { confidence: number; label:
 function mapRocketStatus(status: string): CrisisEvent["type"] {
   switch (status) {
     case "impact": return "incident";
-    case "intercepted": return "road_closure"; // debris field
+    case "intercepted": return "road_closure";
     case "in_flight":
     case "launched": return "evacuation";
     default: return "incident";
   }
 }
 
-/** Fetch geo_alerts and rockets near a city from the database */
 async function fetchDbIncidents(city: string): Promise<CrisisEvent[]> {
   const coords = CITY_COORDS[city];
   if (!coords) return [];
 
-  const radius = 3; // degrees (~330km)
+  const radius = 3;
   const events: CrisisEvent[] = [];
 
-  // Fetch geo_alerts and rockets in parallel
   const [alertsRes, rocketsRes] = await Promise.all([
     supabase.from("geo_alerts").select("*"),
     supabase.from("rockets").select("*"),
   ]);
 
-  // Filter geo_alerts near city
   if (alertsRes.data) {
     const nearby = alertsRes.data.filter((a) => {
       const dist = Math.sqrt(Math.pow(a.lat - coords.lat, 2) + Math.pow(a.lng - coords.lng, 2));
@@ -133,7 +148,6 @@ async function fetchDbIncidents(city: string): Promise<CrisisEvent[]> {
     }
   }
 
-  // Filter rockets near city (origin, target, or current position)
   if (rocketsRes.data) {
     const nearby = rocketsRes.data.filter((r) => {
       const distOrigin = Math.sqrt(Math.pow(r.origin_lat - coords.lat, 2) + Math.pow(r.origin_lng - coords.lng, 2));
@@ -183,49 +197,39 @@ export function useCrisisIntel(city: string) {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<CrisisSnapshot[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const cityRef = useRef(city);
+  cityRef.current = city;
 
-  const fetch_ = useCallback(async () => {
-    if (!city) return;
+  const fetchData = useCallback(async () => {
+    const currentCity = cityRef.current;
+    if (!currentCity) return;
     setLoading(true);
     setError(null);
 
-    const coords = CITY_COORDS[city] || { lat: 33.31, lng: 44.37, zoom: 12 };
+    const coords = CITY_COORDS[currentCity] || { lat: 33.31, lng: 44.37, zoom: 12 };
 
     try {
-      // Always fetch DB incidents (fast, no rate limits)
-      const dbEvents = await fetchDbIncidents(city);
+      const dbEvents = await fetchDbIncidents(currentCity);
 
-      // Try AI edge function in parallel
       let aiEvents: CrisisEvent[] = [];
       let aiSummary = "";
       let aiThreatLevel = "moderate";
       let aiSuccess = false;
 
       try {
-        const res = await supabase.functions.invoke("crisis-intel", {
-          body: { city },
-        });
-
-        const fnError = res?.error;
-        const fnData = res?.data;
-
-        if (fnError) {
-          // All AI errors are silent — DB data fills in
-          console.log("Crisis AI unavailable:", fnError.message || fnError);
-        } else if (fnData && !fnData.error) {
-          aiEvents = fnData.events || [];
-          aiSummary = fnData.city_summary || "";
-          aiThreatLevel = fnData.threat_level || "moderate";
+        const res = await supabase.functions.invoke("crisis-intel", { body: { city: currentCity } });
+        if (res?.error) {
+          console.log("Crisis AI unavailable:", res.error.message || res.error);
+        } else if (res?.data && !res.data.error) {
+          aiEvents = res.data.events || [];
+          aiSummary = res.data.city_summary || "";
+          aiThreatLevel = res.data.threat_level || "moderate";
           aiSuccess = true;
-        } else if (fnData?.error) {
-          console.log("Crisis AI returned error:", fnData.error);
         }
       } catch (e: any) {
-        // Completely swallow — DB data is the fallback
         console.log("Crisis AI call failed, using DB incidents:", e?.message || e);
       }
 
-      // Merge: AI events + DB events (deduplicate by proximity)
       const mergedEvents = [...aiEvents];
       for (const dbEv of dbEvents) {
         const isDuplicate = mergedEvents.some(
@@ -234,12 +238,9 @@ export function useCrisisIntel(city: string) {
             Math.abs(existing.lng - dbEv.lng) < 0.01 &&
             existing.headline.toLowerCase().includes(dbEv.headline.split(" ")[0].toLowerCase())
         );
-        if (!isDuplicate) {
-          mergedEvents.push(dbEv);
-        }
+        if (!isDuplicate) mergedEvents.push(dbEv);
       }
 
-      // Determine threat level from DB events if AI didn't provide one
       if (!aiSuccess && dbEvents.length > 0) {
         const criticalCount = dbEvents.filter((e) => e.confidence >= 85).length;
         const highCount = dbEvents.filter((e) => e.confidence >= 70).length;
@@ -248,19 +249,18 @@ export function useCrisisIntel(city: string) {
         else if (highCount >= 1) aiThreatLevel = "elevated";
       }
 
-      // Build summary from DB if AI didn't provide one
       if (!aiSummary && dbEvents.length > 0) {
         const incidentTypes = [...new Set(dbEvents.map((e) => e.type))];
-        aiSummary = `${dbEvents.length} active incidents detected in ${city} area: ${incidentTypes.join(", ")}. ${
+        aiSummary = `${dbEvents.length} active incidents detected in ${currentCity} area: ${incidentTypes.join(", ")}. ${
           dbEvents.filter((e) => e.verified).length
         } verified by official sources. Monitoring ongoing.`;
       }
 
       const result: CrisisIntelData = {
         events: mergedEvents,
-        city,
+        city: currentCity,
         city_coords: coords,
-        city_summary: aiSummary || `Monitoring ${city} — no active incidents detected.`,
+        city_summary: aiSummary || `Monitoring ${currentCity} — no active incidents detected.`,
         threat_level: aiThreatLevel,
         timestamp: new Date().toISOString(),
       };
@@ -276,19 +276,47 @@ export function useCrisisIntel(city: string) {
       }
     } catch (e) {
       console.error("Crisis intel error:", e);
-      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [city, data]);
+  }, []);
 
+  // Realtime: re-fetch DB incidents on any change to geo_alerts or rockets
   useEffect(() => {
-    fetch_();
-    intervalRef.current = setInterval(fetch_, 180000); // 3 min
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    const channel = supabase
+      .channel("crisis-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "geo_alerts" }, () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchData(), 1000);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "rockets" }, () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchData(), 1000);
+      })
+      .subscribe();
+
+    return () => {
+      clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
+
+  // Initial fetch + polling fallback
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(fetchData, 180000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fetch_]);
+  }, [fetchData]);
 
-  return { data, loading, error, history, refresh: fetch_ };
+  // Re-fetch when city changes
+  useEffect(() => {
+    fetchData();
+  }, [city, fetchData]);
+
+  return { data, loading, error, history, refresh: fetchData };
 }
