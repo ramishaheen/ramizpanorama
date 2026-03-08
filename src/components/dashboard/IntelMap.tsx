@@ -1972,6 +1972,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       )}
 
       {showCrisisIntel && <CrisisIntelModal onClose={() => setShowCrisisIntel(false)} />}
+      {showIranAirspace && (
+        <IranAirspacePanel
+          onClose={() => setShowIranAirspace(false)}
+          onTrackAircraft={(icao) => setTrackedFlightId(icao)}
+          onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 10, { duration: 1.2 })}
+        />
+      )}
 
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
