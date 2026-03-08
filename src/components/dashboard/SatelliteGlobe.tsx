@@ -380,6 +380,8 @@ interface RawSatTLE {
   source?: string;
 }
 
+const SATELLITE_CACHE_KEY = "waros-orbital-cache-v1";
+
 export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeElRef = useRef<HTMLDivElement | null>(null);
@@ -387,6 +389,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const rawTLERef = useRef<RawSatTLE[]>([]);
   const [satellites, setSatellites] = useState<SatelliteData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [globeInitError, setGlobeInitError] = useState<string | null>(null);
   const [showLabels, setShowLabels] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedSat, setSelectedSat] = useState<SatelliteData | null>(null);
