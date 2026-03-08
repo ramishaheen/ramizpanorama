@@ -163,6 +163,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const containerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const mapListenersRef = useRef<any[]>([]);
   const markersRef = useRef<any[]>([]);
   const trailLinesRef = useRef<any[]>([]);
   const heatmapLayerRef = useRef<any>(null);
