@@ -156,15 +156,55 @@ function parseTLEFull(
   }
 }
 
-function categorizeSatellite(name: string): string {
+function categorizeSatellite(name: string, sourceGroup?: string): string {
   const n = name.toUpperCase();
-  if (n.includes("USA ") || n.includes("NOSS") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("MISTY")) return "Military";
-  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("ORION") || n.includes("MENTOR") || n.includes("TRUMPET")) return "ISR";
-  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB")) return "Communication";
-  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU")) return "Navigation";
-  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP")) return "Weather";
-  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA")) return "Earth Observation";
+  // Source group overrides
+  if (sourceGroup === "military") return "Military";
+  if (sourceGroup === "isr") return "ISR";
+  if (sourceGroup === "geo") return "Communication";
+  if (sourceGroup === "gnss") return "Navigation";
+  if (sourceGroup === "weather") return "Weather";
+  if (sourceGroup === "resource" || sourceGroup === "sarsat") return "Earth Observation";
+  // Name-based detection
+  if (n.includes("USA ") || n.includes("NOSS") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("MISTY") || n.includes("SBIRS") || n.includes("DSP") || n.includes("WGS") || n.includes("AEHF") || n.includes("MUOS") || n.includes("MILSTAR") || n.includes("NROL") || n.includes("GSSAP")) return "Military";
+  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("ORION") || n.includes("MENTOR") || n.includes("TRUMPET") || n.includes("INTRUDER") || n.includes("PROWLER") || n.includes("SHARP") || n.includes("MISTY") || n.includes("TOPAZ") || n.includes("SAPPHIRE") || n.includes("YAOGAN") || n.includes("OFEK") || n.includes("EROS") || n.includes("SHIJIAN") || n.includes("COSMOS 2")) return "ISR";
+  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB") || n.includes("THURAYA") || n.includes("ARABSAT") || n.includes("BADR") || n.includes("ASTRA") || n.includes("EUTELSAT") || n.includes("TELSTAR") || n.includes("GLOBALSTAR") || n.includes("O3B")) return "Communication";
+  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU") || n.includes("IRNSS") || n.includes("QZSS") || n.includes("NAVIC")) return "Navigation";
+  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP") || n.includes("METEOR-M") || n.includes("FENGYUN") || n.includes("INSAT") || n.includes("METOP") || n.includes("SUOMI") || n.includes("JPSS")) return "Weather";
+  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA") || n.includes("CARTOSAT") || n.includes("RESOURCESAT") || n.includes("KOMPSAT") || n.includes("RADARSAT") || n.includes("COSMO-SKYMED") || n.includes("ALOS") || n.includes("GAOFEN")) return "Earth Observation";
   return "Unknown";
+}
+
+function detectCountry(name: string, intlDesignator?: string): { country: string; operator: string } {
+  const n = name.toUpperCase();
+  const id = (intlDesignator || "").toUpperCase();
+  // US
+  if (n.includes("USA ") || n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GOES") || n.includes("NOAA") || n.includes("STARLINK") || n.includes("LANDSAT") || n.includes("NROL") || n.includes("SBIRS") || n.includes("WGS") || n.startsWith("TDRS")) return { country: "🇺🇸 USA", operator: "US DoD/NASA/SpaceX" };
+  // Russia
+  if (n.includes("COSMOS") || n.includes("GLONASS") || n.includes("METEOR") || n.includes("RESURS") || n.includes("GONETS") || n.includes("LUCH")) return { country: "🇷🇺 Russia", operator: "Roscosmos/VKS" };
+  // China
+  if (n.includes("BEIDOU") || n.includes("YAOGAN") || n.includes("SHIJIAN") || n.includes("FENGYUN") || n.includes("GAOFEN") || n.includes("TIANLIAN") || n.includes("ZHONGXING") || n.includes("CZ-")) return { country: "🇨🇳 China", operator: "CNSA/PLA" };
+  // Israel
+  if (n.includes("OFEK") || n.includes("AMOS") || n.includes("EROS")) return { country: "🇮🇱 Israel", operator: "IAI/ISA" };
+  // Iran
+  if (n.includes("NAHID") || n.includes("NOOR") || n.includes("KHAYYAM")) return { country: "🇮🇷 Iran", operator: "ISA Iran" };
+  // India
+  if (n.includes("CARTOSAT") || n.includes("IRNSS") || n.includes("INSAT") || n.includes("GSAT") || n.includes("RESOURCESAT") || n.includes("NAVIC")) return { country: "🇮🇳 India", operator: "ISRO" };
+  // Europe
+  if (n.includes("GALILEO") || n.includes("SENTINEL") || n.includes("METEOSAT") || n.includes("METOP") || n.includes("EUTELSAT") || n.includes("COSMO-SKYMED") || n.includes("PLEIADES") || n.includes("SPOT")) return { country: "🇪🇺 Europe", operator: "ESA/EUMETSAT" };
+  // Japan
+  if (n.includes("HIMAWARI") || n.includes("QZSS") || n.includes("ALOS") || n.includes("IGS")) return { country: "🇯🇵 Japan", operator: "JAXA" };
+  // South Korea
+  if (n.includes("KOMPSAT") || n.includes("ANASIS")) return { country: "🇰🇷 S.Korea", operator: "KARI" };
+  // UAE
+  if (n.includes("KHALIFASAT") || n.includes("DUBAISAT") || n.includes("FALCON EYE")) return { country: "🇦🇪 UAE", operator: "MBRSC" };
+  // Saudi
+  if (n.includes("SAUDISAT") || n.includes("SGS")) return { country: "🇸🇦 KSA", operator: "KACST" };
+  // Turkey
+  if (n.includes("TURKSAT") || n.includes("GOKTURK")) return { country: "🇹🇷 Turkey", operator: "TAI/TUA" };
+  // Intl designator country code
+  if (id.startsWith("98067") || id.includes("US")) return { country: "🇺🇸 USA", operator: "Various" };
+  return { country: "Unknown", operator: "Unknown" };
 }
 
 function getOrbitType(alt: number, _inc?: number, ecc?: number): string {
