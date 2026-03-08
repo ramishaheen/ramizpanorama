@@ -22,6 +22,9 @@ import { ChokepointMonitor, CHOKEPOINTS } from "./ChokepointMonitor";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 import { useConflictEvents, type ConflictEvent } from "@/hooks/useConflictEvents";
+import { useNuclearMonitors, type RadiationStation, type NuclearFacility } from "@/hooks/useNuclearMonitors";
+import { useAirQuality, type AirQualityStation } from "@/hooks/useAirQuality";
+import { useAISVessels, type AISVessel } from "@/hooks/useAISVessels";
 import { UP42Panel } from "./UP42Panel";
 import type { UP42Feature } from "@/hooks/useUP42Catalog";
 
