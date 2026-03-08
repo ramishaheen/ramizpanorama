@@ -123,6 +123,7 @@ const Index = () => {
     wildfires: true,
     weather: true,
     conflicts: true,
+    flights: true,
   });
 
   const initialLayout = loadLayout();
