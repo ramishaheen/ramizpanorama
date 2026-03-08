@@ -384,14 +384,22 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                         />
                       )}
                     </div>
-                    {cam.lat !== 0 && cam.lng !== 0 && (
+                    <div className="mt-1.5 flex items-center gap-3">
+                      {cam.lat !== 0 && cam.lng !== 0 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleShowOnMap(cam); }}
+                          className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
+                        >
+                          <MapPin className="h-3 w-3" /> SHOW ON MAP
+                        </button>
+                      )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleShowOnMap(cam); }}
-                        className="mt-1.5 flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); openCameraSource(cam); }}
+                        className="flex items-center gap-1 text-[9px] font-mono text-primary hover:text-primary/80 transition-colors"
                       >
-                        <MapPin className="h-3 w-3" /> SHOW ON MAP
+                        <ExternalLink className="h-3 w-3" /> OPEN LIVE
                       </button>
-                    )}
+                    </div>
                   </button>
                 ))}
               </div>
