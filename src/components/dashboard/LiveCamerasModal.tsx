@@ -27,20 +27,24 @@ interface LiveCamerasModalProps {
   onShowOnMap?: (lat: number, lng: number, name: string) => void;
 }
 
-const COUNTRIES = ["Jordan", "UAE", "Saudi Arabia", "Qatar", "Bahrain", "Oman", "Kuwait", "Iraq", "Lebanon", "Israel", "Egypt", "Turkey", "Iran"];
+const COUNTRIES = ["Jordan", "UAE", "Saudi Arabia", "Qatar", "Bahrain", "Oman", "Kuwait", "Iraq", "Lebanon", "Israel", "Egypt", "Turkey", "Iran", "USA", "UK", "France", "Italy", "Spain", "Netherlands", "Germany", "Japan", "South Korea", "Ukraine", "Canada", "Singapore", "Iceland", "Ireland"];
 const CATEGORIES = ["traffic", "tourism", "ports", "weather", "public"];
+const AGGREGATOR_SOURCES = ["EarthCam", "SkylineWebcams", "WebCamera24", "OpenWebcamDB", "Insecam", "Opentopia", "GeoCam", "AI Discovery"];
 
 export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps) => {
   const [cameras, setCameras] = useState<CameraData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCamera, setSelectedCamera] = useState<CameraData | null>(null);
   const [embedError, setEmbedError] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [checkingHealth, setCheckingHealth] = useState(false);
   const [discovering, setDiscovering] = useState(false);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<string | null>(null);
 
   const fetchCameras = useCallback(async () => {
     setLoading(true);
