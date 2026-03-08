@@ -19,7 +19,7 @@ serve(async (req) => {
       });
     }
 
-    const { lat, lng, radius = 500, limit = 1 } = await req.json();
+    const { lat, lng, radius = 2000, limit = 10 } = await req.json();
 
     if (!lat || !lng) {
       return new Response(JSON.stringify({ error: "lat and lng are required" }), {
