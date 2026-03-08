@@ -761,9 +761,14 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                 <div className="p-3" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)" }}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-[8px] text-cyan-500/50 tracking-[0.2em]">CAMERA INTELLIGENCE</div>
-                    <button onClick={() => setSelectedCamera(null)} className="p-1 hover:bg-white/5 rounded">
-                      <X className="h-3 w-3 text-gray-500" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => { setPipCamera(selectedCamera); }} className="p-1 hover:bg-cyan-500/10 rounded" title="Picture-in-Picture">
+                        <Video className="h-3 w-3 text-cyan-500" />
+                      </button>
+                      <button onClick={() => setSelectedCamera(null)} className="p-1 hover:bg-white/5 rounded">
+                        <X className="h-3 w-3 text-gray-500" />
+                      </button>
+                    </div>
                   </div>
                   <div className="text-xs font-bold text-white">{selectedCamera.name}</div>
                   <div className="text-[9px] text-gray-400 mt-0.5">{selectedCamera.city}, {selectedCamera.country}</div>
