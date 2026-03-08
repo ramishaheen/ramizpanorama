@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, RefreshCw, Search, Building2, Plane, Navigation, RotateCcw, Eye, EyeOff } from "lucide-react";
 
@@ -31,18 +31,49 @@ const PRESETS = [
   { name: "Amman", lat: 31.9454, lng: 35.9284 },
 ];
 
+// Convert lat/lng offset to pixel position relative to container center
+// Approximate: at zoom 17, ~1.5m per pixel. We use a wider scale for our 6-degree bbox.
+function latLngToPixel(
+  acLat: number, acLng: number,
+  centerLat: number, centerLng: number,
+  containerW: number, containerH: number,
+  zoomDeg: number // how many degrees the viewport spans
+) {
+  const dLat = acLat - centerLat;
+  const dLng = acLng - centerLng;
+  const cosLat = Math.cos((centerLat * Math.PI) / 180);
+  const x = containerW / 2 + (dLng / zoomDeg) * containerW * cosLat;
+  const y = containerH / 2 - (dLat / (zoomDeg * (containerH / containerW))) * containerH;
+  return { x, y };
+}
+
 export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const [lat, setLat] = useState(initialCoords?.lat || 25.2048);
   const [lng, setLng] = useState(initialCoords?.lng || 55.2708);
   const [searchInput, setSearchInput] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [showFlights, setShowFlights] = useState(true);
+  const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [flightsLoading, setFlightsLoading] = useState(false);
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(true);
+  const [containerSize, setContainerSize] = useState({ w: 800, h: 600 });
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Track container size for marker positioning
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      setContainerSize({ w: width, h: height });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Fetch Google Maps API key from backend
   useEffect(() => {
@@ -120,6 +151,19 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const militaryCount = aircraft.filter((a) => a.is_military).length;
   const civilCount = aircraft.length - militaryCount;
 
+  // Viewport degrees for marker projection (matches our 6-degree fetch bbox)
+  const VIEWPORT_DEG = 6;
+
+  // Compute marker positions
+  const markerPositions = useMemo(() => {
+    if (!showMarkers || !showFlights) return [];
+    return aircraft.map((ac) => {
+      const pos = latLngToPixel(ac.lat, ac.lng, lat, lng, containerSize.w, containerSize.h, VIEWPORT_DEG);
+      const visible = pos.x >= -20 && pos.x <= containerSize.w + 20 && pos.y >= -20 && pos.y <= containerSize.h + 20;
+      return { ...ac, px: pos.x, py: pos.y, visible };
+    }).filter((m) => m.visible);
+  }, [aircraft, lat, lng, containerSize, showMarkers, showFlights]);
+
   // Build Google Maps 3D embed URL
   const mapSrc = apiKey
     ? `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${lat},${lng}&zoom=17&maptype=satellite`
@@ -156,6 +200,14 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
                 {aircraft.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setShowMarkers(!showMarkers)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showMarkers ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}
+            title="Toggle aircraft markers on map"
+          >
+            {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+            Markers
           </button>
           <button
             onClick={() => fetchFlights()}
@@ -215,7 +267,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       )}
 
       {/* Main content */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative" ref={containerRef}>
         {/* Google Maps 3D Embed */}
         {apiKeyLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -246,6 +298,72 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
           </div>
         )}
 
+        {/* ===== AIRCRAFT MARKERS OVERLAY ===== */}
+        {showFlights && showMarkers && markerPositions.length > 0 && (
+          <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+            {markerPositions.map((ac) => (
+              <div
+                key={ac.icao24}
+                className="absolute pointer-events-auto cursor-pointer group"
+                style={{
+                  left: ac.px,
+                  top: ac.py,
+                  transform: "translate(-50%, -50%)",
+                  transition: "left 1.5s linear, top 1.5s linear",
+                }}
+                onClick={() => setSelectedAircraft(selectedAircraft?.icao24 === ac.icao24 ? null : ac)}
+              >
+                {/* Pulse ring */}
+                <div
+                  className="absolute inset-0 rounded-full animate-ping opacity-30"
+                  style={{
+                    width: 24,
+                    height: 24,
+                    marginLeft: -4,
+                    marginTop: -4,
+                    backgroundColor: ac.is_military ? "rgba(239,68,68,0.4)" : "rgba(96,165,250,0.3)",
+                  }}
+                />
+                {/* Plane icon */}
+                <div
+                  className="relative flex items-center justify-center w-4 h-4"
+                  style={{
+                    filter: `drop-shadow(0 0 4px ${ac.is_military ? "rgba(239,68,68,0.8)" : "rgba(96,165,250,0.7)"})`,
+                  }}
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill={ac.is_military ? "#ef4444" : "#60a5fa"}
+                    style={{ transform: `rotate(${ac.heading}deg)`, transition: "transform 1.5s linear" }}
+                  >
+                    <path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z" />
+                  </svg>
+                </div>
+                {/* Callsign tooltip */}
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 top-full mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap"
+                >
+                  <div
+                    className="px-1.5 py-0.5 rounded text-[7px] font-mono font-bold"
+                    style={{
+                      backgroundColor: ac.is_military ? "rgba(239,68,68,0.85)" : "rgba(96,165,250,0.85)",
+                      color: "#fff",
+                      boxShadow: `0 0 8px ${ac.is_military ? "rgba(239,68,68,0.5)" : "rgba(96,165,250,0.5)"}`,
+                    }}
+                  >
+                    {ac.callsign || ac.icao24}
+                    <span className="text-white/70 ml-1">
+                      {Math.round(ac.altitude)}m
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* HUD Overlay */}
         <div className="absolute top-3 left-3 z-10 pointer-events-none">
           <div
@@ -261,6 +379,12 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               PHOTOREALISTIC 3D TILES
             </div>
+            {showMarkers && markerPositions.length > 0 && (
+              <div className="flex items-center gap-1 text-blue-400">
+                <Plane className="h-2.5 w-2.5" />
+                {markerPositions.length} MARKERS ACTIVE
+              </div>
+            )}
           </div>
         </div>
 
@@ -408,7 +532,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50">
           {showFlights
-            ? `${aircraft.length} aircraft tracked • ${militaryCount} military • Updates every 30s`
+            ? `${aircraft.length} aircraft tracked • ${militaryCount} military • ${markerPositions.length} markers • Updates every 30s`
             : "Flight layer disabled"}
         </span>
       </div>
