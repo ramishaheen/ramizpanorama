@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { X, RefreshCw, Plane, Flame, AlertTriangle, Camera, Newspaper, MapPin, Filter, Clock, Shield, ChevronDown, ChevronUp, ExternalLink, Search } from "lucide-react";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
