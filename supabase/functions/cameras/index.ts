@@ -118,6 +118,7 @@ serve(async (req) => {
         .from("cameras")
         .select("*")
         .eq("is_active", true)
+        .neq("status", "error")
         .order("country")
         .order("city");
 
@@ -267,7 +268,10 @@ serve(async (req) => {
         };
 
         const { data: created } = await supabase.from("cameras").insert(payload).select().single();
-        if (created) inserted.push(created);
+        if (created) {
+          inserted.push(created);
+          existingUrls.add(cam.embed_url);
+        }
       }
 
       return new Response(JSON.stringify({ discovered: candidates.length, inserted: inserted.length, cameras: inserted }), {
