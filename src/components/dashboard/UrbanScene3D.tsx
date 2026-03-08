@@ -695,8 +695,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       .catch(console.error);
   }, [searchInput, navigateTo, aircraft]);
 
-  const militaryCount = aircraft.filter((a) => a.is_military).length;
-  const civilCount = aircraft.length - militaryCount;
+  const militaryCount = interpolatedAircraft.filter((a) => a.is_military).length;
+  const civilCount = interpolatedAircraft.length - militaryCount;
 
   // Cleanup on unmount
   useEffect(() => {
