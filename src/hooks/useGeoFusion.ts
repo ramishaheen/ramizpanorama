@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 export interface FusionEvent {
   event_id: string;
