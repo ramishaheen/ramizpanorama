@@ -129,6 +129,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showHeatmap, setShowHeatmap] = useState(!!initialEvent);
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
   const [streetViewActive, setStreetViewActive] = useState(false);
+  const [streetViewTarget, setStreetViewTarget] = useState<{ lat: number; lng: number } | null>(null);
+  const [clickToStreetView, setClickToStreetView] = useState(false);
+  const clickMarkerRef = useRef<any>(null);
   const [zoomLevel, setZoomLevel] = useState(14);
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
   const zoomIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -312,6 +315,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         google.maps.event.addListener(map, "zoom_changed", () => {
           setZoomLevel(Math.round(map.getZoom() || 14));
         }),
+        google.maps.event.addListener(map, "click", (e: any) => {
+          if (e.latLng) {
+            const clickedLat = e.latLng.lat();
+            const clickedLng = e.latLng.lng();
+            setStreetViewTarget({ lat: clickedLat, lng: clickedLng });
+            setStreetViewActive(true);
+          }
+        }),
       ];
 
       syncMapState();
@@ -427,7 +438,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     };
   }, [mapillaryActive, mapillaryImageId, mapillaryToken]);
 
-  // Toggle Street View 360° with Mapillary fallback
+  // Toggle Street View 360° — uses clicked target or map center
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !apiKey) return;
@@ -436,18 +447,47 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
     if (streetViewActive) {
       const currentZoom = map.getZoom?.() || 6;
-      if (currentZoom < 12) {
-        toast({ title: "Zoom In Required", description: "Please zoom into a city first (zoom 12+) to activate Street View. Use the preset buttons or zoom controls.", duration: 4000 });
+      if (currentZoom < 10) {
+        toast({ title: "Zoom In Required", description: "Please zoom into a city first (zoom 10+) to activate Street View.", duration: 4000 });
         setStreetViewActive(false);
+        setStreetViewTarget(null);
         return;
       }
 
-      const center = map.getCenter?.();
-      const targetLat = center?.lat?.() ?? lat;
-      const targetLng = center?.lng?.() ?? lng;
+      // Use clicked target coordinates if available, otherwise fall back to map center
+      let targetLat: number, targetLng: number;
+      if (streetViewTarget) {
+        targetLat = streetViewTarget.lat;
+        targetLng = streetViewTarget.lng;
+      } else {
+        const center = map.getCenter?.();
+        targetLat = center?.lat?.() ?? lat;
+        targetLng = center?.lng?.() ?? lng;
+      }
+
+      // Drop a marker at the target location
+      if (clickMarkerRef.current) {
+        clickMarkerRef.current.setMap(null);
+        clickMarkerRef.current = null;
+      }
+      const pin = new google.maps.Marker({
+        position: { lat: targetLat, lng: targetLng },
+        map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#22c55e",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+        },
+        title: `360° Target: ${targetLat.toFixed(5)}, ${targetLng.toFixed(5)}`,
+        zIndex: 9999,
+      });
+      clickMarkerRef.current = pin;
 
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 5000 }, async (data: any, status: any) => {
+      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 1000 }, async (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
           const sv = map.getStreetView();
           sv.setPosition(data.location.latLng);
@@ -455,7 +495,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           sv.setVisible(true);
           streetViewRef.current = sv;
           const listener = google.maps.event.addListener(sv, "visible_changed", () => {
-            if (!sv.getVisible()) setStreetViewActive(false);
+            if (!sv.getVisible()) {
+              setStreetViewActive(false);
+              setStreetViewTarget(null);
+            }
           });
           return () => google.maps.event.removeListener(listener);
         } else {
@@ -466,6 +509,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             toast({ title: "360° View Unavailable", description: `No street-level imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try a city center.`, duration: 4000 });
           }
           setStreetViewActive(false);
+          setStreetViewTarget(null);
         }
       });
     } else {
@@ -473,8 +517,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         streetViewRef.current.setVisible(false);
         streetViewRef.current = null;
       }
+      if (clickMarkerRef.current) {
+        clickMarkerRef.current.setMap(null);
+        clickMarkerRef.current = null;
+      }
+      setStreetViewTarget(null);
     }
-  }, [streetViewActive, lat, lng, apiKey, activateMapillary]);
+  }, [streetViewActive, streetViewTarget, apiKey, activateMapillary]);
 
   // ===== RENDER AIRCRAFT MARKERS =====
   useEffect(() => {
