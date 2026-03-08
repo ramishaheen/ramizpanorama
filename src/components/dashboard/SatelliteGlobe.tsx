@@ -1323,17 +1323,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
       {/* Category filters - compact vertical sidebar */}
       <div className="absolute bottom-14 left-3 z-[2002] pointer-events-auto max-h-[calc(100vh-180px)] overflow-y-auto scrollbar-none">
-        <div className="flex flex-col gap-0.5 bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-1.5 py-1.5 w-[120px]">
-          <div className="text-[6px] font-mono uppercase tracking-widest text-center mb-0.5" style={{ color: "rgba(0,255,200,0.4)" }}>SAT TYPES</div>
+        <div className="flex flex-col gap-0.5 bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-2 py-2 w-[140px]">
+          <div className="text-[8px] font-mono uppercase tracking-widest text-center mb-0.5" style={{ color: "rgba(0,255,200,0.4)" }}>SAT TYPES</div>
           <button
             onClick={() => setSelectedCat(null)}
-            className={`flex items-center gap-1 px-1.5 py-[3px] rounded text-[7px] font-mono font-semibold transition-all w-full ${
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
               !selectedCat ? "bg-white text-black shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"
             }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
+            <span className="w-2 h-2 rounded-full bg-white flex-shrink-0" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
             <span className="truncate">ALL</span>
-            <span className="ml-auto text-[6px] opacity-70">{satellites.length}</span>
+            <span className="ml-auto text-[8px] opacity-70">{satellites.length}</span>
           </button>
           {categories.map(([cat, color]) => {
             const count = satellites.filter((s) => s.category === cat).length;
@@ -1344,7 +1344,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 key={cat}
                 disabled={isDisabled}
                 onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
-                className={`flex items-center gap-1 px-1.5 py-[3px] rounded text-[7px] font-mono font-semibold transition-all w-full ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
                   selectedCat === cat
                     ? "bg-white text-black shadow-md"
                     : isDisabled
@@ -1352,9 +1352,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                       : "text-white/70 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                 <span className="truncate">{cat}</span>
-                <span className="ml-auto text-[6px] opacity-70">{count}</span>
+                <span className="ml-auto text-[8px] opacity-70">{count}</span>
               </button>
             );
           })}
