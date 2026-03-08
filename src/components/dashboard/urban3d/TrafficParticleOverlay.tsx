@@ -312,8 +312,11 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       const { factor } = getTimeDensityFactor();
       const particles: Particle[] = [];
       roads.forEach((road, ri) => {
-        const baseDensity = HIGHWAY_BASE_DENSITY[road.highway] || 2;
-        const density = Math.max(1, Math.round(baseDensity * factor));
+        const roadLenM = estimateRoadLengthM(road.points);
+        const per100m = HIGHWAY_DENSITY_PER_100M[road.highway] || 2;
+        const minP = HIGHWAY_MIN_PARTICLES[road.highway] || 2;
+        const lengthBased = Math.round((roadLenM / 100) * per100m);
+        const density = Math.max(minP, Math.round(Math.max(lengthBased, minP) * factor));
         const baseSpeed = HIGHWAY_SPEED[road.highway] || 0.003;
         const roadColor = HIGHWAY_COLORS[road.highway] || "#8b5cf6";
 
