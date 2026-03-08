@@ -16,6 +16,7 @@ export interface LayerState {
   nuclear: boolean;
   airQuality: boolean;
   aisVessels: boolean;
+  cities: boolean;
 }
 
 interface LayerControlsProps {
