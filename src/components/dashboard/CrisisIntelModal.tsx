@@ -246,7 +246,7 @@ export const CrisisIntelModal = ({ onClose }: CrisisIntelModalProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex flex-col"
+      className="fixed inset-0 z-[99998] bg-background/95 backdrop-blur-sm flex flex-col"
     >
       {/* Pulse animation */}
       <style>{`
