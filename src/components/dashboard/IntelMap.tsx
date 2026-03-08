@@ -1096,6 +1096,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <Building2 className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
           <span className="text-[9px] font-mono text-muted-foreground uppercase">URBAN 3D</span>
         </button>
+        <button
+          onClick={() => setShowLiveCameras(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+          title="Open Live Cameras"
+        >
+          <Camera className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">CCTV</span>
+        </button>
       </div>
 
       {/* 3D overlays */}
