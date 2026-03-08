@@ -615,23 +615,23 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
 
         // Apply perpendicular lane offset
         const perpAngle = roadAngle + Math.PI / 2;
-        const offsetPx = p.laneOffset * dpr;
         const x = (px.x + Math.cos(perpAngle) * p.laneOffset) * dpr;
         const y = (px.y + Math.sin(perpAngle) * p.laneOffset) * dpr;
-        const s = p.size * dpr * (zoom >= 20 ? 1.3 : zoom >= 18 ? 1.0 : 0.7);
+        const s = p.size * dpr * (zoom >= 20 ? 1.15 : zoom >= 18 ? 1.0 : 0.8);
 
-        // Glow under vehicle
+        // Glow + particle dot (restored particle style for dense road coverage)
         ctx.beginPath();
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, s * 2.5);
-        gradient.addColorStop(0, p.color + "40");
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, s * 2.2);
+        gradient.addColorStop(0, p.color + "70");
         gradient.addColorStop(1, p.color + "00");
         ctx.fillStyle = gradient;
-        ctx.arc(x, y, s * 2.5, 0, Math.PI * 2);
+        ctx.arc(x, y, s * 2.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw shaped vehicle
-        const renderer = SHAPE_RENDERERS[p.vehicleType];
-        renderer(ctx, x, y, s, p.angle, p.color);
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.arc(x, y, s, 0, Math.PI * 2);
+        ctx.fill();
       });
 
       ctx.globalAlpha = 1;
