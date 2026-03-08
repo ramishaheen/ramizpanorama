@@ -12,7 +12,8 @@ import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
-import { Satellite, Building2 } from "lucide-react";
+import { Satellite, Building2, Camera } from "lucide-react";
+import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
 import { SatelliteGlobe } from "./SatelliteGlobe";
 import { UrbanScene3D } from "./UrbanScene3D";
@@ -1052,6 +1053,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
   const [showUrbanScene, setShowUrbanScene] = useState(false);
+  const [showLiveCameras, setShowLiveCameras] = useState(false);
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
 
   return (
@@ -1094,6 +1096,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <Building2 className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
           <span className="text-[9px] font-mono text-muted-foreground uppercase">URBAN 3D</span>
         </button>
+        <button
+          onClick={() => setShowLiveCameras(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+          title="Open Live Cameras"
+        >
+          <Camera className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">CCTV</span>
+        </button>
       </div>
 
       {/* 3D overlays */}
@@ -1111,6 +1121,25 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             type: urbanScene3DTarget.type,
             summary: urbanScene3DTarget.summary,
           } : undefined}
+        />
+      )}
+      {showLiveCameras && (
+        <LiveCamerasModal
+          onClose={() => setShowLiveCameras(false)}
+          onShowOnMap={(lat, lng, name) => {
+            setShowLiveCameras(false);
+            if (mapRef.current) {
+              mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
+              L.marker([lat, lng], {
+                icon: L.divIcon({
+                  className: "",
+                  html: `<div style="background:hsl(190,100%,50%);border:2px solid white;border-radius:50%;width:14px;height:14px;box-shadow:0 0 10px hsl(190,100%,50%)"></div>`,
+                  iconSize: [14, 14],
+                  iconAnchor: [7, 7],
+                }),
+              }).addTo(mapRef.current).bindPopup(`<b style="font-family:monospace;font-size:11px">📹 ${name}</b>`).openPopup();
+            }
+          }}
         />
       )}
 
