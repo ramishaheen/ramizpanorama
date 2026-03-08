@@ -387,32 +387,43 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       });
       newLines.push(recentLine);
 
-      // Forward projection line (dotted, lighter) — shows where aircraft is heading
-      if (isTracked) {
-        const headingRad = ac.heading * Math.PI / 180;
-        const projDist = Math.max(ac.velocity * 3.6 * 0.03, 10) / 111.32; // ~2min or 10km
-        const fwdPoints = [
-          { lat: ac.lat, lng: ac.lng },
-          { lat: ac.lat + Math.cos(headingRad) * projDist, lng: ac.lng + Math.sin(headingRad) * projDist / Math.cos(ac.lat * Math.PI / 180) },
-        ];
-        const fwdLine = new google.maps.Polyline({
-          path: fwdPoints,
-          map,
-          strokeColor: "#22c55e",
-          strokeOpacity: 0.5,
-          strokeWeight: 2,
-          geodesic: true,
-          icons: [{
-            icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2.5, strokeColor: "#22c55e", strokeOpacity: 0.7 },
-            offset: "100%",
-          }, {
-            icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: 0.4, strokeColor: "#22c55e", scale: 2.5 },
-            offset: "0",
-            repeat: "10px",
-          }],
+      // Forward prediction line for ALL aircraft — shows estimated future position
+      const headingRad = ac.heading * Math.PI / 180;
+      const speedKmh = ac.velocity * 3.6;
+      // Prediction distance: tracked = 5min, military = 3min, civil = 2min
+      const predMinutes = isTracked ? 5 : (isMil ? 3 : 2);
+      const predDistKm = Math.max(speedKmh * (predMinutes / 60), 8);
+      const predColor = isTracked ? "#22c55e" : (isMil ? "#f97316" : "#60a5fa");
+      const predOpacity = isTracked ? 0.6 : (isMil ? 0.4 : 0.25);
+      const predWeight = isTracked ? 2.5 : (isMil ? 2 : 1.5);
+
+      // Build multi-point curved prediction (3 waypoints for smoother look)
+      const fwdPoints = [{ lat: ac.lat, lng: ac.lng }];
+      for (let step = 1; step <= 3; step++) {
+        const d = (predDistKm * step / 3) / 111.32;
+        fwdPoints.push({
+          lat: ac.lat + Math.cos(headingRad) * d,
+          lng: ac.lng + Math.sin(headingRad) * d / Math.cos(ac.lat * Math.PI / 180),
         });
-        newLines.push(fwdLine);
       }
+
+      const fwdLine = new google.maps.Polyline({
+        path: fwdPoints,
+        map,
+        strokeColor: predColor,
+        strokeOpacity: predOpacity,
+        strokeWeight: predWeight,
+        geodesic: true,
+        icons: [{
+          icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: isTracked ? 3 : 2, strokeColor: predColor, strokeOpacity: predOpacity + 0.2 },
+          offset: "100%",
+        }, {
+          icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: predOpacity * 0.8, strokeColor: predColor, scale: 2 },
+          offset: "0",
+          repeat: isTracked ? "8px" : "12px",
+        }],
+      });
+      newLines.push(fwdLine);
     });
     trailLinesRef.current = newLines;
   }, [aircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
@@ -520,6 +531,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       if (!error && data?.aircraft) {
         const newAircraft: Aircraft[] = data.aircraft;
         if (data.source) setFlightSource(data.source);
+
+        // --- ALERT: New military aircraft entering viewport ---
         const prevMilIds = new Set(aircraft.filter(a => a.is_military).map(a => a.icao24));
         const newMil = newAircraft.filter(a => a.is_military && !prevMilIds.has(a.icao24));
         if (newMil.length > 0 && aircraft.length > 0) {
@@ -528,6 +541,29 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             title: "🛩️ Military Aircraft Detected",
             description: `${newMil.length} military callsign${newMil.length > 1 ? "s" : ""} entered airspace: ${names}${newMil.length > 3 ? ` +${newMil.length - 3} more` : ""}`,
             duration: 8000,
+          });
+        }
+
+        // --- ALERT: Rapid altitude change on military aircraft ---
+        if (aircraft.length > 0) {
+          const prevMap = new Map(aircraft.filter(a => a.is_military).map(a => [a.icao24, a]));
+          newAircraft.filter(a => a.is_military).forEach(ac => {
+            const prev = prevMap.get(ac.icao24);
+            if (prev) {
+              const altDelta = Math.abs(ac.altitude - prev.altitude);
+              const vrAbs = Math.abs(ac.vertical_rate);
+              // Alert if altitude changed >300m between polls OR vertical rate > 15 m/s
+              if (altDelta > 300 || vrAbs > 15) {
+                const dir = ac.altitude > prev.altitude ? "CLIMBING" : "DESCENDING";
+                const arrow = ac.altitude > prev.altitude ? "⬆️" : "⬇️";
+                toast({
+                  title: `${arrow} Military Rapid ${dir}`,
+                  description: `${ac.callsign || ac.icao24} (${ac.origin_country}) — ${dir.toLowerCase()} at ${vrAbs.toFixed(1)} m/s, ALT ${Math.round(ac.altitude * 3.281).toLocaleString()} ft`,
+                  variant: "destructive",
+                  duration: 10000,
+                });
+              }
+            }
           });
         }
         // Trail history
