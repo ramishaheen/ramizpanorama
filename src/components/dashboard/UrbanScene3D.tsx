@@ -521,6 +521,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             Trails
           </button>
           <button
+            onClick={() => { setStreetViewActive(!streetViewActive); }}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${streetViewActive ? "border-green-500/50 bg-green-500/10 text-green-400" : "border-border text-muted-foreground hover:bg-secondary"}`}
+          >
+            <Compass className="h-3 w-3" />
+            360° View
+          </button>
+          <button
             onClick={() => fetchFlights()}
             className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all"
           >
