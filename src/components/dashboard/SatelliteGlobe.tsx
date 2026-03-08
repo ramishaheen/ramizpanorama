@@ -248,11 +248,27 @@ function detectCountry(name: string, intlDesignator?: string): { country: string
   return { country: "Unknown", operator: "Unknown" };
 }
 
-function getOrbitType(alt: number, _inc?: number, ecc?: number): string {
-  if (alt < 2000) return "LEO";
-  if (alt >= 2000 && alt < 35000) return "MEO";
-  if (alt >= 35000 && alt <= 36500) return "GEO";
-  if ((ecc || 0) > 0.1) return "HEO";
+function getOrbitType(alt: number, inc?: number, ecc?: number): string {
+  const i = inc || 0;
+  const e = ecc || 0;
+  if (e > 0.5) return "HEO (Highly Elliptical)";
+  if (e > 0.1 && alt > 20000) return "Molniya";
+  if (alt >= 35000 && alt <= 36500) {
+    if (i < 5) return "GEO (Geostationary)";
+    return "GSO (Geosynchronous)";
+  }
+  if (alt < 450) return "VLEO (Very Low)";
+  if (alt < 2000) {
+    if (i > 95 && i < 100) return "SSO (Sun-Synch)";
+    if (i > 50 && i < 55) return "LEO (ISS-type)";
+    if (i > 85) return "LEO (Polar)";
+    if (i > 60 && i < 70) return "LEO (Mid-Inc)";
+    return "LEO";
+  }
+  if (alt >= 2000 && alt < 20200) return "MEO";
+  if (alt >= 20200 && alt < 24000) return "MEO (Nav)";
+  if (alt >= 24000 && alt < 35000) return "MEO (High)";
+  if (alt > 36500) return "Super-GEO";
   return "Other";
 }
 
