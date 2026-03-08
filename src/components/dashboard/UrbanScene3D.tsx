@@ -153,14 +153,16 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   // New real-time layers
   const [showVessels, setShowVessels] = useState(true);
   const [showEarthquakes, setShowEarthquakes] = useState(true);
-  const [showWeather, setShowWeather] = useState(false);
-  const [showTraffic, setShowTraffic] = useState(false);
+  const [showWeather, setShowWeather] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(true);
   const [vessels, setVessels] = useState<any[]>([]);
   const [earthquakes, setEarthquakes] = useState<any[]>([]);
   const vesselMarkersRef = useRef<any[]>([]);
   const earthquakeMarkersRef = useRef<any[]>([]);
   const trafficLayerRef = useRef<any>(null);
   const weatherOverlayRef = useRef<any>(null);
+  const weatherMarkersRef = useRef<any[]>([]);
+  const [weatherData, setWeatherData] = useState<any[]>([]);
 
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
@@ -732,6 +734,78 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   }, [showWeather]);
 
 
+  // ===== FETCH WEATHER DATA FOR CITY MARKERS =====
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("weather-data");
+        if (!error && data?.weather) setWeatherData(data.weather);
+      } catch (e) { console.error("3D weather fetch:", e); }
+    };
+    fetchWeather();
+    const iv = setInterval(fetchWeather, 5 * 60_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // ===== WEATHER CITY MARKERS ON 3D MAP =====
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    weatherMarkersRef.current.forEach(m => m.setMap(null));
+    weatherMarkersRef.current = [];
+
+    if (!showWeather || weatherData.length === 0) return;
+
+    const condEmoji: Record<string, string> = { Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Thunderstorm: "⛈️", Dust: "🌪️", Haze: "🌫️", Mist: "🌫️", Snow: "❄️", Drizzle: "🌦️" };
+
+    weatherData.forEach((w: any) => {
+      const emoji = condEmoji[w.condition] || "🌤️";
+      const tempColor = w.temp >= 40 ? "#ef4444" : w.temp >= 30 ? "#f97316" : w.temp >= 20 ? "#eab308" : w.temp >= 10 ? "#06b6d4" : "#3b82f6";
+      const size = 40;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="28" viewBox="0 0 ${size} 28">
+        <rect x="0" y="0" width="${size}" height="28" rx="6" fill="rgba(0,0,0,0.85)" stroke="${tempColor}" stroke-width="1" stroke-opacity="0.4"/>
+        <text x="12" y="18" font-size="11" font-family="monospace" font-weight="bold" fill="${tempColor}">${w.temp}°</text>
+      </svg>`;
+
+      const marker = new google.maps.Marker({
+        position: { lat: w.lat, lng: w.lng },
+        map,
+        icon: {
+          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg),
+          scaledSize: new google.maps.Size(size, 28),
+          anchor: new google.maps.Point(size / 2, 14),
+        },
+        title: `${w.city}: ${w.temp}°C ${w.condition}`,
+        zIndex: 30,
+      });
+
+      const infoContent = `
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:180px;border:1px solid ${tempColor}40;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span style="font-size:16px;">${emoji}</span>
+            <span style="font-weight:700;font-size:13px;color:${tempColor};">${w.city}</span>
+            <span style="font-size:9px;color:#7d8590;">${w.country}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
+            <span style="color:#7d8590;">TEMP</span><span style="color:${tempColor};font-weight:700;">${w.temp}°C (feels ${w.feels_like}°C)</span>
+            <span style="color:#7d8590;">WIND</span><span>${w.wind_speed} km/h</span>
+            <span style="color:#7d8590;">HUMIDITY</span><span>${w.humidity}%</span>
+            <span style="color:#7d8590;">VISIBILITY</span><span>${w.visibility} km</span>
+            <span style="color:#7d8590;">CLOUDS</span><span>${w.clouds}%</span>
+            <span style="color:#7d8590;">CONDITION</span><span>${w.description}</span>
+          </div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("mouseover", () => infoWindow.open(map, marker));
+      marker.addListener("mouseout", () => infoWindow.close());
+
+      weatherMarkersRef.current.push(marker);
+    });
+  }, [weatherData, showWeather]);
+
   const handleZoomIn = useCallback(() => {
     const map = mapInstanceRef.current;
     if (map) map.setZoom(Math.min((map.getZoom() || 6) + 1, 21));
@@ -948,6 +1022,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       trailLinesRef.current.forEach(l => l.setMap(null));
       vesselMarkersRef.current.forEach(m => m.setMap(null));
       earthquakeMarkersRef.current.forEach(m => m.setMap(null));
+      weatherMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
       if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
       if (interpolationRef.current) clearInterval(interpolationRef.current);
