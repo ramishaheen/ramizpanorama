@@ -1023,6 +1023,11 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       : satellites;
 
     globe.objectsData(filtered.slice(0, selectedCat ? 5000 : 3200));
+
+    // Set orbit color to category color when filtering
+    if (selectedCat) {
+      setOrbitColor(CATEGORY_COLORS[selectedCat] || "#d4a843");
+    }
   }, [satellites, selectedCat]);
 
   // Update label layer independently
