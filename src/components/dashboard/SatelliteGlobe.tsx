@@ -1223,6 +1223,94 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 EPOCH: {selectedSat.epochYear} DAY{" "}
                 {selectedSat.epochDay?.toFixed(2)} • CELESTRAK
               </div>
+              {/* Prediction Buttons */}
+              <div className="flex gap-1 pt-1.5">
+                <button
+                  onClick={() => runPrediction(selectedSat)}
+                  disabled={predicting}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 disabled:opacity-40 transition-all"
+                >
+                  {predicting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crosshair className="h-3 w-3" />}
+                  {predicting ? "PREDICTING..." : "AI PREDICT"}
+                </button>
+                <button
+                  onClick={() => openAiChat(selectedSat)}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all"
+                >
+                  <Bot className="h-3 w-3" /> ASK AI
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Prediction Results Panel */}
+        {predictionData && (
+          <div
+            className="absolute top-20 left-[340px] z-[2004] w-80 rounded border backdrop-blur-md pointer-events-auto animate-fade-in"
+            style={{ background: "rgba(5,10,18,0.94)", borderColor: "#22c55e40", boxShadow: "0 0 25px #22c55e15" }}
+          >
+            <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: "#22c55e30", background: "#22c55e08" }}>
+              <div className="flex items-center gap-1.5">
+                <Crosshair className="h-3 w-3 text-green-400" />
+                <span className="text-[10px] font-mono font-bold text-green-400">
+                  ORBIT PREDICTION: {predictionData.satellite_name}
+                </span>
+              </div>
+              <button
+                onClick={() => { setPredictionData(null); setPredictionTrack(null); }}
+                className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"
+              >
+                <X className="h-2.5 w-2.5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-3 space-y-3">
+              {/* Passes */}
+              {predictionData.passes && predictionData.passes.length > 0 && (
+                <div>
+                  <div className="text-[8px] font-mono text-green-400/80 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <MapPin className="h-2.5 w-2.5" /> MIDDLE EAST PASSES (NEXT 48H)
+                  </div>
+                  <div className="space-y-1">
+                    {predictionData.passes.slice(0, 6).map((pass, i) => (
+                      <div key={i} className="bg-white/5 rounded px-2 py-1.5 border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono text-white/90 flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5 text-green-400" />
+                            {new Date(pass.closestTime).toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" })} UTC
+                          </span>
+                          <span className="text-[8px] font-mono text-green-400">{Math.round(pass.minDistKm)} km</span>
+                        </div>
+                        <div className="text-[8px] font-mono text-white/50 mt-0.5">
+                          {new Date(pass.startTime).toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" })} → {new Date(pass.endTime).toLocaleTimeString("en-US", { hour12: false, timeZone: "UTC" })}
+                          {pass.maxElevation && <span className="ml-1">• EL: {pass.maxElevation.toFixed(1)}°</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Analysis */}
+              {predictionData.ai_analysis && (
+                <div>
+                  <div className="text-[8px] font-mono text-green-400/80 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <Bot className="h-2.5 w-2.5" /> AI ORBITAL ANALYSIS
+                  </div>
+                  <div className="bg-white/5 rounded px-2.5 py-2 border border-white/10">
+                    <div className="prose prose-sm prose-invert max-w-none text-[9px] font-mono text-white/80 leading-relaxed [&_h1]:text-[11px] [&_h2]:text-[10px] [&_h3]:text-[9px] [&_p]:mb-1.5 [&_li]:mb-0.5 [&_ul]:pl-3 [&_ol]:pl-3 [&_strong]:text-green-400">
+                      <ReactMarkdown>{predictionData.ai_analysis}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Track info */}
+              {predictionData.positions && (
+                <div className="text-[7px] font-mono text-white/30 pt-1 border-t border-white/10">
+                  {predictionData.positions.length} PREDICTED POSITIONS • 24H TRACK PLOTTED ON GLOBE
+                </div>
+              )}
             </div>
           </div>
         )}
