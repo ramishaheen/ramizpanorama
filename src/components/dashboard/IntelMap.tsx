@@ -264,6 +264,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const nuclearGroupRef = useRef<L.LayerGroup | null>(null);
   const airQualityGroupRef = useRef<L.LayerGroup | null>(null);
   const aisGroupRef = useRef<L.LayerGroup | null>(null);
+  const cityGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
@@ -558,6 +559,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     nuclearGroupRef.current = L.layerGroup().addTo(map);
     airQualityGroupRef.current = L.layerGroup().addTo(map);
     aisGroupRef.current = L.layerGroup().addTo(map);
+    cityGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
