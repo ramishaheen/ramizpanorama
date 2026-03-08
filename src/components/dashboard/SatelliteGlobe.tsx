@@ -704,6 +704,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         }
       }
 
+      if (allSats.length === 0) {
+        const cached = loadSatelliteCache();
+        if (cached) {
+          rawTLERef.current = cached.rawTLE;
+          setSatellites(cached.satellites);
+          console.log(`[ORBITAL INTEL] Live feeds unavailable, using cached dataset (${cached.satellites.length} satellites)`);
+          return;
+        }
+        throw new Error("No valid TLE entries returned from feeds");
+      }
+
       const prioritized = [
         ...allSats.filter((s) => s.category === "Military" || s.category === "ISR" || s.category === "Early Warning" || s.category === "SIGINT/ELINT"),
         ...allSats.filter((s) => s.category === "Navigation"),
