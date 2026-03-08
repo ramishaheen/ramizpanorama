@@ -140,8 +140,8 @@ serve(async (req) => {
       const passes = findPasses(params, targetLat || 31.5, targetLng || 34.8, radiusKm || 1500, hoursAhead || 48);
 
       // Call AI for deep analysis
-      const apiKey = Deno.env.get("LOVABLE_API_KEY");
-      if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+      const apiKey = Deno.env.get("GEMINI_API_KEY");
+      if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
       const aiPrompt = `You are an expert orbital mechanics and satellite intelligence analyst. Analyze this satellite and its predicted orbital data.
 
@@ -172,14 +172,14 @@ Provide a structured analysis:
 
 Be precise with times and positions. Use UTC.`;
 
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: "You are a satellite orbital mechanics and OSINT intelligence expert. Provide precise, technical analysis." },
             { role: "user", content: aiPrompt },

@@ -41,7 +41,7 @@ serve(async (req) => {
 
     // Step 1: Use Perplexity to search for real social media sentiment data
     const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
     let webContext = "";
 
@@ -77,8 +77,8 @@ serve(async (req) => {
     }
 
     // Step 2: Use AI to structure the sentiment analysis
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI gateway not configured" }), {
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: "Gemini API not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -139,11 +139,11 @@ Return ONLY valid JSON matching this exact schema:
 
     let aiResp;
     try {
-      aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${GEMINI_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "gemini-2.5-flash",
           messages: [
             { role: "system", content: "You are a social media sentiment analysis engine. Return ONLY valid JSON. No markdown, no code fences, no explanation." },
             { role: "user", content: structurePrompt },
