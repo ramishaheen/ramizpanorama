@@ -169,6 +169,49 @@ function parseLaneCount(tags: Record<string, any> = {}, highway: string): number
   return 2;
 }
 
+function inferOnewayDirection(tags: Record<string, any> = {}, highway: string): 1 | -1 | 0 {
+  const onewayTag = String(tags?.oneway ?? "").toLowerCase();
+  if (onewayTag === "-1") return -1;
+  if (onewayTag === "yes" || onewayTag === "1" || onewayTag === "true") return 1;
+  if (onewayTag === "no" || onewayTag === "0" || onewayTag === "false") return 0;
+
+  const junctionTag = String(tags?.junction ?? "").toLowerCase();
+  if (junctionTag === "roundabout" || junctionTag === "circular") return 1;
+
+  // OSM default: motorways are one-way unless explicitly marked otherwise
+  if (highway.includes("motorway")) return 1;
+
+  return 0;
+}
+
+function splitRoadByLength(points: { lat: number; lng: number }[], maxLenM = 220): { lat: number; lng: number }[][] {
+  if (points.length < 2) return [];
+
+  const chunks: { lat: number; lng: number }[][] = [];
+  let current: { lat: number; lng: number }[] = [points[0]];
+  let currentLen = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    const dLat = (b.lat - a.lat) * 111320;
+    const dLng = (b.lng - a.lng) * 111320 * Math.cos((b.lat * Math.PI) / 180);
+    const segLen = Math.sqrt(dLat * dLat + dLng * dLng);
+
+    if (currentLen + segLen > maxLenM && current.length >= 2) {
+      chunks.push(current);
+      current = [a, b];
+      currentLen = segLen;
+    } else {
+      current.push(b);
+      currentLen += segLen;
+    }
+  }
+
+  if (current.length >= 2) chunks.push(current);
+  return chunks;
+}
+
 function pickVehicleType(highway: string): VehicleType {
   const allowed = ROAD_VEHICLES[highway] || ["car"];
   const totalWeight = allowed.reduce((s, v) => s + VEHICLE_CONFIG[v].weight, 0);
