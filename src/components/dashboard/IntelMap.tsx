@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -264,6 +264,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const nuclearGroupRef = useRef<L.LayerGroup | null>(null);
   const airQualityGroupRef = useRef<L.LayerGroup | null>(null);
   const aisGroupRef = useRef<L.LayerGroup | null>(null);
+  const cityGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
@@ -558,6 +559,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     nuclearGroupRef.current = L.layerGroup().addTo(map);
     airQualityGroupRef.current = L.layerGroup().addTo(map);
     aisGroupRef.current = L.layerGroup().addTo(map);
+    cityGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -1177,6 +1179,97 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       group.addLayer(marker);
     });
   }, [aisVessels.data, layers.aisVessels]);
+
+  // ===== CITY LANDMARK MARKERS =====
+  const ME_CITY_LANDMARKS = useMemo(() => [
+    { name: "Tehran", lat: 35.69, lng: 51.39, country: "Iran", landmark: "Azadi Tower", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Azadi_Tower_2021.jpg/320px-Azadi_Tower_2021.jpg", pop: "9.1M" },
+    { name: "Isfahan", lat: 32.65, lng: 51.68, country: "Iran", landmark: "Naqsh-e Jahan Square", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Naghshe_Jahan_Square_Isfahan_modified.jpg/320px-Naghshe_Jahan_Square_Isfahan_modified.jpg", pop: "2.2M" },
+    { name: "Shiraz", lat: 29.59, lng: 52.58, country: "Iran", landmark: "Nasir al-Mulk Mosque", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Nasir_al-Mulk_Mosque_Shiraz.jpg/320px-Nasir_al-Mulk_Mosque_Shiraz.jpg", pop: "1.9M" },
+    { name: "Tabriz", lat: 38.08, lng: 46.29, country: "Iran", landmark: "Tabriz Grand Bazaar", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Tabriz_Bazaar.jpg/320px-Tabriz_Bazaar.jpg", pop: "1.8M" },
+    { name: "Mashhad", lat: 36.3, lng: 59.6, country: "Iran", landmark: "Imam Reza Shrine", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Imam_Reza_shrine.jpg/320px-Imam_Reza_shrine.jpg", pop: "3.4M" },
+    { name: "Amman", lat: 31.95, lng: 35.93, country: "Jordan", landmark: "Roman Theatre", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Amman_Roman_Theatre.jpg/320px-Amman_Roman_Theatre.jpg", pop: "4.1M" },
+    { name: "Petra", lat: 30.33, lng: 35.44, country: "Jordan", landmark: "The Treasury", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Treasury_petra_crop.jpg/320px-Treasury_petra_crop.jpg", pop: "—" },
+    { name: "Jerusalem", lat: 31.77, lng: 35.23, country: "Israel/Palestine", landmark: "Dome of the Rock", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Dome_of_Rock%2C_Temple_Mount%2C_Jerusalem.jpg/320px-Dome_of_Rock%2C_Temple_Mount%2C_Jerusalem.jpg", pop: "936K" },
+    { name: "Tel Aviv", lat: 32.08, lng: 34.78, country: "Israel", landmark: "White City", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Tel_Aviv_Promenade.jpg/320px-Tel_Aviv_Promenade.jpg", pop: "460K" },
+    { name: "Dubai", lat: 25.2, lng: 55.27, country: "UAE", landmark: "Burj Khalifa", image: "https://upload.wikimedia.org/wikipedia/en/thumb/9/93/Burj_Khalifa.jpg/320px-Burj_Khalifa.jpg", pop: "3.5M" },
+    { name: "Abu Dhabi", lat: 24.45, lng: 54.65, country: "UAE", landmark: "Sheikh Zayed Mosque", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Sheikh_Zayed_Mosque_view.jpg/320px-Sheikh_Zayed_Mosque_view.jpg", pop: "1.5M" },
+    { name: "Manama", lat: 26.07, lng: 50.55, country: "Bahrain", landmark: "World Trade Center", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Bahrain_World_Trade_Center_.jpg/320px-Bahrain_World_Trade_Center_.jpg", pop: "411K" },
+    { name: "Kuwait City", lat: 29.38, lng: 47.99, country: "Kuwait", landmark: "Kuwait Towers", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Kuwait_towers.jpg/320px-Kuwait_towers.jpg", pop: "3.1M" },
+    { name: "Doha", lat: 25.29, lng: 51.53, country: "Qatar", landmark: "Museum of Islamic Art", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Museum_of_Islamic_Art%2C_Doha%2C_Qatar.jpg/320px-Museum_of_Islamic_Art%2C_Doha%2C_Qatar.jpg", pop: "1.2M" },
+    { name: "Muscat", lat: 23.59, lng: 58.59, country: "Oman", landmark: "Sultan Qaboos Mosque", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Sultan_Qaboos_Grand_Mosque_RB.jpg/320px-Sultan_Qaboos_Grand_Mosque_RB.jpg", pop: "1.4M" },
+    { name: "Baghdad", lat: 33.31, lng: 44.37, country: "Iraq", landmark: "Al-Shaheed Monument", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Al-Shaheed_Monument_in_Baghdad.jpg/320px-Al-Shaheed_Monument_in_Baghdad.jpg", pop: "8.1M" },
+    { name: "Erbil", lat: 36.19, lng: 44.01, country: "Iraq", landmark: "Erbil Citadel", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Erbil_Citadel.jpg/320px-Erbil_Citadel.jpg", pop: "880K" },
+    { name: "Riyadh", lat: 24.71, lng: 46.67, country: "Saudi Arabia", landmark: "Kingdom Centre", image: "https://upload.wikimedia.org/wikipedia/en/thumb/3/37/Kingdom_Centre%2C_Riyadh%2C_Saudi_Arabia.jpg/320px-Kingdom_Centre%2C_Riyadh%2C_Saudi_Arabia.jpg", pop: "7.6M" },
+    { name: "Mecca", lat: 21.43, lng: 39.83, country: "Saudi Arabia", landmark: "Masjid al-Haram", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Masjid_al-Haram_-_panoramio.jpg/320px-Masjid_al-Haram_-_panoramio.jpg", pop: "2.4M" },
+    { name: "Medina", lat: 24.47, lng: 39.61, country: "Saudi Arabia", landmark: "Al-Masjid an-Nabawi", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Al-Masjid_AL-Nabawi_in_Madinah_-_Saudi_Arabia.jpg/320px-Al-Masjid_AL-Nabawi_in_Madinah_-_Saudi_Arabia.jpg", pop: "1.5M" },
+    { name: "Beirut", lat: 33.89, lng: 35.5, country: "Lebanon", landmark: "Pigeon Rocks", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Raouche.jpg/320px-Raouche.jpg", pop: "2.4M" },
+    { name: "Damascus", lat: 33.51, lng: 36.29, country: "Syria", landmark: "Umayyad Mosque", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Omayyad_Mosque%2C_Damascus.jpg/320px-Omayyad_Mosque%2C_Damascus.jpg", pop: "2.5M" },
+    { name: "Cairo", lat: 30.04, lng: 31.24, country: "Egypt", landmark: "Pyramids of Giza", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Kheops-Pyramid.jpg/320px-Kheops-Pyramid.jpg", pop: "21M" },
+    { name: "Sana'a", lat: 15.37, lng: 44.19, country: "Yemen", landmark: "Old City", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Sanaa_HDR_%288325802494%29.jpg/320px-Sanaa_HDR_%288325802494%29.jpg", pop: "4M" },
+  ], []);
+
+  useEffect(() => {
+    const group = cityGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    ME_CITY_LANDMARKS.forEach((city) => {
+      const icon = L.divIcon({
+        className: "city-landmark-marker",
+        html: `<div style="
+          display:flex;align-items:center;gap:4px;
+          background:rgba(0,12,24,0.85);backdrop-filter:blur(8px);
+          border:1px solid rgba(0,220,255,0.4);border-radius:6px;
+          padding:2px 6px;cursor:pointer;white-space:nowrap;
+          font-family:monospace;font-size:9px;font-weight:700;
+          color:#00dcff;text-shadow:0 0 6px rgba(0,220,255,0.4);
+          box-shadow:0 2px 8px rgba(0,0,0,0.5),0 0 12px rgba(0,220,255,0.1);
+          transition:all 0.2s ease;
+        ">
+          <span style="width:6px;height:6px;border-radius:50%;background:#00dcff;box-shadow:0 0 6px #00dcff;flex-shrink:0;"></span>
+          ${city.name}
+        </div>`,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      });
+
+      const popupContent = `
+        <div style="
+          font-family:'SF Mono',monospace;width:220px;
+          background:#0a0e14;border:1px solid rgba(0,220,255,0.3);
+          border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);
+        ">
+          <div style="position:relative;height:120px;overflow:hidden;">
+            <img src="${city.image}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,14,20,0.9),transparent 60%);"></div>
+            <div style="position:absolute;bottom:6px;left:8px;right:8px;">
+              <div style="font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.8);">${city.landmark}</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.6);">${city.name}, ${city.country}</div>
+            </div>
+          </div>
+          <div style="padding:6px 8px;display:flex;gap:12px;border-top:1px solid rgba(0,220,255,0.15);">
+            <div>
+              <div style="font-size:7px;color:rgba(0,220,255,0.5);text-transform:uppercase;letter-spacing:0.1em;">Population</div>
+              <div style="font-size:10px;color:#00dcff;font-weight:700;">${city.pop}</div>
+            </div>
+            <div>
+              <div style="font-size:7px;color:rgba(0,220,255,0.5);text-transform:uppercase;letter-spacing:0.1em;">Coords</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.6);">${city.lat.toFixed(2)}°, ${city.lng.toFixed(2)}°</div>
+            </div>
+          </div>
+        </div>`;
+
+      const marker = L.marker([city.lat, city.lng], { icon, zIndexOffset: 500 })
+        .bindPopup(popupContent, {
+          className: "city-landmark-popup",
+          maxWidth: 240,
+          minWidth: 220,
+          closeButton: true,
+          autoPan: true,
+        });
+      group.addLayer(marker);
+    });
+  }, [ME_CITY_LANDMARKS]);
 
   // ===== LIVE FLIGHT TRACKING LAYER =====
   const fetchFlightData = useCallback(async () => {
