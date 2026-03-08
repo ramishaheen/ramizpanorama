@@ -267,16 +267,16 @@ const Index = () => {
       <div className="flex flex-col h-screen overflow-hidden relative">
         <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
         <StatsBar
-          airspaceCount={airspaceAlerts.filter(a => a.active).length}
-          vesselCount={vessels.length}
-          alertCount={geoAlerts.length + airspaceAlerts.filter(a => a.active).length}
+          airspaceCount={dailyCounts.airspaceCount}
+          vesselCount={dailyCounts.vesselCount}
+          alertCount={dailyCounts.alertCount}
           riskScore={riskScore.overall}
-          rocketCount={rockets.filter(r => r.status === 'launched' || r.status === 'in_flight').length}
-          impactCount={rockets.filter(r => r.status === 'impact' || r.status === 'intercepted').length}
-          totalRockets={rockets.length}
-          rockets={rockets}
-          geoAlerts={geoAlerts}
-          airspaceAlerts={airspaceAlerts}
+          rocketCount={dailyCounts.rocketCount}
+          impactCount={dailyCounts.impactCount}
+          totalRockets={dailyCounts.totalRockets}
+          rockets={dailyCounts.todayRockets}
+          geoAlerts={dailyCounts.todayGeoAlerts}
+          airspaceAlerts={dailyCounts.todayAirspace}
           dataFresh={dataFresh}
         />
 
@@ -369,16 +369,16 @@ const Index = () => {
     <div className="flex flex-col h-screen overflow-hidden relative">
       <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
       <StatsBar
-        airspaceCount={airspaceAlerts.filter(a => a.active).length}
-        vesselCount={vessels.length}
-        alertCount={geoAlerts.length + airspaceAlerts.filter(a => a.active).length}
+        airspaceCount={dailyCounts.airspaceCount}
+        vesselCount={dailyCounts.vesselCount}
+        alertCount={dailyCounts.alertCount}
         riskScore={riskScore.overall}
-        rocketCount={rockets.filter(r => r.status === 'launched' || r.status === 'in_flight').length}
-        impactCount={rockets.filter(r => r.status === 'impact' || r.status === 'intercepted').length}
-        totalRockets={rockets.length}
-        rockets={rockets}
-        geoAlerts={geoAlerts}
-        airspaceAlerts={airspaceAlerts}
+        rocketCount={dailyCounts.rocketCount}
+        impactCount={dailyCounts.impactCount}
+        totalRockets={dailyCounts.totalRockets}
+        rockets={dailyCounts.todayRockets}
+        geoAlerts={dailyCounts.todayGeoAlerts}
+        airspaceAlerts={dailyCounts.todayAirspace}
         dataFresh={dataFresh}
       />
 
