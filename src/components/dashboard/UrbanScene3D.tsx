@@ -592,25 +592,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         zIndex: isMil ? 80 : 40,
       });
 
-      const speedKts = (v.speed || 0).toFixed(1);
-      const infoContent = `
-        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:200px;border:1px solid ${color}40;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-            <span style="font-weight:700;font-size:13px;color:${color};">🚢 ${v.name}</span>
-            <span style="font-size:8px;padding:2px 6px;border-radius:4px;background:${color}20;color:${color};font-weight:600;">${v.type}</span>
-          </div>
-          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
-            <span style="color:#7d8590;">FLAG</span><span>🏴 ${v.flag}</span>
-            <span style="color:#7d8590;">SPEED</span><span>${speedKts} kts</span>
-            <span style="color:#7d8590;">HDG</span><span>${Math.round(v.heading)}°</span>
-            <span style="color:#7d8590;">DEST</span><span>${v.destination || "Unknown"}</span>
-            <span style="color:#7d8590;">POS</span><span>${v.lat.toFixed(4)}°, ${v.lng.toFixed(4)}°</span>
-          </div>
-        </div>
-      `;
-      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
-      marker.addListener("mouseover", () => infoWindow.open(map, marker));
-      marker.addListener("mouseout", () => infoWindow.close());
+
+      vesselMarkersRef.current.push(marker);
 
       vesselMarkersRef.current.push(marker);
     });
