@@ -110,6 +110,30 @@ function parseLaneCount(tags: Record<string, any> = {}, highway: string): number
   return 2;
 }
 
+function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
+  if (points.length < 2) return [0, 1];
+  const cum: number[] = [0];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dLat = (points[i].lat - points[i - 1].lat) * 111320;
+    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180);
+    total += Math.sqrt(dLat * dLat + dLng * dLng);
+    cum.push(total);
+  }
+  return total <= 0 ? points.map((_, i) => i / (points.length - 1)) : cum.map((d) => d / total);
+}
+
+function interpolateRoad(road: Road, progress: number): { lat: number; lng: number } {
+  const stops = road.progressStops;
+  let segIdx = 0;
+  while (segIdx < stops.length - 2 && progress > stops[segIdx + 1]) segIdx++;
+  const segRange = Math.max(0.000001, stops[segIdx + 1] - stops[segIdx]);
+  const t = (progress - stops[segIdx]) / segRange;
+  const p1 = road.points[segIdx];
+  const p2 = road.points[segIdx + 1];
+  return { lat: p1.lat + (p2.lat - p1.lat) * t, lng: p1.lng + (p2.lng - p1.lng) * t };
+}
+
 function latLngToPixel(lat: number, lng: number, _map: any, overlay: any): { x: number; y: number } | null {
   const google = (window as any).google;
   if (!google || !overlay?.getProjection?.()) return null;
