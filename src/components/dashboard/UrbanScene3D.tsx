@@ -1349,6 +1349,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       cityMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
       if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
+      mapListenersRef.current.forEach((listener) => (window as any).google?.maps?.event?.removeListener?.(listener));
+      mapListenersRef.current = [];
       if (interpolationRef.current) clearInterval(interpolationRef.current);
     };
   }, []);
