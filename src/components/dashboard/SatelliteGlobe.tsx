@@ -829,6 +829,50 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             { lat: s.lat, lng: s.lng, altitude: 1.5 },
             1000
           );
+        })
+        // OSINT rings — conflict zones, military bases, naval choke points
+        .ringsData(OSINT_MARKERS)
+        .ringLat((d: any) => d.lat)
+        .ringLng((d: any) => d.lng)
+        .ringAltitude(0.002)
+        .ringMaxRadius((d: any) => d.type === "conflict" ? 3 : d.type === "naval" ? 2.5 : 1.5)
+        .ringPropagationSpeed((d: any) => d.severity === "critical" ? 4 : d.severity === "high" ? 2.5 : 1.5)
+        .ringRepeatPeriod((d: any) => d.severity === "critical" ? 600 : d.severity === "high" ? 900 : 1200)
+        .ringColor((d: any) => {
+          const colors: Record<string, (t: number) => string> = {
+            conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
+            military: (t: number) => `rgba(251,146,60,${0.8 - t * 0.8})`,
+            naval: (t: number) => `rgba(56,189,248,${0.9 - t * 0.9})`,
+            radar: (t: number) => `rgba(168,85,247,${0.8 - t * 0.8})`,
+          };
+          return colors[d.type] || colors.military;
+        })
+        // Threat arcs — supply lines, patrol routes
+        .arcsData(OSINT_ARCS)
+        .arcStartLat((d: any) => d.startLat)
+        .arcStartLng((d: any) => d.startLng)
+        .arcEndLat((d: any) => d.endLat)
+        .arcEndLng((d: any) => d.endLng)
+        .arcColor((d: any) => [d.color + 'cc', d.color + '44'])
+        .arcAltitudeAutoScale(0.3)
+        .arcStroke(0.6)
+        .arcDashLength(0.4)
+        .arcDashGap(0.15)
+        .arcDashAnimateTime(3000)
+        // OSINT location labels (HTML)
+        .htmlElementsData(OSINT_MARKERS)
+        .htmlLat((d: any) => d.lat)
+        .htmlLng((d: any) => d.lng)
+        .htmlAltitude(0.005)
+        .htmlElement((d: any) => {
+          const el = document.createElement('div');
+          el.style.cssText = `pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;`;
+          const colors: Record<string, string> = { conflict: '#ef4444', military: '#fb923c', naval: '#38bdf8', radar: '#a855f7' };
+          el.style.color = colors[d.type] || '#fb923c';
+          el.style.backgroundColor = 'rgba(0,0,0,0.5)';
+          el.style.borderLeft = `2px solid ${colors[d.type] || '#fb923c'}`;
+          el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
+          return el;
         });
 
       // Add ambient + directional light for 3D objects
