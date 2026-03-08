@@ -1164,6 +1164,21 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <Camera className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
           <span className="text-[9px] font-mono text-muted-foreground uppercase">CCTV</span>
         </button>
+        <button
+          onClick={toggleArabCCTV}
+          disabled={loadingCCTV}
+          className={`flex items-center gap-1.5 backdrop-blur border rounded-md px-2 py-1 shadow-lg transition-all group cursor-pointer ${
+            showArabCCTV
+              ? "bg-primary/20 border-primary/50 shadow-[0_0_12px_hsl(190_100%_50%/0.2)]"
+              : "bg-card/90 border-border hover:bg-primary/10 hover:border-primary/50"
+          }`}
+          title="Show Arab World CCTV on Map"
+        >
+          <Camera className={`h-3.5 w-3.5 ${showArabCCTV ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-primary"}`} />
+          <span className={`text-[9px] font-mono uppercase ${showArabCCTV ? "text-primary" : "text-muted-foreground"}`}>
+            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ARAB CCTV (${arabCameras.length})` : "ARAB CCTV"}
+          </span>
+        </button>
       </div>
 
       {/* 3D overlays */}
