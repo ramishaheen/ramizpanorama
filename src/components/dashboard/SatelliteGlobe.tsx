@@ -802,7 +802,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     return () => clearInterval(interval);
   }, [satellites.length, selectedCat]);
 
-  // Init globe with 3D satellite objects
+  // Init globe once, then update data/layers in separate effects (prevents WebGL context churn/black screen)
   useEffect(() => {
     if (!wrapperRef.current) return;
 
@@ -824,121 +824,71 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         const Globe = mod.default;
         if (cancelled || !globeElRef.current) return;
 
-        if (globeRef.current) {
-          globeElRef.current.innerHTML = "";
-        }
+        if (globeRef.current) return;
 
         const el = globeElRef.current;
-        const filtered = selectedCat
-          ? satellites.filter((s) => s.category === selectedCat)
-          : satellites;
 
-        // Create a reusable satellite 3D mesh factory
         const createSatMesh = (sat: SatelliteData) => {
           const color = new THREE.Color(CATEGORY_COLORS[sat.category] || "#d4a843");
           const group = new THREE.Group();
 
-          // Main satellite body
           const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
           const isNav = sat.category === "Navigation";
           const isStation = sat.category === "Space Station";
-          const bodySize = isStation ? 0.9 : isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
+          const bodySize = isStation ? 0.7 : isMilOrISR ? 0.45 : isNav ? 0.35 : 0.25;
 
           const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
           const bodyMat = new THREE.MeshPhongMaterial({
             color: color,
             emissive: color,
-            emissiveIntensity: 0.6,
+            emissiveIntensity: 0.45,
             transparent: true,
             opacity: 0.9,
-            shininess: 100,
+            shininess: 80,
           });
           const body = new THREE.Mesh(bodyGeo, bodyMat);
           group.add(body);
 
-          // Solar panels (two flat rectangles extending from body)
-          const panelWidth = bodySize * 1.8;
-          const panelHeight = bodySize * 0.7;
-          const panelGeo = new THREE.BoxGeometry(panelWidth, 0.04, panelHeight);
-          const panelMat = new THREE.MeshPhongMaterial({
-            color: 0x1a3a5c,
-            emissive: new THREE.Color(0x0a1a2e),
-            emissiveIntensity: 0.3,
-            transparent: true,
-            opacity: 0.85,
-            shininess: 150,
-          });
-
-          const panelLeft = new THREE.Mesh(panelGeo, panelMat);
-          panelLeft.position.set(-(bodySize * 0.5 + panelWidth * 0.5), 0, 0);
-          group.add(panelLeft);
-
-          const panelRight = new THREE.Mesh(panelGeo, panelMat);
-          panelRight.position.set(bodySize * 0.5 + panelWidth * 0.5, 0, 0);
-          group.add(panelRight);
-
-          // Antenna dish for comm/ISR satellites
-          if (sat.category === "Communication" || sat.category === "ISR" || sat.category === "SIGINT/ELINT" || sat.category === "Data Relay" || sat.category === "SAR Imaging") {
-            const dishGeo = new THREE.ConeGeometry(bodySize * 0.3, bodySize * 0.4, 8);
-            const dishMat = new THREE.MeshPhongMaterial({
-              color: 0xcccccc,
-              emissive: color,
-              emissiveIntensity: 0.2,
-              transparent: true,
-              opacity: 0.8,
-            });
-            const dish = new THREE.Mesh(dishGeo, dishMat);
-            dish.position.set(0, bodySize * 0.4, 0);
-            dish.rotation.x = Math.PI;
-            group.add(dish);
-          }
-
-          // Glow point at center
-          const glowGeo = new THREE.SphereGeometry(bodySize * 0.15, 8, 8);
+          const glowGeo = new THREE.SphereGeometry(bodySize * 0.18, 6, 6);
           const glowMat = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.75,
           });
           const glow = new THREE.Mesh(glowGeo, glowMat);
           group.add(glow);
 
-          // Random slight rotation for visual variety
           group.rotation.y = Math.random() * Math.PI * 2;
-          group.rotation.z = (Math.random() - 0.5) * 0.3;
-
           return group;
         };
 
         const globe = new Globe(el)
           .globeImageUrl(
-            "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+            "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
           )
           .bumpImageUrl(
-            "//unpkg.com/three-globe/example/img/earth-topology.png"
+            "https://unpkg.com/three-globe/example/img/earth-topology.png"
           )
           .backgroundImageUrl(
-            "//unpkg.com/three-globe/example/img/night-sky.png"
+            "https://unpkg.com/three-globe/example/img/night-sky.png"
           )
           .width(el.clientWidth)
           .height(el.clientHeight)
           .atmosphereColor("#1a6b8a")
           .atmosphereAltitude(0.18)
-          // 3D satellite objects at real orbital positions
-          .objectsData(filtered)
+          .objectsData([])
           .objectLat("lat")
           .objectLng("lng")
           .objectAltitude((d: any) => {
             const s = d as SatelliteData;
-            return Math.min(s.alt / 6371 * 0.3 + 0.01, 0.7);
+            return Math.min((s.alt / 6371) * 0.3 + 0.01, 0.7);
           })
           .objectThreeObject((d: any) => createSatMesh(d as SatelliteData))
           .onObjectClick((d: any) => {
             const s = d as SatelliteData;
             setSelectedSat(s);
-            // Compute orbital trail
             if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
-              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
+              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt, 180);
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
@@ -954,19 +904,12 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               setHoveredSat(null);
             }
           })
-          // Labels
-          .labelsData(
-            showLabels
-              ? filtered
-                  .filter((s) => ["Military", "ISR", "Early Warning", "SIGINT/ELINT", "Navigation", "SAR Imaging", "Space Station", "Scientific"].includes(s.category))
-                  .slice(0, 200)
-              : []
-          )
+          .labelsData([])
           .labelLat("lat")
           .labelLng("lng")
           .labelAltitude((d: any) => {
             const s = d as SatelliteData;
-            return Math.min(s.alt / 6371 * 0.3 + 0.02, 0.72);
+            return Math.min((s.alt / 6371) * 0.3 + 0.02, 0.72);
           })
           .labelText("name")
           .labelSize(0.3)
@@ -980,7 +923,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             const s = d as SatelliteData;
             setSelectedSat(s);
             if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
-              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
+              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt, 180);
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
@@ -989,7 +932,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               1000
             );
           })
-          // OSINT rings — conflict zones, military bases, naval choke points
           .ringsData(OSINT_MARKERS)
           .ringLat((d: any) => d.lat)
           .ringLng((d: any) => d.lng)
@@ -1006,7 +948,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             };
             return colors[d.type] || colors.military;
           })
-          // Threat arcs — supply lines, patrol routes
           .arcsData(OSINT_ARCS)
           .arcStartLat((d: any) => d.startLat)
           .arcStartLng((d: any) => d.startLng)
@@ -1018,7 +959,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .arcDashLength(0.4)
           .arcDashGap(0.15)
           .arcDashAnimateTime(3000)
-          // OSINT location labels (HTML)
           .htmlElementsData(OSINT_MARKERS)
           .htmlLat((d: any) => d.lat)
           .htmlLng((d: any) => d.lng)
@@ -1034,15 +974,14 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             return el;
           });
 
-        // Add ambient + directional light for 3D objects
         const scene = globe.scene();
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
         dirLight.position.set(5, 3, 5);
         scene.add(dirLight);
 
-        globe.pointOfView({ lat: 30, lng: 44, altitude: 0.85 }, 1500);
+        globe.pointOfView({ lat: 30, lng: 44, altitude: 1.05 }, 1500);
         globe.controls().autoRotate = false;
         globe.controls().enableDamping = true;
         globe.controls().dampingFactor = 0.15;
@@ -1059,6 +998,36 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Update visible satellites without reinitializing Globe
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+    const filtered = selectedCat
+      ? satellites.filter((s) => s.category === selectedCat)
+      : satellites;
+
+    const maxRenderable = 1800;
+    globe.objectsData(filtered.slice(0, maxRenderable));
+  }, [satellites, selectedCat]);
+
+  // Update label layer independently
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const filtered = selectedCat
+      ? satellites.filter((s) => s.category === selectedCat)
+      : satellites;
+
+    const labels = showLabels
+      ? filtered
+          .filter((s) => ["Military", "ISR", "Early Warning", "SIGINT/ELINT", "Navigation", "SAR Imaging", "Space Station", "Scientific"].includes(s.category))
+          .slice(0, 220)
+      : [];
+
+    globe.labelsData(labels);
   }, [satellites, selectedCat, showLabels]);
 
   // Render orbit trail when a satellite is selected
