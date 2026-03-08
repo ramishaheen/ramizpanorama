@@ -408,50 +408,95 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const fetchSatellites = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await fetch(
-        "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle"
-      )
-        .then((r) => r.text())
-        .catch(() => "");
+      // Fetch from multiple specialized CelesTrak groups for comprehensive OSINT coverage
+      const TLE_SOURCES: { url: string; group: string }[] = [
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle", group: "active" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=military&FORMAT=tle", group: "military" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle", group: "resource" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle", group: "weather" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gnss&FORMAT=tle", group: "gnss" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=tle", group: "geo" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=sarsat&FORMAT=tle", group: "sarsat" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=last-30-days&FORMAT=tle", group: "recent" },
+      ];
+
+      const responses = await Promise.allSettled(
+        TLE_SOURCES.map(async (src) => {
+          const resp = await fetch(src.url).then((r) => r.text()).catch(() => "");
+          return { text: resp, group: src.group };
+        })
+      );
+
       const allSats: SatelliteData[] = [];
       const rawTLEs: RawSatTLE[] = [];
       const seen = new Set<string>();
-      const lines = resp
-        .trim()
-        .split("\n")
-        .map((l) => l.trim());
-      for (let i = 0; i < lines.length - 2; i += 3) {
-        const name = lines[i],
-          tle1 = lines[i + 1],
-          tle2 = lines[i + 2];
-        if (!tle1?.startsWith("1 ") || !tle2?.startsWith("2 ")) continue;
-        if (seen.has(name)) continue;
-        seen.add(name);
-        const sat = parseTLEFull(name, tle1, tle2);
-        if (sat) {
-          allSats.push(sat);
-          rawTLEs.push({
-            name: sat.name,
-            inclination: sat.inclination!,
-            raan: sat.raan!,
-            meanAnomaly: sat.meanAnomaly!,
-            meanMotion: sat.meanMotion!,
-            eccentricity: sat.eccentricity!,
-            epochYear: sat.epochYear!,
-            epochDay: sat.epochDay!,
-            alt: sat.alt,
-            category: sat.category,
-            noradId: sat.noradId!,
-            intlDesignator: sat.intlDesignator!,
-            period: sat.period!,
-            velocity: sat.velocity!,
-            launchYear: sat.launchYear,
-          });
+
+      for (const result of responses) {
+        if (result.status !== "fulfilled") continue;
+        const { text, group } = result.value;
+        if (!text.trim()) continue;
+        const lines = text.trim().split("\n").map((l) => l.trim());
+        for (let i = 0; i < lines.length - 2; i += 3) {
+          const name = lines[i],
+            tle1 = lines[i + 1],
+            tle2 = lines[i + 2];
+          if (!tle1?.startsWith("1 ") || !tle2?.startsWith("2 ")) continue;
+          if (seen.has(name)) continue;
+          seen.add(name);
+          const sat = parseTLEFull(name, tle1, tle2);
+          if (sat) {
+            // Override category based on source group for accuracy
+            sat.category = categorizeSatellite(sat.name, group);
+            const { country, operator } = detectCountry(sat.name, sat.intlDesignator);
+            sat.country = country;
+            sat.operator = operator;
+            sat.source = group;
+            allSats.push(sat);
+            rawTLEs.push({
+              name: sat.name,
+              inclination: sat.inclination!,
+              raan: sat.raan!,
+              meanAnomaly: sat.meanAnomaly!,
+              meanMotion: sat.meanMotion!,
+              eccentricity: sat.eccentricity!,
+              epochYear: sat.epochYear!,
+              epochDay: sat.epochDay!,
+              alt: sat.alt,
+              category: sat.category,
+              noradId: sat.noradId!,
+              intlDesignator: sat.intlDesignator!,
+              period: sat.period!,
+              velocity: sat.velocity!,
+              launchYear: sat.launchYear,
+              country,
+              operator,
+              source: group,
+            });
+          }
         }
       }
-      const limited = allSats.slice(0, 2500);
-      rawTLERef.current = rawTLEs.slice(0, 2500);
+
+      // Prioritize: Military & ISR first, then others
+      const prioritized = [
+        ...allSats.filter((s) => s.category === "Military" || s.category === "ISR"),
+        ...allSats.filter((s) => s.category === "Navigation"),
+        ...allSats.filter((s) => s.category === "Weather" || s.category === "Earth Observation"),
+        ...allSats.filter((s) => s.category === "Communication").slice(0, 500),
+        ...allSats.filter((s) => s.category === "Unknown").slice(0, 200),
+      ];
+
+      // Deduplicate after merge
+      const finalSeen = new Set<string>();
+      const deduped = prioritized.filter((s) => {
+        if (finalSeen.has(s.name)) return false;
+        finalSeen.add(s.name);
+        return true;
+      });
+
+      const limited = deduped.slice(0, 3500);
+      rawTLERef.current = rawTLEs.filter((r) => deduped.some((d) => d.name === r.name)).slice(0, 3500);
       setSatellites(limited);
+      console.log(`[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter(r => r.status === 'fulfilled').length} CelesTrak groups`);
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
     } finally {
