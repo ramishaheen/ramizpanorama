@@ -1683,7 +1683,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
         {/* View Style Presets Bar */}
         {apiKey && (
-          <div className="absolute top-3 left-[55%] -translate-x-1/2 z-[16] pointer-events-auto">
+          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[16] pointer-events-auto">
             <div className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-border/40" style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}>
               {([
                 { id: "normal" as const, label: "Normal", icon: "🌍" },
