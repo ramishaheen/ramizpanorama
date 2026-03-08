@@ -840,6 +840,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const body = new THREE.Mesh(bodyGeo, bodyMat);
           group.add(body);
 
+          // Outer glow sphere (pulse effect)
+          const glowGeo = new THREE.SphereGeometry(bodySize * 0.9, 16, 16);
+          const glowMat = new THREE.MeshBasicMaterial({
+            color,
+            transparent: true,
+            opacity: 0.18,
+            side: THREE.BackSide,
+          });
+          const glow = new THREE.Mesh(glowGeo, glowMat);
+          group.add(glow);
+
           const haloGeo = new THREE.RingGeometry(bodySize * 0.7, bodySize * 0.95, 24);
           const haloMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide });
           const halo = new THREE.Mesh(haloGeo, haloMat);
@@ -847,7 +858,29 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           group.add(halo);
 
           group.rotation.y = Math.random() * Math.PI * 2;
+
+          // Animate pulse
+          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2 };
+
           return group;
+        };
+
+        // Animate satellite glow pulse
+        const animatePulse = () => {
+          const globe = globeRef.current;
+          if (!globe) return;
+          const scene = globe.scene();
+          if (!scene) return;
+          const t = performance.now() * 0.003;
+          scene.traverse((obj: any) => {
+            if (obj.userData?.glow) {
+              const phase = t + (obj.userData.time || 0);
+              const pulse = 0.85 + Math.sin(phase) * 0.25;
+              obj.userData.glow.scale.set(pulse, pulse, pulse);
+              obj.userData.glowMat.opacity = 0.1 + Math.sin(phase) * 0.12;
+            }
+          });
+          pulseFrameRef.current = requestAnimationFrame(animatePulse);
         };
 
         const globe = new Globe(el)
