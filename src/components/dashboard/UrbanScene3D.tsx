@@ -2138,10 +2138,18 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               <div className="aspect-video bg-black relative">
                 {activeCameraFeed.embed_url ? (
                   <iframe
-                    src={activeCameraFeed.embed_url}
+                    src={(() => {
+                      let url = activeCameraFeed.embed_url;
+                      if (url.includes('youtube.com/embed/')) {
+                        if (!url.includes('autoplay=')) url += (url.includes('?') ? '&' : '?') + 'autoplay=1';
+                        if (!url.includes('mute=')) url += '&mute=1';
+                      }
+                      return url;
+                    })()}
                     className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
+                    referrerPolicy="no-referrer"
                     title={activeCameraFeed.name}
                   />
                 ) : activeCameraFeed.stream_url ? (
