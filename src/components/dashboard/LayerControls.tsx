@@ -39,6 +39,7 @@ const layerConfig = [
   { key: "traffic" as const, trKey: "layer.traffic", icon: Car, color: "text-accent" },
   { key: "conflicts" as const, trKey: "layer.conflicts", icon: Crosshair, color: "text-warning" },
   { key: "heatmap" as const, trKey: "layer.heatmap", icon: Radio, color: "text-critical" },
+  { key: "cities" as const, trKey: "layer.cities", icon: MapPin, color: "text-primary" },
 ];
 
 export const LayerControls = ({ layers, onToggle }: LayerControlsProps) => {
