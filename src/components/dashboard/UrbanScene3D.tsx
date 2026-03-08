@@ -1249,7 +1249,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                           setSelectedAircraft(isTracked ? null : ac);
                           if (!isTracked && mapInstanceRef.current) mapInstanceRef.current.panTo({ lat: ac.lat, lng: ac.lng });
                         }}
-                        className={`flex items-center gap-1.5 px-2 py-1.5 text-left transition-all bg-black/50 ${
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-all ${
                           isTracked ? "bg-primary/10" : "hover:bg-white/5"
                         }`}>
                         <Plane className="h-3 w-3 flex-shrink-0" style={{ color, transform: `rotate(${ac.heading}deg)` }} />
