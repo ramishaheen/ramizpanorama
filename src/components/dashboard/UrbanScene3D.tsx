@@ -172,6 +172,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [opacityHeatmap, setOpacityHeatmap] = useState(0.7);
   const [opacityTraffic, setOpacityTraffic] = useState(0.8);
   const [showAirspacePanel, setShowAirspacePanel] = useState(true);
+  const [airspacePanelPos, setAirspacePanelPos] = useState({ x: 12, y: 160 });
+  const airspaceDragRef = useRef<{ dragging: boolean; offsetX: number; offsetY: number }>({ dragging: false, offsetX: 0, offsetY: 0 });
 
   // Fetch nearby intel
   useEffect(() => {
