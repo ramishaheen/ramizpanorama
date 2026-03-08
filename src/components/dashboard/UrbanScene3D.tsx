@@ -1137,7 +1137,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
         {/* Layer panel toggle button */}
         {!showLayerPanel && apiKey && (
-          <button onClick={() => setShowLayerPanel(true)} className="absolute top-3 left-[calc(theme(spacing.3)+250px)] z-[16] pointer-events-auto flex items-center gap-1 px-2 py-1.5 rounded-md bg-black/80 backdrop-blur border border-primary/30 text-primary hover:bg-primary/15 transition-all" style={{ left: "calc(0.75rem + 250px)", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }} title="Open Layer Panel">
+          <button onClick={() => setShowLayerPanel(true)} className="absolute top-14 left-3 z-[16] pointer-events-auto flex items-center gap-1 px-2 py-1.5 rounded-md bg-black/80 backdrop-blur border border-primary/30 text-primary hover:bg-primary/15 transition-all" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }} title="Open Layer Panel">
             <Layers className="h-3.5 w-3.5" />
             <span className="text-[9px] font-mono uppercase">Layers</span>
           </button>
