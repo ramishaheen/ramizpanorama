@@ -1053,12 +1053,20 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     setLoadingCCTV(true);
     setShowArabCCTV(true);
     try {
+      // Fetch only online cameras within the Arab World bounding box
       const { data, error } = await supabase.functions.invoke("cameras", {
         method: "POST",
-        body: { action: "list", status: "online", limit: 1000 },
+        body: {
+          action: "list",
+          status: "online",
+          limit: 1000,
+          bounds: { north: 42, south: 10, east: 65, west: -18 },
+        },
       });
       if (!error && data?.cameras) {
-        setArabCameras(data.cameras);
+        // Filter to only Arab/Middle East countries
+        const filtered = data.cameras.filter((c: any) => ARAB_COUNTRIES.includes(c.country));
+        setArabCameras(filtered);
       }
     } catch (e) { console.error("CCTV fetch failed:", e); }
     finally { setLoadingCCTV(false); }
@@ -1070,6 +1078,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     if (!group) return;
     group.clearLayers();
     if (!showArabCCTV || arabCameras.length === 0) return;
+
+    // Fly to Arab World region
+    if (mapRef.current && arabCameras.length > 0) {
+      mapRef.current.flyTo([28, 45], 4, { duration: 1.2 });
+    }
 
     arabCameras.forEach((cam: any) => {
       if (!cam.lat || !cam.lng) return;
@@ -1169,11 +1182,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
               ? "bg-primary/20 border-primary/50 shadow-[0_0_12px_hsl(190_100%_50%/0.2)]"
               : "bg-card/90 border-border hover:bg-primary/10 hover:border-primary/50"
           }`}
-          title="Show All CCTV Cameras on Map"
+          title="Show Arab World CCTV Cameras"
         >
           <Camera className={`h-3.5 w-3.5 ${showArabCCTV ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-primary"}`} />
           <span className={`text-[9px] font-mono uppercase ${showArabCCTV ? "text-primary" : "text-muted-foreground"}`}>
-            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV"}
+            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ARAB CCTV (${arabCameras.length})` : "ARAB CCTV"}
           </span>
         </button>
       </div>
