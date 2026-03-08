@@ -826,39 +826,65 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
           const isNav = sat.category === "Navigation";
           const isStation = sat.category === "Space Station";
-          const bodySize = isStation ? 1.6 : isMilOrISR ? 1.2 : isNav ? 1.0 : 0.85;
+          const baseSize = isStation ? 6.4 : isMilOrISR ? 4.8 : isNav ? 4.0 : 3.4;
 
-          const bodyGeo = new THREE.OctahedronGeometry(bodySize * 0.5, 0);
-          const bodyMat = new THREE.MeshPhongMaterial({
+          // Satellite body — flat cross shape (two perpendicular planes = solar panel look)
+          const panelW = baseSize * 0.5;
+          const panelH = baseSize * 0.15;
+
+          const panelGeo = new THREE.PlaneGeometry(panelW, panelH);
+          const panelMat = new THREE.MeshPhongMaterial({
             color,
             emissive: color,
-            emissiveIntensity: 0.65,
+            emissiveIntensity: 0.8,
             transparent: true,
-            opacity: 0.96,
-            shininess: 90,
+            opacity: 0.95,
+            side: THREE.DoubleSide,
+            shininess: 120,
           });
 
-          const body = new THREE.Mesh(bodyGeo, bodyMat);
-          group.add(body);
+          // Panel 1 (horizontal)
+          const panel1 = new THREE.Mesh(panelGeo, panelMat);
+          group.add(panel1);
+
+          // Panel 2 (perpendicular)
+          const panel2 = new THREE.Mesh(panelGeo, panelMat.clone());
+          panel2.rotation.y = Math.PI / 2;
+          group.add(panel2);
+
+          // Central hub (small sphere)
+          const hubGeo = new THREE.SphereGeometry(baseSize * 0.12, 8, 8);
+          const hubMat = new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            emissive: color,
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.95,
+            shininess: 100,
+          });
+          const hub = new THREE.Mesh(hubGeo, hubMat);
+          group.add(hub);
 
           // Outer glow sphere (pulse effect)
-          const glowGeo = new THREE.SphereGeometry(bodySize * 0.9, 16, 16);
+          const glowGeo = new THREE.SphereGeometry(baseSize * 0.4, 16, 16);
           const glowMat = new THREE.MeshBasicMaterial({
             color,
             transparent: true,
-            opacity: 0.18,
+            opacity: 0.2,
             side: THREE.BackSide,
           });
           const glow = new THREE.Mesh(glowGeo, glowMat);
           group.add(glow);
 
-          const haloGeo = new THREE.RingGeometry(bodySize * 0.7, bodySize * 0.95, 24);
-          const haloMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide });
+          // Halo ring
+          const haloGeo = new THREE.RingGeometry(baseSize * 0.28, baseSize * 0.38, 24);
+          const haloMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
           const halo = new THREE.Mesh(haloGeo, haloMat);
           halo.rotation.x = Math.PI / 2;
           group.add(halo);
 
           group.rotation.y = Math.random() * Math.PI * 2;
+          group.rotation.x = Math.random() * 0.3;
 
           // Animate pulse
           group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2 };
