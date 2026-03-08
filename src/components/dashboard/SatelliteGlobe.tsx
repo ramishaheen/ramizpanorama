@@ -1705,15 +1705,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               {hoveredSat.operator && hoveredSat.operator !== "Unknown" && <div>OPERATOR: <span className="text-white/90">{hoveredSat.operator}</span></div>}
               {hoveredSat.noradId && <div>NORAD: <span className="text-white/90">{hoveredSat.noradId}</span></div>}
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openAiChat(hoveredSat);
-              }}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-white/10 border border-white/20 text-[10px] font-mono font-semibold text-white hover:bg-white/20 transition-all"
-            >
-              <Bot className="h-3 w-3" /> Ask AI
-            </button>
+            <div className="text-[7px] font-mono text-white/40 mt-1.5 pt-1 border-t border-white/10">
+              CLICK TO VIEW DETAILS & AI ANALYSIS
+            </div>
           </div>
         </div>
       )}
