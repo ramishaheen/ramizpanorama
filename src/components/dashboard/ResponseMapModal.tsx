@@ -525,6 +525,7 @@ export const ResponseMapModal = ({ onClose, onFlyTo }: ResponseMapProps) => {
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
