@@ -45,30 +45,7 @@ interface ConflictPoint {
   severity: number;
 }
 
-const PRESETS = [
-  { name: "Middle East", lat: 29.5, lng: 47.5 },
-  { name: "Tehran", lat: 35.6892, lng: 51.389 },
-  { name: "Tel Aviv", lat: 32.0853, lng: 34.7818 },
-  { name: "Beirut", lat: 33.8938, lng: 35.5018 },
-  { name: "Damascus", lat: 33.5138, lng: 36.2765 },
-  { name: "Riyadh", lat: 24.7136, lng: 46.6753 },
-  { name: "Baghdad", lat: 33.3152, lng: 44.3661 },
-  { name: "Dubai", lat: 25.2048, lng: 55.2708 },
-  { name: "Amman", lat: 31.9454, lng: 35.9284 },
-  { name: "New York", lat: 40.7128, lng: -74.006 },
-  { name: "London", lat: 51.5074, lng: -0.1278 },
-  { name: "Tokyo", lat: 35.6762, lng: 139.6503 },
-];
-
-const MARITIME_CORRIDORS = [
-  { latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 }, // Persian Gulf
-  { latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 }, // Gulf of Oman
-  { latMin: 12.0, latMax: 30.8, lngMin: 32.0, lngMax: 43.8 }, // Red Sea + Bab el-Mandeb
-  { latMin: 30.0, latMax: 33.6, lngMin: 31.8, lngMax: 33.2 }, // Suez Canal
-  { latMin: 31.0, latMax: 37.2, lngMin: 33.2, lngMax: 36.8 }, // Eastern Mediterranean coast
-  { latMin: 36.3, latMax: 47.2, lngMin: 47.0, lngMax: 54.8 }, // Caspian Sea
-];
-
+// Maritime corridor check uses imported MARITIME_CORRIDORS
 function isLikelyWaterPosition(lat: number, lng: number): boolean {
   return MARITIME_CORRIDORS.some((c) => lat >= c.latMin && lat <= c.latMax && lng >= c.lngMin && lng <= c.lngMax);
 }
