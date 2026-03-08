@@ -195,6 +195,25 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
             duration: 8000,
           });
         }
+        // Record trail history
+        const now = Date.now();
+        const history = { ...trailHistoryRef.current };
+        const MAX_TRAIL = 8;
+        const TRAIL_EXPIRE = 5 * 60 * 1000; // 5 min
+        newAircraft.forEach((ac) => {
+          const trail = history[ac.icao24] || [];
+          const last = trail[trail.length - 1];
+          if (!last || last.lat !== ac.lat || last.lng !== ac.lng) {
+            trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
+          }
+          // Trim old points
+          history[ac.icao24] = trail.filter(p => now - p.ts < TRAIL_EXPIRE).slice(-MAX_TRAIL);
+        });
+        // Remove stale aircraft from history
+        const activeIds = new Set(newAircraft.map(a => a.icao24));
+        Object.keys(history).forEach(id => { if (!activeIds.has(id)) delete history[id]; });
+        trailHistoryRef.current = history;
+
         setAircraft(newAircraft);
       }
     } catch (e) {
