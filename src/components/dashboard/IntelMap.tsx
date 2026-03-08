@@ -18,6 +18,7 @@ import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
 import { SatelliteGlobe } from "./SatelliteGlobe";
 import { UrbanScene3D } from "./UrbanScene3D";
+import { ChokepointMonitor, CHOKEPOINTS } from "./ChokepointMonitor";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
 import { useConflictEvents, type ConflictEvent } from "@/hooks/useConflictEvents";
@@ -254,6 +255,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const fusionGroupRef = useRef<L.LayerGroup | null>(null);
   const cctvGroupRef = useRef<L.LayerGroup | null>(null);
   const flightGroupRef = useRef<L.LayerGroup | null>(null);
+  const chokeGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
@@ -541,6 +543,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     newsGroupRef.current = L.layerGroup().addTo(map);
     telegramGroupRef.current = L.layerGroup().addTo(map);
     flightGroupRef.current = L.layerGroup().addTo(map);
+    chokeGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -564,6 +567,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       telegramGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
       flightGroupRef.current?.clearLayers();
+      chokeGroupRef.current?.clearLayers();
       if (flightIntervalRef.current) clearInterval(flightIntervalRef.current);
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
@@ -580,6 +584,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       telegramGroupRef.current = null;
       userItemsGroupRef.current = null;
       flightGroupRef.current = null;
+      chokeGroupRef.current = null;
       weatherTileRef.current = null;
     };
   }, []);
@@ -849,7 +854,43 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     }
   }, [airspaceAlerts, vessels, geoAlerts, rockets, layers]);
 
-  // Render earthquake layer
+  // Render chokepoint zones on map
+  useEffect(() => {
+    const group = chokeGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+    if (!layers.maritime) return;
+
+    CHOKEPOINTS.forEach((cp) => {
+      const circle = L.circle([cp.lat, cp.lng], {
+        radius: cp.radiusKm * 1000,
+        color: "#00d4ff",
+        fillColor: "#00d4ff",
+        fillOpacity: 0.04,
+        weight: 1.5,
+        dashArray: "8 6",
+      });
+      const nearbyCount = vessels.filter((v) => {
+        const dLat = ((v.lat - cp.lat) * Math.PI) / 180;
+        const dLng = ((v.lng - cp.lng) * Math.PI) / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos((cp.lat * Math.PI) / 180) * Math.cos((v.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+        return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) <= cp.radiusKm;
+      }).length;
+      circle.bindPopup(`<div style="${popupStyle}"><div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">⚓ ${cp.name}</div><div>Vessels in zone: <b>${nearbyCount}</b></div><div>Radius: ${cp.radiusKm} km</div><div style="margin-top:4px;font-size:9px;opacity:0.7;">${cp.criticalNote}</div></div>`, popupOptions);
+      circle.addTo(group);
+      L.marker([cp.lat, cp.lng], {
+        icon: L.divIcon({
+          className: "",
+          html: `<div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#00d4ff;text-shadow:0 0 8px rgba(0,212,255,0.6);white-space:nowrap;text-align:center;pointer-events:none;font-weight:700;letter-spacing:1px;">⚓ ${cp.shortName}<br/><span style="font-size:7px;opacity:0.7;">${nearbyCount} vessels</span></div>`,
+          iconSize: [120, 28],
+          iconAnchor: [60, 14],
+        }),
+        interactive: false,
+      }).addTo(group);
+    });
+  }, [vessels, layers.maritime]);
+
+
   useEffect(() => {
     const group = earthquakeGroupRef.current;
     if (!group) return;
@@ -1524,6 +1565,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       />
       <TotalLaunchesWidget rockets={rockets} />
       <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
+      <ChokepointMonitor
+        vessels={vessels}
+        onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
+      />
 
       {/* 3D Mode buttons */}
       <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1.5">
