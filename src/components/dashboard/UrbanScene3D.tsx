@@ -250,7 +250,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         markersRef.current = [];
         trailLinesRef.current.forEach(l => l.setMap(null));
         trailLinesRef.current = [];
-        mapListenersRef.current.forEach((listener) => google.maps.event.removeListener(listener));
+        mapListenersRef.current.forEach((listener) => (window as any).google?.maps?.event?.removeListener?.(listener));
         mapListenersRef.current = [];
         mapInstanceRef.current = null;
       }
