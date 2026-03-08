@@ -355,7 +355,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       const filtered = catFilter
         ? updated.filter((s) => s.category === catFilter)
         : updated;
-      globe.pointsData(filtered);
+      globe.objectsData(filtered);
     }, 4000);
     return () => clearInterval(interval);
   }, [satellites.length, selectedCat]);
