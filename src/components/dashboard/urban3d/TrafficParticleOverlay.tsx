@@ -524,18 +524,22 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         // Compute heading angle from segment direction
         const px1 = latLngToPixel(p1.lat, p1.lng, mapRef.current, overlay);
         const px2 = latLngToPixel(p2.lat, p2.lng, mapRef.current, overlay);
+        let roadAngle = 0;
         if (px1 && px2) {
           const dx = px2.x - px1.x;
           const dy = px2.y - px1.y;
-          p.angle = Math.atan2(dy, dx);
-          if (p.direction === -1) p.angle += Math.PI;
+          roadAngle = Math.atan2(dy, dx);
+          p.angle = p.direction === -1 ? roadAngle + Math.PI : roadAngle;
         }
 
         const px = latLngToPixel(interpLat, interpLng, mapRef.current, overlay);
         if (!px) return;
 
-        const x = px.x * dpr;
-        const y = px.y * dpr;
+        // Apply perpendicular lane offset
+        const perpAngle = roadAngle + Math.PI / 2;
+        const offsetPx = p.laneOffset * dpr;
+        const x = (px.x + Math.cos(perpAngle) * p.laneOffset) * dpr;
+        const y = (px.y + Math.sin(perpAngle) * p.laneOffset) * dpr;
         const s = p.size * dpr * (zoom >= 20 ? 1.3 : zoom >= 18 ? 1.0 : 0.7);
 
         // Glow under vehicle
