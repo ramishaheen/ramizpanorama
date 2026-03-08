@@ -627,13 +627,13 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                 <Marker key={cam.id} position={[cam.lat, cam.lng]} icon={icon}
                   eventHandlers={{ click: () => handleCameraClick(cam) }}>
                   <Tooltip direction="top" offset={[0, -(size + 16)]} className="cctv-tip">
-                    <div style="padding:4px;">
-                      <div style="font-weight:bold;font-size:11px;color:#06b6d4;">{cam.name}</div>
-                      <div style="color:#9ca3af;font-size:10px;">{cam.city}, {cam.country}</div>
-                      <div style="font-size:10px;color:${cam.status === 'active' ? '#22c55e' : '#ef4444'};margin-top:2px;">
+                    <div style={{ padding: 4 }}>
+                      <div style={{ fontWeight: "bold", fontSize: 11, color: "#06b6d4" }}>{cam.name}</div>
+                      <div style={{ color: "#9ca3af", fontSize: 10 }}>{cam.city}, {cam.country}</div>
+                      <div style={{ fontSize: 10, color: cam.status === 'active' ? '#22c55e' : '#ef4444', marginTop: 2 }}>
                         {cam.status === "active" ? "● ONLINE" : "● OFFLINE"}
                       </div>
-                      <div style="font-size:9px;color:#6b7280;margin-top:1px;">{cam.source_name} • {cam.category}</div>
+                      <div style={{ fontSize: 9, color: "#6b7280", marginTop: 1 }}>{cam.source_name} • {cam.category}</div>
                     </div>
                   </Tooltip>
                 </Marker>
