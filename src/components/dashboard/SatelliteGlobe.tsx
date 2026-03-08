@@ -551,6 +551,35 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
   const flyToCity = useCallback((city: (typeof CITY_PRESETS)[0]) => {
     setActiveCity(city.name);
+    setSelectedSat(null);
+    setOrbitPath(null);
+
+    // Find satellites within ~1500km radius of the country center
+    const R = 1500; // km
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const nearbySats = satsRef.current.filter((s) => {
+      const dLat = toRad(s.lat - city.lat);
+      const dLng = toRad(s.lng - city.lng);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(city.lat)) * Math.cos(toRad(s.lat)) * Math.sin(dLng / 2) ** 2;
+      const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return dist < R;
+    });
+
+    // Group by category
+    const catMap = new Map<string, number>();
+    const nameSet = new Set<string>();
+    nearbySats.forEach((s) => {
+      catMap.set(s.category, (catMap.get(s.category) || 0) + 1);
+      nameSet.add(s.noradId || s.name);
+    });
+
+    const breakdown = Array.from(catMap.entries())
+      .map(([category, count]) => ({ category, count, color: CATEGORY_COLORS[category] || "#d4a843" }))
+      .sort((a, b) => b.count - a.count);
+
+    setCountrySats(breakdown);
+    setCountrySatNames(nameSet);
+
     if (globeRef.current) {
       globeRef.current.pointOfView(
         { lat: city.lat, lng: city.lng, altitude: 2.0 },
