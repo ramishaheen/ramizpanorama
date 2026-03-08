@@ -13,6 +13,7 @@ interface Road {
   highway: string;
   lanes: number;
   oneway: boolean;
+  progressStops: number[]; // normalized cumulative distance [0..1] per point
 }
 
 type VehicleType = "car" | "truck" | "bus";
