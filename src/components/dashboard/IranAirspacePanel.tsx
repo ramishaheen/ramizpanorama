@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   X, Plane, Shield, AlertTriangle, RefreshCw, Radar,
   ArrowUpRight, ArrowDownRight, Minus, Eye, EyeOff,
-  ChevronDown, ChevronUp, Filter
+  ChevronDown, ChevronUp, Filter, Volume2, VolumeX
 } from "lucide-react";
 
 interface Aircraft {
