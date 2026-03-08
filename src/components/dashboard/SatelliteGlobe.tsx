@@ -215,6 +215,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [searchResults, setSearchResults] = useState<SatelliteData[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [activeCity, setActiveCity] = useState<string | null>(null);
+  const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const satsRef = useRef<SatelliteData[]>([]);
 
   useEffect(() => {
