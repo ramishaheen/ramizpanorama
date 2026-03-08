@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car, Layers, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface IntelEvent {
   title: string;
