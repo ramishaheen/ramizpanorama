@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
@@ -251,11 +252,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const telegramGroupRef = useRef<L.LayerGroup | null>(null);
   const up42GroupRef = useRef<L.LayerGroup | null>(null);
   const fusionGroupRef = useRef<L.LayerGroup | null>(null);
+  const cctvGroupRef = useRef<L.LayerGroup | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
   const [up42Features, setUp42Features] = useState<UP42Feature[]>([]);
   const [mapBounds, setMapBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
+  const [showArabCCTV, setShowArabCCTV] = useState(false);
+  const [arabCameras, setArabCameras] = useState<any[]>([]);
+  const [loadingCCTV, setLoadingCCTV] = useState(false);
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
@@ -513,6 +518,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     conflictGroupRef.current = L.layerGroup().addTo(map);
     up42GroupRef.current = L.layerGroup().addTo(map);
     fusionGroupRef.current = L.layerGroup().addTo(map);
+    cctvGroupRef.current = L.layerGroup().addTo(map);
     newsGroupRef.current = L.layerGroup().addTo(map);
     telegramGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
@@ -1034,9 +1040,78 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     setUp42Features(features);
   }, []);
 
-  const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
+  // Arab World CCTV layer
+  const ARAB_COUNTRIES = ["UAE", "Jordan", "Saudi Arabia", "Qatar", "Oman", "Bahrain", "Kuwait", "Iraq", "Lebanon", "Egypt", "Syria", "Yemen", "Libya", "Tunisia", "Algeria", "Morocco", "Sudan", "Palestine", "Iran"];
 
-  // Satellite globe is always available (data loaded internally by SatelliteGlobe)
+  const toggleArabCCTV = useCallback(async () => {
+    if (showArabCCTV) {
+      setShowArabCCTV(false);
+      cctvGroupRef.current?.clearLayers();
+      return;
+    }
+    setLoadingCCTV(true);
+    setShowArabCCTV(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cameras", {
+        method: "POST",
+        body: { action: "list", status: "online", limit: 500, bounds: { north: 42, south: 10, east: 65, west: -18 } },
+      });
+      if (!error && data?.cameras) {
+        const filtered = data.cameras.filter((c: any) => ARAB_COUNTRIES.includes(c.country));
+        setArabCameras(filtered);
+      }
+    } catch (e) { console.error("CCTV fetch failed:", e); }
+    finally { setLoadingCCTV(false); }
+  }, [showArabCCTV]);
+
+  // Render CCTV markers
+  useEffect(() => {
+    const group = cctvGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+    if (!showArabCCTV || arabCameras.length === 0) return;
+
+    // Fly to Arab region
+    if (mapRef.current && arabCameras.length > 0) {
+      mapRef.current.flyTo([28, 45], 5, { duration: 1.2 });
+    }
+
+    arabCameras.forEach((cam: any) => {
+      if (!cam.lat || !cam.lng) return;
+      const icon = L.divIcon({
+        className: "cctv-map-marker",
+        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <div style="position:absolute;width:22px;height:22px;border-radius:50%;border:2px solid #06b6d4;box-shadow:0 0 10px rgba(6,182,212,0.5);animation:pulse 2s ease-in-out infinite;"></div>
+          <div style="position:absolute;width:14px;height:14px;border-radius:50%;background:rgba(6,182,212,0.2);"></div>
+          <div style="font-size:14px;filter:drop-shadow(0 0 6px #06b6d4);">📹</div>
+        </div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -14],
+      });
+
+      const statusDot = cam.status === "active"
+        ? `<span style="color:#22c55e;">● ONLINE</span>`
+        : `<span style="color:#ef4444;">● OFFLINE</span>`;
+
+      const marker = L.marker([cam.lat, cam.lng], { icon });
+      marker.bindPopup(`
+        <div style="${popupStyle}min-width:220px;">
+          <div style="color:#06b6d4;font-weight:700;font-size:12px;margin-bottom:4px;">📹 ${cam.name}</div>
+          <div style="margin-bottom:2px;">${cam.city}, ${cam.country}</div>
+          <div style="margin-bottom:4px;">${statusDot}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+            <span style="background:rgba(6,182,212,0.15);padding:1px 6px;border-radius:3px;font-size:9px;color:#06b6d4;text-transform:uppercase;">${cam.category}</span>
+            ${cam.source_name ? `<span style="background:rgba(168,85,247,0.15);padding:1px 6px;border-radius:3px;font-size:9px;color:#a855f7;">${cam.source_name}</span>` : ""}
+          </div>
+          ${cam.embed_url ? `<a href="${cam.embed_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.3);color:#06b6d4;padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;text-decoration:none;margin-top:4px;">▶ VIEW LIVE FEED</a>` : ""}
+        </div>
+      `, popupOptions);
+      group.addLayer(marker);
+    });
+  }, [showArabCCTV, arabCameras]);
+
+  const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
@@ -1088,6 +1163,21 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         >
           <Camera className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
           <span className="text-[9px] font-mono text-muted-foreground uppercase">CCTV</span>
+        </button>
+        <button
+          onClick={toggleArabCCTV}
+          disabled={loadingCCTV}
+          className={`flex items-center gap-1.5 backdrop-blur border rounded-md px-2 py-1 shadow-lg transition-all group cursor-pointer ${
+            showArabCCTV
+              ? "bg-primary/20 border-primary/50 shadow-[0_0_12px_hsl(190_100%_50%/0.2)]"
+              : "bg-card/90 border-border hover:bg-primary/10 hover:border-primary/50"
+          }`}
+          title="Show Arab World CCTV on Map"
+        >
+          <Camera className={`h-3.5 w-3.5 ${showArabCCTV ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-primary"}`} />
+          <span className={`text-[9px] font-mono uppercase ${showArabCCTV ? "text-primary" : "text-muted-foreground"}`}>
+            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ARAB CCTV (${arabCameras.length})` : "ARAB CCTV"}
+          </span>
         </button>
       </div>
 
