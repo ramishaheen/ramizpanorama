@@ -352,6 +352,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       {/* Main content */}
       <div className="flex-1 relative" ref={containerRef}>
         {/* Google Maps 3D Embed */}
+        {/* Google Maps via JS API */}
         {apiKeyLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-2">
@@ -361,15 +362,8 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
               </p>
             </div>
           </div>
-        ) : mapSrc ? (
-          <iframe
-            key={`${lat}-${lng}`}
-            src={mapSrc}
-            className="absolute inset-0 w-full h-full border-0"
-            allowFullScreen
-            loading="eager"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+        ) : apiKey ? (
+          <div ref={mapDivRef} className="absolute inset-0 w-full h-full" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-card">
             <div className="text-center space-y-2 max-w-sm px-4">
