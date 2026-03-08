@@ -946,8 +946,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           group.rotation.x = Math.random() * 0.3;
 
           // Store data for animation (pulse + spin)
-          const spinSpeed = 0.3 + Math.random() * 0.4; // radians per second
-          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2, spinSpeed, isSatGroup: true };
+          const spinSpeed = 0.3 + Math.random() * 0.4;
+          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2, spinSpeed, isSatGroup: true, satId: sat.noradId || sat.name };
 
           return group;
         };
