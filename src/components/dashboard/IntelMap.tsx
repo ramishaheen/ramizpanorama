@@ -1031,6 +1031,151 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     });
   }, [conflictEvents.data, layers.conflicts]);
 
+  // ===== NUCLEAR / RADIATION MONITORING LAYER =====
+  useEffect(() => {
+    const group = nuclearGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+    if (!layers.nuclear) return;
+
+    // Render nuclear facilities
+    nuclearMonitors.facilities.forEach((f) => {
+      const statusColor = f.status === "operational" ? "#eab308" : f.status === "construction" ? "#3b82f6" : f.status === "occupied" ? "#ef4444" : "#888";
+      const typeEmoji = f.type === "power_plant" ? "⚛️" : f.type === "enrichment" ? "🔬" : f.type === "research_reactor" ? "🧪" : "🏭";
+      const size = f.type === "power_plant" ? 22 : 18;
+      const icon = L.divIcon({
+        className: "nuclear-facility-icon",
+        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;width:${size + 8}px;height:${size + 8}px;border-radius:50%;border:2px solid ${statusColor};opacity:0.4;animation:pulse 3s ease-in-out infinite;"></div>
+          <div style="position:absolute;width:${size + 16}px;height:${size + 16}px;border-radius:50%;border:1px dashed ${statusColor};opacity:0.2;"></div>
+          <div style="font-size:${size}px;filter:drop-shadow(0 0 6px ${statusColor});">${typeEmoji}</div>
+        </div>`,
+        iconSize: [size + 16, size + 16],
+        iconAnchor: [(size + 16) / 2, (size + 16) / 2],
+        popupAnchor: [0, -(size / 2 + 4)],
+      });
+      const marker = L.marker([f.lat, f.lng], { icon, zIndexOffset: 600 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
+        <div style="color:${statusColor};font-weight:700;font-size:12px;margin-bottom:4px;">${typeEmoji} ${f.name}</div>
+        <div>Country: <b>${f.country}</b></div>
+        <div>Type: ${f.type.replace(/_/g, " ")}</div>
+        <div>Status: <span style="color:${statusColor};font-weight:600;">${f.status.toUpperCase()}</span></div>
+        ${f.capacity_mw ? `<div>Capacity: ${f.capacity_mw} MW</div>` : ""}
+        <div style="font-size:8px;opacity:0.5;margin-top:4px;">Source: IAEA Registry</div>
+      </div>`);
+      group.addLayer(marker);
+
+      // Exclusion zone circle for facilities
+      L.circle([f.lat, f.lng], {
+        radius: 30000, color: statusColor, fillColor: statusColor,
+        fillOpacity: 0.04, weight: 1, dashArray: "8 4", opacity: 0.3,
+      }).addTo(group);
+    });
+
+    // Render radiation monitoring stations
+    nuclearMonitors.stations.forEach((s) => {
+      const statusColor = s.status === "elevated" ? "#ef4444" : s.status === "above_normal" ? "#f97316" : "#22c55e";
+      const icon = L.divIcon({
+        className: "radiation-station-icon",
+        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;width:14px;height:14px;border-radius:50%;background:${statusColor};opacity:0.2;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};border:1.5px solid rgba(0,0,0,0.5);box-shadow:0 0 6px ${statusColor};"></div>
+        </div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+        popupAnchor: [0, -10],
+      });
+      const marker = L.marker([s.lat, s.lng], { icon, zIndexOffset: 400 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
+        <div style="color:${statusColor};font-weight:700;font-size:12px;margin-bottom:4px;">☢️ ${s.name}</div>
+        <div>Dose Rate: <span style="color:${statusColor};font-weight:700;">${s.dose_rate} ${s.unit}</span></div>
+        <div>Status: <span style="color:${statusColor};">${s.status.toUpperCase()}</span></div>
+        <div>Network: ${s.network} · ${s.country}</div>
+        <div style="font-size:8px;opacity:0.5;margin-top:4px;">${new Date(s.timestamp).toLocaleString()}</div>
+      </div>`);
+      group.addLayer(marker);
+    });
+  }, [nuclearMonitors.stations, nuclearMonitors.facilities, layers.nuclear]);
+
+  // ===== AIR QUALITY MONITORING LAYER =====
+  useEffect(() => {
+    const group = airQualityGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+    if (!layers.airQuality || airQuality.data.length === 0) return;
+
+    const aqiColors: Record<string, string> = {
+      good: "#22c55e",
+      moderate: "#eab308",
+      unhealthy_sensitive: "#f97316",
+      unhealthy: "#ef4444",
+      very_unhealthy: "#a855f7",
+      hazardous: "#7f1d1d",
+      unknown: "#888",
+    };
+
+    airQuality.data.forEach((s) => {
+      const color = aqiColors[s.aqi_level] || "#888";
+      const aqiVal = s.aqi ?? 0;
+      const icon = L.divIcon({
+        className: "air-quality-icon",
+        html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
+          <div style="background:rgba(0,0,0,0.85);border:1.5px solid ${color};border-radius:6px;padding:2px 5px;display:flex;align-items:center;gap:2px;backdrop-filter:blur(4px);">
+            <span style="font-size:9px;">💨</span>
+            <span style="font-size:9px;font-weight:700;color:${color};font-family:monospace;">${aqiVal}</span>
+          </div>
+          <span style="font-size:6px;color:rgba(255,255,255,0.4);font-family:monospace;margin-top:1px;">${s.city || ""}</span>
+        </div>`,
+        iconSize: [44, 28],
+        iconAnchor: [22, 14],
+      });
+      const marker = L.marker([s.lat, s.lng], { icon, zIndexOffset: 250 });
+      const levelLabel = s.aqi_level.replace(/_/g, " ").toUpperCase();
+      bindHoverPopup(marker, `<div style="${popupStyle}">
+        <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">💨 ${s.name}</div>
+        <div>${s.city}, ${s.country}</div>
+        <div>AQI: <span style="color:${color};font-weight:700;">${aqiVal}</span> — <span style="color:${color};">${levelLabel}</span></div>
+        ${s.pm25 != null ? `<div>PM2.5: ${s.pm25} µg/m³</div>` : ""}
+        ${s.pm10 != null ? `<div>PM10: ${s.pm10} µg/m³</div>` : ""}
+        <div style="font-size:8px;opacity:0.5;margin-top:4px;">Source: ${s.source} · ${new Date(s.last_updated).toLocaleString()}</div>
+      </div>`);
+      group.addLayer(marker);
+    });
+  }, [airQuality.data, layers.airQuality]);
+
+  // ===== LIVE AIS VESSEL TRACKING LAYER =====
+  useEffect(() => {
+    const group = aisGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+    if (!layers.aisVessels || aisVessels.data.length === 0) return;
+
+    const aisTypeColors: Record<string, string> = {
+      MILITARY: "#ef4444", CARGO: "#3b82f6", TANKER: "#f97316", FISHING: "#22c55e", UNKNOWN: "#888",
+    };
+
+    aisVessels.data.forEach((v) => {
+      const color = aisTypeColors[v.type] || "#888";
+      const icon = L.divIcon({
+        className: "ais-vessel-icon",
+        html: `<div style="transform:rotate(${v.heading}deg);color:${color};font-size:14px;text-shadow:0 0 8px ${color};filter:drop-shadow(0 0 4px ${color});">▲</div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+        popupAnchor: [0, -12],
+      });
+      const marker = L.marker([v.lat, v.lng], { icon, zIndexOffset: 300 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
+        <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">🚢 ${v.name}</div>
+        <div>MMSI: ${v.mmsi} | Type: ${v.type}</div>
+        <div>Speed: ${v.speed} kts | HDG: ${v.heading}°</div>
+        <div>Flag: ${v.flag}</div>
+        ${v.destination ? `<div>Dest: ${v.destination}</div>` : ""}
+        <div style="font-size:8px;opacity:0.5;margin-top:4px;">Source: ${v.source} (Live AIS)</div>
+      </div>`);
+      group.addLayer(marker);
+    });
+  }, [aisVessels.data, layers.aisVessels]);
+
   // ===== LIVE FLIGHT TRACKING LAYER =====
   const fetchFlightData = useCallback(async () => {
     if (!layers.flights) return;
