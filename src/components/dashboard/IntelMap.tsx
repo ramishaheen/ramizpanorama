@@ -245,7 +245,7 @@ const createNewsIcon = (severity: string, category: string, special: boolean) =>
   });
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [] }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, onToggleLayer, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [] }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
