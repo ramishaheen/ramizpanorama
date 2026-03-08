@@ -20,13 +20,16 @@ type CameraInput = {
   lng: number;
 };
 
+const AGGREGATOR_SOURCES = [
+  "EarthCam", "SkylineWebcams", "WebCamera24", "OpenWebcamDB", 
+  "Insecam", "Opentopia", "GeoCam", "AI Discovery"
+];
+
 const extractYouTubeId = (url: string) => {
   const embed = url.match(/youtube\.com\/embed\/([^?&/]+)/i);
   if (embed?.[1]) return embed[1];
-
   const watch = url.match(/[?&]v=([^?&/]+)/i);
   if (watch?.[1]) return watch[1];
-
   return null;
 };
 
@@ -76,11 +79,7 @@ serve(async (req) => {
     let body: Record<string, any> = {};
 
     if (req.method === "POST") {
-      try {
-        body = await req.json();
-      } catch {
-        body = {};
-      }
+      try { body = await req.json(); } catch { body = {}; }
     }
 
     const action = url.searchParams.get("action") || body.action || "list";
@@ -89,6 +88,14 @@ serve(async (req) => {
     const search = url.searchParams.get("search") || body.search;
     const cameraId = url.searchParams.get("id") || body.id;
 
+    // ── SOURCES: list aggregator sources ──
+    if (action === "sources") {
+      return new Response(JSON.stringify({ sources: AGGREGATOR_SOURCES }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── COUNTRIES ──
     if (action === "countries") {
       const { data, error } = await supabase
         .from("cameras")
@@ -101,30 +108,28 @@ serve(async (req) => {
       });
     }
 
+    // ── DETAIL ──
     if (action === "detail" && cameraId) {
-      const { data, error } = await supabase
-        .from("cameras")
-        .select("*")
-        .eq("id", cameraId)
-        .single();
+      const { data, error } = await supabase.from("cameras").select("*").eq("id", cameraId).single();
       if (error) throw error;
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // ── LIST ──
     if (action === "list") {
       let query = supabase
         .from("cameras")
         .select("*")
         .eq("is_active", true)
-        .neq("status", "error")
         .order("country")
         .order("city");
 
       if (country) query = query.eq("country", country);
       if (category) query = query.eq("category", category);
-      if (search) query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,country.ilike.%${search}%`);
+      if (search) query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,country.ilike.%${search}%,source_name.ilike.%${search}%`);
+      if (body.source) query = query.eq("source_name", body.source);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -133,6 +138,7 @@ serve(async (req) => {
       });
     }
 
+    // ── HEALTH CHECK ──
     if (action === "health_check") {
       const { data: cameras } = await supabase.from("cameras").select("*").eq("is_active", true);
       const results: any[] = [];
@@ -140,29 +146,19 @@ serve(async (req) => {
       for (const cam of cameras || []) {
         const urlToCheck = cam.embed_url || cam.stream_url || cam.snapshot_url;
         if (!urlToCheck) {
-          await supabase
-            .from("cameras")
-            .update({
-              status: "error",
-              error_message: "No URL configured",
-              last_checked_at: new Date().toISOString(),
-            })
-            .eq("id", cam.id);
+          await supabase.from("cameras").update({
+            status: "error", error_message: "No URL configured",
+            last_checked_at: new Date().toISOString(),
+          }).eq("id", cam.id);
           results.push({ id: cam.id, status: "error", reason: "No URL" });
           continue;
         }
 
         const check = await validateCameraUrl(urlToCheck);
-
-        await supabase
-          .from("cameras")
-          .update({
-            status: check.status,
-            error_message: check.error,
-            last_checked_at: new Date().toISOString(),
-          })
-          .eq("id", cam.id);
-
+        await supabase.from("cameras").update({
+          status: check.status, error_message: check.error,
+          last_checked_at: new Date().toISOString(),
+        }).eq("id", cam.id);
         results.push({ id: cam.id, status: check.status, reason: check.error });
       }
 
@@ -171,6 +167,144 @@ serve(async (req) => {
       });
     }
 
+    // ── SCRAPE AGGREGATORS ──
+    if (action === "scrape_aggregators") {
+      const targetCountry = country || null;
+      const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
+      if (!perplexityKey) {
+        return new Response(
+          JSON.stringify({ error: "PERPLEXITY_API_KEY not configured" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const countryClause = targetCountry ? `in ${targetCountry}` : "worldwide from diverse countries";
+      const sourceList = AGGREGATOR_SOURCES.filter(s => s !== "AI Discovery").join(", ");
+
+      const aiResp = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${perplexityKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "sonar-pro",
+          messages: [
+            {
+              role: "system",
+              content: `You are a webcam aggregator specialist. Find REAL, WORKING public webcam feeds from these sources: ${sourceList}. 
+Only return cameras that are genuinely accessible right now via YouTube Live embeds, direct HLS streams, or snapshot URLs.
+For each camera provide the actual working embed URL. Prefer YouTube Live embed URLs (https://www.youtube.com/embed/VIDEO_ID).
+Also search for webcams from Windy.com, Weatherbug, DOT traffic cams, and other public CCTV aggregators.
+NEVER fabricate URLs. Only return cameras you can verify exist.`,
+            },
+            {
+              role: "user",
+              content: `Find up to 15 public live cameras ${countryClause}. Include traffic cams, city cams, port cams, weather cams, and tourism cams. 
+For each camera provide: name, country, city, category (traffic|tourism|ports|weather|public), source_type (embed_page|snapshot|hls), source_name (which aggregator it's from), embed_url (or stream_url or snapshot_url), lat, lng.
+Return JSON with a "cameras" array.`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "camera_list",
+              schema: {
+                type: "object",
+                properties: {
+                  cameras: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        country: { type: "string" },
+                        city: { type: "string" },
+                        category: { type: "string" },
+                        source_type: { type: "string" },
+                        source_name: { type: "string" },
+                        embed_url: { type: "string" },
+                        stream_url: { type: "string" },
+                        snapshot_url: { type: "string" },
+                        lat: { type: "number" },
+                        lng: { type: "number" },
+                      },
+                      required: ["name", "country", "city", "category", "embed_url", "lat", "lng"],
+                    },
+                  },
+                },
+                required: ["cameras"],
+              },
+            },
+          },
+        }),
+      });
+
+      const aiData = await aiResp.json();
+      if (!aiResp.ok) {
+        throw new Error(`AI scrape failed [${aiResp.status}]: ${JSON.stringify(aiData)}`);
+      }
+
+      const parsed = JSON.parse(aiData?.choices?.[0]?.message?.content || '{"cameras":[]}');
+      const candidates: any[] = (parsed?.cameras || []).slice(0, 15);
+
+      const { data: existing } = await supabase.from("cameras").select("embed_url, stream_url, snapshot_url");
+      const existingUrls = new Set(
+        (existing || []).flatMap((row: any) => [row.embed_url, row.stream_url, row.snapshot_url].filter(Boolean))
+      );
+
+      const inserted: any[] = [];
+      const failed: any[] = [];
+
+      for (const cam of candidates) {
+        const primaryUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
+        if (!primaryUrl || existingUrls.has(primaryUrl)) continue;
+
+        const check = await validateCameraUrl(primaryUrl);
+        if (check.status !== "active") {
+          failed.push({ name: cam.name, url: primaryUrl, reason: check.error });
+          continue;
+        }
+
+        const validCategories = ["traffic", "tourism", "ports", "weather", "public"];
+        const validSourceTypes = ["embed_page", "snapshot", "hls"];
+
+        const payload = {
+          name: cam.name,
+          country: cam.country,
+          city: cam.city,
+          category: validCategories.includes(cam.category) ? cam.category : "public",
+          source_type: validSourceTypes.includes(cam.source_type) ? cam.source_type : "embed_page",
+          source_name: cam.source_name || "Aggregator",
+          embed_url: cam.embed_url || null,
+          stream_url: cam.stream_url || null,
+          snapshot_url: cam.snapshot_url || null,
+          lat: Number(cam.lat) || 0,
+          lng: Number(cam.lng) || 0,
+          is_active: true,
+          status: "active",
+          last_checked_at: new Date().toISOString(),
+        };
+
+        const { data: created } = await supabase.from("cameras").insert(payload).select().single();
+        if (created) {
+          inserted.push(created);
+          existingUrls.add(primaryUrl);
+        }
+      }
+
+      return new Response(JSON.stringify({ 
+        found: candidates.length, 
+        inserted: inserted.length, 
+        failed: failed.length,
+        cameras: inserted,
+        failures: failed,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── DISCOVER (legacy) ──
     if (action === "discover") {
       const targetCountry = country || "Middle East";
       const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
@@ -191,15 +325,8 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "sonar",
           messages: [
-            {
-              role: "system",
-              content:
-                "Return only real, public webcam links that are accessible right now. Prefer YouTube live embed links and official city cams. No fabricated URLs.",
-            },
-            {
-              role: "user",
-              content: `Find up to 8 public live cameras for ${targetCountry}. Return JSON array with: name, country, city, category (traffic|tourism|ports|weather|public), source_type (embed_page), embed_url, lat, lng.`,
-            },
+            { role: "system", content: "Return only real, public webcam links that are accessible right now. Prefer YouTube live embed links and official city cams. No fabricated URLs." },
+            { role: "user", content: `Find up to 8 public live cameras for ${targetCountry}. Return JSON array with: name, country, city, category (traffic|tourism|ports|weather|public), source_type (embed_page), embed_url, lat, lng.` },
           ],
           response_format: {
             type: "json_schema",
@@ -208,23 +335,7 @@ serve(async (req) => {
               schema: {
                 type: "object",
                 properties: {
-                  cameras: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        country: { type: "string" },
-                        city: { type: "string" },
-                        category: { type: "string" },
-                        source_type: { type: "string" },
-                        embed_url: { type: "string" },
-                        lat: { type: "number" },
-                        lng: { type: "number" },
-                      },
-                      required: ["name", "country", "city", "category", "source_type", "embed_url", "lat", "lng"],
-                    },
-                  },
+                  cameras: { type: "array", items: { type: "object", properties: { name: { type: "string" }, country: { type: "string" }, city: { type: "string" }, category: { type: "string" }, source_type: { type: "string" }, embed_url: { type: "string" }, lat: { type: "number" }, lng: { type: "number" } }, required: ["name", "country", "city", "category", "source_type", "embed_url", "lat", "lng"] } },
                 },
                 required: ["cameras"],
               },
@@ -234,44 +345,27 @@ serve(async (req) => {
       });
 
       const aiData = await aiResp.json();
-      if (!aiResp.ok) {
-        throw new Error(`AI discovery failed [${aiResp.status}]`);
-      }
+      if (!aiResp.ok) throw new Error(`AI discovery failed [${aiResp.status}]`);
 
-      const parsed = JSON.parse(aiData?.choices?.[0]?.message?.content || "{\"cameras\":[]}");
+      const parsed = JSON.parse(aiData?.choices?.[0]?.message?.content || '{"cameras":[]}');
       const candidates: CameraInput[] = (parsed?.cameras || []).slice(0, 8);
-
       const { data: existing } = await supabase.from("cameras").select("embed_url");
       const existingUrls = new Set((existing || []).map((row: any) => row.embed_url).filter(Boolean));
-
       const inserted: any[] = [];
 
       for (const cam of candidates) {
         if (!cam?.embed_url || existingUrls.has(cam.embed_url)) continue;
-
         const check = await validateCameraUrl(cam.embed_url);
         if (check.status !== "active") continue;
-
         const payload = {
-          name: cam.name,
-          country: cam.country,
-          city: cam.city,
+          name: cam.name, country: cam.country, city: cam.city,
           category: ["traffic", "tourism", "ports", "weather", "public"].includes(cam.category) ? cam.category : "public",
-          source_type: "embed_page",
-          source_name: "AI Discovery",
-          embed_url: cam.embed_url,
-          lat: Number(cam.lat) || 0,
-          lng: Number(cam.lng) || 0,
-          is_active: true,
-          status: "active",
-          last_checked_at: new Date().toISOString(),
+          source_type: "embed_page", source_name: "AI Discovery",
+          embed_url: cam.embed_url, lat: Number(cam.lat) || 0, lng: Number(cam.lng) || 0,
+          is_active: true, status: "active", last_checked_at: new Date().toISOString(),
         };
-
         const { data: created } = await supabase.from("cameras").insert(payload).select().single();
-        if (created) {
-          inserted.push(created);
-          existingUrls.add(cam.embed_url);
-        }
+        if (created) { inserted.push(created); existingUrls.add(cam.embed_url); }
       }
 
       return new Response(JSON.stringify({ discovered: candidates.length, inserted: inserted.length, cameras: inserted }), {
@@ -279,40 +373,27 @@ serve(async (req) => {
       });
     }
 
+    // ── CRUD ──
     if (req.method === "POST") {
       if (action === "create") {
         const { data, error } = await supabase.from("cameras").insert(body.camera).select().single();
         if (error) throw error;
-        return new Response(JSON.stringify(data), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
       if (action === "update") {
-        const { data, error } = await supabase
-          .from("cameras")
-          .update({ ...body.camera, updated_at: new Date().toISOString() })
-          .eq("id", body.id)
-          .select()
-          .single();
+        const { data, error } = await supabase.from("cameras").update({ ...body.camera, updated_at: new Date().toISOString() }).eq("id", body.id).select().single();
         if (error) throw error;
-        return new Response(JSON.stringify(data), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
       if (action === "delete") {
         const { error } = await supabase.from("cameras").delete().eq("id", body.id);
         if (error) throw error;
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("Cameras error:", e);
