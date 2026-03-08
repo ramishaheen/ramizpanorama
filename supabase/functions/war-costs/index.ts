@@ -20,7 +20,7 @@ const fallbackWarCosts = {
   cumulative_estimate_billions: 213.4,
   cumulative_unit: "B",
   daily_unit: "B",
-  conflict_day: daysSinceOct2023,
+  conflict_day: Math.floor((Date.now() - new Date("2023-10-07").getTime()) / 86400000),
   scenarios: { conservative_billions: 185.2, base_billions: 213.4, severe_billions: 256.8 },
   active_events_affecting_costs: ["Airspace disruptions", "Maritime chokepoint risk"],
   methodology: "Fallback estimate from historical trend weighting and current risk state.",

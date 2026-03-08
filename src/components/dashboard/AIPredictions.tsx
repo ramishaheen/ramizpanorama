@@ -48,7 +48,7 @@ const riskColor = {
   EXTREME: "bg-critical/30 text-critical animate-pulse",
 };
 
-const AUTO_REFRESH_MS = 60_000;
+
 
 export const AIPredictions = () => {
   const [data, setData] = useState<PredictionData | null>(null);
