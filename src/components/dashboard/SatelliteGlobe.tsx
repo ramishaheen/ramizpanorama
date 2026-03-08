@@ -556,6 +556,48 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const fetchSatellites = useCallback(async () => {
     setLoading(true);
     try {
+      const fetchTextWithTimeout = async (url: string, timeoutMs = 9000) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const resp = await fetch(url, {
+            signal: controller.signal,
+            cache: "no-store",
+          });
+          if (!resp.ok) return "";
+          return await resp.text();
+        } catch {
+          return "";
+        } finally {
+          clearTimeout(timeout);
+        }
+      };
+
+      const parseTLEBatch = (text: string) => {
+        const lines = text
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+
+        const rows: { name: string; tle1: string; tle2: string }[] = [];
+        for (let i = 0; i < lines.length; i++) {
+          const tle1 = lines[i];
+          if (!tle1.startsWith("1 ")) continue;
+
+          const tle2 = lines[i + 1];
+          if (!tle2?.startsWith("2 ")) continue;
+
+          let name = lines[i - 1] ?? "";
+          if (name.startsWith("0 ")) name = name.slice(2).trim();
+          if (!name || name.startsWith("1 ") || name.startsWith("2 ")) {
+            name = `SAT-${tle1.substring(2, 7).trim()}`;
+          }
+
+          rows.push({ name, tle1, tle2 });
+        }
+        return rows;
+      };
+
       // Fetch from multiple specialized CelesTrak groups for comprehensive OSINT coverage
       const TLE_SOURCES: { url: string; group: string }[] = [
         { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle", group: "active" },
@@ -585,61 +627,59 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
       const responses = await Promise.allSettled(
         TLE_SOURCES.map(async (src) => {
-          const resp = await fetch(src.url).then((r) => r.text()).catch(() => "");
+          const resp = await fetchTextWithTimeout(src.url);
           return { text: resp, group: src.group };
         })
       );
 
       const allSats: SatelliteData[] = [];
-      const rawTLEs: RawSatTLE[] = [];
+      const rawByKey = new Map<string, RawSatTLE>();
       const seen = new Set<string>();
 
       for (const result of responses) {
         if (result.status !== "fulfilled") continue;
         const { text, group } = result.value;
         if (!text.trim()) continue;
-        const lines = text.trim().split("\n").map((l) => l.trim());
-        for (let i = 0; i < lines.length - 2; i += 3) {
-          const name = lines[i],
-            tle1 = lines[i + 1],
-            tle2 = lines[i + 2];
-          if (!tle1?.startsWith("1 ") || !tle2?.startsWith("2 ")) continue;
-          if (seen.has(name)) continue;
-          seen.add(name);
-          const sat = parseTLEFull(name, tle1, tle2);
-          if (sat) {
-            // Override category based on source group for accuracy
-            sat.category = categorizeSatellite(sat.name, group);
-            const { country, operator } = detectCountry(sat.name, sat.intlDesignator);
-            sat.country = country;
-            sat.operator = operator;
-            sat.source = group;
-            allSats.push(sat);
-            rawTLEs.push({
-              name: sat.name,
-              inclination: sat.inclination!,
-              raan: sat.raan!,
-              meanAnomaly: sat.meanAnomaly!,
-              meanMotion: sat.meanMotion!,
-              eccentricity: sat.eccentricity!,
-              epochYear: sat.epochYear!,
-              epochDay: sat.epochDay!,
-              alt: sat.alt,
-              category: sat.category,
-              noradId: sat.noradId!,
-              intlDesignator: sat.intlDesignator!,
-              period: sat.period!,
-              velocity: sat.velocity!,
-              launchYear: sat.launchYear,
-              country,
-              operator,
-              source: group,
-            });
-          }
+
+        const tleRows = parseTLEBatch(text);
+        for (const row of tleRows) {
+          const sat = parseTLEFull(row.name, row.tle1, row.tle2);
+          if (!sat) continue;
+
+          sat.category = categorizeSatellite(sat.name, group);
+          const key = sat.noradId || sat.name;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          const { country, operator } = detectCountry(sat.name, sat.intlDesignator);
+          sat.country = country;
+          sat.operator = operator;
+          sat.source = group;
+          allSats.push(sat);
+
+          rawByKey.set(key, {
+            name: sat.name,
+            inclination: sat.inclination!,
+            raan: sat.raan!,
+            meanAnomaly: sat.meanAnomaly!,
+            meanMotion: sat.meanMotion!,
+            eccentricity: sat.eccentricity!,
+            epochYear: sat.epochYear!,
+            epochDay: sat.epochDay!,
+            alt: sat.alt,
+            category: sat.category,
+            noradId: sat.noradId!,
+            intlDesignator: sat.intlDesignator!,
+            period: sat.period!,
+            velocity: sat.velocity!,
+            launchYear: sat.launchYear,
+            country,
+            operator,
+            source: group,
+          });
         }
       }
 
-      // Prioritize: Military & ISR first, then strategic, then bulk
       const prioritized = [
         ...allSats.filter((s) => s.category === "Military" || s.category === "ISR" || s.category === "Early Warning" || s.category === "SIGINT/ELINT"),
         ...allSats.filter((s) => s.category === "Navigation"),
@@ -653,20 +693,27 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         ...allSats.filter((s) => s.category === "Unknown").slice(0, 200),
       ];
 
-      // Deduplicate after merge
       const finalSeen = new Set<string>();
       const deduped = prioritized.filter((s) => {
-        if (finalSeen.has(s.name)) return false;
-        finalSeen.add(s.name);
+        const key = s.noradId || s.name;
+        if (finalSeen.has(key)) return false;
+        finalSeen.add(key);
         return true;
       });
 
       const limited = deduped.slice(0, 5000);
-      rawTLERef.current = rawTLEs.filter((r) => deduped.some((d) => d.name === r.name)).slice(0, 5000);
+      rawTLERef.current = limited
+        .map((s) => rawByKey.get(s.noradId || s.name))
+        .filter((r): r is RawSatTLE => Boolean(r));
+
       setSatellites(limited);
-      console.log(`[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter(r => r.status === 'fulfilled').length} CelesTrak groups (${Object.keys(CATEGORY_COLORS).length} categories)`);
+      console.log(
+        `[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter((r) => r.status === "fulfilled").length} CelesTrak groups`
+      );
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
+      setSatellites([]);
+      rawTLERef.current = [];
     } finally {
       setLoading(false);
     }
@@ -1190,7 +1237,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           </button>
           {categories.map(([cat, color]) => {
             const count = satellites.filter((s) => s.category === cat).length;
-            if (count === 0) return null;
             const CatIcon = cat === "Military" ? Shield
               : cat === "ISR" ? Eye
               : cat === "Early Warning" ? Zap
@@ -1209,17 +1255,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               : cat === "Debris" ? HelpCircle
               : cat === "Launch Vehicle" ? Rocket
               : HelpCircle;
+            const isDisabled = count === 0;
+
             return (
               <button
                 key={cat}
-                onClick={() => setSelectedCat(selectedCat === cat ? null : cat)}
+                disabled={isDisabled}
+                onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
                   selectedCat === cat
                     ? "bg-white text-black shadow-md"
-                    : "text-white/70 hover:text-white hover:bg-white/10"
+                    : isDisabled
+                      ? "text-white/30 cursor-not-allowed"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <CatIcon className="h-3 w-3" style={{ color: selectedCat === cat ? color : color }} />
+                <CatIcon className="h-3 w-3" style={{ color }} />
                 {cat} ({count})
               </button>
             );
