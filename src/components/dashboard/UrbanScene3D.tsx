@@ -319,8 +319,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           if (e.latLng) {
             const clickedLat = e.latLng.lat();
             const clickedLng = e.latLng.lng();
-            setStreetViewTarget({ lat: clickedLat, lng: clickedLng });
-            setStreetViewActive(true);
+            // Always reset streetViewActive first so a new click re-triggers the effect
+            setStreetViewActive(false);
+            setTimeout(() => {
+              setStreetViewTarget({ lat: clickedLat, lng: clickedLng });
+              setStreetViewActive(true);
+            }, 50);
           }
         }),
       ];
