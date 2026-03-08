@@ -234,7 +234,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const nrtFiresRef = useRef<any>(null);
   const nrtNightLightsRef = useRef<any>(null);
 
-  // Fetch nearby intel
+  // Live overlays
+  const [showIncidents, setShowIncidents] = useState(true);
+  const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+
   useEffect(() => {
     const fetchNearby = async () => {
       const radius = 5;
