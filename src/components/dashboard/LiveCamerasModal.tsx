@@ -575,38 +575,65 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
             </div>
           )}
 
-          <MapContainer center={[20, 0]} zoom={2} className="w-full h-full" zoomControl={false} attributionControl={false} style={{ background: "#080c12" }}>
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+          <MapContainer center={[20, 0]} zoom={2} className="w-full h-full" zoomControl={false} attributionControl={false} style={{ background: "#070b10" }}>
+            {/* Dark 3D-style terrain tiles */}
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              opacity={0.6}
+            />
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
+              opacity={0.8}
+            />
             <MapEventHandler onMoveEnd={() => {}} />
             <FlyToHandler target={flyTarget} />
 
             {cameras.map(cam => {
               if (!cam.lat || !cam.lng) return null;
-              const colors = getMarkerColor(cam.status);
               const isSelected = selectedCamera?.id === cam.id;
-              const size = isSelected ? 32 : 24;
+              const isOnline = cam.status === "active";
+              const borderColor = isOnline ? "#22c55e" : "#ef4444";
+              const glowColor = isOnline ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.4)";
+              const size = isSelected ? 56 : 44;
+
+              // Extract YouTube thumbnail
+              const ytMatch = cam.embed_url?.match(/youtube\.com\/embed\/([^?&/]+)/i);
+              const thumbUrl = ytMatch
+                ? `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`
+                : cam.thumbnail_url || cam.snapshot_url || null;
+
               const icon = L.divIcon({
                 className: "",
-                html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;cursor:pointer;">
-                  <div style="position:absolute;inset:0;border-radius:50%;background:${colors.fill};opacity:${isSelected ? 0.3 : 0.15};${cam.status === 'active' ? 'animation:pulse 2.5s ease-in-out infinite;' : ''}"></div>
-                  <div style="position:absolute;inset:${isSelected ? 2 : 3}px;border-radius:50%;border:2px solid ${isSelected ? '#06b6d4' : colors.fill};background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;">
-                    <span style="font-size:${isSelected ? 14 : 11}px;filter:drop-shadow(0 0 4px ${colors.fill});">📹</span>
-                  </div>
-                  ${cam.status === 'active' ? `<div style="position:absolute;top:-1px;right:-1px;width:7px;height:7px;border-radius:50%;background:#22c55e;border:1.5px solid #0a0f18;"></div>` : ''}
+                html: `<div style="position:relative;width:${size}px;height:${size + 14}px;cursor:pointer;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7));">
+                  ${thumbUrl
+                    ? `<div style="width:${size}px;height:${size * 0.62}px;border-radius:6px 6px 0 0;overflow:hidden;border:2px solid ${isSelected ? '#06b6d4' : borderColor};border-bottom:none;box-shadow:0 0 12px ${glowColor};${isOnline ? 'animation:pulse 3s ease-in-out infinite;' : ''}">
+                        <img src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#111827;font-size:16px;\\'>📹</div>'" />
+                      </div>
+                      <div style="width:${size}px;height:16px;border-radius:0 0 6px 6px;background:${isSelected ? 'rgba(6,182,212,0.9)' : 'rgba(10,15,24,0.95)'};border:2px solid ${isSelected ? '#06b6d4' : borderColor};border-top:none;display:flex;align-items:center;justify-content:center;gap:3px;">
+                        <span style="width:5px;height:5px;border-radius:50%;background:${borderColor};${isOnline ? 'animation:pulse 2s infinite;' : ''}"></span>
+                        <span style="font-size:7px;font-weight:800;color:${isSelected ? '#fff' : '#9ca3af'};font-family:monospace;letter-spacing:0.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:${size - 20}px;">${cam.city}</span>
+                      </div>`
+                    : `<div style="width:${size}px;height:${size * 0.62 + 16}px;border-radius:6px;background:rgba(10,15,24,0.9);border:2px solid ${isSelected ? '#06b6d4' : borderColor};box-shadow:0 0 12px ${glowColor};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;${isOnline ? 'animation:pulse 3s ease-in-out infinite;' : ''}">
+                        <span style="font-size:18px;filter:drop-shadow(0 0 6px ${borderColor});">📹</span>
+                        <span style="font-size:7px;font-weight:800;color:#9ca3af;font-family:monospace;">${cam.city}</span>
+                      </div>`
+                  }
+                  ${isOnline ? `<div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#22c55e;border:2px solid #070b10;z-index:2;"></div>` : ''}
                 </div>`,
-                iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2],
+                iconSize: [size, size + 14],
+                iconAnchor: [size / 2, size + 14],
               });
               return (
                 <Marker key={cam.id} position={[cam.lat, cam.lng]} icon={icon}
                   eventHandlers={{ click: () => handleCameraClick(cam) }}>
-                  <Tooltip direction="top" offset={[0, -14]} className="cctv-tip">
-                    <div>
-                      <div style={{ fontWeight: "bold" }}>{cam.name}</div>
-                      <div style={{ color: "#9ca3af" }}>{cam.city}, {cam.country}</div>
-                      <div style={{ color: cam.status === "active" ? "#22c55e" : "#ef4444" }}>
+                  <Tooltip direction="top" offset={[0, -(size + 16)]} className="cctv-tip">
+                    <div style={{ padding: 4 }}>
+                      <div style={{ fontWeight: "bold", fontSize: 11, color: "#06b6d4" }}>{cam.name}</div>
+                      <div style={{ color: "#9ca3af", fontSize: 10 }}>{cam.city}, {cam.country}</div>
+                      <div style={{ fontSize: 10, color: cam.status === 'active' ? '#22c55e' : '#ef4444', marginTop: 2 }}>
                         {cam.status === "active" ? "● ONLINE" : "● OFFLINE"}
                       </div>
+                      <div style={{ fontSize: 9, color: "#6b7280", marginTop: 1 }}>{cam.source_name} • {cam.category}</div>
                     </div>
                   </Tooltip>
                 </Marker>
