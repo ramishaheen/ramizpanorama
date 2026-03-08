@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Radar, Zap, Rocket, Cpu, Anchor, FlaskConical, Orbit, Wifi } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,10 +33,21 @@ interface SatelliteGlobeProps {
 const CATEGORY_COLORS: Record<string, string> = {
   Military: "#ef4444",
   ISR: "#ff6b00",
+  "Early Warning": "#ff3366",
+  "SIGINT/ELINT": "#e879f9",
   Communication: "#ffd54f",
+  "Data Relay": "#fbbf24",
   Navigation: "#22c55e",
   Weather: "#a855f7",
   "Earth Observation": "#ffb800",
+  "SAR Imaging": "#f97316",
+  Scientific: "#06b6d4",
+  "Space Station": "#f0f0f0",
+  "Technology Demo": "#14b8a6",
+  "Amateur/Ham": "#84cc16",
+  "Search & Rescue": "#fb7185",
+  Debris: "#6b7280",
+  "Launch Vehicle": "#78716c",
   Unknown: "#d4a843",
 };
 
@@ -160,18 +171,48 @@ function categorizeSatellite(name: string, sourceGroup?: string): string {
   const n = name.toUpperCase();
   // Source group overrides
   if (sourceGroup === "military") return "Military";
-  if (sourceGroup === "isr") return "ISR";
+  if (sourceGroup === "stations") return "Space Station";
+  if (sourceGroup === "science") return "Scientific";
+  if (sourceGroup === "amateur") return "Amateur/Ham";
+  // Name-based — most specific first
+  // Space stations
+  if (n.includes("ISS (ZARYA)") || n.includes("TIANGONG") || n.includes("CSS ") || n === "ISS") return "Space Station";
+  // Early warning / missile defense
+  if (n.includes("SBIRS") || n.includes("DSP") || n.includes("STSS") || n.includes("MIDAS") || n.includes("OPIR")) return "Early Warning";
+  // SIGINT / ELINT
+  if (n.includes("MENTOR") || n.includes("TRUMPET") || n.includes("ORION") || n.includes("INTRUDER") || n.includes("PROWLER") || n.includes("MERCURY") || n.includes("NEMESIS") || n.includes("SHARP") || n.includes("NOSS") || n.includes("POPPY") || n.includes("PARCAE") || n.includes("LUCH") || n.includes("OLYMP")) return "SIGINT/ELINT";
+  // ISR / Reconnaissance
+  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("MISTY") || n.includes("TOPAZ") || n.includes("SAPPHIRE") || n.includes("YAOGAN") || n.includes("OFEK") || n.includes("EROS") || n.includes("SHIJIAN") || n.includes("COSMOS 2") || n.includes("GSSAP") || n.includes("GOKTURK") || n.includes("FALCON EYE") || n.includes("CARTOSAT") || n.includes("KONDOR") || n.includes("PERSONA") || n.includes("BARS-M") || n.includes("IGS")) return "ISR";
+  // Military comms / C2
+  if (n.includes("USA ") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("WGS") || n.includes("AEHF") || n.includes("MUOS") || n.includes("MILSTAR") || n.includes("NROL") || n.includes("SKYNET") || n.includes("SICRAL") || n.includes("ANASIS") || n.includes("XTAR") || n.includes("UFO ") || n.includes("FLTSATCOM") || n.includes("DSCS") || n.includes("MERIDIAN") || n.includes("RODNIK") || n.includes("GONETS") || n.includes("STRELA")) return "Military";
+  // SAR imaging
+  if (n.includes("RADARSAT") || n.includes("COSMO-SKYMED") || n.includes("ICEYE") || n.includes("CAPELLA") || n.includes("SAR") || n.includes("SAOCOM") || n.includes("TANDEM") || n.includes("PAZ ") || n.includes("RISAT") || n.includes("KONDOR")) return "SAR Imaging";
+  // Data relay
+  if (n.includes("TDRS") || n.includes("TIANLIAN") || n.includes("EDRS") || n.includes("LUCH")) return "Data Relay";
+  // Communication
+  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB") || n.includes("THURAYA") || n.includes("ARABSAT") || n.includes("BADR") || n.includes("ASTRA") || n.includes("EUTELSAT") || n.includes("TELSTAR") || n.includes("GLOBALSTAR") || n.includes("O3B") || n.includes("ORBCOMM") || n.includes("TURKSAT") || n.includes("NILESAT") || n.includes("MEASAT") || n.includes("JCSAT") || n.includes("APSTAR") || n.includes("CHINASAT") || n.includes("ZHONGXING") || n.includes("PAKSAT") || n.includes("EXPRESS") || n.includes("YAMAL") || n.includes("BANGABANDHU") || n.includes("AMOS") || n.includes("KOREASAT") || n.includes("ECHOSTAR") || n.includes("DIRECTV") || n.includes("SIRIUS") || n.includes("XM ") || n.includes("NIGCOMSAT") || n.includes("RASCOM")) return "Communication";
+  // Navigation
+  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU") || n.includes("IRNSS") || n.includes("QZSS") || n.includes("NAVIC")) return "Navigation";
+  // Weather
+  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP") || n.includes("METEOR-M") || n.includes("FENGYUN") || n.includes("INSAT") || n.includes("METOP") || n.includes("SUOMI") || n.includes("JPSS") || n.includes("ELEKTRO") || n.includes("KALPANA") || n.includes("COMS") || n.includes("GEO-KOMPSAT") || n.includes("FY-")) return "Weather";
+  // Earth Observation
+  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA") || n.includes("RESOURCESAT") || n.includes("KOMPSAT") || n.includes("ALOS") || n.includes("GAOFEN") || n.includes("CBERS") || n.includes("DEIMOS") || n.includes("RAPIDEYE") || n.includes("PLANET") || n.includes("DOVE") || n.includes("SUPERVIEW") || n.includes("TRIPLESAT") || n.includes("JILIN") || n.includes("ZIYUAN") || n.includes("KHALIFASAT") || n.includes("DUBAISAT") || n.includes("SAUDISAT")) return "Earth Observation";
+  // Search & Rescue
+  if (sourceGroup === "sarsat" || n.includes("COSPAS") || n.includes("SARSAT")) return "Search & Rescue";
+  // Scientific
+  if (n.includes("HUBBLE") || n.includes("CHANDRA") || n.includes("FERMI") || n.includes("SWIFT") || n.includes("NUSTAR") || n.includes("WISE") || n.includes("TESS") || n.includes("JWST") || n.includes("GAIA") || n.includes("PLANCK") || n.includes("CLUSTER") || n.includes("INTEGRAL") || n.includes("XMM") || n.includes("SPEKTR") || n.includes("ASTROSAT") || n.includes("DAMPE") || n.includes("HXMT") || n.includes("EINSTEIN") || n.includes("DSCOVR") || n.includes("ACE ") || n.includes("SOHO") || n.includes("SDO ") || n.includes("STEREO") || n.includes("WIND ") || n.includes("SWARM") || n.includes("GRACE") || n.includes("GOCE") || n.includes("LISA") || n.includes("PROBA")) return "Scientific";
+  // Technology demo
+  if (n.includes("CUBESAT") || n.includes("NANOSAT") || n.includes("MICROSAT") || n.includes("LEMUR") || n.includes("FLOCK") || n.includes("SPIRE") || n.includes("AISSAT") || n.includes("TET-") || n.includes("BRITE") || n.includes("OPS-SAT") || n.includes("RANGE")) return "Technology Demo";
+  // Amateur
+  if (n.includes("AMSAT") || n.includes("OSCAR") || n.includes("FUNCUBE") || n.includes("HAMSAT") || n.includes("CUBESAT") || sourceGroup === "amateur") return "Amateur/Ham";
+  // Debris / rocket bodies
+  if (n.includes(" DEB") || n.includes("DEBRIS") || n.includes(" R/B") || n.includes("ROCKET BODY")) return "Debris";
+  if (n.includes("ATLAS") || n.includes("DELTA") || n.includes("FALCON") || n.includes("CENTAUR") || n.includes("BREEZE") || n.includes("FREGAT") || n.includes("BLOCK D")) return "Launch Vehicle";
+  // Fallback by source group
   if (sourceGroup === "geo") return "Communication";
   if (sourceGroup === "gnss") return "Navigation";
   if (sourceGroup === "weather") return "Weather";
-  if (sourceGroup === "resource" || sourceGroup === "sarsat") return "Earth Observation";
-  // Name-based detection
-  if (n.includes("USA ") || n.includes("NOSS") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("MISTY") || n.includes("SBIRS") || n.includes("DSP") || n.includes("WGS") || n.includes("AEHF") || n.includes("MUOS") || n.includes("MILSTAR") || n.includes("NROL") || n.includes("GSSAP")) return "Military";
-  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("ORION") || n.includes("MENTOR") || n.includes("TRUMPET") || n.includes("INTRUDER") || n.includes("PROWLER") || n.includes("SHARP") || n.includes("MISTY") || n.includes("TOPAZ") || n.includes("SAPPHIRE") || n.includes("YAOGAN") || n.includes("OFEK") || n.includes("EROS") || n.includes("SHIJIAN") || n.includes("COSMOS 2")) return "ISR";
-  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB") || n.includes("THURAYA") || n.includes("ARABSAT") || n.includes("BADR") || n.includes("ASTRA") || n.includes("EUTELSAT") || n.includes("TELSTAR") || n.includes("GLOBALSTAR") || n.includes("O3B")) return "Communication";
-  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU") || n.includes("IRNSS") || n.includes("QZSS") || n.includes("NAVIC")) return "Navigation";
-  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP") || n.includes("METEOR-M") || n.includes("FENGYUN") || n.includes("INSAT") || n.includes("METOP") || n.includes("SUOMI") || n.includes("JPSS")) return "Weather";
-  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA") || n.includes("CARTOSAT") || n.includes("RESOURCESAT") || n.includes("KOMPSAT") || n.includes("RADARSAT") || n.includes("COSMO-SKYMED") || n.includes("ALOS") || n.includes("GAOFEN")) return "Earth Observation";
+  if (sourceGroup === "resource") return "Earth Observation";
   return "Unknown";
 }
 
