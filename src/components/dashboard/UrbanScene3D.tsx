@@ -1745,6 +1745,30 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
+        {/* Mapillary street-level viewer overlay */}
+        {mapillaryActive && mapillaryImageId && (
+          <div className="absolute inset-0 z-[20] pointer-events-auto">
+            <div id="mapillary-viewer" className="w-full h-full" />
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[21]">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-emerald-500/40" style={{ boxShadow: "0 0 20px rgba(5,203,99,0.2)" }}>
+                <Eye className="h-4 w-4 text-emerald-400" />
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">MAPILLARY STREET VIEW</span>
+                <button onClick={() => { setMapillaryActive(false); setMapillaryImageId(null); }} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mapillary loading indicator */}
+        {mapillaryLoading && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-emerald-500/40">
+              <RefreshCw className="h-4 w-4 text-emerald-400 animate-spin" />
+              <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">Searching Mapillary…</span>
+            </div>
+          </div>
+        )}
+
         {/* HUD Overlay */}
         <div className="absolute top-3 left-3 z-10 pointer-events-none">
           <div className="bg-black/70 backdrop-blur border border-primary/30 rounded-lg px-3 py-2 font-mono text-[9px] text-primary/80 space-y-1"
