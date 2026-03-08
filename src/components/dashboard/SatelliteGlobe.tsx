@@ -993,12 +993,46 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
   return (
     <div className="absolute inset-0 z-[2000] bg-[#050a12] flex flex-col overflow-hidden">
-      {/* Scanline overlay */}
+      {/* Holographic scanline overlay */}
       <div
-        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.03]"
+        className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background:
-            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)",
+          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,200,0.015) 2px, rgba(0,255,200,0.015) 4px)",
+          mixBlendMode: "screen",
+        }}
+      />
+      {/* Holographic sweep line */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none"
+        style={{
+          background: "linear-gradient(180deg, transparent 0%, transparent 45%, rgba(0,255,200,0.06) 50%, transparent 55%, transparent 100%)",
+          animation: "holoSweep 8s linear infinite",
+        }}
+      />
+      {/* Corner brackets — holographic frame */}
+      <div className="absolute inset-0 z-[2001] pointer-events-none">
+        {/* Top-left */}
+        <div className="absolute top-2 left-2 w-12 h-12 border-t border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {/* Top-right */}
+        <div className="absolute top-2 right-2 w-12 h-12 border-t border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {/* Bottom-left */}
+        <div className="absolute bottom-2 left-2 w-12 h-12 border-b border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {/* Bottom-right */}
+        <div className="absolute bottom-2 right-2 w-12 h-12 border-b border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+      </div>
+      {/* Holographic vignette glow */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,20,30,0.6) 100%)",
+        }}
+      />
+      {/* Holographic grid overlay (subtle) */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.02]"
+        style={{
+          backgroundImage: "linear-gradient(rgba(0,255,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,200,0.3) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
         }}
       />
 
