@@ -7,6 +7,7 @@ import { FlightStat, DataRow, LayerControl } from "./urban3d/LayerControl";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
 import { SatelliteTimestampHUD } from "./urban3d/SatelliteTimestampHUD";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
+import { TrafficParticleOverlay } from "./urban3d/TrafficParticleOverlay";
 
 interface IntelEvent {
   title: string;
