@@ -97,15 +97,17 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     const cam = selectedCamera;
 
     if (cam.source_type === "embed_page" && cam.embed_url && !embedError) {
+      const isYouTube = cam.embed_url.includes("youtube.com/embed");
       return (
         <div className="relative w-full h-full">
           <iframe
             src={cam.embed_url}
             className="w-full h-full rounded-md border border-border"
-            allow="autoplay; fullscreen"
+            allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
             allowFullScreen
             onError={() => setEmbedError(true)}
-            sandbox="allow-scripts allow-same-origin allow-popups"
+            {...(!isYouTube ? { sandbox: "allow-scripts allow-same-origin allow-popups" } : {})}
+            referrerPolicy="no-referrer"
           />
           <a
             href={cam.embed_url}
@@ -177,7 +179,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   });
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
       <div className="relative w-[95vw] h-[90vh] max-w-[1600px] bg-card border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background/80">
