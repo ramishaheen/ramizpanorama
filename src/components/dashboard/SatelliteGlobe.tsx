@@ -539,6 +539,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           velocity: r.velocity,
           raan: r.raan,
           meanAnomaly: r.meanAnomaly,
+          country: r.country,
+          operator: r.operator,
+          source: r.source,
         };
       });
       satsRef.current = updated;
