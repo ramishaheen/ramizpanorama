@@ -397,6 +397,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [searchResults, setSearchResults] = useState<SatelliteData[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [activeCity, setActiveCity] = useState<string | null>(null);
+  const [countrySats, setCountrySats] = useState<{ category: string; count: number; color: string }[]>([]);
+  const [countrySatNames, setCountrySatNames] = useState<Set<string>>(new Set());
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
   const [orbitColor, setOrbitColor] = useState<string>("#ffffff");
@@ -408,6 +410,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [aiLoading, setAiLoading] = useState(false);
   const aiScrollRef = useRef<HTMLDivElement>(null);
   const pulseFrameRef = useRef<number>(0);
+  const countrySatNamesRef = useRef<Set<string>>(new Set());
   const satsRef = useRef<SatelliteData[]>([]);
   const [predicting, setPredicting] = useState(false);
   const [predictionData, setPredictionData] = useState<{
@@ -549,6 +552,36 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
   const flyToCity = useCallback((city: (typeof CITY_PRESETS)[0]) => {
     setActiveCity(city.name);
+    setSelectedSat(null);
+    setOrbitPath(null);
+
+    // Find satellites within ~1500km radius of the country center
+    const R = 1500; // km
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const nearbySats = satsRef.current.filter((s) => {
+      const dLat = toRad(s.lat - city.lat);
+      const dLng = toRad(s.lng - city.lng);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(city.lat)) * Math.cos(toRad(s.lat)) * Math.sin(dLng / 2) ** 2;
+      const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return dist < R;
+    });
+
+    // Group by category
+    const catMap = new Map<string, number>();
+    const nameSet = new Set<string>();
+    nearbySats.forEach((s) => {
+      catMap.set(s.category, (catMap.get(s.category) || 0) + 1);
+      nameSet.add(s.noradId || s.name);
+    });
+
+    const breakdown = Array.from(catMap.entries())
+      .map(([category, count]) => ({ category, count, color: CATEGORY_COLORS[category] || "#d4a843" }))
+      .sort((a, b) => b.count - a.count);
+
+    setCountrySats(breakdown);
+    setCountrySatNames(nameSet);
+    countrySatNamesRef.current = nameSet;
+
     if (globeRef.current) {
       globeRef.current.pointOfView(
         { lat: city.lat, lng: city.lng, altitude: 2.0 },
@@ -914,8 +947,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           group.rotation.x = Math.random() * 0.3;
 
           // Store data for animation (pulse + spin)
-          const spinSpeed = 0.3 + Math.random() * 0.4; // radians per second
-          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2, spinSpeed, isSatGroup: true };
+          const spinSpeed = 0.3 + Math.random() * 0.4;
+          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2, spinSpeed, isSatGroup: true, satId: sat.noradId || sat.name };
 
           return group;
         };
@@ -931,15 +964,24 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const dt = (now - lastFrameTime) / 1000; // seconds
           lastFrameTime = now;
           const t = now * 0.003;
+          const highlightSet = countrySatNamesRef.current;
           scene.traverse((obj: any) => {
             if (obj.userData?.isSatGroup) {
-              // Glow pulse
               const phase = t + (obj.userData.time || 0);
               const pulse = 0.85 + Math.sin(phase) * 0.25;
               obj.userData.glow.scale.set(pulse, pulse, pulse);
               obj.userData.glowMat.opacity = 0.1 + Math.sin(phase) * 0.12;
               // Slow spin
               obj.rotation.y += (obj.userData.spinSpeed || 0.3) * dt;
+              // Blink effect for country-highlighted satellites
+              if (highlightSet.size > 0 && obj.userData.satId && highlightSet.has(obj.userData.satId)) {
+                const blink = (Math.sin(t * 4 + (obj.userData.time || 0)) + 1) * 0.5; // 0-1 fast blink
+                const scale = 1.0 + blink * 0.5; // pulse between 1x and 1.5x
+                obj.scale.set(scale, scale, scale);
+                obj.userData.glowMat.opacity = 0.15 + blink * 0.35;
+              } else {
+                obj.scale.set(1, 1, 1);
+              }
             }
           });
           pulseFrameRef.current = requestAnimationFrame(animatePulse);
@@ -1438,6 +1480,35 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         >
           <X className="h-2.5 w-2.5" /> Close
         </button>
+
+        {/* Country satellite type breakdown */}
+        {activeCity && countrySats.length > 0 && (
+          <div className="bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-2 py-2 w-full">
+            <div className="text-[7px] font-mono uppercase tracking-widest text-center mb-1.5" style={{ color: "rgba(0,255,200,0.5)" }}>
+              {activeCity} SATELLITES
+            </div>
+            <div className="text-[8px] font-mono text-white/50 text-center mb-1.5">
+              {countrySats.reduce((s, c) => s + c.count, 0)} objects overhead
+            </div>
+            <div className="space-y-0.5 max-h-[300px] overflow-y-auto scrollbar-none">
+              {countrySats.map(({ category, count, color }) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCat(selectedCat === category ? null : category)}
+                  className={`flex items-center gap-1.5 w-full px-1.5 py-1 rounded text-[8px] font-mono transition-all ${
+                    selectedCat === category
+                      ? "bg-white text-black font-bold"
+                      : "text-white/80 hover:bg-white/10"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: color }} />
+                  <span className="truncate text-left flex-1">{category}</span>
+                  <span className="text-[7px] opacity-70">{count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search overlay */}
