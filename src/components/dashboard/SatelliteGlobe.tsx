@@ -762,6 +762,16 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     }
   }, []);
 
+  // Listen for city clicks from globe HTML elements
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const city = (e as CustomEvent).detail as CityPreset;
+      if (city) flyToCity(city);
+    };
+    window.addEventListener("globe-city-click", handler);
+    return () => window.removeEventListener("globe-city-click", handler);
+  }, [flyToCity]);
+
   const loadSatelliteCache = useCallback(() => {
     try {
       const raw = localStorage.getItem(SATELLITE_CACHE_KEY);
