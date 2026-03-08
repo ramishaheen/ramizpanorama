@@ -1896,7 +1896,102 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* HUD Overlay */}
+        {/* Live Camera Feed Viewer */}
+        {activeCameraFeed && (
+          <div className="absolute inset-0 z-[25] pointer-events-auto flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-card/95 backdrop-blur-xl border border-border rounded-lg w-[90%] max-w-3xl max-h-[80vh] overflow-hidden shadow-2xl">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <Video className="h-4 w-4 text-amber-400" />
+                  <span className="text-xs font-mono font-bold text-foreground">{activeCameraFeed.name}</span>
+                  <span className="text-[8px] font-mono text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/50 uppercase">{activeCameraFeed.category}</span>
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-emerald-400">
+                    <Signal className="h-2.5 w-2.5" /> LIVE
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] font-mono text-muted-foreground">{activeCameraFeed.city}, {activeCameraFeed.country}</span>
+                  <button onClick={() => setActiveCameraFeed(null)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-secondary transition-colors">
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+              <div className="aspect-video bg-black">
+                {activeCameraFeed.embed_url ? (
+                  <iframe
+                    src={activeCameraFeed.embed_url}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={activeCameraFeed.name}
+                  />
+                ) : activeCameraFeed.stream_url ? (
+                  <iframe
+                    src={activeCameraFeed.stream_url}
+                    className="w-full h-full"
+                    allowFullScreen
+                    title={activeCameraFeed.name}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-muted-foreground text-sm font-mono">No stream available</span>
+                  </div>
+                )}
+              </div>
+              <div className="px-4 py-2 border-t border-border/50 flex items-center gap-3">
+                <span className="text-[8px] font-mono text-muted-foreground">📍 {activeCameraFeed.lat.toFixed(4)}°N, {activeCameraFeed.lng.toFixed(4)}°E</span>
+                <span className="text-[8px] font-mono text-muted-foreground">SRC: {activeCameraFeed.source_name}</span>
+                <button onClick={() => {
+                  if (mapInstanceRef.current) {
+                    mapInstanceRef.current.panTo({ lat: activeCameraFeed.lat, lng: activeCameraFeed.lng });
+                    mapInstanceRef.current.setZoom(17);
+                  }
+                  setActiveCameraFeed(null);
+                }} className="ml-auto text-[9px] font-mono text-primary border border-primary/30 px-2 py-0.5 rounded hover:bg-primary/10 transition-colors">
+                  📍 Go to Location
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* City Intel HUD — shown during street-level viewing */}
+        {(streetViewActive || mapillaryActive) && cityIntel && (
+          <div className="absolute bottom-16 right-3 z-[18] pointer-events-auto">
+            <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg p-3 w-52 space-y-2" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 15px hsl(190 100% 50% / 0.08)" }}>
+              <div className="flex items-center gap-1.5">
+                <Shield className="h-3 w-3 text-primary" />
+                <span className="text-[9px] font-mono font-bold text-primary uppercase">City Intel</span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Camera className="h-2.5 w-2.5" /> Cameras</span>
+                  <span className="text-[9px] font-mono font-bold text-amber-400">{cityIntel.cameras || 0} nearby</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><AlertTriangle className="h-2.5 w-2.5" /> Alerts</span>
+                  <span className={`text-[9px] font-mono font-bold ${(cityIntel.alerts || 0) > 0 ? "text-red-400" : "text-emerald-400"}`}>{cityIntel.alerts || 0} active</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Car className="h-2.5 w-2.5" /> Traffic</span>
+                  <span className="text-[9px] font-mono font-bold text-emerald-400">{cityIntel.traffic}</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Ship className="h-2.5 w-2.5" /> Vessels</span>
+                  <span className="text-[9px] font-mono font-bold text-blue-400">{nearbyIntel.vessels.length} nearby</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Radio className="h-2.5 w-2.5" /> Airspace</span>
+                  <span className="text-[9px] font-mono font-bold text-yellow-400">{nearbyIntel.airspace.length} alerts</span>
+                </div>
+              </div>
+              <div className="pt-1 border-t border-border/30">
+                <span className="text-[7px] font-mono text-muted-foreground/50">📍 {lat.toFixed(4)}°N, {Math.abs(lng).toFixed(4)}°{lng >= 0 ? "E" : "W"}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="absolute top-3 left-3 z-10 pointer-events-none">
           <div className="bg-black/70 backdrop-blur border border-primary/30 rounded-lg px-3 py-2 font-mono text-[9px] text-primary/80 space-y-1"
             style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.1)" }}>
