@@ -102,6 +102,24 @@ function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
   return total;
 }
 
+function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
+  if (points.length < 2) return [0, 1];
+  const cumulative: number[] = [0];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dLat = (points[i].lat - points[i - 1].lat) * 111320;
+    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180);
+    total += Math.sqrt(dLat * dLat + dLng * dLng);
+    cumulative.push(total);
+  }
+
+  if (total <= 0) {
+    return points.map((_, i) => i / (points.length - 1));
+  }
+
+  return cumulative.map((d) => d / total);
+}
+
 function parseLaneCount(tags: Record<string, any> = {}, highway: string): number {
   const laneRaw = String(tags?.lanes ?? "").trim();
   const fwRaw = String(tags?.["lanes:forward"] ?? "").trim();
