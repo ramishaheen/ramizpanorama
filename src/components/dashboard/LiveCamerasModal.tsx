@@ -97,15 +97,17 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     const cam = selectedCamera;
 
     if (cam.source_type === "embed_page" && cam.embed_url && !embedError) {
+      const isYouTube = cam.embed_url.includes("youtube.com/embed");
       return (
         <div className="relative w-full h-full">
           <iframe
             src={cam.embed_url}
             className="w-full h-full rounded-md border border-border"
-            allow="autoplay; fullscreen"
+            allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
             allowFullScreen
             onError={() => setEmbedError(true)}
-            sandbox="allow-scripts allow-same-origin allow-popups"
+            {...(!isYouTube ? { sandbox: "allow-scripts allow-same-origin allow-popups" } : {})}
+            referrerPolicy="no-referrer"
           />
           <a
             href={cam.embed_url}
