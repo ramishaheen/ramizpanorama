@@ -727,44 +727,40 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       </div>
 
-      {/* Left sidebar - category filters */}
-      <div className="absolute top-20 left-3 z-[2002] space-y-1 pointer-events-auto">
-        <button
-          onClick={() => setSelectedCat(null)}
-          className={`flex items-center gap-1.5 text-[9px] font-mono font-semibold transition-all ${
-            !selectedCat ? "text-white opacity-100" : "text-white/50 opacity-60"
-          } hover:opacity-100`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-          ALL ({satellites.length})
-        </button>
-        {categories.map(([cat, color]) => {
-          const count = satellites.filter((s) => s.category === cat).length;
-          if (count === 0) return null;
-          return (
-            <button
-              key={cat}
-              onClick={() =>
-                setSelectedCat(selectedCat === cat ? null : cat)
-              }
-              className={`flex items-center gap-1.5 text-[9px] font-mono font-semibold transition-all ${
-                selectedCat === cat
-                  ? "opacity-100"
-                  : selectedCat
-                  ? "opacity-30"
-                  : "opacity-80"
-              } hover:opacity-100`}
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-white">
+      {/* Category filters - bottom center, above city presets */}
+      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
+        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
+          <button
+            onClick={() => setSelectedCat(null)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
+              !selectedCat ? "bg-white text-black shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-white" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
+            ALL ({satellites.length})
+          </button>
+          {categories.map(([cat, color]) => {
+            const count = satellites.filter((s) => s.category === cat).length;
+            if (count === 0) return null;
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCat(selectedCat === cat ? null : cat)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
+                  selectedCat === cat
+                    ? "bg-white text-black shadow-md"
+                    : "text-white/70 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: selectedCat === cat ? color : color }}
+                />
                 {cat} ({count})
-              </span>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Right sidebar controls */}
