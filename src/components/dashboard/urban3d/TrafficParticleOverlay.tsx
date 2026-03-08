@@ -122,23 +122,44 @@ function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
   return cumulative.map((d) => d / total);
 }
 
+function parseLaneNumber(raw: unknown): number {
+  const val = String(raw ?? "").trim();
+  if (!val) return 0;
+  const nums = val
+    .split(/[;|,]/)
+    .map((x) => parseInt(x.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (nums.length === 0) return 0;
+  return nums.reduce((a, b) => a + b, 0);
+}
+
+function parseLaneDirections(tags: Record<string, any> = {}, totalLanes: number, onewayDirection: 1 | -1 | 0): (1 | -1)[] {
+  if (onewayDirection === 1) return Array.from({ length: totalLanes }, () => 1 as const);
+  if (onewayDirection === -1) return Array.from({ length: totalLanes }, () => -1 as const);
+
+  let fw = parseLaneNumber(tags?.["lanes:forward"]);
+  let bw = parseLaneNumber(tags?.["lanes:backward"]);
+
+  if (fw + bw > 0) {
+    fw = Math.min(totalLanes, fw);
+    bw = Math.min(totalLanes - fw, bw);
+    const remain = Math.max(0, totalLanes - fw - bw);
+    if (fw >= bw) fw += remain;
+    else bw += remain;
+    return [...Array.from({ length: fw }, () => 1 as const), ...Array.from({ length: bw }, () => -1 as const)];
+  }
+
+  const forward = Math.ceil(totalLanes / 2);
+  const backward = totalLanes - forward;
+  return [...Array.from({ length: forward }, () => 1 as const), ...Array.from({ length: backward }, () => -1 as const)];
+}
+
 function parseLaneCount(tags: Record<string, any> = {}, highway: string): number {
-  const laneRaw = String(tags?.lanes ?? "").trim();
-  const fwRaw = String(tags?.["lanes:forward"] ?? "").trim();
-  const bwRaw = String(tags?.["lanes:backward"] ?? "").trim();
-
-  const numericFrom = (val: string): number => {
-    if (!val) return 0;
-    const nums = val.split(/[;|,]/).map((x) => parseInt(x.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
-    if (nums.length === 0) return 0;
-    return nums.reduce((a, b) => a + b, 0);
-  };
-
-  const fw = numericFrom(fwRaw);
-  const bw = numericFrom(bwRaw);
+  const fw = parseLaneNumber(tags?.["lanes:forward"]);
+  const bw = parseLaneNumber(tags?.["lanes:backward"]);
   if (fw + bw > 0) return Math.max(1, fw + bw);
 
-  const laneVal = numericFrom(laneRaw);
+  const laneVal = parseLaneNumber(tags?.lanes);
   if (laneVal > 0) return Math.max(1, laneVal);
 
   if (highway.includes("motorway")) return 6;
