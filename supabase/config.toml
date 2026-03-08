@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.social-sentiment]
 verify_jwt = false
+
+[functions.live-flights]
+verify_jwt = false
+
+[functions.google-maps-key]
+verify_jwt = false
