@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter, Sparkles } from "lucide-react";
+import { X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle, Video, Eye, Filter, Sparkles, Globe, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CameraData {
@@ -27,20 +27,24 @@ interface LiveCamerasModalProps {
   onShowOnMap?: (lat: number, lng: number, name: string) => void;
 }
 
-const COUNTRIES = ["Jordan", "UAE", "Saudi Arabia", "Qatar", "Bahrain", "Oman", "Kuwait", "Iraq", "Lebanon", "Israel", "Egypt", "Turkey", "Iran"];
+const COUNTRIES = ["Jordan", "UAE", "Saudi Arabia", "Qatar", "Bahrain", "Oman", "Kuwait", "Iraq", "Lebanon", "Israel", "Egypt", "Turkey", "Iran", "USA", "UK", "France", "Italy", "Spain", "Netherlands", "Germany", "Japan", "South Korea", "Ukraine", "Canada", "Singapore", "Iceland", "Ireland"];
 const CATEGORIES = ["traffic", "tourism", "ports", "weather", "public"];
+const AGGREGATOR_SOURCES = ["EarthCam", "SkylineWebcams", "WebCamera24", "OpenWebcamDB", "Insecam", "Opentopia", "GeoCam", "AI Discovery"];
 
 export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps) => {
   const [cameras, setCameras] = useState<CameraData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCamera, setSelectedCamera] = useState<CameraData | null>(null);
   const [embedError, setEmbedError] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [checkingHealth, setCheckingHealth] = useState(false);
   const [discovering, setDiscovering] = useState(false);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<string | null>(null);
 
   const fetchCameras = useCallback(async () => {
     setLoading(true);
@@ -52,6 +56,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           country: selectedCountry,
           category: selectedCategory,
           search: searchQuery,
+          source: selectedSource,
         },
       });
 
@@ -63,7 +68,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     } finally {
       setLoading(false);
     }
-  }, [selectedCountry, selectedCategory, searchQuery]);
+  }, [selectedCountry, selectedCategory, searchQuery, selectedSource]);
 
   useEffect(() => {
     fetchCameras();
@@ -104,6 +109,25 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
       console.error("AI camera discovery failed:", e);
     } finally {
       setDiscovering(false);
+    }
+  }, [fetchCameras, selectedCountry]);
+
+  const scrapeAggregators = useCallback(async () => {
+    setScraping(true);
+    setScrapeResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("cameras", {
+        method: "POST",
+        body: { action: "scrape_aggregators", country: selectedCountry },
+      });
+      if (error) throw error;
+      setScrapeResult(`Found ${data?.found || 0} cameras, added ${data?.inserted || 0} new feeds`);
+      await fetchCameras();
+    } catch (e) {
+      console.error("Scrape aggregators failed:", e);
+      setScrapeResult("Scrape failed — try again");
+    } finally {
+      setScraping(false);
     }
   }, [fetchCameras, selectedCountry]);
 
@@ -240,6 +264,15 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={scrapeAggregators}
+              className="px-2 py-1 rounded bg-accent/15 border border-accent/30 hover:bg-accent/25 transition-colors text-[10px] font-mono text-accent-foreground flex items-center gap-1"
+              title="Scrape EarthCam, SkylineWebcams, Insecam & more"
+              disabled={scraping}
+            >
+              <Globe className={`h-3.5 w-3.5 ${scraping ? "animate-spin" : ""}`} />
+              {scraping ? "SCRAPING" : "SCRAPE SOURCES"}
+            </button>
+            <button
               onClick={discoverMoreCameras}
               className="px-2 py-1 rounded bg-primary/15 border border-primary/30 hover:bg-primary/25 transition-colors text-[10px] font-mono text-primary flex items-center gap-1"
               title="AI discover more public cameras"
@@ -285,6 +318,19 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
               {cat}
             </button>
           ))}
+          <span className="text-muted-foreground text-[10px]">│</span>
+          {/* Source pills */}
+          {AGGREGATOR_SOURCES.map((src) => (
+            <button
+              key={src}
+              onClick={() => setSelectedSource(selectedSource === src ? null : src)}
+              className={`px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all ${
+                selectedSource === src ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {src}
+            </button>
+          ))}
           <div className="ml-auto relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
@@ -295,6 +341,11 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
               className="pl-7 pr-3 py-1.5 bg-muted border border-border rounded text-xs font-mono text-foreground placeholder:text-muted-foreground w-48 focus:outline-none focus:border-primary/50"
             />
           </div>
+          {scrapeResult && (
+            <span className="text-[9px] font-mono text-success bg-success/10 px-2 py-0.5 rounded">
+              {scrapeResult}
+            </span>
+          )}
         </div>
 
         {/* Main Content */}
@@ -370,6 +421,11 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                           <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
                             {cam.category}
                           </span>
+                          {cam.source_name && (
+                            <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground uppercase">
+                              {cam.source_name}
+                            </span>
+                          )}
                           <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
                             {cam.source_type}
                           </span>
