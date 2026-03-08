@@ -74,9 +74,9 @@ export const AIPredictions = () => {
   }, [t]);
 
   useEffect(() => {
-    fetchPredictions();
-    const interval = setInterval(fetchPredictions, AUTO_REFRESH_MS);
-    return () => clearInterval(interval);
+    const initialDelay = setTimeout(fetchPredictions, 10000);
+    const interval = setInterval(fetchPredictions, 180_000);
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetchPredictions]);
 
   return (
