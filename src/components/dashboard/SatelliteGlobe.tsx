@@ -1126,21 +1126,25 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         <div className="mt-2 space-y-0.5 text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.55)" }}>
           <div style={{ color: "rgba(239,68,68,0.7)" }}>⬤ TOP SECRET // SI-TK // NOFORN</div>
           <div>
-            ▸ TRACKING {satellites.length} OBJECTS • MIL:{" "}
-            {satellites.filter((s) => s.category === "Military").length} ISR:{" "}
-            {satellites.filter((s) => s.category === "ISR").length} NAV:{" "}
-            {satellites.filter((s) => s.category === "Navigation").length}
+            ▸ TRACKING {satellites.length} OBJECTS across {Object.keys(CATEGORY_COLORS).length} TYPES
           </div>
           <div>
-            ▸ LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
-            {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO:{" "}
-            {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
+            ▸ MIL: {satellites.filter((s) => s.category === "Military").length} • ISR: {satellites.filter((s) => s.category === "ISR").length} • EW: {satellites.filter((s) => s.category === "Early Warning").length} • SIGINT: {satellites.filter((s) => s.category === "SIGINT/ELINT").length}
+          </div>
+          <div>
+            ▸ NAV: {satellites.filter((s) => s.category === "Navigation").length} • COMM: {satellites.filter((s) => s.category === "Communication").length} • WX: {satellites.filter((s) => s.category === "Weather").length} • EO: {satellites.filter((s) => s.category === "Earth Observation").length}
+          </div>
+          <div>
+            ▸ SAR: {satellites.filter((s) => s.category === "SAR Imaging").length} • SCI: {satellites.filter((s) => s.category === "Scientific").length} • RELAY: {satellites.filter((s) => s.category === "Data Relay").length} • S&R: {satellites.filter((s) => s.category === "Search & Rescue").length}
+          </div>
+          <div>
+            ▸ VLEO: {satellites.filter((s) => s.alt < 450).length} • LEO: {satellites.filter((s) => s.alt >= 450 && s.alt < 2000).length} • MEO: {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO: {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
           </div>
           <div>
             ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
           </div>
           <div>
-            ▸ SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+            ▸ SOURCES: CELESTRAK × 23 GROUPS • NORAD TLE
           </div>
           <div style={{ color: "rgba(255,255,255,0.45)" }}>
             ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
