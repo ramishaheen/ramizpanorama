@@ -13,6 +13,7 @@ interface Road {
   highway: string;
   lanes: number;
   oneway: boolean;
+  progressStops: number[]; // normalized cumulative distance [0..1] per point
 }
 
 type VehicleType = "car" | "truck" | "bus";
@@ -99,6 +100,24 @@ function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
     total += Math.sqrt(dLat * dLat + dLng * dLng);
   }
   return total;
+}
+
+function buildProgressStops(points: { lat: number; lng: number }[]): number[] {
+  if (points.length < 2) return [0, 1];
+  const cumulative: number[] = [0];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dLat = (points[i].lat - points[i - 1].lat) * 111320;
+    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180);
+    total += Math.sqrt(dLat * dLat + dLng * dLng);
+    cumulative.push(total);
+  }
+
+  if (total <= 0) {
+    return points.map((_, i) => i / (points.length - 1));
+  }
+
+  return cumulative.map((d) => d / total);
 }
 
 function parseLaneCount(tags: Record<string, any> = {}, highway: string): number {
@@ -360,6 +379,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
           lanes: parseLaneCount(el.tags || {}, el.tags?.highway || "unclassified"),
           oneway: el.tags?.oneway === "yes" || (el.tags?.oneway ?? "").toString() === "1",
+          progressStops: buildProgressStops(el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon }))),
         }));
 
       roadsRef.current = roads;
@@ -529,10 +549,18 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const road = roads[p.roadIdx];
         if (!road || road.points.length < 2) return;
 
-        const totalSegments = road.points.length - 1;
-        const segFloat = p.progress * totalSegments;
-        const segIdx = Math.min(Math.floor(segFloat), totalSegments - 1);
-        const segProgress = segFloat - segIdx;
+        const stops = road.progressStops;
+        if (!stops || stops.length < 2) return;
+
+        let segIdx = 0;
+        while (segIdx < stops.length - 2 && p.progress > stops[segIdx + 1]) {
+          segIdx++;
+        }
+
+        const segStart = stops[segIdx];
+        const segEnd = stops[segIdx + 1];
+        const segRange = Math.max(0.000001, segEnd - segStart);
+        const segProgress = (p.progress - segStart) / segRange;
 
         const p1 = road.points[segIdx];
         const p2 = road.points[segIdx + 1];
