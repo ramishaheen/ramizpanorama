@@ -320,7 +320,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       mapListenersRef.current = [
         google.maps.event.addListener(map, "idle", syncMapState),
         google.maps.event.addListener(map, "zoom_changed", () => {
-          setZoomLevel(Math.round(map.getZoom() || 14));
+          const z = Math.round(map.getZoom() || 14);
+          setZoomLevel(z);
+          // Auto-enable traffic particle sim at street level
+          if (z >= 16) setShowTrafficParticles(true);
         }),
         google.maps.event.addListener(map, "click", (e: any) => {
           if (e.latLng) {
