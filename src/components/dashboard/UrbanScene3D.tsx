@@ -28,6 +28,8 @@ interface Aircraft {
   altitude: number;
   velocity: number;
   heading: number;
+  registration?: string;
+  type?: string;
   vertical_rate: number;
   is_military: boolean;
 }
