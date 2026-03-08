@@ -907,15 +907,15 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
       {/* Bottom city presets */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
-        <div className="flex items-center gap-0.5 bg-black/60 backdrop-blur border border-border/30 rounded-md px-1 py-0.5">
+        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
           {CITY_PRESETS.map((city) => (
             <button
               key={city.name}
               onClick={() => flyToCity(city)}
-              className={`px-2.5 py-1 rounded text-[8px] font-mono transition-all ${
+              className={`px-3 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all ${
                 activeCity === city.name
-                  ? "bg-primary/15 text-primary border border-primary/30"
-                  : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-white/5 border border-transparent"
+                  ? "bg-white text-black shadow-md"
+                  : "text-white/90 hover:text-white hover:bg-white/15 border border-transparent"
               }`}
             >
               {city.name}
