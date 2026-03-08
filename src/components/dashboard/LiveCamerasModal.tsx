@@ -264,6 +264,15 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={scrapeAggregators}
+              className="px-2 py-1 rounded bg-accent/15 border border-accent/30 hover:bg-accent/25 transition-colors text-[10px] font-mono text-accent-foreground flex items-center gap-1"
+              title="Scrape EarthCam, SkylineWebcams, Insecam & more"
+              disabled={scraping}
+            >
+              <Globe className={`h-3.5 w-3.5 ${scraping ? "animate-spin" : ""}`} />
+              {scraping ? "SCRAPING" : "SCRAPE SOURCES"}
+            </button>
+            <button
               onClick={discoverMoreCameras}
               className="px-2 py-1 rounded bg-primary/15 border border-primary/30 hover:bg-primary/25 transition-colors text-[10px] font-mono text-primary flex items-center gap-1"
               title="AI discover more public cameras"
