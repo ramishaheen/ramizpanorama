@@ -691,29 +691,29 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           <span className="text-[9px] font-mono text-muted-foreground">PHOTOREALISTIC TILES</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={() => setShowSearch(!showSearch)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showSearch ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+          <button onClick={() => setShowSearch(!showSearch)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showSearch ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_12px_hsl(var(--primary)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Search className="h-3 w-3" /> Search
           </button>
-          <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showFlights ? "border-primary/50 bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+          <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showFlights ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_12px_hsl(var(--primary)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Plane className="h-3 w-3" /> Flights
-            {aircraft.length > 0 && <span className="bg-primary/20 text-primary text-[8px] px-1 rounded-full font-bold">{aircraft.length}</span>}
+            {aircraft.length > 0 && <span className="bg-primary/30 text-white text-[8px] px-1.5 rounded-full font-bold">{aircraft.length}</span>}
           </button>
-          <button onClick={() => setShowMarkers(!showMarkers)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showMarkers ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+          <button onClick={() => setShowMarkers(!showMarkers)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showMarkers ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} Markers
           </button>
-          <button onClick={() => setShowHeatmap(!showHeatmap)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showHeatmap ? "border-orange-500/50 bg-orange-500/10 text-orange-400" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+          <button onClick={() => setShowHeatmap(!showHeatmap)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showHeatmap ? "border-orange-500/60 bg-orange-500/20 text-white shadow-[0_0_12px_rgba(249,115,22,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Flame className="h-3 w-3" /> Heatmap
           </button>
-          <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${showTrails ? "border-accent/50 bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+          <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showTrails ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Navigation className="h-3 w-3" /> Trails
           </button>
-          <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${streetViewActive ? "border-green-500/50 bg-green-500/10 text-green-400" : "border-border text-muted-foreground hover:bg-secondary"}`}>
+          <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${streetViewActive ? "border-green-500/60 bg-green-500/20 text-white shadow-[0_0_12px_rgba(34,197,94,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
             <Compass className="h-3 w-3" /> 360°
           </button>
-          <button onClick={() => fetchFlights()} className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all">
+          <button onClick={() => fetchFlights()} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30 transition-all duration-300 hover:scale-105 active:scale-95">
             <RefreshCw className={`h-3 w-3 ${flightsLoading ? "animate-spin" : ""}`} />
           </button>
-          <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded border border-border text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-all">
+          <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded-md border border-border/60 text-white/80 hover:bg-destructive/20 hover:text-destructive transition-all duration-300 hover:scale-110 active:scale-95">
             <X className="h-4 w-4" />
           </button>
         </div>
