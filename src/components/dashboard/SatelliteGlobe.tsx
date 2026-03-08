@@ -767,7 +767,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     fetchSatellites();
   }, [fetchSatellites]);
 
-  // Re-propagate positions every 4 seconds using real orbital mechanics
+  // Re-propagate positions every 2 seconds for smoother icon motion
   useEffect(() => {
     if (rawTLERef.current.length === 0) return;
     const interval = setInterval(() => {
@@ -808,8 +808,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       const filtered = catFilter
         ? updated.filter((s) => s.category === catFilter)
         : updated;
-      globe.objectsData(filtered.slice(0, 1800));
-    }, 4000);
+      globe.objectsData(filtered.slice(0, catFilter ? 5000 : 3200));
+    }, 2000);
     return () => clearInterval(interval);
   }, [satellites.length, selectedCat]);
 
@@ -840,25 +840,28 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
           const isNav = sat.category === "Navigation";
           const isStation = sat.category === "Space Station";
-          const bodySize = isStation ? 0.7 : isMilOrISR ? 0.45 : isNav ? 0.35 : 0.25;
+          const bodySize = isStation ? 0.9 : isMilOrISR ? 0.62 : isNav ? 0.5 : 0.4;
 
-          const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
+          const bodyGeo = new THREE.OctahedronGeometry(bodySize * 0.5, 0);
           const bodyMat = new THREE.MeshPhongMaterial({
             color,
             emissive: color,
-            emissiveIntensity: 0.45,
+            emissiveIntensity: 0.65,
             transparent: true,
-            opacity: 0.9,
-            shininess: 80,
+            opacity: 0.96,
+            shininess: 90,
           });
 
-          group.add(new THREE.Mesh(bodyGeo, bodyMat));
+          const body = new THREE.Mesh(bodyGeo, bodyMat);
+          group.add(body);
 
-          const glowGeo = new THREE.SphereGeometry(bodySize * 0.18, 6, 6);
-          const glowMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.75 });
-          group.add(new THREE.Mesh(glowGeo, glowMat));
+          const haloGeo = new THREE.RingGeometry(bodySize * 0.7, bodySize * 0.95, 24);
+          const haloMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide });
+          const halo = new THREE.Mesh(haloGeo, haloMat);
+          halo.rotation.x = Math.PI / 2;
+          group.add(halo);
+
           group.rotation.y = Math.random() * Math.PI * 2;
-
           return group;
         };
 
@@ -1034,7 +1037,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       ? satellites.filter((s) => s.category === selectedCat)
       : satellites;
 
-    globe.objectsData(filtered.slice(0, 1800));
+    globe.objectsData(filtered.slice(0, selectedCat ? 5000 : 3200));
   }, [satellites, selectedCat]);
 
   // Update label layer independently
@@ -1095,12 +1098,13 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       pushSegmentedPath(orbitPath, "orbit");
     }
 
-    if (!selectedSat && rawTLERef.current.length > 0) {
+    if (rawTLERef.current.length > 0) {
       const source = selectedCat
         ? rawTLERef.current.filter((r) => r.category === selectedCat)
         : rawTLERef.current;
 
-      source.slice(0, 140).forEach((r) => {
+      const baselineLimit = selectedSat ? 140 : 300;
+      source.slice(0, baselineLimit).forEach((r) => {
         const baselinePath = computeOrbitPath(
           r.inclination,
           r.raan,
@@ -1110,7 +1114,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           r.epochYear,
           r.epochDay,
           r.alt,
-          72
+          180
         );
         pushSegmentedPath(baselinePath, "baseline");
       });
@@ -1136,10 +1140,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               ? ["rgba(255,255,255,0.24)", "rgba(255,255,255,0.05)"]
               : [orbitColor + "cc", orbitColor + "33"]
         )
-        .pathStroke((seg: any) => (seg.type === "predict" ? 2 : seg.type === "baseline" ? 0.65 : 1.5))
-        .pathDashLength((seg: any) => (seg.type === "baseline" ? 0.008 : 0.02))
+        .pathStroke((seg: any) => (seg.type === "predict" ? 2.2 : seg.type === "baseline" ? 0.95 : 1.8))
+        .pathDashLength((seg: any) => (seg.type === "baseline" ? 0.014 : 0.02))
         .pathDashGap(0.01)
-        .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : seg.type === "baseline" ? 0 : 4000))
+        .pathDashAnimateTime((seg: any) => (seg.type === "predict" ? 6000 : seg.type === "baseline" ? 0 : 3500))
         .pathTransitionDuration(250);
     } else {
       globe.pathsData([]);
