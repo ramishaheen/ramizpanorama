@@ -136,7 +136,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 47.5);
   
   const [searchInput, setSearchInput] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearch, setShowSearch] = useState(true);
   const [showFlights, setShowFlights] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
