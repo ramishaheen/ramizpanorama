@@ -21,6 +21,9 @@ interface SatelliteData {
   velocity?: number;
   raan?: number;
   meanAnomaly?: number;
+  country?: string;
+  operator?: string;
+  source?: string; // which TLE group it came from
 }
 
 interface SatelliteGlobeProps {
@@ -153,15 +156,55 @@ function parseTLEFull(
   }
 }
 
-function categorizeSatellite(name: string): string {
+function categorizeSatellite(name: string, sourceGroup?: string): string {
   const n = name.toUpperCase();
-  if (n.includes("USA ") || n.includes("NOSS") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("MISTY")) return "Military";
-  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("ORION") || n.includes("MENTOR") || n.includes("TRUMPET")) return "ISR";
-  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB")) return "Communication";
-  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU")) return "Navigation";
-  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP")) return "Weather";
-  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA")) return "Earth Observation";
+  // Source group overrides
+  if (sourceGroup === "military") return "Military";
+  if (sourceGroup === "isr") return "ISR";
+  if (sourceGroup === "geo") return "Communication";
+  if (sourceGroup === "gnss") return "Navigation";
+  if (sourceGroup === "weather") return "Weather";
+  if (sourceGroup === "resource" || sourceGroup === "sarsat") return "Earth Observation";
+  // Name-based detection
+  if (n.includes("USA ") || n.includes("NOSS") || n.includes("LACROSSE") || n.includes("ONYX") || n.includes("MISTY") || n.includes("SBIRS") || n.includes("DSP") || n.includes("WGS") || n.includes("AEHF") || n.includes("MUOS") || n.includes("MILSTAR") || n.includes("NROL") || n.includes("GSSAP")) return "Military";
+  if (n.includes("KEYHOLE") || n.includes("KH-") || n.includes("CRYSTAL") || n.includes("ORION") || n.includes("MENTOR") || n.includes("TRUMPET") || n.includes("INTRUDER") || n.includes("PROWLER") || n.includes("SHARP") || n.includes("MISTY") || n.includes("TOPAZ") || n.includes("SAPPHIRE") || n.includes("YAOGAN") || n.includes("OFEK") || n.includes("EROS") || n.includes("SHIJIAN") || n.includes("COSMOS 2")) return "ISR";
+  if (n.includes("STARLINK") || n.includes("IRIDIUM") || n.includes("INTELSAT") || n.includes("SES") || n.includes("VIASAT") || n.includes("ONEWEB") || n.includes("THURAYA") || n.includes("ARABSAT") || n.includes("BADR") || n.includes("ASTRA") || n.includes("EUTELSAT") || n.includes("TELSTAR") || n.includes("GLOBALSTAR") || n.includes("O3B")) return "Communication";
+  if (n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GLONASS") || n.includes("GALILEO") || n.includes("BEIDOU") || n.includes("IRNSS") || n.includes("QZSS") || n.includes("NAVIC")) return "Navigation";
+  if (n.includes("NOAA") || n.includes("GOES") || n.includes("METEOSAT") || n.includes("HIMAWARI") || n.includes("DMSP") || n.includes("METEOR-M") || n.includes("FENGYUN") || n.includes("INSAT") || n.includes("METOP") || n.includes("SUOMI") || n.includes("JPSS")) return "Weather";
+  if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW") || n.includes("PLEIADES") || n.includes("SPOT") || n.includes("TERRA") || n.includes("AQUA") || n.includes("CARTOSAT") || n.includes("RESOURCESAT") || n.includes("KOMPSAT") || n.includes("RADARSAT") || n.includes("COSMO-SKYMED") || n.includes("ALOS") || n.includes("GAOFEN")) return "Earth Observation";
   return "Unknown";
+}
+
+function detectCountry(name: string, intlDesignator?: string): { country: string; operator: string } {
+  const n = name.toUpperCase();
+  const id = (intlDesignator || "").toUpperCase();
+  // US
+  if (n.includes("USA ") || n.includes("GPS") || n.includes("NAVSTAR") || n.includes("GOES") || n.includes("NOAA") || n.includes("STARLINK") || n.includes("LANDSAT") || n.includes("NROL") || n.includes("SBIRS") || n.includes("WGS") || n.startsWith("TDRS")) return { country: "🇺🇸 USA", operator: "US DoD/NASA/SpaceX" };
+  // Russia
+  if (n.includes("COSMOS") || n.includes("GLONASS") || n.includes("METEOR") || n.includes("RESURS") || n.includes("GONETS") || n.includes("LUCH")) return { country: "🇷🇺 Russia", operator: "Roscosmos/VKS" };
+  // China
+  if (n.includes("BEIDOU") || n.includes("YAOGAN") || n.includes("SHIJIAN") || n.includes("FENGYUN") || n.includes("GAOFEN") || n.includes("TIANLIAN") || n.includes("ZHONGXING") || n.includes("CZ-")) return { country: "🇨🇳 China", operator: "CNSA/PLA" };
+  // Israel
+  if (n.includes("OFEK") || n.includes("AMOS") || n.includes("EROS")) return { country: "🇮🇱 Israel", operator: "IAI/ISA" };
+  // Iran
+  if (n.includes("NAHID") || n.includes("NOOR") || n.includes("KHAYYAM")) return { country: "🇮🇷 Iran", operator: "ISA Iran" };
+  // India
+  if (n.includes("CARTOSAT") || n.includes("IRNSS") || n.includes("INSAT") || n.includes("GSAT") || n.includes("RESOURCESAT") || n.includes("NAVIC")) return { country: "🇮🇳 India", operator: "ISRO" };
+  // Europe
+  if (n.includes("GALILEO") || n.includes("SENTINEL") || n.includes("METEOSAT") || n.includes("METOP") || n.includes("EUTELSAT") || n.includes("COSMO-SKYMED") || n.includes("PLEIADES") || n.includes("SPOT")) return { country: "🇪🇺 Europe", operator: "ESA/EUMETSAT" };
+  // Japan
+  if (n.includes("HIMAWARI") || n.includes("QZSS") || n.includes("ALOS") || n.includes("IGS")) return { country: "🇯🇵 Japan", operator: "JAXA" };
+  // South Korea
+  if (n.includes("KOMPSAT") || n.includes("ANASIS")) return { country: "🇰🇷 S.Korea", operator: "KARI" };
+  // UAE
+  if (n.includes("KHALIFASAT") || n.includes("DUBAISAT") || n.includes("FALCON EYE")) return { country: "🇦🇪 UAE", operator: "MBRSC" };
+  // Saudi
+  if (n.includes("SAUDISAT") || n.includes("SGS")) return { country: "🇸🇦 KSA", operator: "KACST" };
+  // Turkey
+  if (n.includes("TURKSAT") || n.includes("GOKTURK")) return { country: "🇹🇷 Turkey", operator: "TAI/TUA" };
+  // Intl designator country code
+  if (id.startsWith("98067") || id.includes("US")) return { country: "🇺🇸 USA", operator: "Various" };
+  return { country: "Unknown", operator: "Unknown" };
 }
 
 function getOrbitType(alt: number, _inc?: number, ecc?: number): string {
@@ -237,6 +280,9 @@ interface RawSatTLE {
   period: number;
   velocity: number;
   launchYear?: string;
+  country?: string;
+  operator?: string;
+  source?: string;
 }
 
 export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
@@ -284,7 +330,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const openAiChat = useCallback((sat: SatelliteData) => {
     setAiChatSat(sat);
     setHoveredSat(null);
-    const initialQ = `Tell me about the satellite "${sat.name}" (NORAD ID: ${sat.noradId || "N/A"}, Category: ${sat.category}, Altitude: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}). What is its purpose, operator, and strategic significance?`;
+    const initialQ = `Provide OSINT intelligence analysis on satellite "${sat.name}" (NORAD: ${sat.noradId || "N/A"}, Category: ${sat.category}, Country: ${sat.country || "Unknown"}, Operator: ${sat.operator || "Unknown"}, Alt: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}, Inc: ${sat.inclination?.toFixed(1) || "N/A"}°, Source: ${sat.source || "CelesTrak"}). Include: mission purpose, military/intelligence significance, coverage area over Middle East, operator details, and any known OSINT about this satellite's recent activities or significance in current geopolitical context.`;
     setAiMessages([{ role: "user", content: initialQ }]);
     setAiLoading(true);
     supabase.functions.invoke("war-chat", {
@@ -362,50 +408,95 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const fetchSatellites = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await fetch(
-        "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle"
-      )
-        .then((r) => r.text())
-        .catch(() => "");
+      // Fetch from multiple specialized CelesTrak groups for comprehensive OSINT coverage
+      const TLE_SOURCES: { url: string; group: string }[] = [
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle", group: "active" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=military&FORMAT=tle", group: "military" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle", group: "resource" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle", group: "weather" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gnss&FORMAT=tle", group: "gnss" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=tle", group: "geo" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=sarsat&FORMAT=tle", group: "sarsat" },
+        { url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=last-30-days&FORMAT=tle", group: "recent" },
+      ];
+
+      const responses = await Promise.allSettled(
+        TLE_SOURCES.map(async (src) => {
+          const resp = await fetch(src.url).then((r) => r.text()).catch(() => "");
+          return { text: resp, group: src.group };
+        })
+      );
+
       const allSats: SatelliteData[] = [];
       const rawTLEs: RawSatTLE[] = [];
       const seen = new Set<string>();
-      const lines = resp
-        .trim()
-        .split("\n")
-        .map((l) => l.trim());
-      for (let i = 0; i < lines.length - 2; i += 3) {
-        const name = lines[i],
-          tle1 = lines[i + 1],
-          tle2 = lines[i + 2];
-        if (!tle1?.startsWith("1 ") || !tle2?.startsWith("2 ")) continue;
-        if (seen.has(name)) continue;
-        seen.add(name);
-        const sat = parseTLEFull(name, tle1, tle2);
-        if (sat) {
-          allSats.push(sat);
-          rawTLEs.push({
-            name: sat.name,
-            inclination: sat.inclination!,
-            raan: sat.raan!,
-            meanAnomaly: sat.meanAnomaly!,
-            meanMotion: sat.meanMotion!,
-            eccentricity: sat.eccentricity!,
-            epochYear: sat.epochYear!,
-            epochDay: sat.epochDay!,
-            alt: sat.alt,
-            category: sat.category,
-            noradId: sat.noradId!,
-            intlDesignator: sat.intlDesignator!,
-            period: sat.period!,
-            velocity: sat.velocity!,
-            launchYear: sat.launchYear,
-          });
+
+      for (const result of responses) {
+        if (result.status !== "fulfilled") continue;
+        const { text, group } = result.value;
+        if (!text.trim()) continue;
+        const lines = text.trim().split("\n").map((l) => l.trim());
+        for (let i = 0; i < lines.length - 2; i += 3) {
+          const name = lines[i],
+            tle1 = lines[i + 1],
+            tle2 = lines[i + 2];
+          if (!tle1?.startsWith("1 ") || !tle2?.startsWith("2 ")) continue;
+          if (seen.has(name)) continue;
+          seen.add(name);
+          const sat = parseTLEFull(name, tle1, tle2);
+          if (sat) {
+            // Override category based on source group for accuracy
+            sat.category = categorizeSatellite(sat.name, group);
+            const { country, operator } = detectCountry(sat.name, sat.intlDesignator);
+            sat.country = country;
+            sat.operator = operator;
+            sat.source = group;
+            allSats.push(sat);
+            rawTLEs.push({
+              name: sat.name,
+              inclination: sat.inclination!,
+              raan: sat.raan!,
+              meanAnomaly: sat.meanAnomaly!,
+              meanMotion: sat.meanMotion!,
+              eccentricity: sat.eccentricity!,
+              epochYear: sat.epochYear!,
+              epochDay: sat.epochDay!,
+              alt: sat.alt,
+              category: sat.category,
+              noradId: sat.noradId!,
+              intlDesignator: sat.intlDesignator!,
+              period: sat.period!,
+              velocity: sat.velocity!,
+              launchYear: sat.launchYear,
+              country,
+              operator,
+              source: group,
+            });
+          }
         }
       }
-      const limited = allSats.slice(0, 2500);
-      rawTLERef.current = rawTLEs.slice(0, 2500);
+
+      // Prioritize: Military & ISR first, then others
+      const prioritized = [
+        ...allSats.filter((s) => s.category === "Military" || s.category === "ISR"),
+        ...allSats.filter((s) => s.category === "Navigation"),
+        ...allSats.filter((s) => s.category === "Weather" || s.category === "Earth Observation"),
+        ...allSats.filter((s) => s.category === "Communication").slice(0, 500),
+        ...allSats.filter((s) => s.category === "Unknown").slice(0, 200),
+      ];
+
+      // Deduplicate after merge
+      const finalSeen = new Set<string>();
+      const deduped = prioritized.filter((s) => {
+        if (finalSeen.has(s.name)) return false;
+        finalSeen.add(s.name);
+        return true;
+      });
+
+      const limited = deduped.slice(0, 3500);
+      rawTLERef.current = rawTLEs.filter((r) => deduped.some((d) => d.name === r.name)).slice(0, 3500);
       setSatellites(limited);
+      console.log(`[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter(r => r.status === 'fulfilled').length} CelesTrak groups`);
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
     } finally {
@@ -448,6 +539,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           velocity: r.velocity,
           raan: r.raan,
           meanAnomaly: r.meanAnomaly,
+          country: r.country,
+          operator: r.operator,
+          source: r.source,
         };
       });
       satsRef.current = updated;
@@ -768,14 +862,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/60">
           <div>TOP SECRET // SI-TK // NOFORN</div>
           <div>
-            TRACKING {satellites.length} OBJECTS • LEO:{" "}
-            {satellites.filter((s) => s.alt < 2000).length} MEO:{" "}
-            {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length}{" "}
-            GEO:{" "}
+            TRACKING {satellites.length} OBJECTS • MIL:{" "}
+            {satellites.filter((s) => s.category === "Military").length} ISR:{" "}
+            {satellites.filter((s) => s.category === "ISR").length} NAV:{" "}
+            {satellites.filter((s) => s.category === "Navigation").length}
+          </div>
+          <div>
+            LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
+            {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO:{" "}
             {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
           </div>
+          <div>
+            SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+          </div>
           <div className="text-white/60">
-            LAST ORBIT UPDATE: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
+            LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
           </div>
         </div>
       </div>
@@ -1013,6 +1114,14 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                   value={selectedSat.noradId || "N/A"}
                 />
                 <DataRow
+                  label="COUNTRY"
+                  value={selectedSat.country || "N/A"}
+                />
+                <DataRow
+                  label="OPERATOR"
+                  value={selectedSat.operator || "N/A"}
+                />
+                <DataRow
                   label="INTL"
                   value={selectedSat.intlDesignator || "N/A"}
                 />
@@ -1088,6 +1197,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             <div className="text-[9px] font-mono text-white/60 space-y-0.5">
               <div>TYPE: <span className="text-white/90">{hoveredSat.category}</span></div>
               <div>ALT: <span className="text-white/90">{Math.round(hoveredSat.alt)} km</span> • ORBIT: <span className="text-white/90">{getOrbitType(hoveredSat.alt, hoveredSat.inclination, hoveredSat.eccentricity)}</span></div>
+              {hoveredSat.country && <div>COUNTRY: <span className="text-white/90">{hoveredSat.country}</span></div>}
+              {hoveredSat.operator && hoveredSat.operator !== "Unknown" && <div>OPERATOR: <span className="text-white/90">{hoveredSat.operator}</span></div>}
               {hoveredSat.noradId && <div>NORAD: <span className="text-white/90">{hoveredSat.noradId}</span></div>}
             </div>
             <button
