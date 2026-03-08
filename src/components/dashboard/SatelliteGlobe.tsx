@@ -742,6 +742,13 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           {categories.map(([cat, color]) => {
             const count = satellites.filter((s) => s.category === cat).length;
             if (count === 0) return null;
+            const CatIcon = cat === "Military" ? Shield
+              : cat === "ISR" ? Eye
+              : cat === "Communication" ? Radio
+              : cat === "Navigation" ? Navigation
+              : cat === "Weather" ? Cloud
+              : cat === "Earth Observation" ? Globe
+              : HelpCircle;
             return (
               <button
                 key={cat}
@@ -752,10 +759,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                     : "text-white/70 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: selectedCat === cat ? color : color }}
-                />
+                <CatIcon className="h-3 w-3" style={{ color: selectedCat === cat ? color : color }} />
                 {cat} ({count})
               </button>
             );
