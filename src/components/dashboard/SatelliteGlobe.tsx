@@ -269,6 +269,56 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     satsRef.current = satellites;
   }, [satellites]);
 
+  // Track mouse position for tooltip
+  useEffect(() => {
+    const handler = (e: MouseEvent) => setHoverPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", handler);
+    return () => window.removeEventListener("mousemove", handler);
+  }, []);
+
+  // Scroll AI chat
+  useEffect(() => {
+    aiScrollRef.current?.scrollTo({ top: aiScrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [aiMessages]);
+
+  const openAiChat = useCallback((sat: SatelliteData) => {
+    setAiChatSat(sat);
+    setHoveredSat(null);
+    const initialQ = `Tell me about the satellite "${sat.name}" (NORAD ID: ${sat.noradId || "N/A"}, Category: ${sat.category}, Altitude: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}). What is its purpose, operator, and strategic significance?`;
+    setAiMessages([{ role: "user", content: initialQ }]);
+    setAiLoading(true);
+    supabase.functions.invoke("war-chat", {
+      body: { messages: [{ role: "user", content: initialQ }] },
+    }).then(({ data, error }) => {
+      setAiLoading(false);
+      if (error || !data) {
+        setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Unable to reach AI. Try again later." }]);
+        return;
+      }
+      const text = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
+      setAiMessages(prev => [...prev, { role: "assistant", content: text }]);
+    });
+  }, []);
+
+  const sendAiMessage = useCallback(async () => {
+    const text = aiInput.trim();
+    if (!text || aiLoading) return;
+    const newMsgs = [...aiMessages, { role: "user", content: text }];
+    setAiMessages(newMsgs);
+    setAiInput("");
+    setAiLoading(true);
+    const { data, error } = await supabase.functions.invoke("war-chat", {
+      body: { messages: newMsgs },
+    });
+    setAiLoading(false);
+    if (error || !data) {
+      setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error connecting to AI." }]);
+      return;
+    }
+    const reply = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
+    setAiMessages(prev => [...prev, { role: "assistant", content: reply }]);
+  }, [aiInput, aiLoading, aiMessages]);
+
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
