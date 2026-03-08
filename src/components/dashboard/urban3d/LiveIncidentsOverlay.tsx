@@ -167,7 +167,7 @@ export const LiveIncidentsOverlay = ({ mapRef, enabled, lat, lng }: LiveIncident
   if (!enabled) return null;
 
   return (
-    <div className="absolute top-16 right-3 z-[14] pointer-events-auto">
+    <div className="absolute bottom-4 left-3 z-[14] pointer-events-auto">
       <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg p-2 w-48" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
         <div className="flex items-center gap-1.5 mb-1.5">
           <AlertTriangle className="h-3 w-3 text-amber-400" />
