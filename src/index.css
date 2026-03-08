@@ -279,6 +279,30 @@
   border: 1px solid hsl(190 100% 50% / 0.2);
 }
 
+/* City landmark popup */
+.leaflet-popup-pane .city-landmark-popup .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+}
+.leaflet-popup-pane .city-landmark-popup .leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.leaflet-popup-pane .city-landmark-popup .leaflet-popup-tip {
+  background: hsl(210 40% 6%) !important;
+  border: 1px solid hsl(190 100% 50% / 0.2);
+}
+.leaflet-popup-pane .city-landmark-popup .leaflet-popup-close-button {
+  color: hsl(190 100% 50% / 0.6) !important;
+  font-size: 16px !important;
+  top: 4px !important;
+  right: 6px !important;
+  z-index: 10;
+}
+
 /* Holographic sweep animation for Orbital Intelligence */
 @keyframes holoSweep {
   0% { transform: translateY(-100%); }
