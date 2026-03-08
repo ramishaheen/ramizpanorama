@@ -91,8 +91,8 @@ export const ResponseMapModal = ({
 
   const filteredConflicts = useMemo(() =>
     conflicts.data.filter(c => {
-      if (searchQuery && !c.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (selectedCountry !== "all" && !(c.country || "").toLowerCase().includes(selectedCountry.toLowerCase())) return false;
+      if (searchQuery && !c.location.toLowerCase().includes(searchQuery.toLowerCase()) && !c.notes.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (selectedCountry !== "all" && !c.country.toLowerCase().includes(selectedCountry.toLowerCase())) return false;
       return true;
     }).slice(0, 50), [conflicts.data, searchQuery, selectedCountry]);
 
@@ -142,11 +142,11 @@ export const ResponseMapModal = ({
     if (layers.conflicts) {
       filteredConflicts.forEach(c => events.push({
         id: c.id, type: "conflict",
-        title: c.title,
-        subtitle: `${c.country || ""} — ${c.source || ""}`,
-        severity: "high",
-        lat: c.lat, lng: c.lng, time: c.date || new Date().toISOString(),
-        url: c.url, source: "GDELT",
+        title: `${c.event_type} — ${c.location}`,
+        subtitle: `${c.country} — ${c.source}`,
+        severity: c.severity || "high",
+        lat: c.lat, lng: c.lng, time: c.event_date || new Date().toISOString(),
+        details: c.notes, source: "GDELT",
       }));
     }
 
