@@ -404,7 +404,21 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     overlay.setMap(map);
     overlayRef.current = overlay;
 
-    return () => { overlay.setMap(null); overlayRef.current = null; };
+    // Re-fetch roads when map stops moving (pan/zoom)
+    const idleListener = map.addListener("idle", () => {
+      if (!enabled || zoom < MIN_ZOOM) return;
+      const center = map.getCenter();
+      if (center) {
+        lastFetchRef.current = ""; // force re-fetch with new bounds
+        fetchRoads(center.lat(), center.lng());
+      }
+    });
+
+    return () => {
+      overlay.setMap(null);
+      overlayRef.current = null;
+      google.maps.event.removeListener(idleListener);
+    };
   }, [enabled, zoom >= MIN_ZOOM, mapRef.current]);
 
   useEffect(() => {
