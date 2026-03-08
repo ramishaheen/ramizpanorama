@@ -311,6 +311,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               ${isMil ? 'MILITARY' : 'CIVIL'}
             </span>
           </div>
+          ${ac.type || ac.registration ? `<div style="display:flex;gap:8px;margin-bottom:6px;font-size:9px;color:#7d8590;">
+            ${ac.type ? `<span>✈ ${ac.type}</span>` : ''}
+            ${ac.registration ? `<span>📋 ${ac.registration}</span>` : ''}
+          </div>` : ''}
           <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
             <span style="color:#7d8590;">ICAO</span><span>${ac.icao24}</span>
             <span style="color:#7d8590;">ORIGIN</span><span>${ac.origin_country}</span>
