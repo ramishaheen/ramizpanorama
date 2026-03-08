@@ -273,6 +273,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     aircraft.forEach((ac) => {
       const isTracked = trackedAircraftId === ac.icao24;
       const isMil = ac.is_military;
+      const color = isMil ? "#ef4444" : "#3b82f6";
       const size = isTracked ? 40 : 30;
 
       const marker = new google.maps.Marker({
