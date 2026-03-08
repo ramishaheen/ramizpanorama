@@ -556,8 +556,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     setSelectedSat(null);
     setOrbitPath(null);
 
-    // Find satellites within ~1500km radius of the country center
-    const R = 1500; // km
+    // Find satellites within ~2500km radius of the country center
+    const R = 2500; // km
     const toRad = (d: number) => (d * Math.PI) / 180;
     const nearbySats = satsRef.current.filter((s) => {
       const dLat = toRad(s.lat - city.lat);
@@ -2035,19 +2035,35 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       {/* Bottom city presets */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
         <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
-          {CITY_PRESETS.map((city) => (
-            <button
-              key={city.name}
-              onClick={() => flyToCity(city)}
-              className={`px-3 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all ${
-                activeCity === city.name
-                  ? "bg-white text-black shadow-md"
-                  : "text-white/90 hover:text-white hover:bg-white/15 border border-transparent"
-              }`}
-            >
-              {city.name}
-            </button>
-          ))}
+          {CITY_PRESETS.map((city) => {
+            // Count satellites overhead for badge
+            const toRad = (d: number) => (d * Math.PI) / 180;
+            const overhead = satsRef.current.filter((s) => {
+              const dLat = toRad(s.lat - city.lat);
+              const dLng = toRad(s.lng - city.lng);
+              const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(city.lat)) * Math.cos(toRad(s.lat)) * Math.sin(dLng / 2) ** 2;
+              const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              return dist < 2500;
+            }).length;
+            return (
+              <button
+                key={city.name}
+                onClick={() => flyToCity(city)}
+                className={`relative px-3 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all ${
+                  activeCity === city.name
+                    ? "bg-white text-black shadow-md"
+                    : "text-white/90 hover:text-white hover:bg-white/15 border border-transparent"
+                }`}
+              >
+                {city.name}
+                {overhead > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold leading-none px-1">
+                    {overhead}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
