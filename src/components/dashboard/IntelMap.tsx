@@ -35,6 +35,7 @@ interface IntelMapProps {
   geoAlerts: GeoAlert[];
   rockets: Rocket[];
   layers: LayerState;
+  onToggleLayer?: (layer: keyof LayerState) => void;
   safetyData?: CountrySafety[];
   flyToTarget?: { lat: number; lng: number; label: string } | null;
   newsMarkers?: WarUpdate[];
