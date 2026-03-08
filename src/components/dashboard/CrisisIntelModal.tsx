@@ -115,7 +115,16 @@ export const CrisisIntelModal = ({ onClose }: CrisisIntelModalProps) => {
     };
   }, []);
 
-  // Fly to city
+  // Fly to city immediately on selection (before API response)
+  useEffect(() => {
+    if (!mapRef.current || !city) return;
+    const coords = CITY_COORDS[city];
+    if (coords) {
+      mapRef.current.flyTo([coords.lat, coords.lng], coords.zoom, { duration: 1.8, easeLinearity: 0.25 });
+    }
+  }, [city]);
+
+  // Also fly when API returns (in case coords differ)
   useEffect(() => {
     if (!mapRef.current || !data?.city_coords) return;
     mapRef.current.flyTo([data.city_coords.lat, data.city_coords.lng], data.city_coords.zoom, { duration: 1.2 });
