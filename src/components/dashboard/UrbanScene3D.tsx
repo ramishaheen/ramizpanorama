@@ -209,8 +209,17 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const cameraMarkersRef = useRef<any[]>([]);
   const [activeCameraFeed, setActiveCameraFeed] = useState<any>(null);
   
+  // AI Object Detection overlay
+  const [showAIDetection, setShowAIDetection] = useState(true);
+  const [aiDetections, setAiDetections] = useState<{ id: string; label: string; confidence: number; x: number; y: number; w: number; h: number; color: string }[]>([]);
+  const aiDetectionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // City intel HUD (shown in street-level mode)
   const [cityIntel, setCityIntel] = useState<{ weather?: any; alerts?: number; cameras?: number; traffic?: string } | null>(null);
+
+  // Walking experience state
+  const [walkingPath, setWalkingPath] = useState<{ lat: number; lng: number }[]>([]);
+  const [walkingSteps, setWalkingSteps] = useState(0);
 
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
