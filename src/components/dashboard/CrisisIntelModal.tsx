@@ -242,12 +242,20 @@ export const CrisisIntelModal = ({ onClose }: CrisisIntelModalProps) => {
     critical: "text-red-500",
   }[data?.threat_level || "moderate"] || "text-amber-400";
 
-  return (
+  // Lock body scroll while open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const content = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[999999] bg-background/95 backdrop-blur-sm flex flex-col"
+      style={{ zIndex: 2147483647 }}
+      className="fixed inset-0 isolate bg-background/95 backdrop-blur-sm flex flex-col pointer-events-auto"
     >
       {/* Pulse animation */}
       <style>{`
