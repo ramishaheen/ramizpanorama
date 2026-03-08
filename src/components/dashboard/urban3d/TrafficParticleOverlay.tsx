@@ -11,6 +11,8 @@ interface Road {
   id: number;
   points: { lat: number; lng: number }[];
   highway: string;
+  lanes: number;
+  oneway: boolean;
 }
 
 type VehicleType = "car" | "truck" | "bus";
