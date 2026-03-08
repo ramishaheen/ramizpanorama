@@ -245,6 +245,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   // Live overlays
   const [showIncidents, setShowIncidents] = useState(true);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+  const [showTrafficParticles, setShowTrafficParticles] = useState(false);
+  const [opacityTrafficParticles, setOpacityTrafficParticles] = useState(0.85);
 
   useEffect(() => {
     const fetchNearby = async () => {
