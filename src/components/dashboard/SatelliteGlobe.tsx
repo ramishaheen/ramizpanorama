@@ -537,9 +537,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       scene.add(dirLight);
 
       globe.pointOfView({ lat: 25, lng: 55, altitude: 2.8 }, 1500);
-      globe.controls().autoRotate = true;
-      globe.controls().autoRotateSpeed = 0.3;
+      globe.controls().autoRotate = false;
       globe.controls().enableDamping = true;
+      globe.controls().dampingFactor = 0.15;
 
       globeRef.current = globe;
     };
