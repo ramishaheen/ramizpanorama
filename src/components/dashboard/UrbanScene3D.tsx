@@ -1990,6 +1990,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
                 <LayerControl icon={<MapPin className="h-3 w-3" />} label="City Landmarks" color="#00dcff" active={showCities} onToggle={() => setShowCities(!showCities)} count={CITY_LANDMARKS_3D.length} opacity={1} onOpacity={() => {}} source={`${CITY_LANDMARKS_3D.length} cities`} />
                 <LayerControl icon={<Video className="h-3 w-3" />} label="Live Cameras" color="#f59e0b" active={showCameras} onToggle={() => setShowCameras(!showCameras)} count={cameras.length} opacity={1} onOpacity={() => {}} source={`${cameras.length} feeds`} />
+
+                <div className="border-t border-border/20 my-2" />
+                <span className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-wider">NASA NRT Satellite</span>
+
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="MODIS Aqua NRT" color="#00bcd4" active={showNrtModis} onToggle={() => setShowNrtModis(!showNrtModis)} opacity={opacityNrtModis} onOpacity={setOpacityNrtModis} source="NASA GIBS • Today" />
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="VIIRS SNPP NRT" color="#26a69a" active={showNrtViirs} onToggle={() => setShowNrtViirs(!showNrtViirs)} opacity={opacityNrtViirs} onOpacity={setOpacityNrtViirs} source="NASA GIBS • Today" />
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="VIIRS NOAA-20" color="#4db6ac" active={showNrtNoaa20} onToggle={() => setShowNrtNoaa20(!showNrtNoaa20)} opacity={opacityNrtNoaa20} onOpacity={setOpacityNrtNoaa20} source="NASA GIBS • Today" />
+                <LayerControl icon={<Flame className="h-3 w-3" />} label="MODIS Fires NRT" color="#ff5722" active={showNrtFires} onToggle={() => setShowNrtFires(!showNrtFires)} opacity={opacityNrtFires} onOpacity={setOpacityNrtFires} source="NASA FIRMS • Today" />
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="Night Lights" color="#7c4dff" active={showNrtNightLights} onToggle={() => setShowNrtNightLights(!showNrtNightLights)} opacity={opacityNrtNightLights} onOpacity={setOpacityNrtNightLights} source="VIIRS DNB" />
               </div>
               <div className="px-3 py-2 border-t border-border/30">
                 <span className="text-[7px] font-mono text-muted-foreground/50">Real-time data • Auto-refresh</span>
