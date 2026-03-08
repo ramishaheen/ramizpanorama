@@ -385,6 +385,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
