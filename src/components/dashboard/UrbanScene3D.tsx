@@ -916,52 +916,84 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   return (
     <div className="absolute inset-0 z-[2000] bg-black flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-card/90 backdrop-blur border-b border-border z-20">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-primary" />
-          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">Google 3D View</span>
-          <span className="text-[9px] font-mono text-muted-foreground">PHOTOREALISTIC TILES</span>
+      <div className="flex flex-col bg-card/90 backdrop-blur border-b border-border z-20">
+        {/* Top row: Title + close/refresh */}
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">Google 3D View</span>
+            <span className="text-[9px] font-mono text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded">PHOTOREALISTIC TILES</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => fetchFlights()} className="flex items-center justify-center w-7 h-7 rounded-md border border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30 transition-all duration-300 hover:scale-105 active:scale-95">
+              <RefreshCw className={`h-3 w-3 ${flightsLoading ? "animate-spin" : ""}`} />
+            </button>
+            <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded-md border border-border/60 text-white/80 hover:bg-destructive/20 hover:text-destructive transition-all duration-300 hover:scale-110 active:scale-95">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => setShowSearch(!showSearch)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showSearch ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_12px_hsl(var(--primary)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Search className="h-3 w-3" /> Search
-          </button>
-          <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showFlights ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_12px_hsl(var(--primary)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Plane className="h-3 w-3" /> Flights
-            {interpolatedAircraft.length > 0 && <span className="bg-primary/30 text-white text-[8px] px-1.5 rounded-full font-bold">{interpolatedAircraft.length}</span>}
-          </button>
-          <button onClick={() => setShowMarkers(!showMarkers)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showMarkers ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} Markers
-          </button>
-          <button onClick={() => setShowHeatmap(!showHeatmap)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showHeatmap ? "border-orange-500/60 bg-orange-500/20 text-white shadow-[0_0_12px_rgba(249,115,22,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Flame className="h-3 w-3" /> Heatmap
-          </button>
-          <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showTrails ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_12px_hsl(var(--accent)/0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Navigation className="h-3 w-3" /> Trails
-          </button>
-          <button onClick={() => setShowVessels(!showVessels)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showVessels ? "border-blue-500/60 bg-blue-500/20 text-white shadow-[0_0_12px_rgba(59,130,246,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Ship className="h-3 w-3" /> Vessels
-            {vessels.length > 0 && <span className="bg-blue-500/30 text-white text-[8px] px-1.5 rounded-full font-bold">{vessels.length}</span>}
-          </button>
-          <button onClick={() => setShowEarthquakes(!showEarthquakes)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showEarthquakes ? "border-yellow-500/60 bg-yellow-500/20 text-white shadow-[0_0_12px_rgba(234,179,8,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Activity className="h-3 w-3" /> Quakes
-            {earthquakes.length > 0 && <span className="bg-yellow-500/30 text-white text-[8px] px-1.5 rounded-full font-bold">{earthquakes.length}</span>}
-          </button>
-          <button onClick={() => setShowWeather(!showWeather)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showWeather ? "border-cyan-500/60 bg-cyan-500/20 text-white shadow-[0_0_12px_rgba(6,182,212,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <CloudRain className="h-3 w-3" /> Weather
-          </button>
-          <button onClick={() => setShowTraffic(!showTraffic)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${showTraffic ? "border-emerald-500/60 bg-emerald-500/20 text-white shadow-[0_0_12px_rgba(16,185,129,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Car className="h-3 w-3" /> Traffic
-          </button>
-          <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border transition-all duration-300 hover:scale-105 active:scale-95 ${streetViewActive ? "border-green-500/60 bg-green-500/20 text-white shadow-[0_0_12px_rgba(34,197,94,0.3)]" : "border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30"}`}>
-            <Compass className="h-3 w-3" /> 360°
-          </button>
-          <button onClick={() => fetchFlights()} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-mono uppercase border border-border/60 text-white/80 hover:bg-white/10 hover:border-white/30 transition-all duration-300 hover:scale-105 active:scale-95">
-            <RefreshCw className={`h-3 w-3 ${flightsLoading ? "animate-spin" : ""}`} />
-          </button>
-          <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded-md border border-border/60 text-white/80 hover:bg-destructive/20 hover:text-destructive transition-all duration-300 hover:scale-110 active:scale-95">
-            <X className="h-4 w-4" />
-          </button>
+
+        {/* Bottom row: Layer toggles grouped by category */}
+        <div className="flex items-center gap-3 px-3 py-1.5 overflow-x-auto">
+          {/* Tools */}
+          <div className="flex items-center gap-1">
+            <span className="text-[8px] font-mono text-muted-foreground/60 uppercase mr-0.5">Tools</span>
+            <button onClick={() => setShowSearch(!showSearch)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showSearch ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_8px_hsl(var(--primary)/0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Search className="h-3 w-3" /> Search
+            </button>
+            <button onClick={() => setStreetViewActive(!streetViewActive)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${streetViewActive ? "border-green-500/60 bg-green-500/20 text-white shadow-[0_0_8px_rgba(34,197,94,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Compass className="h-3 w-3" /> 360°
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-border/40" />
+
+          {/* Air */}
+          <div className="flex items-center gap-1">
+            <span className="text-[8px] font-mono text-muted-foreground/60 uppercase mr-0.5">Air</span>
+            <button onClick={() => setShowFlights(!showFlights)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showFlights ? "border-primary/60 bg-primary/20 text-white shadow-[0_0_8px_hsl(var(--primary)/0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Plane className="h-3 w-3" /> Flights
+              {interpolatedAircraft.length > 0 && <span className="bg-primary/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5">{interpolatedAircraft.length}</span>}
+            </button>
+            <button onClick={() => setShowTrails(!showTrails)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showTrails ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_8px_hsl(var(--accent)/0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Navigation className="h-3 w-3" /> Trails
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-border/40" />
+
+          {/* Sea */}
+          <div className="flex items-center gap-1">
+            <span className="text-[8px] font-mono text-muted-foreground/60 uppercase mr-0.5">Sea</span>
+            <button onClick={() => setShowVessels(!showVessels)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showVessels ? "border-blue-500/60 bg-blue-500/20 text-white shadow-[0_0_8px_rgba(59,130,246,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Ship className="h-3 w-3" /> Vessels
+              {vessels.length > 0 && <span className="bg-blue-500/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5">{vessels.length}</span>}
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-border/40" />
+
+          {/* Layers */}
+          <div className="flex items-center gap-1">
+            <span className="text-[8px] font-mono text-muted-foreground/60 uppercase mr-0.5">Layers</span>
+            <button onClick={() => setShowMarkers(!showMarkers)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showMarkers ? "border-accent/60 bg-accent/20 text-white shadow-[0_0_8px_hsl(var(--accent)/0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              {showMarkers ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />} Markers
+            </button>
+            <button onClick={() => setShowHeatmap(!showHeatmap)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showHeatmap ? "border-orange-500/60 bg-orange-500/20 text-white shadow-[0_0_8px_rgba(249,115,22,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Flame className="h-3 w-3" /> Heatmap
+            </button>
+            <button onClick={() => setShowEarthquakes(!showEarthquakes)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showEarthquakes ? "border-yellow-500/60 bg-yellow-500/20 text-white shadow-[0_0_8px_rgba(234,179,8,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Activity className="h-3 w-3" /> Quakes
+              {earthquakes.length > 0 && <span className="bg-yellow-500/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5">{earthquakes.length}</span>}
+            </button>
+            <button onClick={() => setShowWeather(!showWeather)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showWeather ? "border-cyan-500/60 bg-cyan-500/20 text-white shadow-[0_0_8px_rgba(6,182,212,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <CloudRain className="h-3 w-3" /> Weather
+            </button>
+            <button onClick={() => setShowTraffic(!showTraffic)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showTraffic ? "border-emerald-500/60 bg-emerald-500/20 text-white shadow-[0_0_8px_rgba(16,185,129,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Car className="h-3 w-3" /> Traffic
+            </button>
+          </div>
         </div>
       </div>
 
