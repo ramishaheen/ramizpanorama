@@ -994,7 +994,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             el.style.color = c;
             el.style.backgroundColor = "rgba(0,0,0,0.5)";
             el.style.borderLeft = `2px solid ${c}`;
-            el.innerHTML = `<span style=\"opacity:0.7\">▸</span> ${d.label}`;
+            el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
             return el;
           });
 
