@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 export interface WarUpdate {
   id: string;
@@ -36,7 +37,8 @@ export function useWarUpdates() {
       setData(fnData);
     } catch (e) {
       console.error("War updates fetch error:", e);
-      setError(e instanceof Error ? e.message : "Failed to load");
+      handleAIError(e, "War Updates");
+      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 export interface CountrySafety {
   code: string;
@@ -30,13 +31,12 @@ export function useCitizenSecurity() {
       const { data: fnData, error: fnError } = await supabase.functions.invoke("citizen-security");
       if (fnError) throw fnError;
       if (fnData?.error) {
-        // On rate limit, keep existing data instead of clearing it
-        if (fnData.error === "Rate limit exceeded.") {
-          console.warn("[CitizenSecurity] Rate limited, keeping cached data");
+        const err = new Error(fnData.error);
+        if (handleAIError(err, "Citizen Security")) {
           setLoading(false);
           return;
         }
-        throw new Error(fnData.error);
+        throw err;
       }
       setData(fnData);
     } catch (e) {

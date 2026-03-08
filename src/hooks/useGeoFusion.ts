@@ -142,6 +142,7 @@ export function useGeoFusion() {
       setData(normalized);
     } catch (e) {
       console.error("GeoFusion fetch error:", e);
+      handleAIError(e, "Geo Fusion");
       if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 interface SectorPrediction {
   name: string;
@@ -40,7 +41,8 @@ export function useSectorPredictions() {
       setData(fnData);
     } catch (e) {
       console.error("Sector predictions fetch error:", e);
-      setError(e instanceof Error ? e.message : "Failed to load");
+      handleAIError(e, "Sector Predictions");
+      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }

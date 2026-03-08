@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { handleAIError } from "@/lib/ai-error-handler";
 
 export interface EscalationScenario {
   name: string;
@@ -66,7 +67,8 @@ export function useWarEscalation() {
       setData(fnData);
     } catch (e) {
       console.error("Escalation prediction error:", e);
-      setError(e instanceof Error ? e.message : "Failed to load");
+      handleAIError(e, "Escalation");
+      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
