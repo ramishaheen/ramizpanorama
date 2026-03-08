@@ -1565,6 +1565,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       />
       <TotalLaunchesWidget rockets={rockets} />
       <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
+      <ChokepointMonitor
+        vessels={vessels}
+        onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
+      />
 
       {/* 3D Mode buttons */}
       <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1.5">
