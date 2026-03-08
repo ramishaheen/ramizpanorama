@@ -864,6 +864,102 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [showTraffic]);
 
+  // ===== LIVE CAMERA LAYER =====
+  useEffect(() => {
+    const fetchCameras = async () => {
+      try {
+        const { data, error } = await supabase.from("cameras").select("*").eq("is_active", true);
+        if (!error && data) setCameras(data);
+      } catch (e) { console.error("Camera fetch error:", e); }
+    };
+    fetchCameras();
+    const iv = setInterval(fetchCameras, 120_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Render camera markers on map
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    cameraMarkersRef.current.forEach(m => m.setMap(null));
+    cameraMarkersRef.current = [];
+
+    if (!showCameras || cameras.length === 0) return;
+
+    const catColors: Record<string, string> = {
+      traffic: "#10b981", tourism: "#8b5cf6", ports: "#3b82f6", weather: "#06b6d4", public: "#f59e0b",
+    };
+
+    cameras.forEach((cam) => {
+      const color = catColors[cam.category] || "#f59e0b";
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" fill="${color}30" stroke="${color}" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="4" fill="${color}"/>
+        <circle cx="12" cy="12" r="6" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5">
+          <animate attributeName="r" values="6;10" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.5;0" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>`;
+
+      const marker = new google.maps.Marker({
+        position: { lat: cam.lat, lng: cam.lng },
+        map,
+        icon: {
+          url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+          scaledSize: new google.maps.Size(24, 24),
+          anchor: new google.maps.Point(12, 12),
+        },
+        title: `📹 ${cam.name} (${cam.city}, ${cam.country})`,
+        zIndex: 60,
+      });
+
+      const infoContent = `
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:200px;border:1px solid ${color}40;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span style="font-size:14px;">📹</span>
+            <span style="font-weight:700;font-size:12px;color:${color};">${cam.name}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:10px;">
+            <span style="color:#7d8590;">CITY</span><span>${cam.city}, ${cam.country}</span>
+            <span style="color:#7d8590;">TYPE</span><span style="text-transform:uppercase;">${cam.category}</span>
+            <span style="color:#7d8590;">STATUS</span><span style="color:${cam.status === 'active' ? '#22c55e' : '#ef4444'};">${cam.status?.toUpperCase()}</span>
+          </div>
+          <div style="margin-top:8px;text-align:center;font-size:9px;color:${color};cursor:pointer;">▶ CLICK TO VIEW LIVE FEED</div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("mouseover", () => infoWindow.open(map, marker));
+      marker.addListener("mouseout", () => infoWindow.close());
+      marker.addListener("click", () => {
+        setActiveCameraFeed(cam);
+        infoWindow.close();
+      });
+
+      cameraMarkersRef.current.push(marker);
+    });
+  }, [cameras, showCameras]);
+
+  // ===== CITY INTEL HUD =====
+  useEffect(() => {
+    if (!streetViewActive && !mapillaryActive) {
+      setCityIntel(null);
+      return;
+    }
+    const fetchCityIntel = async () => {
+      const nearbyCams = cameras.filter(c => Math.abs(c.lat - lat) < 0.5 && Math.abs(c.lng - lng) < 0.5).length;
+      const nearbyAlerts = nearbyIntel.alerts.length;
+      setCityIntel({
+        cameras: nearbyCams,
+        alerts: nearbyAlerts,
+        traffic: showTraffic ? "Active" : "Off",
+      });
+    };
+    fetchCityIntel();
+  }, [streetViewActive, mapillaryActive, lat, lng, cameras, nearbyIntel, showTraffic]);
+
+
   // ===== REAL-TIME ROCKET/MISSILE LAYER =====
   useEffect(() => {
     const fetchRockets = async () => {
