@@ -273,6 +273,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const flightTrailsRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [trackedFlightId, setTrackedFlightId] = useState<string | null>(null);
+  const [flightSource, setFlightSource] = useState<string>("");
+  const prevFlightPositions = useRef<Record<string, { lat: number; lng: number }>>({});
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
@@ -974,22 +976,29 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const bounds = map.getBounds();
       bbox = { lamin: bounds.getSouth(), lamax: bounds.getNorth(), lomin: bounds.getWest(), lomax: bounds.getEast() };
     }
-    if (!bbox) bbox = { lamin: 10, lamax: 45, lomin: 25, lomax: 65 };
+    if (!bbox) bbox = { lamin: -60, lamax: 70, lomin: -180, lomax: 180 };
     try {
       const { data, error } = await supabase.functions.invoke("live-flights", { body: bbox });
       if (!error && data?.aircraft) {
         const newAircraft: FlightAircraft[] = data.aircraft;
+        if (data.source) setFlightSource(data.source);
         const now = Date.now();
         const history = { ...flightTrailsRef.current };
+        const prevPos = { ...prevFlightPositions.current };
         newAircraft.forEach((ac) => {
           const trail = history[ac.icao24] || [];
           const last = trail[trail.length - 1];
-          if (!last || last.lat !== ac.lat || last.lng !== ac.lng) trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
-          history[ac.icao24] = trail.filter(p => now - p.ts < 300000).slice(-10);
+          if (!last || Math.abs(last.lat - ac.lat) > 0.001 || Math.abs(last.lng - ac.lng) > 0.001) {
+            trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
+          }
+          history[ac.icao24] = trail.filter(p => now - p.ts < 600000).slice(-20);
+          prevPos[ac.icao24] = { lat: ac.lat, lng: ac.lng };
         });
         const activeIds = new Set(newAircraft.map(a => a.icao24));
         Object.keys(history).forEach(id => { if (!activeIds.has(id)) delete history[id]; });
+        Object.keys(prevPos).forEach(id => { if (!activeIds.has(id)) delete prevPos[id]; });
         flightTrailsRef.current = history;
+        prevFlightPositions.current = prevPos;
         setFlightData(newAircraft);
       }
     } catch (e) { console.error("Flight fetch error:", e); }
@@ -1003,7 +1012,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       return;
     }
     fetchFlightData();
-    flightIntervalRef.current = setInterval(fetchFlightData, 30000);
+    flightIntervalRef.current = setInterval(fetchFlightData, 15000); // 15s for smoother updates
     return () => { if (flightIntervalRef.current) { clearInterval(flightIntervalRef.current); flightIntervalRef.current = null; } };
   }, [fetchFlightData, layers.flights]);
 
@@ -1012,14 +1021,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     if (!trackedFlightId || !mapRef.current) return;
     const ac = flightData.find(f => f.icao24 === trackedFlightId);
     if (ac) {
-      mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.5 });
+      mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.8 });
     } else {
-      // Aircraft left the viewport, stop tracking
       setTrackedFlightId(null);
     }
   }, [flightData, trackedFlightId]);
 
-  // Render flights on map
+  // Render flights on map — optimized with proper aircraft icons
   useEffect(() => {
     const group = flightGroupRef.current;
     if (!group) return;
@@ -1029,57 +1037,96 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     flightData.forEach((ac) => {
       const isMil = ac.is_military;
-      const color = isMil ? "#ef4444" : "#60a5fa";
-      const size = isMil ? 18 : 14;
+      const color = isMil ? "#ef4444" : "#3b82f6";
+      const trailColor = isMil ? "#ef444480" : "#3b82f640";
       const isTracked = trackedFlightId === ac.icao24;
+      const size = isTracked ? 22 : (isMil ? 18 : 14);
 
-      // Draw trail polyline
+      // Draw trail polyline with gradient opacity
       const trail = flightTrailsRef.current[ac.icao24] || [];
       if (trail.length >= 2) {
-        const path: L.LatLngExpression[] = [...trail.map(p => [p.lat, p.lng] as L.LatLngTuple), [ac.lat, ac.lng]];
-        L.polyline(path, {
+        const fullPath: L.LatLngExpression[] = [...trail.map(p => [p.lat, p.lng] as L.LatLngTuple), [ac.lat, ac.lng]];
+        // Faded older trail
+        if (fullPath.length > 3) {
+          L.polyline(fullPath.slice(0, -2), {
+            color: trailColor,
+            weight: isTracked ? 2.5 : 1.5,
+            opacity: 0.3,
+            dashArray: isMil ? undefined : "6 4",
+            className: "flight-trail",
+          }).addTo(group);
+        }
+        // Bright recent trail
+        L.polyline(fullPath.slice(-4), {
           color,
-          weight: isMil ? 2 : 1.5,
-          opacity: isTracked ? 0.9 : 0.6,
-          dashArray: isMil ? undefined : "4 3",
+          weight: isTracked ? 3 : 2,
+          opacity: isTracked ? 0.9 : 0.7,
+          className: "flight-trail",
         }).addTo(group);
       }
 
-      // Aircraft marker
-      const trackedRing = isTracked
-        ? `<div style="position:absolute;width:${size + 16}px;height:${size + 16}px;border-radius:50%;border:2px solid ${color};opacity:0.7;animation:pulse 1s ease-in-out infinite;"></div>`
+      // Clean aircraft SVG — proper airplane shape
+      const aircraftSvg = isMil
+        ? `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg" style="--flight-color:${color};transform:rotate(${ac.heading}deg);">
+            <path d="M16 2l-3 8h-9l2 4-2 4h9l3 8 3-8h9l-2-4 2-4h-9l-3-8z" fill="${color}" stroke="${color}" stroke-width="0.5"/>
+            <circle cx="16" cy="14" r="2" fill="rgba(0,0,0,0.3)"/>
+          </svg>`
+        : `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg" style="--flight-color:${color};transform:rotate(${ac.heading}deg);">
+            <path d="M16 3l-2.5 10H5l1.5 3L5 19h8.5L16 29l2.5-10H27l-1.5-3L27 13h-8.5L16 3z" fill="${color}" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+          </svg>`;
+
+      const trackedRingHtml = isTracked
+        ? `<div class="flight-tracked-ring" style="--flight-color:${color};"></div>`
         : "";
+
       const icon = L.divIcon({
-        className: "flight-marker",
-        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-          ${trackedRing}
-          <div style="position:absolute;width:${size + 8}px;height:${size + 8}px;border-radius:50%;border:1.5px solid ${color};opacity:0.3;animation:pulse 2.5s ease-in-out infinite;"></div>
-          <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}" style="transform:rotate(${ac.heading}deg);filter:drop-shadow(0 0 4px ${color});">
-            <path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z"/>
-          </svg>
+        className: "",
+        html: `<div class="flight-marker-wrap" style="--flight-color:${color};width:${size + 12}px;height:${size + 12}px;">
+          ${trackedRingHtml}
+          <div class="flight-pulse-ring" style="--flight-color:${color};"></div>
+          ${aircraftSvg}
         </div>`,
-        iconSize: [size + 16, size + 16],
-        iconAnchor: [(size + 16) / 2, (size + 16) / 2],
-        popupAnchor: [0, -(size / 2 + 6)],
+        iconSize: [size + 12, size + 12],
+        iconAnchor: [(size + 12) / 2, (size + 12) / 2],
+        popupAnchor: [0, -(size / 2 + 8)],
       });
 
-      const marker = L.marker([ac.lat, ac.lng], { icon, zIndexOffset: isTracked ? 1200 : (isMil ? 800 : 400) });
-      
-      // Click to track/untrack
+      const marker = L.marker([ac.lat, ac.lng], { icon, zIndexOffset: isTracked ? 1500 : (isMil ? 800 : 400) });
+
+      // Click to track
       marker.on("click", () => {
         setTrackedFlightId(prev => prev === ac.icao24 ? null : ac.icao24);
       });
 
+      // Hover popup
+      const altFt = Math.round(ac.altitude * 3.281);
+      const speedKts = Math.round(ac.velocity * 1.944);
+      const speedKmh = Math.round(ac.velocity * 3.6);
+      const vsArrow = ac.vertical_rate > 0.5 ? "↑" : ac.vertical_rate < -0.5 ? "↓" : "→";
+      const vsColor = ac.vertical_rate > 0.5 ? "#22c55e" : ac.vertical_rate < -0.5 ? "#ef4444" : "#888";
+
       bindHoverPopup(marker, `<div style="${popupStyle}">
-        <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">
-          ${isMil ? "🛩️ MILITARY" : "✈️ CIVIL"} — ${ac.callsign || ac.icao24}
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="color:${color};font-weight:700;font-size:13px;">
+            ${isMil ? "🛩️" : "✈️"} ${ac.callsign || "N/A"}
+          </span>
+          <span style="font-size:9px;padding:1px 5px;border-radius:3px;background:${isMil ? "rgba(239,68,68,0.2)" : "rgba(59,130,246,0.2)"};color:${color};">
+            ${isMil ? "MIL" : "CIV"}
+          </span>
         </div>
-        <div>Origin: ${ac.origin_country}</div>
-        <div>Alt: ${Math.round(ac.altitude)}m | Speed: ${Math.round(ac.velocity * 3.6)} km/h</div>
-        <div>Heading: ${Math.round(ac.heading)}° | V/S: ${ac.vertical_rate > 0 ? "+" : ""}${ac.vertical_rate.toFixed(1)} m/s</div>
-        ${isTracked ? '<div style="color:#22c55e;font-size:10px;margin-top:4px;">📡 TRACKING — click to stop</div>' : '<div style="color:#888;font-size:10px;margin-top:4px;">Click to track</div>'}
-        <div style="font-size:9px;opacity:0.5;margin-top:2px;">ICAO: ${ac.icao24}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10px;">
+          <div>🌍 ${ac.origin_country}</div>
+          <div>📐 HDG ${Math.round(ac.heading)}°</div>
+          <div>📏 ${altFt.toLocaleString()} ft (${Math.round(ac.altitude)}m)</div>
+          <div>💨 ${speedKts} kts (${speedKmh} km/h)</div>
+          <div style="color:${vsColor};">${vsArrow} V/S ${ac.vertical_rate > 0 ? "+" : ""}${ac.vertical_rate.toFixed(1)} m/s</div>
+          <div style="opacity:0.5;">ICAO: ${ac.icao24}</div>
+        </div>
+        <div style="margin-top:6px;font-size:9px;color:${isTracked ? "#22c55e" : "#666"};">
+          ${isTracked ? "📡 TRACKING ACTIVE — click to stop" : "🖱️ Click to track this aircraft"}
+        </div>
       </div>`);
+
       group.addLayer(marker);
     });
   }, [flightData, layers.flights, trackedFlightId]);
@@ -1328,23 +1375,63 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       {/* Flight count badge */}
       {layers.flights && flightData.length > 0 && (
-        <div className="absolute top-14 right-3 z-[1000] flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-lg">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z"/></svg>
-          <span className="text-[10px] font-mono text-foreground">
-            <span className="text-primary font-bold">{flightData.filter(f => !f.is_military).length}</span>
-            <span className="text-muted-foreground"> CIV</span>
-            <span className="text-muted-foreground mx-1">|</span>
-            <span className="text-critical font-bold">{flightData.filter(f => f.is_military).length}</span>
-            <span className="text-muted-foreground"> MIL</span>
-          </span>
-          {trackedFlightId && (
-            <button
-              onClick={() => setTrackedFlightId(null)}
-              className="ml-1 text-[9px] font-mono text-accent bg-accent/10 border border-accent/30 rounded px-1.5 py-0.5 hover:bg-accent/20 transition-colors"
-            >
-              📡 TRACKING
-            </button>
-          )}
+        <div className="absolute top-[7.5rem] right-3 z-[1000] flight-badge-panel rounded-lg px-3 py-2 flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor" className="text-primary">
+              <path d="M16 3l-2.5 10H5l1.5 3L5 19h8.5L16 29l2.5-10H27l-1.5-3L27 13h-8.5L16 3z"/>
+            </svg>
+            <span className="text-[10px] font-mono font-bold text-foreground tracking-wide">
+              {flightData.length} FLIGHTS
+            </span>
+            <span className="text-[8px] font-mono text-muted-foreground px-1 py-0.5 rounded bg-secondary">
+              {flightSource === "opensky" ? "LIVE" : "SIM"}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-[9px] font-mono">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-primary inline-block"></span>
+              <span className="text-primary font-bold">{flightData.filter(f => !f.is_military).length}</span>
+              <span className="text-muted-foreground">CIV</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-critical inline-block"></span>
+              <span className="text-critical font-bold">{flightData.filter(f => f.is_military).length}</span>
+              <span className="text-muted-foreground">MIL</span>
+            </span>
+          </div>
+          {trackedFlightId && (() => {
+            const tac = flightData.find(f => f.icao24 === trackedFlightId);
+            if (!tac) return null;
+            return (
+              <div className="mt-1 pt-1.5 border-t border-border">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold text-accent">
+                    📡 {tac.callsign || tac.icao24}
+                  </span>
+                  <button
+                    onClick={() => setTrackedFlightId(null)}
+                    className="text-[8px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    ✕ STOP
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 text-[9px] font-mono">
+                  <span className="text-muted-foreground">ALT</span>
+                  <span className="text-foreground">{Math.round(tac.altitude * 3.281).toLocaleString()} ft</span>
+                  <span className="text-muted-foreground">SPD</span>
+                  <span className="text-foreground">{Math.round(tac.velocity * 1.944)} kts</span>
+                  <span className="text-muted-foreground">HDG</span>
+                  <span className="text-foreground">{Math.round(tac.heading)}°</span>
+                  <span className="text-muted-foreground">V/S</span>
+                  <span className={tac.vertical_rate > 0.5 ? "text-green-400" : tac.vertical_rate < -0.5 ? "text-critical" : "text-foreground"}>
+                    {tac.vertical_rate > 0 ? "+" : ""}{tac.vertical_rate.toFixed(1)} m/s
+                  </span>
+                  <span className="text-muted-foreground">FROM</span>
+                  <span className="text-foreground">{tac.origin_country}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

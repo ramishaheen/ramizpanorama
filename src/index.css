@@ -313,3 +313,80 @@
   box-shadow: 0 0 15px rgba(0,255,200,0.05), inset 0 0 30px rgba(0,255,200,0.02);
   backdrop-filter: blur(12px);
 }
+
+/* ===== Flight Tracking Styles ===== */
+@keyframes flightPulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes flightGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--flight-color)); }
+  50% { filter: drop-shadow(0 0 8px var(--flight-color)); }
+}
+
+@keyframes trackingRing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.flight-marker-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.flight-marker-wrap:hover {
+  transform: scale(1.3);
+  z-index: 9999 !important;
+}
+
+.flight-pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1.5px solid var(--flight-color);
+  animation: flightPulse 2.5s ease-out infinite;
+}
+
+.flight-tracked-ring {
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  border-radius: 50%;
+  border: 2px solid var(--flight-color);
+  animation: trackingRing 1.2s ease-out infinite;
+}
+
+.flight-icon-svg {
+  animation: flightGlow 3s ease-in-out infinite;
+  transition: transform 0.5s ease;
+}
+
+.flight-trail {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.flight-info-panel {
+  background: hsl(var(--card) / 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px hsl(var(--primary) / 0.1);
+}
+
+.flight-info-panel .flight-stat {
+  background: hsl(var(--secondary));
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.flight-badge-panel {
+  background: hsl(var(--card) / 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
