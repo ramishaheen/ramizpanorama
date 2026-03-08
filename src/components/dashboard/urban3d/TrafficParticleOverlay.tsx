@@ -30,28 +30,33 @@ interface Particle {
 }
 
 const HIGHWAY_COLORS: Record<string, string> = {
-  motorway: "#ef4444", trunk: "#f97316", primary: "#eab308",
-  secondary: "#22c55e", tertiary: "#06b6d4", residential: "#8b5cf6",
-  service: "#6b7280", unclassified: "#a855f7", living_street: "#14b8a6",
+  motorway: "#ef4444", motorway_link: "#ef4444",
+  trunk: "#f97316", trunk_link: "#f97316",
+  primary: "#eab308", primary_link: "#eab308",
+  secondary: "#22c55e", secondary_link: "#22c55e",
+  tertiary: "#06b6d4", tertiary_link: "#06b6d4",
+  residential: "#8b5cf6", service: "#6b7280",
+  unclassified: "#a855f7", living_street: "#14b8a6",
 };
 
-// Particles per ~100m of road (scaled by road length)
-const HIGHWAY_DENSITY_PER_100M: Record<string, number> = {
-  motorway: 12, trunk: 10, primary: 8, secondary: 8,
-  tertiary: 6, residential: 4, service: 3,
-  unclassified: 3, living_street: 2,
-};
-
-// Minimum particles per road regardless of length
-const HIGHWAY_MIN_PARTICLES: Record<string, number> = {
-  motorway: 15, trunk: 12, primary: 10, secondary: 8,
-  tertiary: 6, residential: 4, service: 3,
-  unclassified: 3, living_street: 2,
+// Approximate spacing between particles in meters (smaller = fuller coverage)
+const HIGHWAY_PARTICLE_SPACING_M: Record<string, number> = {
+  motorway: 12, motorway_link: 12,
+  trunk: 14, trunk_link: 14,
+  primary: 16, primary_link: 16,
+  secondary: 18, secondary_link: 18,
+  tertiary: 20, tertiary_link: 20,
+  residential: 22, service: 24,
+  unclassified: 24, living_street: 26,
 };
 
 const HIGHWAY_SPEED: Record<string, number> = {
-  motorway: 0.006, trunk: 0.005, primary: 0.004, secondary: 0.003,
-  tertiary: 0.0025, residential: 0.002, service: 0.0015,
+  motorway: 0.006, motorway_link: 0.006,
+  trunk: 0.005, trunk_link: 0.005,
+  primary: 0.004, primary_link: 0.004,
+  secondary: 0.003, secondary_link: 0.003,
+  tertiary: 0.0025, tertiary_link: 0.0025,
+  residential: 0.002, service: 0.0015,
   unclassified: 0.002, living_street: 0.001,
 };
 
@@ -62,10 +67,12 @@ const VEHICLE_CONFIG: Record<VehicleType, { speedMult: number; sizeBase: number;
 };
 
 const ROAD_VEHICLES: Record<string, VehicleType[]> = {
-  motorway: ["car", "truck", "bus"], trunk: ["car", "truck", "bus"],
-  primary: ["car", "truck", "bus"], secondary: ["car", "truck", "bus"],
-  tertiary: ["car", "truck"], residential: ["car"],
-  service: ["car"], unclassified: ["car"], living_street: ["car"],
+  motorway: ["car", "truck", "bus"], motorway_link: ["car", "truck", "bus"],
+  trunk: ["car", "truck", "bus"], trunk_link: ["car", "truck", "bus"],
+  primary: ["car", "truck", "bus"], primary_link: ["car", "truck", "bus"],
+  secondary: ["car", "truck", "bus"], secondary_link: ["car", "truck", "bus"],
+  tertiary: ["car", "truck"], tertiary_link: ["car", "truck"],
+  residential: ["car"], service: ["car"], unclassified: ["car"], living_street: ["car"],
 };
 
 const OVERPASS_ENDPOINTS = [
