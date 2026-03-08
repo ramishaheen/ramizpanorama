@@ -1237,7 +1237,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           </button>
           {categories.map(([cat, color]) => {
             const count = satellites.filter((s) => s.category === cat).length;
-            if (count === 0) return null;
             const CatIcon = cat === "Military" ? Shield
               : cat === "ISR" ? Eye
               : cat === "Early Warning" ? Zap
@@ -1256,17 +1255,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               : cat === "Debris" ? HelpCircle
               : cat === "Launch Vehicle" ? Rocket
               : HelpCircle;
+            const isDisabled = count === 0;
+
             return (
               <button
                 key={cat}
-                onClick={() => setSelectedCat(selectedCat === cat ? null : cat)}
+                disabled={isDisabled}
+                onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
                   selectedCat === cat
                     ? "bg-white text-black shadow-md"
-                    : "text-white/70 hover:text-white hover:bg-white/10"
+                    : isDisabled
+                      ? "text-white/30 cursor-not-allowed"
+                      : "text-white/70 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <CatIcon className="h-3 w-3" style={{ color: selectedCat === cat ? color : color }} />
+                <CatIcon className="h-3 w-3" style={{ color }} />
                 {cat} ({count})
               </button>
             );
