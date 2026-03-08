@@ -920,19 +920,26 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           return group;
         };
 
-        // Animate satellite glow pulse
+        // Animate satellite glow pulse + spin
+        let lastFrameTime = performance.now();
         const animatePulse = () => {
           const globe = globeRef.current;
           if (!globe) return;
           const scene = globe.scene();
           if (!scene) return;
-          const t = performance.now() * 0.003;
+          const now = performance.now();
+          const dt = (now - lastFrameTime) / 1000; // seconds
+          lastFrameTime = now;
+          const t = now * 0.003;
           scene.traverse((obj: any) => {
-            if (obj.userData?.glow) {
+            if (obj.userData?.isSatGroup) {
+              // Glow pulse
               const phase = t + (obj.userData.time || 0);
               const pulse = 0.85 + Math.sin(phase) * 0.25;
               obj.userData.glow.scale.set(pulse, pulse, pulse);
               obj.userData.glowMat.opacity = 0.1 + Math.sin(phase) * 0.12;
+              // Slow spin
+              obj.rotation.y += (obj.userData.spinSpeed || 0.3) * dt;
             }
           });
           pulseFrameRef.current = requestAnimationFrame(animatePulse);
