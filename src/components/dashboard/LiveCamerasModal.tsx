@@ -420,7 +420,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
         <div className="flex items-center gap-1 ml-1">
           <button onClick={() => setSelectedStatus(selectedStatus === "online" ? null : "online")}
             className={`px-1.5 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${
-              selectedStatus === "online" ? "text-green-400" : "text-gray-600 hover:text-gray-400"
+              selectedStatus === "online" ? "text-white" : "text-white/60 hover:text-white"
             }`}
             style={selectedStatus === "online" ? { background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)" } : { border: "1px solid transparent" }}
           >
@@ -428,7 +428,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </button>
           <button onClick={() => setSelectedStatus(selectedStatus === "offline" ? null : "offline")}
             className={`px-1.5 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${
-              selectedStatus === "offline" ? "text-red-400" : "text-gray-600 hover:text-gray-400"
+              selectedStatus === "offline" ? "text-white" : "text-white/60 hover:text-white"
             }`}
             style={selectedStatus === "offline" ? { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)" } : { border: "1px solid transparent" }}
           >
