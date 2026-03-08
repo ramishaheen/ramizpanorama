@@ -162,6 +162,16 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const trafficLayerRef = useRef<any>(null);
   const weatherOverlayRef = useRef<any>(null);
 
+  // Layer panel & opacity
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [vesselSource, setVesselSource] = useState<string>("loading");
+  const [opacityFlights, setOpacityFlights] = useState(1);
+  const [opacityVessels, setOpacityVessels] = useState(1);
+  const [opacityEarthquakes, setOpacityEarthquakes] = useState(1);
+  const [opacityWeather, setOpacityWeather] = useState(0.6);
+  const [opacityHeatmap, setOpacityHeatmap] = useState(0.7);
+  const [opacityTraffic, setOpacityTraffic] = useState(0.8);
+
   // Fetch nearby intel
   useEffect(() => {
     const fetchNearby = async () => {
