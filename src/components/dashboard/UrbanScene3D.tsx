@@ -245,12 +245,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (!apiKey) return;
 
     const initMap = () => {
-      if (!mapDivRef.current || !(window as any).google?.maps) return;
       if (mapInstanceRef.current) {
         markersRef.current.forEach(m => m.setMap(null));
         markersRef.current = [];
         trailLinesRef.current.forEach(l => l.setMap(null));
         trailLinesRef.current = [];
+        mapListenersRef.current.forEach((listener) => google.maps.event.removeListener(listener));
+        mapListenersRef.current = [];
         mapInstanceRef.current = null;
       }
       const google = (window as any).google;
@@ -269,6 +270,24 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         gestureHandling: "greedy",
         maxZoom: 21,
       });
+
+      const syncMapState = () => {
+        const center = map.getCenter();
+        if (center) {
+          setLat(center.lat());
+          setLng(center.lng());
+        }
+        setZoomLevel(Math.round(map.getZoom() || 14));
+      };
+
+      mapListenersRef.current = [
+        google.maps.event.addListener(map, "idle", syncMapState),
+        google.maps.event.addListener(map, "zoom_changed", () => {
+          setZoomLevel(Math.round(map.getZoom() || 14));
+        }),
+      ];
+
+      syncMapState();
       mapInstanceRef.current = map;
     };
 
