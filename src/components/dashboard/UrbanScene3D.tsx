@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, RotateCcw, Eye, EyeOff } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, RotateCcw, Eye, EyeOff, Flame } from "lucide-react";
 
 interface UrbanSceneProps {
   onClose: () => void;
@@ -19,6 +19,12 @@ interface Aircraft {
   heading: number;
   vertical_rate: number;
   is_military: boolean;
+}
+
+interface ConflictPoint {
+  lat: number;
+  lng: number;
+  severity: number; // 1-4
 }
 
 const PRESETS = [
@@ -57,6 +63,9 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [showTrails, setShowTrails] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
+  const heatCanvasRef = useRef<HTMLCanvasElement>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
