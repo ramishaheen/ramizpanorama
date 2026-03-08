@@ -252,17 +252,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
     }).filter((m) => m.visible);
   }, [aircraft, lat, lng, containerSize, showMarkers, showFlights]);
 
-  // Build Google Maps 3D embed URL
-  const mapSrc = apiKey
-    ? `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${lat},${lng}&zoom=17&maptype=satellite`
-    : null;
-
-  return (
-    <div className="absolute inset-0 z-[2000] bg-black flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-card/90 backdrop-blur border-b border-border z-20">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-primary" />
+  // No longer need mapSrc - using JS API directly
           <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
             3D Urban Intel
           </span>
