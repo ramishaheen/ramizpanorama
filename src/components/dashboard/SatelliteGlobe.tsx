@@ -25,7 +25,6 @@ interface SatelliteData {
   operator?: string;
   source?: string; // which TLE group it came from
 }
-}
 
 interface SatelliteGlobeProps {
   onClose: () => void;
