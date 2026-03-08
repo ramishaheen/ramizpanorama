@@ -335,7 +335,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     markersRef.current = newMarkers;
   }, [aircraft, showFlights, showMarkers, trackedAircraftId]);
 
-  // ===== RENDER TRAILS =====
+  // ===== RENDER FLIGHT ROUTES & TRAILS =====
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
@@ -349,35 +349,70 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     const newLines: any[] = [];
     aircraft.forEach((ac) => {
       const history = trailHistoryRef.current[ac.icao24] || [];
-      if (history.length < 2) return;
       const isMil = ac.is_military;
       const isTracked = trackedAircraftId === ac.icao24;
       const color = isMil ? "#ef4444" : "#3b82f6";
-      const fullPath = [...history.map(p => ({ lat: p.lat, lng: p.lng })), { lat: ac.lat, lng: ac.lng }];
 
-      // Faded old trail
-      if (fullPath.length > 3) {
+      // Generate full route — uses trail history + projected backward path
+      const routePath = generateProjectedRoute(ac, history);
+
+      // Projected/old portion (dashed, faded)
+      if (routePath.length > 3) {
+        const oldPortion = routePath.slice(0, -2);
         const fadedLine = new google.maps.Polyline({
-          path: fullPath.slice(0, -2),
+          path: oldPortion,
           map,
           strokeColor: color,
-          strokeOpacity: 0.2,
-          strokeWeight: isTracked ? 2 : 1.2,
+          strokeOpacity: isTracked ? 0.35 : 0.2,
+          strokeWeight: isTracked ? 2.5 : 1.5,
           geodesic: true,
+          icons: [{
+            icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: 0.5, strokeColor: color, scale: 3 },
+            offset: "0",
+            repeat: "14px",
+          }],
         });
         newLines.push(fadedLine);
       }
 
-      // Bright recent trail
+      // Recent solid trail (last few points to current position)
+      const recentPath = routePath.slice(Math.max(0, routePath.length - 6));
       const recentLine = new google.maps.Polyline({
-        path: fullPath.slice(Math.max(0, fullPath.length - 5)),
+        path: recentPath,
         map,
         strokeColor: color,
-        strokeOpacity: isTracked ? 0.9 : 0.6,
-        strokeWeight: isTracked ? 3.5 : 2,
+        strokeOpacity: isTracked ? 0.95 : 0.7,
+        strokeWeight: isTracked ? 3.5 : 2.5,
         geodesic: true,
       });
       newLines.push(recentLine);
+
+      // Forward projection line (dotted, lighter) — shows where aircraft is heading
+      if (isTracked) {
+        const headingRad = ac.heading * Math.PI / 180;
+        const projDist = Math.max(ac.velocity * 3.6 * 0.03, 10) / 111.32; // ~2min or 10km
+        const fwdPoints = [
+          { lat: ac.lat, lng: ac.lng },
+          { lat: ac.lat + Math.cos(headingRad) * projDist, lng: ac.lng + Math.sin(headingRad) * projDist / Math.cos(ac.lat * Math.PI / 180) },
+        ];
+        const fwdLine = new google.maps.Polyline({
+          path: fwdPoints,
+          map,
+          strokeColor: "#22c55e",
+          strokeOpacity: 0.5,
+          strokeWeight: 2,
+          geodesic: true,
+          icons: [{
+            icon: { path: google.maps.SymbolPath.FORWARD_OPEN_ARROW, scale: 2.5, strokeColor: "#22c55e", strokeOpacity: 0.7 },
+            offset: "100%",
+          }, {
+            icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: 0.4, strokeColor: "#22c55e", scale: 2.5 },
+            offset: "0",
+            repeat: "10px",
+          }],
+        });
+        newLines.push(fwdLine);
+      }
     });
     trailLinesRef.current = newLines;
   }, [aircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
