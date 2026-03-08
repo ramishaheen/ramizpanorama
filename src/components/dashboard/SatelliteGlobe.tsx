@@ -602,6 +602,46 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     };
   }, [satellites.length > 0, selectedCat, showLabels]);
 
+  // Render orbit trail when a satellite is selected
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    if (orbitPath && orbitPath.length > 1 && selectedSat) {
+      const segments: { coords: { lat: number; lng: number }[] }[] = [];
+      let currentSegment: { lat: number; lng: number }[] = [orbitPath[0]];
+
+      for (let i = 1; i < orbitPath.length; i++) {
+        const prev = orbitPath[i - 1];
+        const curr = orbitPath[i];
+        if (Math.abs(curr.lng - prev.lng) > 90) {
+          if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+          currentSegment = [curr];
+        } else {
+          currentSegment.push(curr);
+        }
+      }
+      if (currentSegment.length > 1) segments.push({ coords: currentSegment });
+
+      const altitude = Math.min(selectedSat.alt / 6371 * 0.3 + 0.01, 0.7);
+
+      globe
+        .pathsData(segments)
+        .pathPoints('coords')
+        .pathPointLat((p: any) => p.lat)
+        .pathPointLng((p: any) => p.lng)
+        .pathPointAlt(() => altitude)
+        .pathColor(() => [orbitColor + 'cc', orbitColor + '33'])
+        .pathStroke(1.5)
+        .pathDashLength(0.02)
+        .pathDashGap(0.01)
+        .pathDashAnimateTime(4000)
+        .pathTransitionDuration(300);
+    } else {
+      globe.pathsData([]);
+    }
+  }, [orbitPath, selectedSat, orbitColor]);
+
   // Resize
   useEffect(() => {
     const handleResize = () => {
