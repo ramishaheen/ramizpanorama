@@ -55,6 +55,23 @@ const PRESETS = [
   { name: "Tokyo", lat: 35.6762, lng: 139.6503 },
 ];
 
+const MARITIME_CORRIDORS = [
+  { latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 }, // Persian Gulf
+  { latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 }, // Gulf of Oman
+  { latMin: 12.0, latMax: 30.8, lngMin: 32.0, lngMax: 43.8 }, // Red Sea + Bab el-Mandeb
+  { latMin: 30.0, latMax: 33.6, lngMin: 31.8, lngMax: 33.2 }, // Suez Canal
+  { latMin: 31.0, latMax: 37.2, lngMin: 33.2, lngMax: 36.8 }, // Eastern Mediterranean coast
+  { latMin: 36.3, latMax: 47.2, lngMin: 47.0, lngMax: 54.8 }, // Caspian Sea
+];
+
+function isLikelyWaterPosition(lat: number, lng: number): boolean {
+  return MARITIME_CORRIDORS.some((c) => lat >= c.latMin && lat <= c.latMax && lng >= c.lngMin && lng <= c.lngMax);
+}
+
+function sanitizeVesselsToWater<T extends { lat: number; lng: number }>(rows: T[]): T[] {
+  return rows.filter((v) => isLikelyWaterPosition(v.lat, v.lng));
+}
+
 function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: boolean): string {
   const color = isMilitary ? "#ef4444" : "#3b82f6";
   const glow = isMilitary ? "rgba(239,68,68,0.8)" : "rgba(59,130,246,0.7)";
@@ -540,13 +557,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         // Try live AIS API first
         const { data, error } = await supabase.functions.invoke("ais-vessels", { body: bbox });
         if (!error && data?.vessels && data.vessels.length > 0) {
-          setVessels(data.vessels);
+          const seaSafe = sanitizeVesselsToWater(data.vessels);
+          setVessels(seaSafe);
           setVesselSource(data.source || "live");
         } else {
           // Fallback to DB
           const { data: dbData } = await supabase.from("vessels").select("*");
           if (dbData && dbData.length > 0) {
-            setVessels(dbData);
+            const seaSafe = sanitizeVesselsToWater(dbData);
+            setVessels(seaSafe);
             setVesselSource("database");
           }
         }
@@ -554,7 +573,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         console.error("Vessel fetch error:", e);
         // DB fallback
         const { data: dbData } = await supabase.from("vessels").select("*");
-        if (dbData) { setVessels(dbData); setVesselSource("database"); }
+        if (dbData) {
+          const seaSafe = sanitizeVesselsToWater(dbData);
+          setVessels(seaSafe);
+          setVesselSource("database");
+        }
       }
     };
     fetchVessels();
