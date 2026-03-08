@@ -1958,6 +1958,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         />
       )}
 
+      {showCrisisIntel && <CrisisIntelModal onClose={() => setShowCrisisIntel(false)} />}
+
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
     </div>
