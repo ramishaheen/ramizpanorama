@@ -264,7 +264,7 @@ function latLngToPixel(lat: number, lng: number, _map: any, overlay: any): { x: 
   const google = (window as any).google;
   if (!google || !overlay?.getProjection?.()) return null;
   const projection = overlay.getProjection();
-  const point = projection.fromLatLngToDivPixel(new google.maps.LatLng(lat, lng));
+  const point = projection.fromLatLngToContainerPixel(new google.maps.LatLng(lat, lng));
   return point ? { x: point.x, y: point.y } : null;
 }
 
