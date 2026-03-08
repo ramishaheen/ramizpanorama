@@ -280,6 +280,9 @@ interface RawSatTLE {
   period: number;
   velocity: number;
   launchYear?: string;
+  country?: string;
+  operator?: string;
+  source?: string;
 }
 
 export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
