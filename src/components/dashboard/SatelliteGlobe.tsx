@@ -1036,40 +1036,52 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         }}
       />
 
-      {/* Top-left HUD */}
-      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1">
+      {/* Top-left HUD — holographic */}
+      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1 holo-flicker">
         <div
-          className="font-mono text-[11px] font-bold tracking-[0.2em] text-primary/90"
-          style={{ textShadow: "0 0 10px hsl(190 100% 50% / 0.5)" }}
+          className="font-mono text-[11px] font-bold tracking-[0.2em] holo-text"
         >
-          ORBITAL INTELLIGENCE
+          ◈ ORBITAL INTELLIGENCE
         </div>
-        <div className="text-[8px] font-mono text-muted-foreground/60 tracking-wider">
-          REAL-TIME SATELLITE TRACKING
+        <div className="text-[8px] font-mono tracking-wider" style={{ color: "rgba(0,255,200,0.5)" }}>
+          REAL-TIME SATELLITE TRACKING • OSINT FUSION
         </div>
-        <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/60">
-          <div>TOP SECRET // SI-TK // NOFORN</div>
+        <div className="mt-2 space-y-0.5 text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.55)" }}>
+          <div style={{ color: "rgba(239,68,68,0.7)" }}>⬤ TOP SECRET // SI-TK // NOFORN</div>
           <div>
-            TRACKING {satellites.length} OBJECTS • MIL:{" "}
+            ▸ TRACKING {satellites.length} OBJECTS • MIL:{" "}
             {satellites.filter((s) => s.category === "Military").length} ISR:{" "}
             {satellites.filter((s) => s.category === "ISR").length} NAV:{" "}
             {satellites.filter((s) => s.category === "Navigation").length}
           </div>
           <div>
-            LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
+            ▸ LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
             {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO:{" "}
             {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
           </div>
           <div>
-            SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+            ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
           </div>
-          <div className="text-white/60">
-            LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
+          <div>
+            ▸ SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.45)" }}>
+            ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
+          </div>
+        </div>
+        {/* OSINT Legend */}
+        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid rgba(0,255,200,0.1)" }}>
+          <div className="text-[7px] font-mono uppercase tracking-widest" style={{ color: "rgba(0,255,200,0.4)" }}>OSINT LAYER</div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            <span className="text-[7px] font-mono flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> CONFLICT</span>
+            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#fb923c" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#fb923c" }} /> MILITARY</span>
+            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#38bdf8" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#38bdf8" }} /> NAVAL</span>
+            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#a855f7" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#a855f7" }} /> RADAR</span>
           </div>
         </div>
       </div>
 
-      {/* Top-right timestamp */}
+      {/* Top-right timestamp — holographic */}
       <div className="absolute top-3 right-3 z-[2002] pointer-events-none text-right space-y-0.5">
         <div className="flex items-center gap-1.5 justify-end">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -1077,8 +1089,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             {timestamp}
           </span>
         </div>
-        <div className="text-[8px] font-mono text-muted-foreground/50">
-          CELESTRAK NORAD TLE • LIVE
+        <div className="text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.4)" }}>
+          CELESTRAK NORAD TLE • LIVE OSINT
         </div>
       </div>
 
