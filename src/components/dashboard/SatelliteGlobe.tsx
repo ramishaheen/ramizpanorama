@@ -2065,32 +2065,49 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
         <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
           {CITY_PRESETS.map((city) => {
-            // Count satellites overhead for badge
-            const toRad = (d: number) => (d * Math.PI) / 180;
-            const overhead = satsRef.current.filter((s) => {
-              const dLat = toRad(s.lat - city.lat);
-              const dLng = toRad(s.lng - city.lng);
-              const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(city.lat)) * Math.cos(toRad(s.lat)) * Math.sin(dLng / 2) ** 2;
-              const dist = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              return dist < 2500;
-            }).length;
+            const badge = countryBadges[city.name];
+            const overhead = badge?.total || 0;
             return (
-              <button
-                key={city.name}
-                onClick={() => flyToCity(city)}
-                className={`relative px-3 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all ${
-                  activeCity === city.name
-                    ? "bg-white text-black shadow-md"
-                    : "text-white/90 hover:text-white hover:bg-white/15 border border-transparent"
-                }`}
+              <div key={city.name} className="relative"
+                onMouseEnter={() => setHoveredCountry(city.name)}
+                onMouseLeave={() => setHoveredCountry(null)}
               >
-                {city.name}
-                {overhead > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold leading-none px-1">
-                    {overhead}
-                  </span>
+                <button
+                  onClick={() => flyToCity(city)}
+                  className={`relative px-3 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all ${
+                    activeCity === city.name
+                      ? "bg-white text-black shadow-md"
+                      : "text-white/90 hover:text-white hover:bg-white/15 border border-transparent"
+                  }`}
+                >
+                  {city.name}
+                  {overhead > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold leading-none px-1 animate-pulse">
+                      {overhead}
+                    </span>
+                  )}
+                </button>
+                {/* Hover tooltip with type breakdown */}
+                {hoveredCountry === city.name && badge && badge.breakdown.length > 0 && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[160px] bg-black/90 backdrop-blur-md border border-white/20 rounded-lg px-2.5 py-2 pointer-events-none">
+                    <div className="text-[8px] font-mono text-white/50 uppercase tracking-widest text-center mb-1.5">
+                      {city.name} — {overhead} sats
+                    </div>
+                    <div className="space-y-0.5">
+                      {badge.breakdown.slice(0, 8).map(({ category, count, color }) => (
+                        <div key={category} className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                            <span className="text-[8px] font-mono text-white/80 truncate">{category}</span>
+                          </div>
+                          <span className="text-[8px] font-mono text-white/60 flex-shrink-0">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-black/90 border-r border-b border-white/20 rotate-45" />
+                  </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
