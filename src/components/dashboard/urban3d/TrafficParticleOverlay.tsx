@@ -127,6 +127,7 @@ function parseLaneCount(tags: Record<string, any> = {}, highway: string): number
   return 2;
 }
 
+function pickVehicleType(highway: string): VehicleType {
   const allowed = ROAD_VEHICLES[highway] || ["car"];
   const totalWeight = allowed.reduce((s, v) => s + VEHICLE_CONFIG[v].weight, 0);
   let r = Math.random() * totalWeight;
