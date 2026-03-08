@@ -252,7 +252,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: initialEvent ? 16 : 6,
+        zoom: initialEvent ? 16 : 14,
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
