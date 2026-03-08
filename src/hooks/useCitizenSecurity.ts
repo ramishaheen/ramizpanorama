@@ -58,44 +58,14 @@ export function useCitizenSecurity() {
   }, [fetchSecurity]);
 
   useEffect(() => {
-    // Stagger initial fetch to avoid Gemini rate limits
     const initialDelay = setTimeout(fetchSecurity, 8000);
-    const interval = setInterval(fetchSecurity, 180000); // 3 min interval
-
-    // Subscribe to realtime changes on incident-related tables
-    const channel = supabase
-      .channel('citizen-security-incidents')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'geo_alerts' }, () => {
-        console.log("[CitizenSecurity] New geo_alert detected");
-        debouncedRefresh();
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rockets' }, () => {
-        console.log("[CitizenSecurity] New rocket launch detected");
-        debouncedRefresh();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rockets' }, (payload) => {
-        if (payload.eventType === 'UPDATE') {
-          console.log("[CitizenSecurity] Rocket status updated");
-          debouncedRefresh();
-        }
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'airspace_alerts' }, () => {
-        console.log("[CitizenSecurity] New airspace alert detected");
-        debouncedRefresh();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'risk_scores' }, () => {
-        console.log("[CitizenSecurity] Risk scores updated");
-        debouncedRefresh();
-      })
-      .subscribe();
-
+    const interval = setInterval(fetchSecurity, 86_400_000); // once per day
     return () => {
       clearTimeout(initialDelay);
       clearInterval(interval);
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      supabase.removeChannel(channel);
     };
-  }, [fetchSecurity, debouncedRefresh]);
+  }, [fetchSecurity]);
 
   return { data, loading, error, refresh: fetchSecurity };
 }
