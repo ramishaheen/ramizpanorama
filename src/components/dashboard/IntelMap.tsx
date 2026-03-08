@@ -964,7 +964,102 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     });
   }, [conflictEvents.data, layers.conflicts]);
 
-  // Weather radar tile layer
+  // ===== LIVE FLIGHT TRACKING LAYER =====
+  const fetchFlightData = useCallback(async () => {
+    if (!layers.flights) return;
+    const map = mapRef.current;
+    let bbox: any;
+    if (map) {
+      const bounds = map.getBounds();
+      bbox = { lamin: bounds.getSouth(), lamax: bounds.getNorth(), lomin: bounds.getWest(), lomax: bounds.getEast() };
+    }
+    if (!bbox) bbox = { lamin: 10, lamax: 45, lomin: 25, lomax: 65 };
+    try {
+      const { data, error } = await supabase.functions.invoke("live-flights", { body: bbox });
+      if (!error && data?.aircraft) {
+        const newAircraft: FlightAircraft[] = data.aircraft;
+        const now = Date.now();
+        const history = { ...flightTrailsRef.current };
+        newAircraft.forEach((ac) => {
+          const trail = history[ac.icao24] || [];
+          const last = trail[trail.length - 1];
+          if (!last || last.lat !== ac.lat || last.lng !== ac.lng) trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
+          history[ac.icao24] = trail.filter(p => now - p.ts < 300000).slice(-10);
+        });
+        const activeIds = new Set(newAircraft.map(a => a.icao24));
+        Object.keys(history).forEach(id => { if (!activeIds.has(id)) delete history[id]; });
+        flightTrailsRef.current = history;
+        setFlightData(newAircraft);
+      }
+    } catch (e) { console.error("Flight fetch error:", e); }
+  }, [layers.flights]);
+
+  useEffect(() => {
+    if (!layers.flights) {
+      flightGroupRef.current?.clearLayers();
+      setFlightData([]);
+      if (flightIntervalRef.current) { clearInterval(flightIntervalRef.current); flightIntervalRef.current = null; }
+      return;
+    }
+    fetchFlightData();
+    flightIntervalRef.current = setInterval(fetchFlightData, 30000);
+    return () => { if (flightIntervalRef.current) { clearInterval(flightIntervalRef.current); flightIntervalRef.current = null; } };
+  }, [fetchFlightData, layers.flights]);
+
+  // Render flights on map
+  useEffect(() => {
+    const group = flightGroupRef.current;
+    if (!group) return;
+    group.clearLayers();
+
+    if (!layers.flights || flightData.length === 0) return;
+
+    flightData.forEach((ac) => {
+      const isMil = ac.is_military;
+      const color = isMil ? "#ef4444" : "#60a5fa";
+      const size = isMil ? 18 : 14;
+
+      // Draw trail polyline
+      const trail = flightTrailsRef.current[ac.icao24] || [];
+      if (trail.length >= 2) {
+        const path: L.LatLngExpression[] = [...trail.map(p => [p.lat, p.lng] as L.LatLngTuple), [ac.lat, ac.lng]];
+        L.polyline(path, {
+          color,
+          weight: isMil ? 2 : 1.5,
+          opacity: 0.6,
+          dashArray: isMil ? undefined : "4 3",
+        }).addTo(group);
+      }
+
+      // Aircraft marker
+      const icon = L.divIcon({
+        className: "flight-marker",
+        html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;width:${size + 8}px;height:${size + 8}px;border-radius:50%;border:1.5px solid ${color};opacity:0.3;animation:pulse 2.5s ease-in-out infinite;"></div>
+          <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}" style="transform:rotate(${ac.heading}deg);filter:drop-shadow(0 0 4px ${color});">
+            <path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z"/>
+          </svg>
+        </div>`,
+        iconSize: [size + 8, size + 8],
+        iconAnchor: [(size + 8) / 2, (size + 8) / 2],
+        popupAnchor: [0, -(size / 2 + 6)],
+      });
+
+      const marker = L.marker([ac.lat, ac.lng], { icon, zIndexOffset: isMil ? 800 : 400 });
+      bindHoverPopup(marker, `<div style="${popupStyle}">
+        <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">
+          ${isMil ? "🛩️ MILITARY" : "✈️ CIVIL"} — ${ac.callsign || ac.icao24}
+        </div>
+        <div>Origin: ${ac.origin_country}</div>
+        <div>Alt: ${Math.round(ac.altitude)}m | Speed: ${Math.round(ac.velocity * 3.6)} km/h</div>
+        <div>Heading: ${Math.round(ac.heading)}° | V/S: ${ac.vertical_rate > 0 ? "+" : ""}${ac.vertical_rate.toFixed(1)} m/s</div>
+        <div style="font-size:9px;opacity:0.5;margin-top:4px;">ICAO: ${ac.icao24}</div>
+      </div>`);
+      group.addLayer(marker);
+    });
+  }, [flightData, layers.flights]);
+
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
