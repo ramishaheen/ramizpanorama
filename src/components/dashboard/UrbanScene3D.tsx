@@ -887,7 +887,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 </div>
               </div>
               <div className="divide-y divide-border/10 max-h-[42vh] overflow-y-auto">
-                {aircraft
+                {interpolatedAircraft
                   .sort((a, b) => {
                     // Tracked first, then military, then by callsign
                     if (a.icao24 === trackedAircraftId) return -1;
