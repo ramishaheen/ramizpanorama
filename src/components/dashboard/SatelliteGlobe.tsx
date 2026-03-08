@@ -2229,53 +2229,96 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       </div>
 
-      {/* Bottom city presets */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
-        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
+      {/* City Landmark Tooltip */}
+      {selectedCity && (
+        <div className="absolute top-16 right-3 z-[2003] pointer-events-auto w-[280px]">
+          <div className="bg-black/85 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden shadow-2xl">
+            {/* Landmark Image */}
+            <div className="relative h-[140px] overflow-hidden">
+              <img
+                src={selectedCity.image}
+                alt={selectedCity.landmark}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              <div className="absolute bottom-2 left-3 right-3">
+                <div className="text-white text-sm font-bold leading-tight">{selectedCity.landmark}</div>
+                <div className="text-white/60 text-[10px] font-mono">{selectedCity.name}, {selectedCity.country}</div>
+              </div>
+              <button
+                onClick={() => setSelectedCity(null)}
+                className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/80 text-white/70 hover:text-white transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {/* Info */}
+            <div className="p-3 space-y-2">
+              <p className="text-[10px] font-mono text-white/70 leading-relaxed">{selectedCity.description}</p>
+              <div className="flex items-center gap-3 pt-1 border-t border-white/10">
+                {selectedCity.population && (
+                  <div className="flex flex-col">
+                    <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest">Pop.</span>
+                    <span className="text-[10px] font-mono text-cyan-400 font-bold">{selectedCity.population}</span>
+                  </div>
+                )}
+                {selectedCity.timezone && (
+                  <div className="flex flex-col">
+                    <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest">Time</span>
+                    <span className="text-[10px] font-mono text-cyan-400 font-bold">{selectedCity.timezone}</span>
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest">Coords</span>
+                  <span className="text-[10px] font-mono text-white/60">{selectedCity.lat.toFixed(2)}°, {selectedCity.lng.toFixed(2)}°</span>
+                </div>
+              </div>
+              {/* Satellite count for this city */}
+              {countryBadges[selectedCity.name] && (
+                <div className="pt-1 border-t border-white/10">
+                  <div className="text-[8px] font-mono text-white/40 uppercase tracking-widest mb-1">
+                    {countryBadges[selectedCity.name].total} Satellites Overhead
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {countryBadges[selectedCity.name].breakdown.slice(0, 6).map(({ category, count, color }) => (
+                      <span key={category} className="inline-flex items-center gap-1 text-[8px] font-mono text-white/70 bg-white/5 rounded px-1.5 py-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                        {category}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom city presets — scrollable */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto max-w-[95vw]">
+        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: "none" }}>
           {CITY_PRESETS.map((city) => {
             const badge = countryBadges[city.name];
             const overhead = badge?.total || 0;
             return (
-              <div key={city.name} className="relative"
-                onMouseEnter={() => setHoveredCountry(city.name)}
-                onMouseLeave={() => setHoveredCountry(null)}
+              <button
+                key={city.name}
+                onClick={() => flyToCity(city)}
+                className={`relative flex-shrink-0 px-2.5 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all whitespace-nowrap ${
+                  activeCity === city.name
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_8px_rgba(0,200,255,0.15)]"
+                    : "text-white/80 hover:text-white hover:bg-white/10 border border-transparent"
+                }`}
+                title={`${city.landmark} — ${city.country}`}
               >
-                <button
-                  onClick={() => flyToCity(city)}
-                  className={`relative px-3 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all ${
-                    activeCity === city.name
-                      ? "bg-white text-black shadow-md"
-                      : "text-white/90 hover:text-white hover:bg-white/15 border border-transparent"
-                  }`}
-                >
-                  {city.name}
-                  {overhead > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold leading-none px-1 animate-pulse">
-                      {overhead}
-                    </span>
-                  )}
-                </button>
-                {/* Hover tooltip with type breakdown */}
-                {hoveredCountry === city.name && badge && badge.breakdown.length > 0 && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[160px] bg-black/90 backdrop-blur-md border border-white/20 rounded-lg px-2.5 py-2 pointer-events-none">
-                    <div className="text-[8px] font-mono text-white/50 uppercase tracking-widest text-center mb-1.5">
-                      {city.name} — {overhead} sats
-                    </div>
-                    <div className="space-y-0.5">
-                      {badge.breakdown.slice(0, 8).map(({ category, count, color }) => (
-                        <div key={category} className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1 min-w-0">
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                            <span className="text-[8px] font-mono text-white/80 truncate">{category}</span>
-                          </div>
-                          <span className="text-[8px] font-mono text-white/60 flex-shrink-0">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-black/90 border-r border-b border-white/20 rotate-45" />
-                  </div>
+                {city.name}
+                {overhead > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[7px] font-bold leading-none px-0.5 animate-pulse">
+                    {overhead}
+                  </span>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>
