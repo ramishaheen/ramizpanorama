@@ -270,11 +270,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     heading: number; vertical_rate: number; is_military: boolean;
   }
   const [flightData, setFlightData] = useState<FlightAircraft[]>([]);
+  const flightSnapshotRef = useRef<FlightAircraft[]>([]);
+  const flightLastPollRef = useRef<number>(Date.now());
+  const [interpolatedFlights, setInterpolatedFlights] = useState<FlightAircraft[]>([]);
   const flightTrailsRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const flightInterpRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [trackedFlightId, setTrackedFlightId] = useState<string | null>(null);
   const [flightSource, setFlightSource] = useState<string>("");
-  const prevFlightPositions = useRef<Record<string, { lat: number; lng: number }>>({});
+  const prevFlightPositions = useRef<Record<string, { lat: number; lng: number }>>({}); 
 
   // OSINT data hooks
   const earthquakes = useEarthquakes();
