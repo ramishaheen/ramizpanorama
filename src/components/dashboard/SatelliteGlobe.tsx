@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2 } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -310,6 +310,14 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [aiLoading, setAiLoading] = useState(false);
   const aiScrollRef = useRef<HTMLDivElement>(null);
   const satsRef = useRef<SatelliteData[]>([]);
+  const [predicting, setPredicting] = useState(false);
+  const [predictionData, setPredictionData] = useState<{
+    positions?: { time: string; lat: number; lng: number; alt: number }[];
+    passes?: { startTime: string; closestTime: string; endTime: string; minDistKm: number; maxElevation: number }[];
+    ai_analysis?: string;
+    satellite_name?: string;
+  } | null>(null);
+  const [predictionTrack, setPredictionTrack] = useState<{ lat: number; lng: number }[] | null>(null);
 
   useEffect(() => {
     satsRef.current = satellites;
