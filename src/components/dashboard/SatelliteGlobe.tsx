@@ -309,16 +309,43 @@ function computeOrbitPath(
   return points;
 }
 
-const CITY_PRESETS = [
-  { name: "Jordan", lat: 31.95, lng: 35.93 },
-  { name: "Israel", lat: 31.77, lng: 35.23 },
-  { name: "UAE", lat: 24.45, lng: 54.65 },
-  { name: "Bahrain", lat: 26.07, lng: 50.55 },
-  { name: "Iraq", lat: 33.31, lng: 44.37 },
-  { name: "KSA", lat: 24.71, lng: 46.67 },
-  { name: "Moscow", lat: 55.75, lng: 37.62 },
-  { name: "China", lat: 35.86, lng: 104.2 },
-  { name: "Beijing", lat: 39.9, lng: 116.4 },
+interface CityPreset {
+  name: string;
+  lat: number;
+  lng: number;
+  country: string;
+  landmark: string;
+  description: string;
+  image: string;
+  population?: string;
+  timezone?: string;
+}
+
+const CITY_PRESETS: CityPreset[] = [
+  // Middle East
+  { name: "Amman", lat: 31.95, lng: 35.93, country: "Jordan", landmark: "Roman Theatre", description: "Ancient 6,000-seat amphitheater built during the reign of Antoninus Pius (138–161 CE), carved into a hillside in downtown Amman.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Amman_Roman_Theatre.jpg/1280px-Amman_Roman_Theatre.jpg", population: "4.1M", timezone: "UTC+3" },
+  { name: "Jerusalem", lat: 31.77, lng: 35.23, country: "Israel/Palestine", landmark: "Dome of the Rock", description: "Iconic 7th-century Islamic shrine on Temple Mount/Haram al-Sharif, one of the holiest sites in the world for three Abrahamic religions.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Dome_of_Rock%2C_Temple_Mount%2C_Jerusalem.jpg/1280px-Dome_of_Rock%2C_Temple_Mount%2C_Jerusalem.jpg", population: "936K", timezone: "UTC+2" },
+  { name: "Dubai", lat: 25.2, lng: 55.27, country: "UAE", landmark: "Burj Khalifa", description: "World's tallest building at 828m (2,717 ft) with 163 floors. Observation deck on the 148th floor offers panoramic views of the Arabian Gulf.", image: "https://upload.wikimedia.org/wikipedia/en/thumb/9/93/Burj_Khalifa.jpg/800px-Burj_Khalifa.jpg", population: "3.5M", timezone: "UTC+4" },
+  { name: "Riyadh", lat: 24.71, lng: 46.67, country: "Saudi Arabia", landmark: "Kingdom Centre Tower", description: "302m skyscraper with a distinctive inverted parabolic arch at the top, housing a sky bridge observation deck.", image: "https://upload.wikimedia.org/wikipedia/en/thumb/3/37/Kingdom_Centre%2C_Riyadh%2C_Saudi_Arabia.jpg/800px-Kingdom_Centre%2C_Riyadh%2C_Saudi_Arabia.jpg", population: "7.6M", timezone: "UTC+3" },
+  { name: "Baghdad", lat: 33.31, lng: 44.37, country: "Iraq", landmark: "Al-Shaheed Monument", description: "Split turquoise dome war memorial (1983) honoring Iraqi soldiers, set within a landscaped park and museum complex.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Al-Shaheed_Monument_in_Baghdad.jpg/1280px-Al-Shaheed_Monument_in_Baghdad.jpg", population: "8.1M", timezone: "UTC+3" },
+  { name: "Tehran", lat: 35.69, lng: 51.39, country: "Iran", landmark: "Azadi Tower", description: "45m marble-clad gateway tower (1971) combining Sassanid and Islamic architecture, symbol of modern Iran.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Azadi_Tower_2021.jpg/1280px-Azadi_Tower_2021.jpg", population: "9.1M", timezone: "UTC+3:30" },
+  { name: "Beirut", lat: 33.89, lng: 35.5, country: "Lebanon", landmark: "Pigeon Rocks", description: "Iconic natural limestone arches rising from the Mediterranean Sea off the Raouché coast, a symbol of Beirut.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Raouche.jpg/1280px-Raouche.jpg", population: "2.4M", timezone: "UTC+2" },
+  { name: "Manama", lat: 26.07, lng: 50.55, country: "Bahrain", landmark: "Bahrain World Trade Center", description: "Twin 240m towers connected by three sky bridges with integrated wind turbines — first skyscraper to do so.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Bahrain_World_Trade_Center_.jpg/800px-Bahrain_World_Trade_Center_.jpg", population: "411K", timezone: "UTC+3" },
+  // Europe
+  { name: "Paris", lat: 48.86, lng: 2.35, country: "France", landmark: "Eiffel Tower", description: "324m wrought-iron lattice tower (1889) on the Champ de Mars, visited by nearly 7 million people annually.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/800px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg", population: "11M", timezone: "UTC+1" },
+  { name: "London", lat: 51.51, lng: -0.13, country: "UK", landmark: "Big Ben & Parliament", description: "The Elizabeth Tower houses Big Ben, the iconic 13.7-ton Great Bell, adjacent to the Palace of Westminster (1859).", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Clock_Tower_-_Palace_of_Westminster%2C_London_-_May_2007.jpg/800px-Clock_Tower_-_Palace_of_Westminster%2C_London_-_May_2007.jpg", population: "9.5M", timezone: "UTC+0" },
+  { name: "Rome", lat: 41.9, lng: 12.5, country: "Italy", landmark: "Colosseum", description: "Largest ancient amphitheater ever built (70–80 CE), once seating 50,000–80,000 spectators for gladiatorial contests.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/1280px-Colosseo_2020.jpg", population: "4.3M", timezone: "UTC+1" },
+  { name: "Istanbul", lat: 41.01, lng: 28.98, country: "Turkey", landmark: "Hagia Sophia", description: "Built in 537 CE as a cathedral, later a mosque, now a mosque-museum. Its massive dome was an architectural marvel for nearly a millennium.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Hagia_Sophia_Mars_2013.jpg/1280px-Hagia_Sophia_Mars_2013.jpg", population: "15.8M", timezone: "UTC+3" },
+  { name: "Moscow", lat: 55.75, lng: 37.62, country: "Russia", landmark: "St. Basil's Cathedral", description: "Colorful onion-domed cathedral (1561) on Red Square, built by Ivan the Terrible to commemorate the capture of Kazan.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Moscow_July_2011-16.jpg/800px-Moscow_July_2011-16.jpg", population: "12.6M", timezone: "UTC+3" },
+  // Asia
+  { name: "Beijing", lat: 39.9, lng: 116.4, country: "China", landmark: "Forbidden City", description: "Imperial palace complex (1420) with 980 buildings over 72 hectares, served as the Chinese imperial palace for 500 years.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Beijing-Forbidden_City1.jpg/1280px-Beijing-Forbidden_City1.jpg", population: "21.5M", timezone: "UTC+8" },
+  { name: "Tokyo", lat: 35.68, lng: 139.69, country: "Japan", landmark: "Tokyo Tower", description: "333m communications tower (1958) inspired by the Eiffel Tower, painted in white and international orange for aviation safety.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/TaroTokyo20110213-TokyoTower-01min.jpg/800px-TaroTokyo20110213-TokyoTower-01min.jpg", population: "14M", timezone: "UTC+9" },
+  { name: "Delhi", lat: 28.61, lng: 77.21, country: "India", landmark: "India Gate", description: "42m triumphal arch war memorial (1931) on Rajpath, dedicated to 70,000 Indian Army soldiers who died in WWI.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/India_Gate_in_New_Delhi_03-2016.jpg/1280px-India_Gate_in_New_Delhi_03-2016.jpg", population: "32M", timezone: "UTC+5:30" },
+  // Americas
+  { name: "New York", lat: 40.71, lng: -74.01, country: "USA", landmark: "Statue of Liberty", description: "93m copper-clad neoclassical statue (1886), a gift from France symbolizing freedom and democracy.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Statue_of_Liberty_7.jpg/800px-Statue_of_Liberty_7.jpg", population: "8.3M", timezone: "UTC-5" },
+  { name: "Washington DC", lat: 38.9, lng: -77.04, country: "USA", landmark: "The Pentagon", description: "World's largest office building by floor area, headquarters of the US Department of Defense since 1943.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/The_Pentagon_January_2008.jpg/1280px-The_Pentagon_January_2008.jpg", population: "689K", timezone: "UTC-5" },
+  // Africa
+  { name: "Cairo", lat: 30.04, lng: 31.24, country: "Egypt", landmark: "Great Pyramids of Giza", description: "Last surviving Wonder of the Ancient World. The Great Pyramid (2560 BCE) stood as the tallest man-made structure for 3,800 years.", image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Kheops-Pyramid.jpg/1280px-Kheops-Pyramid.jpg", population: "21M", timezone: "UTC+2" },
 ];
 
 // OSINT Intelligence Markers — conflict zones, military bases, naval choke points, radar sites
