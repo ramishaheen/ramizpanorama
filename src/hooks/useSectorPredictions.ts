@@ -49,9 +49,10 @@ export function useSectorPredictions() {
   }, []);
 
   useEffect(() => {
-    fetchPredictions();
-    const interval = setInterval(fetchPredictions, 120_000);
-    return () => clearInterval(interval);
+    // Stagger: sector predictions load after 16s
+    const initialDelay = setTimeout(fetchPredictions, 16000);
+    const interval = setInterval(fetchPredictions, 180_000);
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetchPredictions]);
 
   return { data, loading, error, refresh: fetchPredictions };

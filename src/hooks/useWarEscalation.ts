@@ -75,9 +75,10 @@ export function useWarEscalation() {
   }, []);
 
   useEffect(() => {
-    fetchEscalation();
-    const interval = setInterval(fetchEscalation, 120_000);
-    return () => clearInterval(interval);
+    // Stagger: escalation loads after 12s
+    const initialDelay = setTimeout(fetchEscalation, 12000);
+    const interval = setInterval(fetchEscalation, 180_000);
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetchEscalation]);
 
   return { data, loading, error, refresh: fetchEscalation };

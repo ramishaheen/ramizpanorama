@@ -43,9 +43,10 @@ export function useConflictEvents() {
   }, []);
 
   useEffect(() => {
-    fetch_();
-    const interval = setInterval(fetch_, 300_000); // refresh every 5 minutes
-    return () => clearInterval(interval);
+    // Stagger: conflict events load after 20s
+    const initialDelay = setTimeout(fetch_, 20000);
+    const interval = setInterval(fetch_, 300_000);
+    return () => { clearTimeout(initialDelay); clearInterval(interval); };
   }, [fetch_]);
 
   return { data, loading, error, refresh: fetch_ };
