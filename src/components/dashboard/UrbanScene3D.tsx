@@ -588,12 +588,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           scaledSize: new google.maps.Size(size, size),
           anchor: new google.maps.Point(size / 2, size / 2),
         },
-        title: `${v.name} (${v.type})`,
         zIndex: isMil ? 80 : 40,
       });
-
-
-      vesselMarkersRef.current.push(marker);
 
       vesselMarkersRef.current.push(marker);
     });
