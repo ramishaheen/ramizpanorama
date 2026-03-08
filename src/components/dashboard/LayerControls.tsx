@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff, Mountain, Flame, Cloud, Crosshair, Navigation } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Radio, Rocket, Eye, EyeOff, Mountain, Flame, Cloud, Crosshair, Navigation, Car } from "lucide-react";
 import { useLanguage, translations as tr } from "@/hooks/useLanguage";
 
 export interface LayerState {
@@ -10,6 +10,7 @@ export interface LayerState {
   earthquakes: boolean;
   wildfires: boolean;
   weather: boolean;
+  traffic: boolean;
   conflicts: boolean;
   flights: boolean;
 }
@@ -28,6 +29,7 @@ const layerConfig = [
   { key: "earthquakes" as const, trKey: "layer.earthquakes", icon: Mountain, color: "text-warning" },
   { key: "wildfires" as const, trKey: "layer.wildfires", icon: Flame, color: "text-critical" },
   { key: "weather" as const, trKey: "layer.weather", icon: Cloud, color: "text-primary" },
+  { key: "traffic" as const, trKey: "layer.traffic", icon: Car, color: "text-accent" },
   { key: "conflicts" as const, trKey: "layer.conflicts", icon: Crosshair, color: "text-warning" },
   { key: "heatmap" as const, trKey: "layer.heatmap", icon: Radio, color: "text-critical" },
 ];

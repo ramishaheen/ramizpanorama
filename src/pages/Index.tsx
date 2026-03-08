@@ -122,6 +122,7 @@ const Index = () => {
     earthquakes: true,
     wildfires: true,
     weather: true,
+    traffic: true,
     conflicts: true,
     flights: true,
   });
