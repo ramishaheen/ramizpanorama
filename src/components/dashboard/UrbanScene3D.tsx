@@ -259,7 +259,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-primary" />
           <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
-            3D Urban Intel
+            Google 3D View
           </span>
           <span className="text-[9px] font-mono text-muted-foreground">
             GOOGLE 3D TILES
@@ -447,7 +447,7 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
             className="bg-black/70 backdrop-blur border border-primary/30 rounded px-2.5 py-1.5 font-mono text-[9px] text-primary/80 space-y-0.5"
             style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.1)" }}
           >
-            <div className="text-primary font-bold text-[10px]">// URBAN RECON — GOOGLE 3D</div>
+            <div className="text-primary font-bold text-[10px]">// GOOGLE 3D SATELLITE</div>
             <div>
               SECTOR {lat.toFixed(4)}N {Math.abs(lng).toFixed(4)}
               {lng >= 0 ? "E" : "W"}
