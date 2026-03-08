@@ -235,6 +235,23 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [airspacePanelPos, setAirspacePanelPos] = useState({ x: 12, y: 160 });
   const airspaceDragRef = useRef<{ dragging: boolean; offsetX: number; offsetY: number }>({ dragging: false, offsetX: 0, offsetY: 0 });
 
+  // NASA NRT Satellite overlays
+  const [showNrtModis, setShowNrtModis] = useState(false);
+  const [showNrtViirs, setShowNrtViirs] = useState(false);
+  const [showNrtNoaa20, setShowNrtNoaa20] = useState(false);
+  const [showNrtFires, setShowNrtFires] = useState(false);
+  const [showNrtNightLights, setShowNrtNightLights] = useState(false);
+  const [opacityNrtModis, setOpacityNrtModis] = useState(0.6);
+  const [opacityNrtViirs, setOpacityNrtViirs] = useState(0.6);
+  const [opacityNrtNoaa20, setOpacityNrtNoaa20] = useState(0.6);
+  const [opacityNrtFires, setOpacityNrtFires] = useState(0.7);
+  const [opacityNrtNightLights, setOpacityNrtNightLights] = useState(0.6);
+  const nrtModisRef = useRef<any>(null);
+  const nrtViirsRef = useRef<any>(null);
+  const nrtNoaa20Ref = useRef<any>(null);
+  const nrtFiresRef = useRef<any>(null);
+  const nrtNightLightsRef = useRef<any>(null);
+
   // Fetch nearby intel
   useEffect(() => {
     const fetchNearby = async () => {
@@ -1378,6 +1395,55 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [showWeather]);
 
+  // ===== NASA NRT SATELLITE OVERLAYS ON 3D MAP =====
+  const nrtToday = new Date().toISOString().split("T")[0];
+  const nrtLayers = [
+    { show: showNrtModis, ref: nrtModisRef, opacity: opacityNrtModis, name: "MODIS Aqua NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Aqua_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtViirs, ref: nrtViirsRef, opacity: opacityNrtViirs, name: "VIIRS SNPP NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtNoaa20, ref: nrtNoaa20Ref, opacity: opacityNrtNoaa20, name: "VIIRS NOAA-20 NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtFires, ref: nrtFiresRef, opacity: opacityNrtFires, name: "MODIS Fires NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Thermal_Anomalies_Day/default/${nrtToday}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png` },
+    { show: showNrtNightLights, ref: nrtNightLightsRef, opacity: opacityNrtNightLights, name: "VIIRS Night Lights", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_DayNightBand_AtSensor_M15/default/2024-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png` },
+  ];
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    // Remove all existing NRT overlays
+    nrtLayers.forEach(layer => {
+      if (layer.ref.current) {
+        const idx = map.overlayMapTypes.indexOf(layer.ref.current);
+        if (idx >= 0) map.overlayMapTypes.removeAt(idx);
+        // Fallback: iterate
+        for (let i = map.overlayMapTypes.getLength() - 1; i >= 0; i--) {
+          if (map.overlayMapTypes.getAt(i) === layer.ref.current) {
+            map.overlayMapTypes.removeAt(i);
+          }
+        }
+        layer.ref.current = null;
+      }
+    });
+
+    // Add enabled NRT overlays
+    nrtLayers.forEach(layer => {
+      if (layer.show) {
+        const tileType = new google.maps.ImageMapType({
+          getTileUrl: (coord: any, zoom: number) => {
+            const maxZoom = layer.url.includes("Level7") ? 7 : layer.url.includes("Level8") ? 8 : 9;
+            if (zoom > maxZoom) return null;
+            return layer.url.replace("{z}", zoom.toString()).replace("{y}", coord.y.toString()).replace("{x}", coord.x.toString());
+          },
+          tileSize: new google.maps.Size(256, 256),
+          opacity: layer.opacity,
+          name: layer.name,
+        });
+        map.overlayMapTypes.push(tileType);
+        layer.ref.current = tileType;
+      }
+    });
+  }, [showNrtModis, showNrtViirs, showNrtNoaa20, showNrtFires, showNrtNightLights, opacityNrtModis, opacityNrtViirs, opacityNrtNoaa20, opacityNrtFires, opacityNrtNightLights]);
+
 
   // ===== FETCH WEATHER DATA FOR CITY MARKERS =====
   useEffect(() => {
@@ -1924,6 +1990,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
                 <LayerControl icon={<MapPin className="h-3 w-3" />} label="City Landmarks" color="#00dcff" active={showCities} onToggle={() => setShowCities(!showCities)} count={CITY_LANDMARKS_3D.length} opacity={1} onOpacity={() => {}} source={`${CITY_LANDMARKS_3D.length} cities`} />
                 <LayerControl icon={<Video className="h-3 w-3" />} label="Live Cameras" color="#f59e0b" active={showCameras} onToggle={() => setShowCameras(!showCameras)} count={cameras.length} opacity={1} onOpacity={() => {}} source={`${cameras.length} feeds`} />
+
+                <div className="border-t border-border/20 my-2" />
+                <span className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-wider">NASA NRT Satellite</span>
+
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="MODIS Aqua NRT" color="#00bcd4" active={showNrtModis} onToggle={() => setShowNrtModis(!showNrtModis)} opacity={opacityNrtModis} onOpacity={setOpacityNrtModis} source="NASA GIBS • Today" />
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="VIIRS SNPP NRT" color="#26a69a" active={showNrtViirs} onToggle={() => setShowNrtViirs(!showNrtViirs)} opacity={opacityNrtViirs} onOpacity={setOpacityNrtViirs} source="NASA GIBS • Today" />
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="VIIRS NOAA-20" color="#4db6ac" active={showNrtNoaa20} onToggle={() => setShowNrtNoaa20(!showNrtNoaa20)} opacity={opacityNrtNoaa20} onOpacity={setOpacityNrtNoaa20} source="NASA GIBS • Today" />
+                <LayerControl icon={<Flame className="h-3 w-3" />} label="MODIS Fires NRT" color="#ff5722" active={showNrtFires} onToggle={() => setShowNrtFires(!showNrtFires)} opacity={opacityNrtFires} onOpacity={setOpacityNrtFires} source="NASA FIRMS • Today" />
+                <LayerControl icon={<Signal className="h-3 w-3" />} label="Night Lights" color="#7c4dff" active={showNrtNightLights} onToggle={() => setShowNrtNightLights(!showNrtNightLights)} opacity={opacityNrtNightLights} onOpacity={setOpacityNrtNightLights} source="VIIRS DNB" />
               </div>
               <div className="px-3 py-2 border-t border-border/30">
                 <span className="text-[7px] font-mono text-muted-foreground/50">Real-time data • Auto-refresh</span>
