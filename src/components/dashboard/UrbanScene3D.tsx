@@ -1022,6 +1022,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       trailLinesRef.current.forEach(l => l.setMap(null));
       vesselMarkersRef.current.forEach(m => m.setMap(null));
       earthquakeMarkersRef.current.forEach(m => m.setMap(null));
+      weatherMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
       if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
       if (interpolationRef.current) clearInterval(interpolationRef.current);
