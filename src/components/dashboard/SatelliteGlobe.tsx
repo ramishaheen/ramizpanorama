@@ -580,6 +580,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
     setCountrySats(breakdown);
     setCountrySatNames(nameSet);
+    countrySatNamesRef.current = nameSet;
 
     if (globeRef.current) {
       globeRef.current.pointOfView(
@@ -1479,6 +1480,35 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         >
           <X className="h-2.5 w-2.5" /> Close
         </button>
+
+        {/* Country satellite type breakdown */}
+        {activeCity && countrySats.length > 0 && (
+          <div className="bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-2 py-2 w-full">
+            <div className="text-[7px] font-mono uppercase tracking-widest text-center mb-1.5" style={{ color: "rgba(0,255,200,0.5)" }}>
+              {activeCity} SATELLITES
+            </div>
+            <div className="text-[8px] font-mono text-white/50 text-center mb-1.5">
+              {countrySats.reduce((s, c) => s + c.count, 0)} objects overhead
+            </div>
+            <div className="space-y-0.5 max-h-[300px] overflow-y-auto scrollbar-none">
+              {countrySats.map(({ category, count, color }) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCat(selectedCat === category ? null : category)}
+                  className={`flex items-center gap-1.5 w-full px-1.5 py-1 rounded text-[8px] font-mono transition-all ${
+                    selectedCat === category
+                      ? "bg-white text-black font-bold"
+                      : "text-white/80 hover:bg-white/10"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: color }} />
+                  <span className="truncate text-left flex-1">{category}</span>
+                  <span className="text-[7px] opacity-70">{count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Search overlay */}
