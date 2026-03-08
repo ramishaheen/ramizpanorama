@@ -576,6 +576,16 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     return () => window.removeEventListener("mousemove", handler);
   }, []);
 
+  // Listen for city clicks from globe HTML elements
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const city = (e as CustomEvent).detail as CityPreset;
+      if (city) flyToCity(city);
+    };
+    window.addEventListener("globe-city-click", handler);
+    return () => window.removeEventListener("globe-city-click", handler);
+  }, [flyToCity]);
+
   // Scroll AI chat
   useEffect(() => {
     aiScrollRef.current?.scrollTo({ top: aiScrollRef.current.scrollHeight, behavior: "smooth" });
