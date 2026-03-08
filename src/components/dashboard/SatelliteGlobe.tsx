@@ -758,9 +758,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         const group = new THREE.Group();
 
         // Main satellite body
-        const isMilOrISR = sat.category === "Military" || sat.category === "ISR";
+        const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
         const isNav = sat.category === "Navigation";
-        const bodySize = isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
+        const isStation = sat.category === "Space Station";
+        const bodySize = isStation ? 0.9 : isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
 
         const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
         const bodyMat = new THREE.MeshPhongMaterial({
