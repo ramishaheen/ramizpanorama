@@ -1182,6 +1182,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             <div className="text-[9px] font-mono text-white/60 space-y-0.5">
               <div>TYPE: <span className="text-white/90">{hoveredSat.category}</span></div>
               <div>ALT: <span className="text-white/90">{Math.round(hoveredSat.alt)} km</span> • ORBIT: <span className="text-white/90">{getOrbitType(hoveredSat.alt, hoveredSat.inclination, hoveredSat.eccentricity)}</span></div>
+              {hoveredSat.country && <div>COUNTRY: <span className="text-white/90">{hoveredSat.country}</span></div>}
+              {hoveredSat.operator && hoveredSat.operator !== "Unknown" && <div>OPERATOR: <span className="text-white/90">{hoveredSat.operator}</span></div>}
               {hoveredSat.noradId && <div>NORAD: <span className="text-white/90">{hoveredSat.noradId}</span></div>}
             </div>
             <button
