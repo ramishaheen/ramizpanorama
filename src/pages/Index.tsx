@@ -26,6 +26,7 @@ import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
 import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
+import { WeatherTrafficPanel } from "@/components/dashboard/WeatherTrafficPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DndContext,
@@ -44,7 +45,7 @@ import {
 } from "@dnd-kit/sortable";
 
 const STORAGE_KEY = "waros-layout";
-const DEFAULT_LEFT_ORDER = ["risk", "geo-fusion", "escalation", "commodities", "news", "predictions", "telegram"];
+const DEFAULT_LEFT_ORDER = ["risk", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
 
 interface LayoutState {
@@ -122,6 +123,7 @@ const Index = () => {
     earthquakes: true,
     wildfires: true,
     weather: true,
+    traffic: true,
     conflicts: true,
     flights: true,
   });
@@ -215,6 +217,7 @@ const Index = () => {
   const leftWidgets: Record<string, ReactNode> = {
     risk: <RiskScoreGauge score={riskScore} />,
     "geo-fusion": <CountryStatusPanel data={geoFusion.data} loading={geoFusion.loading} error={geoFusion.error} onRefresh={geoFusion.refresh} />,
+    weather: <WeatherTrafficPanel />,
     escalation: <WarEscalationEngine />,
     commodities: <CommodityTracker riskScore={riskScore.overall} />,
     news: <LiveNewsFeed />,

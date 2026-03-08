@@ -417,3 +417,10 @@
   border: 1px solid hsl(var(--border));
   box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
+
+/* Weather city markers */
+.weather-city-marker {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
