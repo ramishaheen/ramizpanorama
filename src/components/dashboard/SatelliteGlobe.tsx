@@ -1277,38 +1277,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       </div>
 
-      {/* Category filters - centered and wrapped for readability */}
-      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto w-[min(96vw,1400px)] px-2">
-        <div className="flex flex-wrap items-center justify-center gap-1.5 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1.5">
+      {/* Category filters - compact vertical sidebar */}
+      <div className="absolute bottom-14 left-3 z-[2002] pointer-events-auto max-h-[calc(100vh-180px)] overflow-y-auto scrollbar-none">
+        <div className="flex flex-col gap-0.5 bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-1.5 py-1.5 w-[120px]">
+          <div className="text-[6px] font-mono uppercase tracking-widest text-center mb-0.5" style={{ color: "rgba(0,255,200,0.4)" }}>SAT TYPES</div>
           <button
             onClick={() => setSelectedCat(null)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
+            className={`flex items-center gap-1 px-1.5 py-[3px] rounded text-[7px] font-mono font-semibold transition-all w-full ${
               !selectedCat ? "bg-white text-black shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"
             }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-white" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
-            ALL ({satellites.length})
+            <span className="w-1.5 h-1.5 rounded-full bg-white flex-shrink-0" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
+            <span className="truncate">ALL</span>
+            <span className="ml-auto text-[6px] opacity-70">{satellites.length}</span>
           </button>
           {categories.map(([cat, color]) => {
             const count = satellites.filter((s) => s.category === cat).length;
-            const CatIcon = cat === "Military" ? Shield
-              : cat === "ISR" ? Eye
-              : cat === "Early Warning" ? Zap
-              : cat === "SIGINT/ELINT" ? Eye
-              : cat === "Communication" ? Radio
-              : cat === "Data Relay" ? Radio
-              : cat === "Navigation" ? Navigation
-              : cat === "Weather" ? Cloud
-              : cat === "Earth Observation" ? Globe
-              : cat === "SAR Imaging" ? Satellite
-              : cat === "Scientific" ? Crosshair
-              : cat === "Space Station" ? Globe
-              : cat === "Technology Demo" ? Cpu
-              : cat === "Amateur/Ham" ? Radio
-              : cat === "Search & Rescue" ? Anchor
-              : cat === "Debris" ? HelpCircle
-              : cat === "Launch Vehicle" ? Rocket
-              : HelpCircle;
             const isDisabled = count === 0;
 
             return (
@@ -1316,16 +1300,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
                 key={cat}
                 disabled={isDisabled}
                 onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
+                className={`flex items-center gap-1 px-1.5 py-[3px] rounded text-[7px] font-mono font-semibold transition-all w-full ${
                   selectedCat === cat
                     ? "bg-white text-black shadow-md"
                     : isDisabled
-                      ? "text-white/30 cursor-not-allowed"
+                      ? "text-white/20 cursor-not-allowed"
                       : "text-white/70 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <CatIcon className="h-3 w-3" style={{ color }} />
-                {cat} ({count})
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                <span className="truncate">{cat}</span>
+                <span className="ml-auto text-[6px] opacity-70">{count}</span>
               </button>
             );
           })}
