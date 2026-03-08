@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, RefreshCw, Satellite, Search, Tag, Tags } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw } from "lucide-react";
 
 interface SatelliteData {
   name: string;
