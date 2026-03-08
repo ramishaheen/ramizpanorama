@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass } from "lucide-react";
 
 interface IntelEvent {
   title: string;
@@ -61,8 +61,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showMarkers, setShowMarkers] = useState(true);
   const [aircraft, setAircraft] = useState<Aircraft[]>([]);
   const [showTrails, setShowTrails] = useState(true);
-  const [showHeatmap, setShowHeatmap] = useState(!!initialEvent); // auto-enable heatmap when coming from event
+  const [showHeatmap, setShowHeatmap] = useState(!!initialEvent);
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
+  const [streetViewActive, setStreetViewActive] = useState(false);
+  const streetViewRef = useRef<any>(null);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
@@ -153,16 +155,18 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const google = (window as any).google;
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat, lng },
-        zoom: initialEvent ? 16 : 6, // street-level for events, regional for default Middle East view
+        zoom: initialEvent ? 16 : 6,
         mapTypeId: "satellite",
         tilt: 45,
         heading: 0,
         mapId: "WAROS_3D_MAP",
         disableDefaultUI: false,
-        zoomControl: true,
+        zoomControl: false,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        gestureHandling: "greedy",
+        maxZoom: 21,
       });
       mapInstanceRef.current = map;
 
@@ -206,6 +210,60 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       mapInstanceRef.current.panTo({ lat, lng });
     }
   }, [lat, lng]);
+
+  // Toggle Street View 360°
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !apiKey) return;
+    const google = (window as any).google;
+    if (!google?.maps) return;
+
+    if (streetViewActive) {
+      const sv = map.getStreetView();
+      sv.setPosition({ lat, lng });
+      sv.setPov({ heading: 0, pitch: 0 });
+      sv.setVisible(true);
+      streetViewRef.current = sv;
+
+      // Listen for close
+      const listener = google.maps.event.addListener(sv, "visible_changed", () => {
+        if (!sv.getVisible()) setStreetViewActive(false);
+      });
+      return () => google.maps.event.removeListener(listener);
+    } else {
+      if (streetViewRef.current) {
+        streetViewRef.current.setVisible(false);
+        streetViewRef.current = null;
+      }
+    }
+  }, [streetViewActive, lat, lng, apiKey]);
+
+  // Map navigation helpers
+  const handleZoomIn = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setZoom(Math.min((map.getZoom() || 6) + 1, 21));
+  }, []);
+  const handleZoomOut = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setZoom(Math.max((map.getZoom() || 6) - 1, 1));
+  }, []);
+  const handleRotate = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setHeading((map.getHeading() || 0) + 45);
+  }, []);
+  const handleResetView = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) {
+      map.setTilt(45);
+      map.setHeading(0);
+      map.setZoom(6);
+      map.panTo({ lat: 29.5, lng: 47.5 });
+    }
+  }, []);
+  const handleToggleTilt = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (map) map.setTilt(map.getTilt() === 0 ? 45 : 0);
+  }, []);
 
   // Helper: convert lat/lng to pixel using Google Maps projection
   const latLngToPixel = useCallback(
@@ -463,6 +521,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             Trails
           </button>
           <button
+            onClick={() => { setStreetViewActive(!streetViewActive); }}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border transition-all ${streetViewActive ? "border-green-500/50 bg-green-500/10 text-green-400" : "border-border text-muted-foreground hover:bg-secondary"}`}
+          >
+            <Compass className="h-3 w-3" />
+            360° View
+          </button>
+          <button
             onClick={() => fetchFlights()}
             className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono uppercase border border-border text-muted-foreground hover:bg-secondary transition-all"
           >
@@ -544,7 +609,42 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* ===== CONFLICT HEATMAP CANVAS ===== */}
+        {/* ===== MAP NAVIGATION CONTROLS ===== */}
+        {apiKey && !streetViewActive && (
+          <div className="absolute right-3 bottom-16 z-[12] flex flex-col gap-1.5 pointer-events-auto">
+            {[
+              { icon: <ZoomIn className="h-3.5 w-3.5" />, action: handleZoomIn, tip: "Zoom In" },
+              { icon: <ZoomOut className="h-3.5 w-3.5" />, action: handleZoomOut, tip: "Zoom Out" },
+              { icon: <RotateCcw className="h-3.5 w-3.5" />, action: handleRotate, tip: "Rotate 45°" },
+              { icon: <Maximize2 className="h-3.5 w-3.5" />, action: handleToggleTilt, tip: "Toggle 3D Tilt" },
+              { icon: <Compass className="h-3.5 w-3.5" />, action: handleResetView, tip: "Reset View" },
+              { icon: <span className="text-[10px] font-bold">360°</span>, action: () => setStreetViewActive(true), tip: "Enter 360° Street View" },
+            ].map((btn, i) => (
+              <button
+                key={i}
+                onClick={btn.action}
+                title={btn.tip}
+                className="w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border border-primary/25 text-primary hover:bg-primary/15 hover:border-primary/50 transition-all"
+                style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
+              >
+                {btn.icon}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ===== STREET VIEW ACTIVE INDICATOR ===== */}
+        {streetViewActive && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
+              <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
+              <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
+              <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">
+                EXIT
+              </button>
+            </div>
+          </div>
+        )}
         <canvas
           ref={heatCanvasRef}
           className="absolute inset-0 w-full h-full z-[8] pointer-events-none"
