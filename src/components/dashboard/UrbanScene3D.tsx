@@ -1981,6 +1981,24 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </button>
         )}
 
+        {/* Live Incidents Overlay */}
+        <LiveIncidentsOverlay mapRef={mapInstanceRef} enabled={showIncidents} lat={lat} lng={lng} />
+
+        {/* Weather Radar Overlay */}
+        <WeatherRadarOverlay mapRef={mapInstanceRef} enabled={showWeatherRadar} opacity={opacityWeather} />
+
+        {/* Satellite Timestamp HUD */}
+        <SatelliteTimestampHUD
+          layers={[
+            { name: "MODIS Aqua", enabled: showNrtModis, date: nrtYesterday, maxZoom: 9, color: "#00bcd4" },
+            { name: "VIIRS SNPP", enabled: showNrtViirs, date: nrtYesterday, maxZoom: 9, color: "#26a69a" },
+            { name: "VIIRS NOAA-20", enabled: showNrtNoaa20, date: nrtYesterday, maxZoom: 9, color: "#4db6ac" },
+            { name: "MODIS Fires", enabled: showNrtFires, date: nrtYesterday, maxZoom: 7, color: "#ff5722" },
+            { name: "Night Lights", enabled: showNrtNightLights, date: "2024-01-01", maxZoom: 8, color: "#7c4dff" },
+          ]}
+          lastRefresh={new Date()}
+        />
+
 
         {/* View Style Presets Bar */}
         {apiKey && (
