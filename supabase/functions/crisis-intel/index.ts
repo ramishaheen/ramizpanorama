@@ -6,9 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// In-memory cache
 let cache: { city: string; data: any; ts: number } | null = null;
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+const CACHE_TTL = 3 * 60 * 1000;
 
 const CITY_COORDS: Record<string, { lat: number; lng: number; zoom: number }> = {
   Baghdad: { lat: 33.31, lng: 44.37, zoom: 12 },
@@ -58,6 +57,124 @@ async function fetchTelegramPosts(): Promise<Array<{ id: number; text: string; d
   return posts;
 }
 
+// --- AI call helpers ---
+
+function buildToolDef() {
+  return {
+    type: "function",
+    function: {
+      name: "report_crisis_events",
+      description: "Report detected crisis anomaly events for the city",
+      parameters: {
+        type: "object",
+        properties: {
+          events: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["protest", "evacuation", "road_closure", "disruption", "incident", "abnormal_activity", "rumor"] },
+                lat: { type: "number" },
+                lng: { type: "number" },
+                radius_km: { type: "number", description: "Affected radius in km" },
+                polygon: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Optional polygon [[lat,lng]...]" },
+                headline: { type: "string", description: "Max 80 chars" },
+                summary: { type: "string", description: "Max 200 chars" },
+                confidence: { type: "number", description: "0-100 score" },
+                confidence_label: { type: "string", enum: ["low", "medium", "high"] },
+                source_count: { type: "number" },
+                sources: { type: "array", items: { type: "object", properties: { name: { type: "string" }, reliability: { type: "string", enum: ["high", "medium", "low"] } }, required: ["name", "reliability"] } },
+                affected_roads: { type: "array", items: { type: "string" } },
+                district: { type: "string" },
+                trend: { type: "string", enum: ["rising", "stable", "declining"] },
+                evacuation_direction: { type: "string", description: "Only for evacuation type" },
+                verified: { type: "boolean" },
+              },
+              required: ["type", "lat", "lng", "radius_km", "headline", "summary", "confidence", "confidence_label", "source_count", "district", "trend", "verified"],
+            },
+          },
+          city_summary: { type: "string", description: "Brief overall city assessment" },
+          threat_level: { type: "string", enum: ["low", "moderate", "elevated", "high", "critical"] },
+        },
+        required: ["events", "city_summary", "threat_level"],
+      },
+    },
+  };
+}
+
+function parseToolCallResult(aiData: any): any | null {
+  const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall?.function?.arguments) {
+    return JSON.parse(toolCall.function.arguments);
+  }
+  return null;
+}
+
+async function callGemini(messages: any[], toolDef: any): Promise<any | null> {
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_API_KEY) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 45000);
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gemini-2.5-flash",
+        messages,
+        tools: [toolDef],
+        tool_choice: { type: "function", function: { name: "report_crisis_events" } },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      console.log(`Gemini returned ${response.status}, skipping`);
+      return null;
+    }
+    return parseToolCallResult(await response.json());
+  } catch (e) {
+    console.error("Gemini call error:", e);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function callLovableGateway(messages: any[], toolDef: any): Promise<any | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) return null;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages,
+        tools: [toolDef],
+        tool_choice: { type: "function", function: { name: "report_crisis_events" } },
+      }),
+    });
+
+    if (!response.ok) {
+      console.log(`Lovable AI returned ${response.status}, skipping`);
+      return null;
+    }
+    return parseToolCallResult(await response.json());
+  } catch (e) {
+    console.error("Lovable AI error:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -70,7 +187,6 @@ serve(async (req) => {
       if (body.city && CITY_COORDS[body.city]) city = body.city;
     } catch {}
 
-    // Check cache
     if (cache && cache.city === city && Date.now() - cache.ts < CACHE_TTL) {
       return new Response(JSON.stringify(cache.data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -79,7 +195,6 @@ serve(async (req) => {
 
     const cityInfo = CITY_COORDS[city];
 
-    // Fetch data sources in parallel
     const [telegramPosts, telegramCache] = await Promise.all([
       fetchTelegramPosts().catch(() => []),
       (async () => {
@@ -95,13 +210,11 @@ serve(async (req) => {
       })().catch(() => []),
     ]);
 
-    // Filter telegram markers near city
     const nearbyMarkers = (telegramCache as any[]).filter((m: any) => {
       const dist = Math.sqrt(Math.pow(m.lat - cityInfo.lat, 2) + Math.pow(m.lng - cityInfo.lng, 2));
       return dist < 3;
     });
 
-    // Build context for AI
     const postsText = telegramPosts.slice(0, 15).map((p, i) => `[${i}] ${p.text.slice(0, 200)}`).join("\n---\n");
     const markersText = nearbyMarkers.slice(0, 10).map((m: any) =>
       `• ${m.headline} (${m.severity}) at ${m.lat},${m.lng}`
@@ -128,133 +241,26 @@ Generate 4-8 realistic events for ${city} covering different types. Include at l
 
 Use precise coordinates within the city bounds (±0.05 of city center).`;
 
-    const toolDef = {
-      type: "function",
-      function: {
-        name: "report_crisis_events",
-        description: "Report detected crisis anomaly events for the city",
-        parameters: {
-          type: "object",
-          properties: {
-            events: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  type: { type: "string", enum: ["protest", "evacuation", "road_closure", "disruption", "incident", "abnormal_activity", "rumor"] },
-                  lat: { type: "number" },
-                  lng: { type: "number" },
-                  radius_km: { type: "number", description: "Affected radius in km" },
-                  polygon: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Optional polygon [[lat,lng]...]" },
-                  headline: { type: "string", description: "Max 80 chars" },
-                  summary: { type: "string", description: "Max 200 chars" },
-                  confidence: { type: "number", description: "0-100 score" },
-                  confidence_label: { type: "string", enum: ["low", "medium", "high"] },
-                  source_count: { type: "number" },
-                  sources: { type: "array", items: { type: "object", properties: { name: { type: "string" }, reliability: { type: "string", enum: ["high", "medium", "low"] } }, required: ["name", "reliability"] } },
-                  affected_roads: { type: "array", items: { type: "string" } },
-                  district: { type: "string" },
-                  trend: { type: "string", enum: ["rising", "stable", "declining"] },
-                  evacuation_direction: { type: "string", description: "Only for evacuation type" },
-                  verified: { type: "boolean" },
-                },
-                required: ["type", "lat", "lng", "radius_km", "headline", "summary", "confidence", "confidence_label", "source_count", "district", "trend", "verified"],
-              },
-            },
-            city_summary: { type: "string", description: "Brief overall city assessment" },
-            threat_level: { type: "string", enum: ["low", "moderate", "elevated", "high", "critical"] },
-          },
-          required: ["events", "city_summary", "threat_level"],
-        },
-      },
-    };
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ];
+    const toolDef = buildToolDef();
 
-    // Try Lovable AI first, fallback to direct Gemini API
-    let result = { events: [], city_summary: "Analysis unavailable", threat_level: "moderate" };
-    let aiSuccess = false;
+    // Attempt 1: Direct Gemini API (primary)
+    let result = await callGemini(messages, toolDef);
 
-    // Attempt 1: Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY) {
-      try {
-        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            tools: [toolDef],
-            tool_choice: { type: "function", function: { name: "report_crisis_events" } },
-          }),
-        });
-
-        if (response.ok) {
-          const aiData = await response.json();
-          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-          if (toolCall?.function?.arguments) {
-            result = JSON.parse(toolCall.function.arguments);
-            aiSuccess = true;
-          }
-        } else {
-          console.log(`Lovable AI returned ${response.status}, falling back to Gemini`);
-        }
-      } catch (e) {
-        console.error("Lovable AI error, falling back:", e);
-      }
+    // Attempt 2: Lovable AI Gateway (fallback)
+    if (!result) {
+      result = await callLovableGateway(messages, toolDef);
     }
 
-    // Attempt 2: Direct Gemini API
-    if (!aiSuccess) {
-      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-      if (!GEMINI_API_KEY) {
-        return new Response(JSON.stringify({ error: "No AI provider available", events: [] }), {
-          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
-      try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${GEMINI_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "gemini-2.5-flash",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            tools: [toolDef],
-            tool_choice: { type: "function", function: { name: "report_crisis_events" } },
-          }),
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`Gemini error ${response.status}: ${text}`);
-        }
-
-        const aiData = await response.json();
-        const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-        if (toolCall?.function?.arguments) {
-          result = JSON.parse(toolCall.function.arguments);
-        }
-      } finally {
-        clearTimeout(timeout);
-      }
+    if (!result) {
+      return new Response(JSON.stringify({ error: "No AI provider available", events: [] }), {
+        status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Add IDs and timestamps
     const events = (result.events || []).map((e: any, i: number) => ({
       ...e,
       id: `ci-${city}-${i}-${Date.now()}`,

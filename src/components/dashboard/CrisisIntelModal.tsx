@@ -571,4 +571,6 @@ export const CrisisIntelModal = ({ onClose }: CrisisIntelModalProps) => {
       )}
     </motion.div>
   );
+
+  return createPortal(content, document.body);
 };
