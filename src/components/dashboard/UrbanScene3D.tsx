@@ -161,6 +161,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const earthquakeMarkersRef = useRef<any[]>([]);
   const trafficLayerRef = useRef<any>(null);
   const weatherOverlayRef = useRef<any>(null);
+  const weatherMarkersRef = useRef<any[]>([]);
+  const [weatherData, setWeatherData] = useState<any[]>([]);
 
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
