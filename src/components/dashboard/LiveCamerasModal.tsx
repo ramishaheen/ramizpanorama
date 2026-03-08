@@ -240,11 +240,21 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={fetchCameras}
-              className="p-1.5 rounded hover:bg-muted transition-colors"
-              title="Refresh"
+              onClick={discoverMoreCameras}
+              className="px-2 py-1 rounded bg-primary/15 border border-primary/30 hover:bg-primary/25 transition-colors text-[10px] font-mono text-primary flex items-center gap-1"
+              title="AI discover more public cameras"
+              disabled={discovering}
             >
-              <RefreshCw className={`h-4 w-4 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
+              <Sparkles className={`h-3.5 w-3.5 ${discovering ? "animate-pulse" : ""}`} />
+              {discovering ? "DISCOVERING" : "AI FIND"}
+            </button>
+            <button
+              onClick={runHealthCheck}
+              className="p-1.5 rounded hover:bg-muted transition-colors"
+              title="Refresh live/offline status"
+              disabled={checkingHealth}
+            >
+              <RefreshCw className={`h-4 w-4 text-muted-foreground ${checkingHealth ? "animate-spin" : ""}`} />
             </button>
             <button onClick={onClose} className="p-1.5 rounded hover:bg-destructive/20 transition-colors">
               <X className="h-4 w-4 text-muted-foreground" />
