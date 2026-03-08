@@ -876,8 +876,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         .labelsData(
           showLabels
             ? filtered
-                .filter((s) => s.category === "Military" || s.category === "ISR" || s.category === "Navigation")
-                .slice(0, 150)
+                .filter((s) => ["Military", "ISR", "Early Warning", "SIGINT/ELINT", "Navigation", "SAR Imaging", "Space Station", "Scientific"].includes(s.category))
+                .slice(0, 200)
             : []
         )
         .labelLat("lat")
