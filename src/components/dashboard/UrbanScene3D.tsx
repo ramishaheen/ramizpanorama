@@ -1259,8 +1259,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                             {ac.is_military && <span className="text-[6px] font-mono font-bold px-1 rounded" style={{ color: "#ef4444", background: "rgba(239,68,68,0.15)" }}>MIL</span>}
                             {isTracked && <Target className="h-2.5 w-2.5 text-green-400 flex-shrink-0" />}
                           </div>
-                          <span className="text-[7px] font-mono text-muted-foreground/60 truncate block">
-                            {ac.type ? `${ac.type} · ` : ""}{Math.round(ac.altitude * 3.281).toLocaleString()}ft · {Math.round(ac.velocity * 1.944)}kts
+                          <span className="text-[7px] font-mono text-muted-foreground/60">
+                            {ac.type ? `${ac.type} · ` : ""}{Math.round(ac.altitude * 3.281).toLocaleString()}ft · {Math.round(ac.velocity * 1.944)}kts · {ac.origin_country}{ac.registration ? ` · ${ac.registration}` : ""}
                           </span>
                         </div>
                       </button>
