@@ -639,12 +639,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         }
       }
 
-      // Prioritize: Military & ISR first, then others
+      // Prioritize: Military & ISR first, then strategic, then bulk
       const prioritized = [
-        ...allSats.filter((s) => s.category === "Military" || s.category === "ISR"),
+        ...allSats.filter((s) => s.category === "Military" || s.category === "ISR" || s.category === "Early Warning" || s.category === "SIGINT/ELINT"),
         ...allSats.filter((s) => s.category === "Navigation"),
+        ...allSats.filter((s) => s.category === "SAR Imaging"),
         ...allSats.filter((s) => s.category === "Weather" || s.category === "Earth Observation"),
-        ...allSats.filter((s) => s.category === "Communication").slice(0, 500),
+        ...allSats.filter((s) => s.category === "Data Relay" || s.category === "Search & Rescue"),
+        ...allSats.filter((s) => s.category === "Scientific" || s.category === "Space Station"),
+        ...allSats.filter((s) => s.category === "Communication").slice(0, 800),
+        ...allSats.filter((s) => s.category === "Technology Demo" || s.category === "Amateur/Ham").slice(0, 200),
+        ...allSats.filter((s) => s.category === "Debris" || s.category === "Launch Vehicle").slice(0, 100),
         ...allSats.filter((s) => s.category === "Unknown").slice(0, 200),
       ];
 
@@ -656,10 +661,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         return true;
       });
 
-      const limited = deduped.slice(0, 3500);
-      rawTLERef.current = rawTLEs.filter((r) => deduped.some((d) => d.name === r.name)).slice(0, 3500);
+      const limited = deduped.slice(0, 5000);
+      rawTLERef.current = rawTLEs.filter((r) => deduped.some((d) => d.name === r.name)).slice(0, 5000);
       setSatellites(limited);
-      console.log(`[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter(r => r.status === 'fulfilled').length} CelesTrak groups`);
+      console.log(`[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter(r => r.status === 'fulfilled').length} CelesTrak groups (${Object.keys(CATEGORY_COLORS).length} categories)`);
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
     } finally {
