@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Zap, Rocket, Cpu, Anchor } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
+import militarySatSprite from "@/assets/military-sat-sprite.png";
 
 interface SatelliteData {
   name: string;
@@ -852,6 +853,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
         const el = globeElRef.current;
 
+        // Load military satellite sprite texture once
+        const milSatTexture = new THREE.TextureLoader().load(militarySatSprite);
+
         const createSatMesh = (sat: SatelliteData) => {
           const color = new THREE.Color(CATEGORY_COLORS[sat.category] || "#d4a843");
           const group = new THREE.Group();
@@ -859,9 +863,45 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
           const isNav = sat.category === "Navigation";
           const isStation = sat.category === "Space Station";
-          const baseSize = isStation ? 6.4 : isMilOrISR ? 4.8 : isNav ? 4.0 : 3.4;
+          const baseSize = isStation ? 6.4 : isMilOrISR ? 5.6 : isNav ? 4.0 : 3.4;
 
-          // Satellite body — flat cross shape (two perpendicular planes = solar panel look)
+          if (isMilOrISR) {
+            // Use sprite image for military/ISR satellites
+            const spriteMat = new THREE.SpriteMaterial({
+              map: milSatTexture,
+              transparent: true,
+              opacity: 0.95,
+              sizeAttenuation: true,
+            });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(baseSize * 0.8, baseSize * 0.8, 1);
+            group.add(sprite);
+
+            // Red glow sphere behind
+            const glowGeo = new THREE.SphereGeometry(baseSize * 0.5, 16, 16);
+            const glowMat = new THREE.MeshBasicMaterial({
+              color: 0xff2222,
+              transparent: true,
+              opacity: 0.15,
+              side: THREE.BackSide,
+            });
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            group.add(glow);
+
+            // Red halo ring
+            const haloGeo = new THREE.RingGeometry(baseSize * 0.35, baseSize * 0.45, 24);
+            const haloMat = new THREE.MeshBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+            const halo = new THREE.Mesh(haloGeo, haloMat);
+            halo.rotation.x = Math.PI / 2;
+            group.add(halo);
+
+            group.rotation.y = Math.random() * Math.PI * 2;
+            const spinSpeed = 0.3 + Math.random() * 0.4;
+            group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2, spinSpeed, isSatGroup: true, satId: sat.noradId || sat.name };
+            return group;
+          }
+
+          // Non-military satellites: keep original mesh
           const panelW = baseSize * 0.5;
           const panelH = baseSize * 0.15;
 
@@ -876,16 +916,13 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             shininess: 120,
           });
 
-          // Panel 1 (horizontal)
           const panel1 = new THREE.Mesh(panelGeo, panelMat);
           group.add(panel1);
 
-          // Panel 2 (perpendicular)
           const panel2 = new THREE.Mesh(panelGeo, panelMat.clone());
           panel2.rotation.y = Math.PI / 2;
           group.add(panel2);
 
-          // Central hub (small sphere)
           const hubGeo = new THREE.SphereGeometry(baseSize * 0.12, 8, 8);
           const hubMat = new THREE.MeshPhongMaterial({
             color: 0xffffff,
@@ -898,34 +935,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const hub = new THREE.Mesh(hubGeo, hubMat);
           group.add(hub);
 
-          // Antenna spikes for Military/ISR types
-          if (isMilOrISR) {
-            const antennaMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 });
-            // Top antenna
-            const antennaGeo1 = new THREE.CylinderGeometry(baseSize * 0.015, baseSize * 0.03, baseSize * 0.5, 4);
-            const antenna1 = new THREE.Mesh(antennaGeo1, antennaMat);
-            antenna1.position.y = baseSize * 0.3;
-            group.add(antenna1);
-            // Antenna tip sphere
-            const tipGeo = new THREE.SphereGeometry(baseSize * 0.04, 6, 6);
-            const tipMat = new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0.95 });
-            const tip = new THREE.Mesh(tipGeo, tipMat);
-            tip.position.y = baseSize * 0.55;
-            group.add(tip);
-            // Side antenna
-            const antennaGeo2 = new THREE.CylinderGeometry(baseSize * 0.01, baseSize * 0.025, baseSize * 0.35, 4);
-            const antenna2 = new THREE.Mesh(antennaGeo2, antennaMat.clone());
-            antenna2.position.set(baseSize * 0.15, baseSize * 0.2, 0);
-            antenna2.rotation.z = -Math.PI / 6;
-            group.add(antenna2);
-            // Bottom stub
-            const antennaGeo3 = new THREE.CylinderGeometry(baseSize * 0.02, baseSize * 0.02, baseSize * 0.2, 4);
-            const antenna3 = new THREE.Mesh(antennaGeo3, antennaMat.clone());
-            antenna3.position.y = -baseSize * 0.2;
-            group.add(antenna3);
-          }
-
-          // Outer glow sphere (pulse effect)
+          // Outer glow sphere
           const glowGeo = new THREE.SphereGeometry(baseSize * 0.4, 16, 16);
           const glowMat = new THREE.MeshBasicMaterial({
             color,
@@ -946,7 +956,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           group.rotation.y = Math.random() * Math.PI * 2;
           group.rotation.x = Math.random() * 0.3;
 
-          // Store data for animation (pulse + spin)
           const spinSpeed = 0.3 + Math.random() * 0.4;
           group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2, spinSpeed, isSatGroup: true, satId: sat.noradId || sat.name };
 
