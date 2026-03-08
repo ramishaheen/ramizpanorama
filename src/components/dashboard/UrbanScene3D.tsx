@@ -194,6 +194,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [viewStyle, setViewStyle] = useState<"normal" | "crt" | "nvg" | "flir" | "noir" | "snow">("normal");
   const [vesselSource, setVesselSource] = useState<string>("loading");
   const [opacityFlights, setOpacityFlights] = useState(1);
   const [opacityVessels, setOpacityVessels] = useState(1);
