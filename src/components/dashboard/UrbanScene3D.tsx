@@ -1432,7 +1432,19 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             </div>
           </div>
         ) : apiKey ? (
-          <div ref={mapDivRef} className="absolute inset-0 w-full h-full" />
+          <div ref={mapDivRef} className="absolute inset-0 w-full h-full" style={{
+            filter: viewStyle === "crt"
+              ? "contrast(1.3) saturate(0.6) brightness(0.9)"
+              : viewStyle === "nvg"
+              ? "brightness(0.7) contrast(1.4) saturate(0) sepia(1) hue-rotate(70deg) brightness(1.3)"
+              : viewStyle === "flir"
+              ? "saturate(0) contrast(1.6) brightness(1.1) invert(1) hue-rotate(180deg)"
+              : viewStyle === "noir"
+              ? "saturate(0) contrast(1.3) brightness(0.85)"
+              : viewStyle === "snow"
+              ? "brightness(1.3) contrast(0.85) saturate(0.3)"
+              : "none",
+          }} />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-card">
             <div className="text-center space-y-2 max-w-sm px-4">
