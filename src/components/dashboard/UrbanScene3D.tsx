@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { X, RefreshCw, Search, Building2, Plane, Navigation, RotateCcw, Eye, EyeOff } from "lucide-react";
 
 interface UrbanSceneProps {
@@ -105,7 +106,19 @@ export const UrbanScene3D = ({ onClose, initialCoords }: UrbanSceneProps) => {
       };
       const { data, error } = await supabase.functions.invoke("live-flights", { body: bbox });
       if (!error && data?.aircraft) {
-        setAircraft(data.aircraft);
+        const newAircraft: Aircraft[] = data.aircraft;
+        // Detect newly appeared military aircraft
+        const prevMilIds = new Set(aircraft.filter(a => a.is_military).map(a => a.icao24));
+        const newMil = newAircraft.filter(a => a.is_military && !prevMilIds.has(a.icao24));
+        if (newMil.length > 0 && aircraft.length > 0) {
+          const names = newMil.slice(0, 3).map(a => a.callsign || a.icao24).join(", ");
+          toast({
+            title: "🛩️ Military Aircraft Detected",
+            description: `${newMil.length} military callsign${newMil.length > 1 ? "s" : ""} entered airspace: ${names}${newMil.length > 3 ? ` +${newMil.length - 3} more` : ""}`,
+            duration: 8000,
+          });
+        }
+        setAircraft(newAircraft);
       }
     } catch (e) {
       console.error("Failed to fetch flights:", e);
