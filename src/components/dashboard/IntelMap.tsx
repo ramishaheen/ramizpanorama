@@ -1326,6 +1326,28 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         </button>
       </div>
 
+      {/* Flight count badge */}
+      {layers.flights && flightData.length > 0 && (
+        <div className="absolute top-14 right-3 z-[1000] flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-lg">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><path d="M12 2L8 9H3l2 3.5L3 16h5l4 6 4-6h5l-2-3.5L21 9h-5L12 2z"/></svg>
+          <span className="text-[10px] font-mono text-foreground">
+            <span className="text-primary font-bold">{flightData.filter(f => !f.is_military).length}</span>
+            <span className="text-muted-foreground"> CIV</span>
+            <span className="text-muted-foreground mx-1">|</span>
+            <span className="text-critical font-bold">{flightData.filter(f => f.is_military).length}</span>
+            <span className="text-muted-foreground"> MIL</span>
+          </span>
+          {trackedFlightId && (
+            <button
+              onClick={() => setTrackedFlightId(null)}
+              className="ml-1 text-[9px] font-mono text-accent bg-accent/10 border border-accent/30 rounded px-1.5 py-0.5 hover:bg-accent/20 transition-colors"
+            >
+              📡 TRACKING
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 3D overlays */}
       {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
       {showUrbanScene && (
