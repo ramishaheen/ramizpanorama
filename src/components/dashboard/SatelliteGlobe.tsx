@@ -862,14 +862,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/60">
           <div>TOP SECRET // SI-TK // NOFORN</div>
           <div>
-            TRACKING {satellites.length} OBJECTS • LEO:{" "}
-            {satellites.filter((s) => s.alt < 2000).length} MEO:{" "}
-            {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length}{" "}
-            GEO:{" "}
+            TRACKING {satellites.length} OBJECTS • MIL:{" "}
+            {satellites.filter((s) => s.category === "Military").length} ISR:{" "}
+            {satellites.filter((s) => s.category === "ISR").length} NAV:{" "}
+            {satellites.filter((s) => s.category === "Navigation").length}
+          </div>
+          <div>
+            LEO: {satellites.filter((s) => s.alt < 2000).length} • MEO:{" "}
+            {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO:{" "}
             {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
           </div>
+          <div>
+            SOURCES: CELESTRAK × 8 GROUPS • NORAD TLE
+          </div>
           <div className="text-white/60">
-            LAST ORBIT UPDATE: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
+            LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
           </div>
         </div>
       </div>
