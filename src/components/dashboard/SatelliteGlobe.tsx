@@ -380,6 +380,8 @@ interface RawSatTLE {
   source?: string;
 }
 
+const SATELLITE_CACHE_KEY = "waros-orbital-cache-v1";
+
 export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeElRef = useRef<HTMLDivElement | null>(null);
@@ -387,6 +389,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const rawTLERef = useRef<RawSatTLE[]>([]);
   const [satellites, setSatellites] = useState<SatelliteData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [globeInitError, setGlobeInitError] = useState<string | null>(null);
   const [showLabels, setShowLabels] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedSat, setSelectedSat] = useState<SatelliteData | null>(null);
@@ -553,8 +556,29 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     }
   }, []);
 
+  const loadSatelliteCache = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(SATELLITE_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { satellites: SatelliteData[]; rawTLE: RawSatTLE[] };
+      if (!parsed?.satellites?.length || !parsed?.rawTLE?.length) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const saveSatelliteCache = useCallback((data: { satellites: SatelliteData[]; rawTLE: RawSatTLE[] }) => {
+    try {
+      localStorage.setItem(SATELLITE_CACHE_KEY, JSON.stringify(data));
+    } catch {
+      // Ignore cache write failures
+    }
+  }, []);
+
   const fetchSatellites = useCallback(async () => {
     setLoading(true);
+    setGlobeInitError(null);
     try {
       const fetchTextWithTimeout = async (url: string, timeoutMs = 9000) => {
         const controller = new AbortController();
@@ -702,22 +726,31 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       });
 
       const limited = deduped.slice(0, 5000);
-      rawTLERef.current = limited
+      const rawTLE = limited
         .map((s) => rawByKey.get(s.noradId || s.name))
         .filter((r): r is RawSatTLE => Boolean(r));
 
+      rawTLERef.current = rawTLE;
       setSatellites(limited);
+      saveSatelliteCache({ satellites: limited, rawTLE });
       console.log(
         `[ORBITAL INTEL] Loaded ${limited.length} satellites from ${responses.filter((r) => r.status === "fulfilled").length} CelesTrak groups`
       );
     } catch (err) {
       console.error("Failed to fetch satellites:", err);
-      setSatellites([]);
-      rawTLERef.current = [];
+      const cached = loadSatelliteCache();
+      if (cached) {
+        rawTLERef.current = cached.rawTLE;
+        setSatellites(cached.satellites);
+        console.log(`[ORBITAL INTEL] Using cached dataset (${cached.satellites.length} satellites)`);
+      } else {
+        setSatellites([]);
+        rawTLERef.current = [];
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadSatelliteCache, saveSatelliteCache]);
 
   useEffect(() => {
     fetchSatellites();
@@ -771,7 +804,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
   // Init globe with 3D satellite objects
   useEffect(() => {
-    if (!wrapperRef.current || satellites.length === 0) return;
+    if (!wrapperRef.current) return;
 
     if (!globeElRef.current) {
       globeElRef.current = document.createElement("div");
@@ -783,244 +816,250 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     let cancelled = false;
 
     const initGlobe = async () => {
-      const [mod, THREE] = await Promise.all([
-        import("globe.gl"),
-        import("three"),
-      ]);
-      const Globe = mod.default;
-      if (cancelled || !globeElRef.current) return;
+      try {
+        const [mod, THREE] = await Promise.all([
+          import("globe.gl"),
+          import("three"),
+        ]);
+        const Globe = mod.default;
+        if (cancelled || !globeElRef.current) return;
 
-      if (globeRef.current) {
-        globeElRef.current.innerHTML = "";
-      }
+        if (globeRef.current) {
+          globeElRef.current.innerHTML = "";
+        }
 
-      const el = globeElRef.current;
-      const filtered = selectedCat
-        ? satellites.filter((s) => s.category === selectedCat)
-        : satellites;
+        const el = globeElRef.current;
+        const filtered = selectedCat
+          ? satellites.filter((s) => s.category === selectedCat)
+          : satellites;
 
-      // Create a reusable satellite 3D mesh factory
-      const createSatMesh = (sat: SatelliteData) => {
-        const color = new THREE.Color(CATEGORY_COLORS[sat.category] || "#d4a843");
-        const group = new THREE.Group();
+        // Create a reusable satellite 3D mesh factory
+        const createSatMesh = (sat: SatelliteData) => {
+          const color = new THREE.Color(CATEGORY_COLORS[sat.category] || "#d4a843");
+          const group = new THREE.Group();
 
-        // Main satellite body
-        const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
-        const isNav = sat.category === "Navigation";
-        const isStation = sat.category === "Space Station";
-        const bodySize = isStation ? 0.9 : isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
+          // Main satellite body
+          const isMilOrISR = sat.category === "Military" || sat.category === "ISR" || sat.category === "Early Warning" || sat.category === "SIGINT/ELINT";
+          const isNav = sat.category === "Navigation";
+          const isStation = sat.category === "Space Station";
+          const bodySize = isStation ? 0.9 : isMilOrISR ? 0.6 : isNav ? 0.45 : 0.3;
 
-        const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
-        const bodyMat = new THREE.MeshPhongMaterial({
-          color: color,
-          emissive: color,
-          emissiveIntensity: 0.6,
-          transparent: true,
-          opacity: 0.9,
-          shininess: 100,
-        });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        group.add(body);
-
-        // Solar panels (two flat rectangles extending from body)
-        const panelWidth = bodySize * 1.8;
-        const panelHeight = bodySize * 0.7;
-        const panelGeo = new THREE.BoxGeometry(panelWidth, 0.04, panelHeight);
-        const panelMat = new THREE.MeshPhongMaterial({
-          color: 0x1a3a5c,
-          emissive: new THREE.Color(0x0a1a2e),
-          emissiveIntensity: 0.3,
-          transparent: true,
-          opacity: 0.85,
-          shininess: 150,
-        });
-
-        const panelLeft = new THREE.Mesh(panelGeo, panelMat);
-        panelLeft.position.set(-(bodySize * 0.5 + panelWidth * 0.5), 0, 0);
-        group.add(panelLeft);
-
-        const panelRight = new THREE.Mesh(panelGeo, panelMat);
-        panelRight.position.set(bodySize * 0.5 + panelWidth * 0.5, 0, 0);
-        group.add(panelRight);
-
-        // Antenna dish for comm/ISR satellites
-        if (sat.category === "Communication" || sat.category === "ISR" || sat.category === "SIGINT/ELINT" || sat.category === "Data Relay" || sat.category === "SAR Imaging") {
-          const dishGeo = new THREE.ConeGeometry(bodySize * 0.3, bodySize * 0.4, 8);
-          const dishMat = new THREE.MeshPhongMaterial({
-            color: 0xcccccc,
+          const bodyGeo = new THREE.BoxGeometry(bodySize, bodySize * 0.5, bodySize * 0.7);
+          const bodyMat = new THREE.MeshPhongMaterial({
+            color: color,
             emissive: color,
-            emissiveIntensity: 0.2,
+            emissiveIntensity: 0.6,
+            transparent: true,
+            opacity: 0.9,
+            shininess: 100,
+          });
+          const body = new THREE.Mesh(bodyGeo, bodyMat);
+          group.add(body);
+
+          // Solar panels (two flat rectangles extending from body)
+          const panelWidth = bodySize * 1.8;
+          const panelHeight = bodySize * 0.7;
+          const panelGeo = new THREE.BoxGeometry(panelWidth, 0.04, panelHeight);
+          const panelMat = new THREE.MeshPhongMaterial({
+            color: 0x1a3a5c,
+            emissive: new THREE.Color(0x0a1a2e),
+            emissiveIntensity: 0.3,
+            transparent: true,
+            opacity: 0.85,
+            shininess: 150,
+          });
+
+          const panelLeft = new THREE.Mesh(panelGeo, panelMat);
+          panelLeft.position.set(-(bodySize * 0.5 + panelWidth * 0.5), 0, 0);
+          group.add(panelLeft);
+
+          const panelRight = new THREE.Mesh(panelGeo, panelMat);
+          panelRight.position.set(bodySize * 0.5 + panelWidth * 0.5, 0, 0);
+          group.add(panelRight);
+
+          // Antenna dish for comm/ISR satellites
+          if (sat.category === "Communication" || sat.category === "ISR" || sat.category === "SIGINT/ELINT" || sat.category === "Data Relay" || sat.category === "SAR Imaging") {
+            const dishGeo = new THREE.ConeGeometry(bodySize * 0.3, bodySize * 0.4, 8);
+            const dishMat = new THREE.MeshPhongMaterial({
+              color: 0xcccccc,
+              emissive: color,
+              emissiveIntensity: 0.2,
+              transparent: true,
+              opacity: 0.8,
+            });
+            const dish = new THREE.Mesh(dishGeo, dishMat);
+            dish.position.set(0, bodySize * 0.4, 0);
+            dish.rotation.x = Math.PI;
+            group.add(dish);
+          }
+
+          // Glow point at center
+          const glowGeo = new THREE.SphereGeometry(bodySize * 0.15, 8, 8);
+          const glowMat = new THREE.MeshBasicMaterial({
+            color: color,
             transparent: true,
             opacity: 0.8,
           });
-          const dish = new THREE.Mesh(dishGeo, dishMat);
-          dish.position.set(0, bodySize * 0.4, 0);
-          dish.rotation.x = Math.PI;
-          group.add(dish);
-        }
+          const glow = new THREE.Mesh(glowGeo, glowMat);
+          group.add(glow);
 
-        // Glow point at center
-        const glowGeo = new THREE.SphereGeometry(bodySize * 0.15, 8, 8);
-        const glowMat = new THREE.MeshBasicMaterial({
-          color: color,
-          transparent: true,
-          opacity: 0.8,
-        });
-        const glow = new THREE.Mesh(glowGeo, glowMat);
-        group.add(glow);
+          // Random slight rotation for visual variety
+          group.rotation.y = Math.random() * Math.PI * 2;
+          group.rotation.z = (Math.random() - 0.5) * 0.3;
 
-        // Random slight rotation for visual variety
-        group.rotation.y = Math.random() * Math.PI * 2;
-        group.rotation.z = (Math.random() - 0.5) * 0.3;
+          return group;
+        };
 
-        return group;
-      };
+        const globe = new Globe(el)
+          .globeImageUrl(
+            "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+          )
+          .bumpImageUrl(
+            "//unpkg.com/three-globe/example/img/earth-topology.png"
+          )
+          .backgroundImageUrl(
+            "//unpkg.com/three-globe/example/img/night-sky.png"
+          )
+          .width(el.clientWidth)
+          .height(el.clientHeight)
+          .atmosphereColor("#1a6b8a")
+          .atmosphereAltitude(0.18)
+          // 3D satellite objects at real orbital positions
+          .objectsData(filtered)
+          .objectLat("lat")
+          .objectLng("lng")
+          .objectAltitude((d: any) => {
+            const s = d as SatelliteData;
+            return Math.min(s.alt / 6371 * 0.3 + 0.01, 0.7);
+          })
+          .objectThreeObject((d: any) => createSatMesh(d as SatelliteData))
+          .onObjectClick((d: any) => {
+            const s = d as SatelliteData;
+            setSelectedSat(s);
+            // Compute orbital trail
+            if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
+              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
+              setOrbitPath(path);
+              setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
+            }
+            globe.pointOfView(
+              { lat: s.lat, lng: s.lng, altitude: 1.5 },
+              1000
+            );
+          })
+          .onObjectHover((d: any) => {
+            if (d) {
+              setHoveredSat(d as SatelliteData);
+            } else {
+              setHoveredSat(null);
+            }
+          })
+          // Labels
+          .labelsData(
+            showLabels
+              ? filtered
+                  .filter((s) => ["Military", "ISR", "Early Warning", "SIGINT/ELINT", "Navigation", "SAR Imaging", "Space Station", "Scientific"].includes(s.category))
+                  .slice(0, 200)
+              : []
+          )
+          .labelLat("lat")
+          .labelLng("lng")
+          .labelAltitude((d: any) => {
+            const s = d as SatelliteData;
+            return Math.min(s.alt / 6371 * 0.3 + 0.02, 0.72);
+          })
+          .labelText("name")
+          .labelSize(0.3)
+          .labelDotRadius(0.08)
+          .labelColor((d: any) => {
+            const s = d as SatelliteData;
+            return CATEGORY_COLORS[s.category] || "rgba(255,213,79,0.7)";
+          })
+          .labelResolution(1)
+          .onLabelClick((d: any) => {
+            const s = d as SatelliteData;
+            setSelectedSat(s);
+            if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
+              const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
+              setOrbitPath(path);
+              setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
+            }
+            globe.pointOfView(
+              { lat: s.lat, lng: s.lng, altitude: 1.5 },
+              1000
+            );
+          })
+          // OSINT rings — conflict zones, military bases, naval choke points
+          .ringsData(OSINT_MARKERS)
+          .ringLat((d: any) => d.lat)
+          .ringLng((d: any) => d.lng)
+          .ringAltitude(0.002)
+          .ringMaxRadius((d: any) => d.type === "conflict" ? 3 : d.type === "naval" ? 2.5 : 1.5)
+          .ringPropagationSpeed((d: any) => d.severity === "critical" ? 4 : d.severity === "high" ? 2.5 : 1.5)
+          .ringRepeatPeriod((d: any) => d.severity === "critical" ? 600 : d.severity === "high" ? 900 : 1200)
+          .ringColor((d: any) => {
+            const colors: Record<string, (t: number) => string> = {
+              conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
+              military: (t: number) => `rgba(251,146,60,${0.8 - t * 0.8})`,
+              naval: (t: number) => `rgba(56,189,248,${0.9 - t * 0.9})`,
+              radar: (t: number) => `rgba(168,85,247,${0.8 - t * 0.8})`,
+            };
+            return colors[d.type] || colors.military;
+          })
+          // Threat arcs — supply lines, patrol routes
+          .arcsData(OSINT_ARCS)
+          .arcStartLat((d: any) => d.startLat)
+          .arcStartLng((d: any) => d.startLng)
+          .arcEndLat((d: any) => d.endLat)
+          .arcEndLng((d: any) => d.endLng)
+          .arcColor((d: any) => [d.color + 'cc', d.color + '44'])
+          .arcAltitudeAutoScale(0.3)
+          .arcStroke(0.6)
+          .arcDashLength(0.4)
+          .arcDashGap(0.15)
+          .arcDashAnimateTime(3000)
+          // OSINT location labels (HTML)
+          .htmlElementsData(OSINT_MARKERS)
+          .htmlLat((d: any) => d.lat)
+          .htmlLng((d: any) => d.lng)
+          .htmlAltitude(0.005)
+          .htmlElement((d: any) => {
+            const el = document.createElement('div');
+            el.style.cssText = `pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;`;
+            const colors: Record<string, string> = { conflict: '#ef4444', military: '#fb923c', naval: '#38bdf8', radar: '#a855f7' };
+            el.style.color = colors[d.type] || '#fb923c';
+            el.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            el.style.borderLeft = `2px solid ${colors[d.type] || '#fb923c'}`;
+            el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
+            return el;
+          });
 
-      const globe = new Globe(el)
-        .globeImageUrl(
-          "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-        )
-        .bumpImageUrl(
-          "//unpkg.com/three-globe/example/img/earth-topology.png"
-        )
-        .backgroundImageUrl(
-          "//unpkg.com/three-globe/example/img/night-sky.png"
-        )
-        .width(el.clientWidth)
-        .height(el.clientHeight)
-        .atmosphereColor("#1a6b8a")
-        .atmosphereAltitude(0.18)
-        // 3D satellite objects at real orbital positions
-        .objectsData(filtered)
-        .objectLat("lat")
-        .objectLng("lng")
-        .objectAltitude((d: any) => {
-          const s = d as SatelliteData;
-          return Math.min(s.alt / 6371 * 0.3 + 0.01, 0.7);
-        })
-        .objectThreeObject((d: any) => createSatMesh(d as SatelliteData))
-        .onObjectClick((d: any) => {
-          const s = d as SatelliteData;
-          setSelectedSat(s);
-          // Compute orbital trail
-          if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
-            const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
-            setOrbitPath(path);
-            setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
-          }
-          globe.pointOfView(
-            { lat: s.lat, lng: s.lng, altitude: 1.5 },
-            1000
-          );
-        })
-        .onObjectHover((d: any) => {
-          if (d) {
-            setHoveredSat(d as SatelliteData);
-          } else {
-            setHoveredSat(null);
-          }
-        })
-        // Labels
-        .labelsData(
-          showLabels
-            ? filtered
-                .filter((s) => ["Military", "ISR", "Early Warning", "SIGINT/ELINT", "Navigation", "SAR Imaging", "Space Station", "Scientific"].includes(s.category))
-                .slice(0, 200)
-            : []
-        )
-        .labelLat("lat")
-        .labelLng("lng")
-        .labelAltitude((d: any) => {
-          const s = d as SatelliteData;
-          return Math.min(s.alt / 6371 * 0.3 + 0.02, 0.72);
-        })
-        .labelText("name")
-        .labelSize(0.3)
-        .labelDotRadius(0.08)
-        .labelColor((d: any) => {
-          const s = d as SatelliteData;
-          return CATEGORY_COLORS[s.category] || "rgba(255,213,79,0.7)";
-        })
-        .labelResolution(1)
-        .onLabelClick((d: any) => {
-          const s = d as SatelliteData;
-          setSelectedSat(s);
-          if (s.inclination != null && s.raan != null && s.meanAnomaly != null && s.meanMotion != null && s.eccentricity != null && s.epochYear != null && s.epochDay != null) {
-            const path = computeOrbitPath(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay, s.alt);
-            setOrbitPath(path);
-            setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
-          }
-          globe.pointOfView(
-            { lat: s.lat, lng: s.lng, altitude: 1.5 },
-            1000
-          );
-        })
-        // OSINT rings — conflict zones, military bases, naval choke points
-        .ringsData(OSINT_MARKERS)
-        .ringLat((d: any) => d.lat)
-        .ringLng((d: any) => d.lng)
-        .ringAltitude(0.002)
-        .ringMaxRadius((d: any) => d.type === "conflict" ? 3 : d.type === "naval" ? 2.5 : 1.5)
-        .ringPropagationSpeed((d: any) => d.severity === "critical" ? 4 : d.severity === "high" ? 2.5 : 1.5)
-        .ringRepeatPeriod((d: any) => d.severity === "critical" ? 600 : d.severity === "high" ? 900 : 1200)
-        .ringColor((d: any) => {
-          const colors: Record<string, (t: number) => string> = {
-            conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
-            military: (t: number) => `rgba(251,146,60,${0.8 - t * 0.8})`,
-            naval: (t: number) => `rgba(56,189,248,${0.9 - t * 0.9})`,
-            radar: (t: number) => `rgba(168,85,247,${0.8 - t * 0.8})`,
-          };
-          return colors[d.type] || colors.military;
-        })
-        // Threat arcs — supply lines, patrol routes
-        .arcsData(OSINT_ARCS)
-        .arcStartLat((d: any) => d.startLat)
-        .arcStartLng((d: any) => d.startLng)
-        .arcEndLat((d: any) => d.endLat)
-        .arcEndLng((d: any) => d.endLng)
-        .arcColor((d: any) => [d.color + 'cc', d.color + '44'])
-        .arcAltitudeAutoScale(0.3)
-        .arcStroke(0.6)
-        .arcDashLength(0.4)
-        .arcDashGap(0.15)
-        .arcDashAnimateTime(3000)
-        // OSINT location labels (HTML)
-        .htmlElementsData(OSINT_MARKERS)
-        .htmlLat((d: any) => d.lat)
-        .htmlLng((d: any) => d.lng)
-        .htmlAltitude(0.005)
-        .htmlElement((d: any) => {
-          const el = document.createElement('div');
-          el.style.cssText = `pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;`;
-          const colors: Record<string, string> = { conflict: '#ef4444', military: '#fb923c', naval: '#38bdf8', radar: '#a855f7' };
-          el.style.color = colors[d.type] || '#fb923c';
-          el.style.backgroundColor = 'rgba(0,0,0,0.5)';
-          el.style.borderLeft = `2px solid ${colors[d.type] || '#fb923c'}`;
-          el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
-          return el;
-        });
+        // Add ambient + directional light for 3D objects
+        const scene = globe.scene();
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 3, 5);
+        scene.add(dirLight);
 
-      // Add ambient + directional light for 3D objects
-      const scene = globe.scene();
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(5, 3, 5);
-      scene.add(dirLight);
+        globe.pointOfView({ lat: 30, lng: 44, altitude: 0.85 }, 1500);
+        globe.controls().autoRotate = false;
+        globe.controls().enableDamping = true;
+        globe.controls().dampingFactor = 0.15;
 
-      globe.pointOfView({ lat: 30, lng: 44, altitude: 0.85 }, 1500);
-      globe.controls().autoRotate = false;
-      globe.controls().enableDamping = true;
-      globe.controls().dampingFactor = 0.15;
-
-      globeRef.current = globe;
+        globeRef.current = globe;
+        setGlobeInitError(null);
+      } catch (error) {
+        console.error("[ORBITAL INTEL] Globe initialization failed:", error);
+        setGlobeInitError("Unable to initialize 3D globe renderer");
+      }
     };
 
     initGlobe();
     return () => {
       cancelled = true;
     };
-  }, [satellites.length > 0, selectedCat, showLabels]);
+  }, [satellites, selectedCat, showLabels]);
 
   // Render orbit trail when a satellite is selected
   useEffect(() => {
@@ -1223,9 +1262,9 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       </div>
 
-      {/* Category filters - bottom center, above city presets */}
-      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
-        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
+      {/* Category filters - centered and wrapped for readability */}
+      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto w-[min(96vw,1400px)] px-2">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1.5">
           <button
             onClick={() => setSelectedCat(null)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-semibold transition-all ${
@@ -1390,6 +1429,24 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               <p className="text-[10px] font-mono text-amber-400/70 uppercase tracking-widest">
                 Acquiring TLE data…
               </p>
+            </div>
+          </div>
+        )}
+
+        {!loading && globeInitError && (
+          <div className="absolute inset-0 z-[2002] flex items-center justify-center pointer-events-none">
+            <div className="rounded-md border border-destructive/30 bg-card/90 px-4 py-3 text-center max-w-sm">
+              <p className="text-xs font-mono text-destructive">3D renderer failed to initialize.</p>
+              <p className="text-[10px] font-mono text-muted-foreground mt-1">Refresh Orbital Intel to retry.</p>
+            </div>
+          </div>
+        )}
+
+        {!loading && !globeInitError && satellites.length === 0 && (
+          <div className="absolute inset-0 z-[2002] flex items-center justify-center pointer-events-none">
+            <div className="rounded-md border border-border bg-card/90 px-4 py-3 text-center max-w-sm">
+              <p className="text-xs font-mono text-foreground">No orbital objects available right now.</p>
+              <p className="text-[10px] font-mono text-muted-foreground mt-1">Try refresh to reacquire TLE feeds.</p>
             </div>
           </div>
         )}
