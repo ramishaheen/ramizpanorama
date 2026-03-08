@@ -108,7 +108,32 @@ export function useLiveDashboard() {
     };
   }, []);
 
-  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh };
+  // Daily filtered counts
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  }, []);
+
+  const dailyCounts = useMemo(() => {
+    const todayAirspace = airspaceAlerts.filter(a => a.active && a.timestamp >= todayStart);
+    const todayVessels = vessels.filter(v => v.timestamp >= todayStart);
+    const todayGeoAlerts = geoAlerts.filter(g => g.timestamp >= todayStart);
+    const todayRockets = rockets.filter(r => r.timestamp >= todayStart);
+    return {
+      airspaceCount: todayAirspace.length,
+      vesselCount: todayVessels.length,
+      alertCount: todayGeoAlerts.length + todayAirspace.length,
+      rocketCount: todayRockets.filter(r => r.status === 'launched' || r.status === 'in_flight').length,
+      impactCount: todayRockets.filter(r => r.status === 'impact' || r.status === 'intercepted').length,
+      totalRockets: todayRockets.length,
+      todayRockets,
+      todayGeoAlerts,
+      todayAirspace: todayAirspace as AirspaceAlert[],
+    };
+  }, [airspaceAlerts, vessels, geoAlerts, rockets, todayStart]);
+
+  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts };
 }
 
 // Mappers from DB rows to app types
