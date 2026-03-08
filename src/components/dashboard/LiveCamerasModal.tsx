@@ -584,13 +584,23 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
               if (!cam.lat || !cam.lng) return null;
               const colors = getMarkerColor(cam.status);
               const isSelected = selectedCamera?.id === cam.id;
+              const size = isSelected ? 32 : 24;
+              const icon = L.divIcon({
+                className: "",
+                html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;cursor:pointer;">
+                  <div style="position:absolute;inset:0;border-radius:50%;background:${colors.fill};opacity:${isSelected ? 0.3 : 0.15};${cam.status === 'active' ? 'animation:pulse 2.5s ease-in-out infinite;' : ''}"></div>
+                  <div style="position:absolute;inset:${isSelected ? 2 : 3}px;border-radius:50%;border:2px solid ${isSelected ? '#06b6d4' : colors.fill};background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;">
+                    <span style="font-size:${isSelected ? 14 : 11}px;filter:drop-shadow(0 0 4px ${colors.fill});">📹</span>
+                  </div>
+                  ${cam.status === 'active' ? `<div style="position:absolute;top:-1px;right:-1px;width:7px;height:7px;border-radius:50%;background:#22c55e;border:1.5px solid #0a0f18;"></div>` : ''}
+                </div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+              });
               return (
-                <CircleMarker key={cam.id} center={[cam.lat, cam.lng]}
-                  radius={isSelected ? 8 : 5}
-                  fillColor={colors.fill} color={isSelected ? "#06b6d4" : colors.stroke}
-                  weight={isSelected ? 3 : 1.5} fillOpacity={0.85}
+                <Marker key={cam.id} position={[cam.lat, cam.lng]} icon={icon}
                   eventHandlers={{ click: () => handleCameraClick(cam) }}>
-                  <Tooltip direction="top" offset={[0, -8]} className="cctv-tip">
+                  <Tooltip direction="top" offset={[0, -14]} className="cctv-tip">
                     <div>
                       <div style={{ fontWeight: "bold" }}>{cam.name}</div>
                       <div style={{ color: "#9ca3af" }}>{cam.city}, {cam.country}</div>
@@ -599,7 +609,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                       </div>
                     </div>
                   </Tooltip>
-                </CircleMarker>
+                </Marker>
               );
             })}
           </MapContainer>
