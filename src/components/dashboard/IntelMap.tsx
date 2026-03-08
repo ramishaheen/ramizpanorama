@@ -1831,6 +1831,24 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             setShowResponseMap(false);
             mapRef.current?.flyTo([lat, lng], zoom || 8, { duration: 1.5 });
           }}
+          earthquakes={earthquakes}
+          wildfires={wildfires}
+          conflicts={conflictEvents}
+          nuclearStations={nuclearMonitors.stations}
+          nuclearFacilities={nuclearMonitors.facilities}
+          airQuality={airQuality}
+          aisVessels={aisVessels}
+          newsMarkers={newsMarkers}
+          telegramMarkers={telegramMarkers}
+          airspaceAlerts={airspaceAlerts}
+          vessels={vessels}
+          geoAlerts={geoAlerts}
+          rockets={rockets}
+          flightCount={flightData.length}
+          layers={layers}
+          onToggleLayer={(layer) => {
+            // Propagate toggle to parent — need to pass through
+          }}
         />
       )}
 
