@@ -865,6 +865,33 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           const hub = new THREE.Mesh(hubGeo, hubMat);
           group.add(hub);
 
+          // Antenna spikes for Military/ISR types
+          if (isMilOrISR) {
+            const antennaMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 });
+            // Top antenna
+            const antennaGeo1 = new THREE.CylinderGeometry(baseSize * 0.015, baseSize * 0.03, baseSize * 0.5, 4);
+            const antenna1 = new THREE.Mesh(antennaGeo1, antennaMat);
+            antenna1.position.y = baseSize * 0.3;
+            group.add(antenna1);
+            // Antenna tip sphere
+            const tipGeo = new THREE.SphereGeometry(baseSize * 0.04, 6, 6);
+            const tipMat = new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0.95 });
+            const tip = new THREE.Mesh(tipGeo, tipMat);
+            tip.position.y = baseSize * 0.55;
+            group.add(tip);
+            // Side antenna
+            const antennaGeo2 = new THREE.CylinderGeometry(baseSize * 0.01, baseSize * 0.025, baseSize * 0.35, 4);
+            const antenna2 = new THREE.Mesh(antennaGeo2, antennaMat.clone());
+            antenna2.position.set(baseSize * 0.15, baseSize * 0.2, 0);
+            antenna2.rotation.z = -Math.PI / 6;
+            group.add(antenna2);
+            // Bottom stub
+            const antennaGeo3 = new THREE.CylinderGeometry(baseSize * 0.02, baseSize * 0.02, baseSize * 0.2, 4);
+            const antenna3 = new THREE.Mesh(antennaGeo3, antennaMat.clone());
+            antenna3.position.y = -baseSize * 0.2;
+            group.add(antenna3);
+          }
+
           // Outer glow sphere (pulse effect)
           const glowGeo = new THREE.SphereGeometry(baseSize * 0.4, 16, 16);
           const glowMat = new THREE.MeshBasicMaterial({
@@ -886,25 +913,33 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           group.rotation.y = Math.random() * Math.PI * 2;
           group.rotation.x = Math.random() * 0.3;
 
-          // Animate pulse
-          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2 };
+          // Store data for animation (pulse + spin)
+          const spinSpeed = 0.3 + Math.random() * 0.4; // radians per second
+          group.userData = { glow, glowMat, baseScale: 1, time: Math.random() * Math.PI * 2, spinSpeed, isSatGroup: true };
 
           return group;
         };
 
-        // Animate satellite glow pulse
+        // Animate satellite glow pulse + spin
+        let lastFrameTime = performance.now();
         const animatePulse = () => {
           const globe = globeRef.current;
           if (!globe) return;
           const scene = globe.scene();
           if (!scene) return;
-          const t = performance.now() * 0.003;
+          const now = performance.now();
+          const dt = (now - lastFrameTime) / 1000; // seconds
+          lastFrameTime = now;
+          const t = now * 0.003;
           scene.traverse((obj: any) => {
-            if (obj.userData?.glow) {
+            if (obj.userData?.isSatGroup) {
+              // Glow pulse
               const phase = t + (obj.userData.time || 0);
               const pulse = 0.85 + Math.sin(phase) * 0.25;
               obj.userData.glow.scale.set(pulse, pulse, pulse);
               obj.userData.glowMat.opacity = 0.1 + Math.sin(phase) * 0.12;
+              // Slow spin
+              obj.rotation.y += (obj.userData.spinSpeed || 0.3) * dt;
             }
           });
           pulseFrameRef.current = requestAnimationFrame(animatePulse);
