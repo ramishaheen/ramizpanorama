@@ -870,7 +870,113 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
   }, [rockets, showRockets]);
 
-  // ===== WEATHER OVERLAY (OpenWeatherMap precipitation tiles) =====
+  // ===== CITY LANDMARK MARKERS =====
+  const CITY_LANDMARKS_3D = [
+    { name: "Tehran", lat: 35.69, lng: 51.39, country: "Iran", landmark: "Azadi Tower", image: "https://images.unsplash.com/photo-1573225935973-40b81e22e6e3?w=320&h=200&fit=crop", pop: "9.1M" },
+    { name: "Isfahan", lat: 32.65, lng: 51.68, country: "Iran", landmark: "Naqsh-e Jahan Square", image: "https://images.unsplash.com/photo-1565447786498-aa4c35d2aa6b?w=320&h=200&fit=crop", pop: "2.2M" },
+    { name: "Shiraz", lat: 29.59, lng: 52.58, country: "Iran", landmark: "Nasir al-Mulk Mosque", image: "https://images.unsplash.com/photo-1564399580075-5dfe19c205f0?w=320&h=200&fit=crop", pop: "1.9M" },
+    { name: "Tabriz", lat: 38.08, lng: 46.29, country: "Iran", landmark: "Tabriz Grand Bazaar", image: "https://images.unsplash.com/photo-1590595978583-3967cf17d2ea?w=320&h=200&fit=crop", pop: "1.8M" },
+    { name: "Mashhad", lat: 36.3, lng: 59.6, country: "Iran", landmark: "Imam Reza Shrine", image: "https://images.unsplash.com/photo-1580834341580-8c17a3a630c1?w=320&h=200&fit=crop", pop: "3.4M" },
+    { name: "Kerman", lat: 30.28, lng: 57.08, country: "Iran", landmark: "Ganjali Khan Complex", image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=320&h=200&fit=crop", pop: "738K" },
+    { name: "Yazd", lat: 31.9, lng: 54.37, country: "Iran", landmark: "Tower of Silence", image: "https://images.unsplash.com/photo-1566236297412-60a3c6883482?w=320&h=200&fit=crop", pop: "530K" },
+    { name: "Amman", lat: 31.95, lng: 35.93, country: "Jordan", landmark: "Roman Theatre", image: "https://images.unsplash.com/photo-1580834341580-8c17a3a630c1?w=320&h=200&fit=crop", pop: "4.1M" },
+    { name: "Petra", lat: 30.33, lng: 35.44, country: "Jordan", landmark: "The Treasury", image: "https://images.unsplash.com/photo-1579606032821-4e6161c81571?w=320&h=200&fit=crop", pop: "—" },
+    { name: "Jerusalem", lat: 31.77, lng: 35.23, country: "Israel/Palestine", landmark: "Dome of the Rock", image: "https://images.unsplash.com/photo-1547483238-2cbf881a559f?w=320&h=200&fit=crop", pop: "936K" },
+    { name: "Tel Aviv", lat: 32.08, lng: 34.78, country: "Israel", landmark: "White City", image: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=320&h=200&fit=crop", pop: "460K" },
+    { name: "Dubai", lat: 25.2, lng: 55.27, country: "UAE", landmark: "Burj Khalifa", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=320&h=200&fit=crop", pop: "3.5M" },
+    { name: "Abu Dhabi", lat: 24.45, lng: 54.65, country: "UAE", landmark: "Sheikh Zayed Mosque", image: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=320&h=200&fit=crop", pop: "1.5M" },
+    { name: "Manama", lat: 26.07, lng: 50.55, country: "Bahrain", landmark: "World Trade Center", image: "https://images.unsplash.com/photo-1580745482925-d3806a527cec?w=320&h=200&fit=crop", pop: "411K" },
+    { name: "Kuwait City", lat: 29.38, lng: 47.99, country: "Kuwait", landmark: "Kuwait Towers", image: "https://images.unsplash.com/photo-1568816132a-27b5c4caa97a?w=320&h=200&fit=crop", pop: "3.1M" },
+    { name: "Doha", lat: 25.29, lng: 51.53, country: "Qatar", landmark: "Museum of Islamic Art", image: "https://images.unsplash.com/photo-1548017544-240c59b4ae3c?w=320&h=200&fit=crop", pop: "1.2M" },
+    { name: "Muscat", lat: 23.59, lng: 58.59, country: "Oman", landmark: "Sultan Qaboos Mosque", image: "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?w=320&h=200&fit=crop", pop: "1.4M" },
+    { name: "Baghdad", lat: 33.31, lng: 44.37, country: "Iraq", landmark: "Al-Shaheed Monument", image: "https://images.unsplash.com/photo-1603565816030-6b389eeb23cb?w=320&h=200&fit=crop", pop: "8.1M" },
+    { name: "Erbil", lat: 36.19, lng: 44.01, country: "Iraq", landmark: "Erbil Citadel", image: "https://images.unsplash.com/photo-1601918774946-7c269a6be31a?w=320&h=200&fit=crop", pop: "880K" },
+    { name: "Basra", lat: 30.51, lng: 47.78, country: "Iraq", landmark: "Shatt al-Arab", image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=320&h=200&fit=crop", pop: "2.1M" },
+    { name: "Riyadh", lat: 24.71, lng: 46.67, country: "Saudi Arabia", landmark: "Kingdom Centre", image: "https://images.unsplash.com/photo-1586724237569-f3d0c1dee8c6?w=320&h=200&fit=crop", pop: "7.6M" },
+    { name: "Mecca", lat: 21.43, lng: 39.83, country: "Saudi Arabia", landmark: "Masjid al-Haram", image: "https://images.unsplash.com/photo-1591604129939-f1efa4d99f7e?w=320&h=200&fit=crop", pop: "2.4M" },
+    { name: "Medina", lat: 24.47, lng: 39.61, country: "Saudi Arabia", landmark: "Al-Masjid an-Nabawi", image: "https://images.unsplash.com/photo-1542816417-0983c9c7ad7c?w=320&h=200&fit=crop", pop: "1.5M" },
+    { name: "Jeddah", lat: 21.54, lng: 39.17, country: "Saudi Arabia", landmark: "King Fahd Fountain", image: "https://images.unsplash.com/photo-1587974928442-77dc3e0748b1?w=320&h=200&fit=crop", pop: "4.7M" },
+    { name: "Beirut", lat: 33.89, lng: 35.5, country: "Lebanon", landmark: "Pigeon Rocks", image: "https://images.unsplash.com/photo-1579606032821-4e6161c81571?w=320&h=200&fit=crop", pop: "2.4M" },
+    { name: "Damascus", lat: 33.51, lng: 36.29, country: "Syria", landmark: "Umayyad Mosque", image: "https://images.unsplash.com/photo-1566236297412-60a3c6883482?w=320&h=200&fit=crop", pop: "2.5M" },
+    { name: "Aleppo", lat: 36.2, lng: 37.16, country: "Syria", landmark: "Citadel of Aleppo", image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=320&h=200&fit=crop", pop: "1.9M" },
+    { name: "Cairo", lat: 30.04, lng: 31.24, country: "Egypt", landmark: "Pyramids of Giza", image: "https://images.unsplash.com/photo-1539768942893-daf53e736495?w=320&h=200&fit=crop", pop: "21M" },
+    { name: "Sana'a", lat: 15.37, lng: 44.19, country: "Yemen", landmark: "Old City", image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=320&h=200&fit=crop", pop: "4M" },
+    { name: "Aden", lat: 12.78, lng: 45.04, country: "Yemen", landmark: "Aden Harbor", image: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=320&h=200&fit=crop", pop: "1.0M" },
+    { name: "Ankara", lat: 39.93, lng: 32.86, country: "Turkey", landmark: "Anıtkabir", image: "https://images.unsplash.com/photo-1589254065878-42c014f2d4d6?w=320&h=200&fit=crop", pop: "5.7M" },
+    { name: "Istanbul", lat: 41.01, lng: 28.98, country: "Turkey", landmark: "Hagia Sophia", image: "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=320&h=200&fit=crop", pop: "15.8M" },
+  ];
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    // Cleanup previous
+    cityMarkersRef.current.forEach(m => m.setMap(null));
+    cityMarkersRef.current = [];
+    if (cityInfoWindowRef.current) { cityInfoWindowRef.current.close(); cityInfoWindowRef.current = null; }
+
+    if (!showCities) return;
+
+    const cityIcon = (name: string) => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24">
+        <rect x="0" y="0" width="120" height="24" rx="6" fill="rgba(0,12,24,0.85)" stroke="rgba(0,220,255,0.4)" stroke-width="1"/>
+        <circle cx="12" cy="12" r="4" fill="#00dcff" opacity="0.9">
+          <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;0.4;0.9" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <text x="22" y="16" font-family="monospace" font-size="10" font-weight="bold" fill="#00dcff">${name}</text>
+      </svg>`;
+      return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+    };
+
+    CITY_LANDMARKS_3D.forEach(city => {
+      const marker = new google.maps.Marker({
+        position: { lat: city.lat, lng: city.lng },
+        map,
+        icon: {
+          url: cityIcon(city.name),
+          scaledSize: new google.maps.Size(120, 24),
+          anchor: new google.maps.Point(0, 12),
+        },
+        zIndex: 60,
+        title: city.name,
+      });
+
+      const infoContent = `
+        <div style="font-family:'SF Mono',monospace;width:220px;background:#0a0e14;border:1px solid rgba(0,220,255,0.3);border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+          <div style="position:relative;height:120px;overflow:hidden;">
+            <img src="${city.image}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.height='0'" />
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,14,20,0.9),transparent 60%);"></div>
+            <div style="position:absolute;bottom:6px;left:8px;right:8px;">
+              <div style="font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.8);">${city.landmark}</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.6);">${city.name}, ${city.country}</div>
+            </div>
+          </div>
+          <div style="padding:6px 8px;display:flex;gap:12px;border-top:1px solid rgba(0,220,255,0.15);">
+            <div>
+              <div style="font-size:7px;color:rgba(0,220,255,0.5);text-transform:uppercase;letter-spacing:0.1em;">Population</div>
+              <div style="font-size:10px;color:#00dcff;font-weight:700;">${city.pop}</div>
+            </div>
+            <div>
+              <div style="font-size:7px;color:rgba(0,220,255,0.5);text-transform:uppercase;letter-spacing:0.1em;">Coords</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.6);">${city.lat.toFixed(2)}°, ${city.lng.toFixed(2)}°</div>
+            </div>
+          </div>
+        </div>`;
+
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("click", () => {
+        if (cityInfoWindowRef.current) cityInfoWindowRef.current.close();
+        infoWindow.open(map, marker);
+        cityInfoWindowRef.current = infoWindow;
+      });
+
+      cityMarkersRef.current.push(marker);
+    });
+  }, [showCities]);
+
+
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
