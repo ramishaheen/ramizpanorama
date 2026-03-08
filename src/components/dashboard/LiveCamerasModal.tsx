@@ -68,42 +68,145 @@ function FlyToHandler({ target }: { target: { center: [number, number]; zoom: nu
 }
 
 // ═══════════════ FEED VIEWER ═══════════════
-function FeedViewer({ cam }: { cam: CameraData }) {
-  const [error, setError] = useState(false);
+function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) {
+  const [embedState, setEmbedState] = useState<"loading" | "ok" | "blocked">("loading");
+  const [snapTick, setSnapTick] = useState(0);
 
-  if (cam.source_type === "embed_page" && cam.embed_url && !error) {
-    const isYouTube = cam.embed_url.includes("youtube.com/embed");
-    return (
-      <iframe
-        src={cam.embed_url}
-        className="w-full h-full"
-        allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
-        allowFullScreen
-        onError={() => setError(true)}
-        {...(!isYouTube ? { sandbox: "allow-scripts allow-same-origin allow-popups" } : {})}
-        referrerPolicy="no-referrer"
-      />
-    );
-  }
+  // Reset state when camera changes
+  useEffect(() => {
+    setEmbedState("loading");
+    setSnapTick(0);
+  }, [cam.id]);
 
-  if (cam.source_type === "snapshot" && cam.snapshot_url) {
+  // Auto-refresh snapshot every 5s
+  useEffect(() => {
+    if (cam.snapshot_url || embedState === "blocked") {
+      const iv = setInterval(() => setSnapTick(t => t + 1), 5000);
+      return () => clearInterval(iv);
+    }
+  }, [cam.snapshot_url, embedState]);
+
+  const getEmbedUrl = (url: string): string | null => {
+    // YouTube - convert any URL to embeddable format
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=1&modestbranding=1`;
+    // Vimeo
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1`;
+    // Dailymotion
+    const dmMatch = url.match(/dailymotion\.com\/video\/([a-z0-9]+)/i);
+    if (dmMatch) return `https://www.dailymotion.com/embed/video/${dmMatch[1]}?autoplay=1&mute=1`;
+    // Already an embed URL with known embeddable domains
+    const embeddableDomains = ["youtube.com/embed", "player.vimeo.com", "dailymotion.com/embed", "livestream.com/accounts", "ustream.tv", "twitch.tv/embed", "iframe.dacast.com", "video.ibm.com"];
+    if (embeddableDomains.some(d => url.includes(d))) return url;
+    // Windy webcams
+    const windyMatch = url.match(/windy\.com\/webcams\/(\d+)/);
+    if (windyMatch) return `https://webcams.windy.com/webcams/public/embed/player/${windyMatch[1]}/day`;
+    return null;
+  };
+
+  // Try embeddable URL first
+  const primaryUrl = cam.embed_url || cam.stream_url || "";
+  const embeddableUrl = getEmbedUrl(primaryUrl);
+  const snapshotSrc = cam.snapshot_url || cam.thumbnail_url;
+
+  // Detect iframe block via timeout (onLoad fires but content is blocked)
+  useEffect(() => {
+    if (embeddableUrl && embedState === "loading") {
+      const timer = setTimeout(() => {
+        // If still loading after 8s, likely blocked
+        setEmbedState(prev => prev === "loading" ? "blocked" : prev);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [embeddableUrl, embedState]);
+
+  // Embeddable iframe available
+  if (embeddableUrl && embedState !== "blocked") {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <img src={cam.snapshot_url} alt={cam.name} className="max-w-full max-h-full object-contain" />
+      <div className="w-full h-full relative">
+        {embedState === "loading" && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: "#0a0f18" }}>
+            <div className="flex flex-col items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-cyan-400 animate-spin" />
+              <span className="text-[9px] text-gray-500 font-mono">CONNECTING TO FEED...</span>
+            </div>
+          </div>
+        )}
+        <iframe
+          key={cam.id}
+          src={embeddableUrl}
+          className="w-full h-full border-0"
+          allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+          allowFullScreen
+          onLoad={() => setEmbedState("ok")}
+          onError={() => setEmbedState("blocked")}
+          referrerPolicy="no-referrer"
+        />
       </div>
     );
   }
 
-  const fallbackUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
+  // Snapshot / thumbnail fallback with auto-refresh
+  if (snapshotSrc) {
+    const imgSrc = `${snapshotSrc}${snapshotSrc.includes("?") ? "&" : "?"}t=${snapTick}`;
+    return (
+      <div className="w-full h-full relative flex items-center justify-center" style={{ background: "#0a0f18" }}>
+        <img src={imgSrc} alt={cam.name} className="max-w-full max-h-full object-contain"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(6,182,212,0.2)" }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="text-[8px] text-cyan-400 font-mono font-bold">SNAPSHOT • AUTO-REFRESH</span>
+        </div>
+        <div className="absolute bottom-2 left-2 text-[8px] text-gray-600 font-mono">
+          FRAME #{snapTick}
+        </div>
+      </div>
+    );
+  }
+
+  // HLS stream - open in-app via video element
+  if (cam.stream_url && (cam.stream_url.endsWith(".m3u8") || cam.source_type === "hls")) {
+    return (
+      <div className="w-full h-full relative" style={{ background: "#0a0f18" }}>
+        <video
+          key={cam.id}
+          src={cam.stream_url}
+          className="w-full h-full object-contain"
+          autoPlay muted controls playsInline
+          onError={() => setEmbedState("blocked")}
+        />
+        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(239,68,68,0.3)" }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-[8px] text-red-400 font-mono font-bold">LIVE STREAM</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Final fallback - tactical "no feed" display
+  const rawUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-      <Video className="h-8 w-8 text-gray-600" />
-      <span className="text-[10px] text-gray-500 font-mono">PREVIEW UNAVAILABLE</span>
-      {fallbackUrl && (
-        <a href={fallbackUrl} target="_blank" rel="noopener noreferrer"
-          className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded text-[10px] text-cyan-400 hover:bg-cyan-500/20 transition-all flex items-center gap-1 font-mono">
-          <ExternalLink className="h-3 w-3" /> OPEN SOURCE
-        </a>
+    <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: "#0a0f18" }}>
+      <div className="relative">
+        <Camera className="h-10 w-10 text-gray-700" />
+        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-500/30 flex items-center justify-center">
+          <AlertTriangle className="h-2 w-2 text-amber-400" />
+        </span>
+      </div>
+      <div className="text-center">
+        <div className="text-[10px] text-gray-400 font-mono font-bold">FEED RESTRICTED</div>
+        <div className="text-[8px] text-gray-600 font-mono mt-0.5">Source blocks inline embedding</div>
+      </div>
+      {rawUrl && (
+        <button onClick={() => {
+          const ytM = rawUrl.match(/youtube\.com\/embed\/([^?&/]+)/i);
+          window.open(ytM ? `https://www.youtube.com/watch?v=${ytM[1]}` : rawUrl, "_blank", "noopener,noreferrer");
+        }}
+          className="px-4 py-2 rounded text-[10px] text-cyan-400 font-mono font-bold flex items-center gap-2 hover:bg-cyan-500/15 transition-all"
+          style={{ background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.25)" }}>
+          <Eye className="h-3.5 w-3.5" /> VIEW LIVE FEED
+        </button>
       )}
     </div>
   );
@@ -562,8 +665,8 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                 </div>
 
                 {/* Feed Viewer */}
-                <div className="h-44 flex-shrink-0" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)", background: "rgba(0,0,0,0.4)" }}>
-                  <FeedViewer cam={selectedCamera} />
+                <div className="h-56 flex-shrink-0" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)", background: "rgba(0,0,0,0.4)" }}>
+                  <FeedViewer cam={selectedCamera} expanded />
                 </div>
 
                 {/* Actions */}
