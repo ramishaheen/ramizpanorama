@@ -146,7 +146,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showTrails, setShowTrails] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(!!initialEvent);
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
-  const [streetViewActive, setStreetViewActive] = useState(true);
+  const [streetViewActive, setStreetViewActive] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(14);
+  const [showZoomIndicator, setShowZoomIndicator] = useState(false);
+  const zoomIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streetViewRef = useRef<any>(null);
   const trailHistoryRef = useRef<Record<string, { lat: number; lng: number; ts: number }[]>>({});
   const [flightsLoading, setFlightsLoading] = useState(false);
@@ -295,8 +298,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (!google?.maps) return;
 
     if (streetViewActive) {
+      const currentZoom = mapInstanceRef.current?.getZoom?.() || 6;
+      if (currentZoom < 12) {
+        toast({ title: "Zoom In Required", description: "Please zoom into a city first (zoom 12+) to activate Street View. Use the preset buttons or zoom controls.", duration: 4000 });
+        setStreetViewActive(false);
+        return;
+      }
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ location: { lat, lng }, radius: 500 }, (data: any, status: any) => {
+      svService.getPanorama({ location: { lat, lng }, radius: 1000 }, (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
           const sv = map.getStreetView();
           sv.setPosition(data.location.latLng);
@@ -308,7 +317,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           });
           return () => google.maps.event.removeListener(listener);
         } else {
-          toast({ title: "360° View Unavailable", description: "No Street View coverage at this location. Try zooming into a city first.", duration: 4000 });
+          toast({ title: "360° View Unavailable", description: `No Street View coverage at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°. Try navigating to a major road or city center.`, duration: 4000 });
           setStreetViewActive(false);
         }
       });
@@ -1078,14 +1087,29 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
   }, [weatherData, showWeather]);
 
+  const flashZoomIndicator = useCallback((zoom: number) => {
+    setZoomLevel(zoom);
+    setShowZoomIndicator(true);
+    if (zoomIndicatorTimerRef.current) clearTimeout(zoomIndicatorTimerRef.current);
+    zoomIndicatorTimerRef.current = setTimeout(() => setShowZoomIndicator(false), 1500);
+  }, []);
+
   const handleZoomIn = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (map) map.setZoom(Math.min((map.getZoom() || 6) + 1, 21));
-  }, []);
+    if (map) {
+      const newZoom = Math.min((map.getZoom() || 6) + 1, 21);
+      map.setZoom(newZoom);
+      flashZoomIndicator(newZoom);
+    }
+  }, [flashZoomIndicator]);
   const handleZoomOut = useCallback(() => {
     const map = mapInstanceRef.current;
-    if (map) map.setZoom(Math.max((map.getZoom() || 6) - 1, 1));
-  }, []);
+    if (map) {
+      const newZoom = Math.max((map.getZoom() || 6) - 1, 1);
+      map.setZoom(newZoom);
+      flashZoomIndicator(newZoom);
+    }
+  }, [flashZoomIndicator]);
   const handleRotate = useCallback(() => {
     const map = mapInstanceRef.current;
     if (map) map.setHeading((map.getHeading() || 0) + 45);
@@ -1471,6 +1495,17 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 {btn.icon}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Zoom level indicator */}
+        {showZoomIndicator && (
+          <div className="absolute right-14 bottom-24 z-[13] pointer-events-none animate-fade-in">
+            <div className="px-3 py-1.5 rounded-lg bg-black/85 backdrop-blur border border-primary/30 font-mono" style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.15)" }}>
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Zoom </span>
+              <span className="text-sm font-bold text-primary">{zoomLevel}</span>
+              <span className="text-[8px] text-muted-foreground/60"> / 21</span>
+            </div>
           </div>
         )}
 
