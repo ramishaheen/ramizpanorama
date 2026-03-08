@@ -317,7 +317,76 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (mapInstanceRef.current) mapInstanceRef.current.panTo({ lat, lng });
   }, [lat, lng]);
 
-  // Toggle Street View 360°
+  // Fetch Mapillary street-level imagery
+  const activateMapillary = useCallback(async (targetLat: number, targetLng: number) => {
+    setMapillaryLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("mapillary", {
+        body: { lat: targetLat, lng: targetLng, radius: 1000, limit: 1 },
+      });
+      if (!error && data?.images?.length > 0) {
+        setMapillaryImageId(data.images[0].id);
+        setMapillaryToken(data.token);
+        setMapillaryActive(true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error("Mapillary fetch error:", e);
+      return false;
+    } finally {
+      setMapillaryLoading(false);
+    }
+  }, []);
+
+  // Load Mapillary viewer script
+  useEffect(() => {
+    if (!mapillaryActive || !mapillaryImageId || !mapillaryToken) return;
+
+    const loadViewer = () => {
+      const container = document.getElementById("mapillary-viewer");
+      if (!container) return;
+
+      // Load Mapillary JS + CSS if not yet loaded
+      if (!(window as any).mapillary) {
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.href = "https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.css";
+        document.head.appendChild(css);
+
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.js";
+        script.onload = () => initViewer(container);
+        document.head.appendChild(script);
+      } else {
+        initViewer(container);
+      }
+    };
+
+    const initViewer = (container: HTMLElement) => {
+      const { Viewer } = (window as any).mapillary;
+      if (mapillaryViewerRef.current) {
+        mapillaryViewerRef.current.remove();
+      }
+      const viewer = new Viewer({
+        accessToken: mapillaryToken,
+        container,
+        imageId: mapillaryImageId,
+      });
+      mapillaryViewerRef.current = viewer;
+    };
+
+    loadViewer();
+
+    return () => {
+      if (mapillaryViewerRef.current) {
+        mapillaryViewerRef.current.remove();
+        mapillaryViewerRef.current = null;
+      }
+    };
+  }, [mapillaryActive, mapillaryImageId, mapillaryToken]);
+
+  // Toggle Street View 360° with Mapillary fallback
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !apiKey) return;
@@ -337,7 +406,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       const targetLng = center?.lng?.() ?? lng;
 
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 5000 }, (data: any, status: any) => {
+      svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 5000 }, async (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
           const sv = map.getStreetView();
           sv.setPosition(data.location.latLng);
@@ -349,7 +418,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           });
           return () => google.maps.event.removeListener(listener);
         } else {
-          toast({ title: "360° View Unavailable", description: `No Street View coverage near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try city center or main roads.`, duration: 4000 });
+          // Fallback to Mapillary
+          toast({ title: "Trying Mapillary…", description: "No Google Street View here. Searching Mapillary street-level imagery…", duration: 3000 });
+          const found = await activateMapillary(targetLat, targetLng);
+          if (!found) {
+            toast({ title: "360° View Unavailable", description: `No street-level imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try a city center.`, duration: 4000 });
+          }
           setStreetViewActive(false);
         }
       });
@@ -359,7 +433,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         streetViewRef.current = null;
       }
     }
-  }, [streetViewActive, lat, lng, apiKey]);
+  }, [streetViewActive, lat, lng, apiKey, activateMapillary]);
 
   // ===== RENDER AIRCRAFT MARKERS =====
   useEffect(() => {
