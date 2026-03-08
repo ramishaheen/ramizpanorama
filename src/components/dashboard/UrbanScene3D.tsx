@@ -2007,7 +2007,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* Live Camera Feed Viewer */}
+        {/* Live Camera Feed Viewer with AI Detection Overlay */}
         {activeCameraFeed && (
           <div className="absolute inset-0 z-[25] pointer-events-auto flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="bg-card/95 backdrop-blur-xl border border-border rounded-lg w-[90%] max-w-3xl max-h-[80vh] overflow-hidden shadow-2xl">
@@ -2021,13 +2021,16 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button onClick={() => setShowAIDetection(!showAIDetection)} className={`flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-mono uppercase border transition-all ${showAIDetection ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400" : "border-border/40 text-muted-foreground hover:bg-white/5"}`}>
+                    <Eye className="h-2.5 w-2.5" /> AI Detection
+                  </button>
                   <span className="text-[8px] font-mono text-muted-foreground">{activeCameraFeed.city}, {activeCameraFeed.country}</span>
                   <button onClick={() => setActiveCameraFeed(null)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-secondary transition-colors">
                     <X className="h-4 w-4 text-muted-foreground" />
                   </button>
                 </div>
               </div>
-              <div className="aspect-video bg-black">
+              <div className="aspect-video bg-black relative">
                 {activeCameraFeed.embed_url ? (
                   <iframe
                     src={activeCameraFeed.embed_url}
@@ -2048,10 +2051,48 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     <span className="text-muted-foreground text-sm font-mono">No stream available</span>
                   </div>
                 )}
+                {/* AI Object Detection Overlay */}
+                {showAIDetection && aiDetections.length > 0 && (
+                  <div className="absolute inset-0 pointer-events-none z-[5]">
+                    {aiDetections.map((det) => (
+                      <div key={det.id} className="absolute transition-all duration-700"
+                        style={{
+                          left: `${det.x}%`, top: `${det.y}%`,
+                          width: `${det.w}%`, height: `${det.h}%`,
+                        }}>
+                        <div className="w-full h-full border-2 rounded-sm" style={{
+                          borderColor: det.color,
+                          boxShadow: `0 0 8px ${det.color}50, inset 0 0 4px ${det.color}20`,
+                        }}>
+                          {/* Corner brackets */}
+                          <div className="absolute -top-px -left-px w-2 h-2 border-t-2 border-l-2 rounded-tl-sm" style={{ borderColor: det.color }} />
+                          <div className="absolute -top-px -right-px w-2 h-2 border-t-2 border-r-2 rounded-tr-sm" style={{ borderColor: det.color }} />
+                          <div className="absolute -bottom-px -left-px w-2 h-2 border-b-2 border-l-2 rounded-bl-sm" style={{ borderColor: det.color }} />
+                          <div className="absolute -bottom-px -right-px w-2 h-2 border-b-2 border-r-2 rounded-br-sm" style={{ borderColor: det.color }} />
+                        </div>
+                        {/* Label */}
+                        <div className="absolute -top-4 left-0 flex items-center gap-1 px-1 py-0.5 rounded-sm text-[7px] font-mono font-bold whitespace-nowrap"
+                          style={{ background: `${det.color}dd`, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>
+                          {det.label} {(det.confidence * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    ))}
+                    {/* AI HUD overlay info */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur border border-cyan-500/30">
+                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-[8px] font-mono text-cyan-400 font-bold">AI DETECTION</span>
+                      <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
+                    </div>
+                    <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
+                      <span className="text-[7px] font-mono text-muted-foreground">MODEL: YOLOv8-OSINT</span>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="px-4 py-2 border-t border-border/50 flex items-center gap-3">
                 <span className="text-[8px] font-mono text-muted-foreground">📍 {activeCameraFeed.lat.toFixed(4)}°N, {activeCameraFeed.lng.toFixed(4)}°E</span>
                 <span className="text-[8px] font-mono text-muted-foreground">SRC: {activeCameraFeed.source_name}</span>
+                {showAIDetection && <span className="text-[8px] font-mono text-cyan-400">🔍 {aiDetections.length} detections</span>}
                 <button onClick={() => {
                   if (mapInstanceRef.current) {
                     mapInstanceRef.current.panTo({ lat: activeCameraFeed.lat, lng: activeCameraFeed.lng });
