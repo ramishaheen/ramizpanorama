@@ -14,7 +14,8 @@ export interface ImageryLayer {
   category: "satellite" | "terrain" | "weather" | "analysis";
 }
 
-const today = new Date().toISOString().split("T")[0];
+// Use yesterday's date — NASA GIBS NRT has 3-6hr processing delay
+const today = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; })();
 
 export const DEFAULT_IMAGERY_LAYERS: ImageryLayer[] = [
   // ── Base Maps ──
