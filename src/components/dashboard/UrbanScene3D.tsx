@@ -28,6 +28,8 @@ interface Aircraft {
   altitude: number;
   velocity: number;
   heading: number;
+  registration?: string;
+  type?: string;
   vertical_rate: number;
   is_military: boolean;
 }
@@ -309,6 +311,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               ${isMil ? 'MILITARY' : 'CIVIL'}
             </span>
           </div>
+          ${ac.type || ac.registration ? `<div style="display:flex;gap:8px;margin-bottom:6px;font-size:9px;color:#7d8590;">
+            ${ac.type ? `<span>✈ ${ac.type}</span>` : ''}
+            ${ac.registration ? `<span>📋 ${ac.registration}</span>` : ''}
+          </div>` : ''}
           <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
             <span style="color:#7d8590;">ICAO</span><span>${ac.icao24}</span>
             <span style="color:#7d8590;">ORIGIN</span><span>${ac.origin_country}</span>
@@ -918,7 +924,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                             {isTracked && <Target className="h-2.5 w-2.5 text-green-400 flex-shrink-0" />}
                           </div>
                           <span className="text-[7px] font-mono text-muted-foreground/60">
-                            {Math.round(ac.altitude * 3.281).toLocaleString()}ft · {Math.round(ac.velocity * 1.944)}kts · {ac.origin_country}
+                            {ac.type ? `${ac.type} · ` : ""}{Math.round(ac.altitude * 3.281).toLocaleString()}ft · {Math.round(ac.velocity * 1.944)}kts · {ac.origin_country}{ac.registration ? ` · ${ac.registration}` : ""}
                           </span>
                         </div>
                       </button>

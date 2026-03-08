@@ -268,6 +268,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     icao24: string; callsign: string; origin_country: string;
     lat: number; lng: number; altitude: number; velocity: number;
     heading: number; vertical_rate: number; is_military: boolean;
+    registration?: string; type?: string;
   }
   const [flightData, setFlightData] = useState<FlightAircraft[]>([]);
   const flightSnapshotRef = useRef<FlightAircraft[]>([]);
@@ -1164,6 +1165,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             ${isMil ? "MIL" : "CIV"}
           </span>
         </div>
+        ${ac.type || ac.registration ? `<div style="display:flex;gap:8px;margin-bottom:5px;font-size:9px;color:#aaa;">
+          ${ac.type ? `<span>✈ ${ac.type}</span>` : ""}
+          ${ac.registration ? `<span>📋 ${ac.registration}</span>` : ""}
+        </div>` : ""}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10px;">
           <div>🌍 ${ac.origin_country}</div>
           <div>📐 HDG ${Math.round(ac.heading)}°</div>
