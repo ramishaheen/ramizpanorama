@@ -292,7 +292,7 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
     lastFetchRef.current = bbox;
 
     setLoading(true);
-    const query = `[out:json][timeout:15];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|residential|service|unclassified|living_street)$"](${bbox});out geom;`;
+    const query = `[out:json][timeout:15];way["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|residential|service|unclassified|living_street|road)$"](${bbox});out geom;`;
     const body = `data=${encodeURIComponent(query)}`;
 
     let data: any = null;
