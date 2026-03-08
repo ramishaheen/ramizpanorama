@@ -1776,6 +1776,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             {loadingCCTV ? "LOADING..." : showArabCCTV ? `ARAB CCTV (${arabCameras.length})` : "ARAB CCTV"}
           </span>
         </button>
+        <button
+          onClick={() => setShowResponseMap(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+          title="Crisis Awareness — Response Map"
+        >
+          <ShieldAlert className="h-3.5 w-3.5 text-emerald-400 group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">RESPONSE MAP</span>
+        </button>
       </div>
 
 
