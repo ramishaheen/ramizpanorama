@@ -549,10 +549,18 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
         const road = roads[p.roadIdx];
         if (!road || road.points.length < 2) return;
 
-        const totalSegments = road.points.length - 1;
-        const segFloat = p.progress * totalSegments;
-        const segIdx = Math.min(Math.floor(segFloat), totalSegments - 1);
-        const segProgress = segFloat - segIdx;
+        const stops = road.progressStops;
+        if (!stops || stops.length < 2) return;
+
+        let segIdx = 0;
+        while (segIdx < stops.length - 2 && p.progress > stops[segIdx + 1]) {
+          segIdx++;
+        }
+
+        const segStart = stops[segIdx];
+        const segEnd = stops[segIdx + 1];
+        const segRange = Math.max(0.000001, segEnd - segStart);
+        const segProgress = (p.progress - segStart) / segRange;
 
         const p1 = road.points[segIdx];
         const p2 = road.points[segIdx + 1];
