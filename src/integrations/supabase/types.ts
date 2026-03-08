@@ -53,6 +53,72 @@ export type Database = {
         }
         Relationships: []
       }
+      cameras: {
+        Row: {
+          category: Database["public"]["Enums"]["camera_category"]
+          city: string
+          country: string
+          created_at: string
+          embed_url: string | null
+          error_message: string | null
+          id: string
+          is_active: boolean
+          last_checked_at: string | null
+          lat: number
+          lng: number
+          name: string
+          snapshot_url: string | null
+          source_name: string
+          source_type: Database["public"]["Enums"]["camera_source_type"]
+          status: Database["public"]["Enums"]["camera_status"]
+          stream_url: string | null
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["camera_category"]
+          city: string
+          country: string
+          created_at?: string
+          embed_url?: string | null
+          error_message?: string | null
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          lat?: number
+          lng?: number
+          name: string
+          snapshot_url?: string | null
+          source_name?: string
+          source_type?: Database["public"]["Enums"]["camera_source_type"]
+          status?: Database["public"]["Enums"]["camera_status"]
+          stream_url?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["camera_category"]
+          city?: string
+          country?: string
+          created_at?: string
+          embed_url?: string | null
+          error_message?: string | null
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          lat?: number
+          lng?: number
+          name?: string
+          snapshot_url?: string | null
+          source_name?: string
+          source_type?: Database["public"]["Enums"]["camera_source_type"]
+          status?: Database["public"]["Enums"]["camera_status"]
+          stream_url?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geo_alerts: {
         Row: {
           id: string
@@ -296,6 +362,9 @@ export type Database = {
     }
     Enums: {
       airspace_alert_type: "NOTAM" | "TFR" | "CLOSURE"
+      camera_category: "traffic" | "tourism" | "ports" | "weather" | "public"
+      camera_source_type: "hls" | "snapshot" | "embed_page"
+      camera_status: "active" | "inactive" | "error" | "unknown"
       geo_alert_type: "DIPLOMATIC" | "MILITARY" | "ECONOMIC" | "HUMANITARIAN"
       risk_trend: "rising" | "falling" | "stable"
       rocket_status: "launched" | "in_flight" | "intercepted" | "impact"
@@ -430,6 +499,9 @@ export const Constants = {
   public: {
     Enums: {
       airspace_alert_type: ["NOTAM", "TFR", "CLOSURE"],
+      camera_category: ["traffic", "tourism", "ports", "weather", "public"],
+      camera_source_type: ["hls", "snapshot", "embed_page"],
+      camera_status: ["active", "inactive", "error", "unknown"],
       geo_alert_type: ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"],
       risk_trend: ["rising", "falling", "stable"],
       rocket_status: ["launched", "in_flight", "intercepted", "impact"],
