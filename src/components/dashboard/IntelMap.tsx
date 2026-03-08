@@ -555,6 +555,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       newsGroupRef.current?.clearLayers();
       telegramGroupRef.current?.clearLayers();
       userItemsGroupRef.current?.clearLayers();
+      flightGroupRef.current?.clearLayers();
+      if (flightIntervalRef.current) clearInterval(flightIntervalRef.current);
       if (weatherTileRef.current) map.removeLayer(weatherTileRef.current);
       tileLayersRef.current.clear();
       map.remove();
@@ -569,6 +571,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       newsGroupRef.current = null;
       telegramGroupRef.current = null;
       userItemsGroupRef.current = null;
+      flightGroupRef.current = null;
       weatherTileRef.current = null;
     };
   }, []);
