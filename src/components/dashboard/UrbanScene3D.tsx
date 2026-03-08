@@ -203,6 +203,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [mapillaryLoading, setMapillaryLoading] = useState(false);
   const mapillaryViewerRef = useRef<any>(null);
 
+  // Live camera layer
+  const [showCameras, setShowCameras] = useState(true);
+  const [cameras, setCameras] = useState<any[]>([]);
+  const cameraMarkersRef = useRef<any[]>([]);
+  const [activeCameraFeed, setActiveCameraFeed] = useState<any>(null);
+  
+  // City intel HUD (shown in street-level mode)
+  const [cityIntel, setCityIntel] = useState<{ weather?: any; alerts?: number; cameras?: number; traffic?: string } | null>(null);
+
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [viewStyle, setViewStyle] = useState<"normal" | "crt" | "nvg" | "flir" | "noir" | "snow">("normal");
