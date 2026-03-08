@@ -1123,6 +1123,25 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           } : undefined}
         />
       )}
+      {showLiveCameras && (
+        <LiveCamerasModal
+          onClose={() => setShowLiveCameras(false)}
+          onShowOnMap={(lat, lng, name) => {
+            setShowLiveCameras(false);
+            if (mapRef.current) {
+              mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
+              L.marker([lat, lng], {
+                icon: L.divIcon({
+                  className: "",
+                  html: `<div style="background:hsl(190,100%,50%);border:2px solid white;border-radius:50%;width:14px;height:14px;box-shadow:0 0 10px hsl(190,100%,50%)"></div>`,
+                  iconSize: [14, 14],
+                  iconAnchor: [7, 7],
+                }),
+              }).addTo(mapRef.current).bindPopup(`<b style="font-family:monospace;font-size:11px">📹 ${name}</b>`).openPopup();
+            }
+          }}
+        />
+      )}
 
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
