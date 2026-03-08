@@ -256,6 +256,13 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
   const [orbitColor, setOrbitColor] = useState<string>("#ffffff");
+  const [hoveredSat, setHoveredSat] = useState<SatelliteData | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [aiChatSat, setAiChatSat] = useState<SatelliteData | null>(null);
+  const [aiMessages, setAiMessages] = useState<{ role: string; content: string }[]>([]);
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiScrollRef = useRef<HTMLDivElement>(null);
   const satsRef = useRef<SatelliteData[]>([]);
 
   useEffect(() => {
