@@ -44,7 +44,7 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
 
 // In-memory cache to avoid hammering the AI gateway
 let cachedResult: { data: unknown; timestamp: number } | null = null;
-const CACHE_TTL_MS = 120_000; // 2 minutes
+const CACHE_TTL_MS = 86_400_000; // 24 hours
 
 const fallbackCitizenSecurity = {
   countries: [
