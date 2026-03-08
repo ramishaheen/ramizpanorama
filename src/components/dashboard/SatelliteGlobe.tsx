@@ -171,13 +171,14 @@ function getOrbitType(alt: number, _inc?: number, ecc?: number): string {
 }
 
 const CITY_PRESETS = [
-  { name: "Dubai", lat: 25.2, lng: 55.27 },
-  { name: "Tehran", lat: 35.69, lng: 51.39 },
-  { name: "Baghdad", lat: 33.31, lng: 44.37 },
-  { name: "Jerusalem", lat: 31.77, lng: 35.23 },
-  { name: "Riyadh", lat: 24.71, lng: 46.67 },
-  { name: "Washington", lat: 38.91, lng: -77.04 },
+  { name: "Jordan", lat: 31.95, lng: 35.93 },
+  { name: "Israel", lat: 31.77, lng: 35.23 },
+  { name: "UAE", lat: 24.45, lng: 54.65 },
+  { name: "Bahrain", lat: 26.07, lng: 50.55 },
+  { name: "Iraq", lat: 33.31, lng: 44.37 },
+  { name: "KSA", lat: 24.71, lng: 46.67 },
   { name: "Moscow", lat: 55.75, lng: 37.62 },
+  { name: "China", lat: 35.86, lng: 104.2 },
   { name: "Beijing", lat: 39.9, lng: 116.4 },
 ];
 
@@ -636,11 +637,11 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       <div className="absolute top-20 left-3 z-[2002] space-y-1 pointer-events-auto">
         <button
           onClick={() => setSelectedCat(null)}
-          className={`flex items-center gap-1.5 text-[8px] font-mono transition-all ${
-            !selectedCat ? "text-primary opacity-100" : "text-muted-foreground/50 opacity-60"
+          className={`flex items-center gap-1.5 text-[9px] font-mono font-semibold transition-all ${
+            !selectedCat ? "text-white opacity-100" : "text-white/50 opacity-60"
           } hover:opacity-100`}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+          <span className="w-1.5 h-1.5 rounded-full bg-white" />
           ALL ({satellites.length})
         </button>
         {categories.map(([cat, color]) => {
@@ -652,19 +653,19 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
               onClick={() =>
                 setSelectedCat(selectedCat === cat ? null : cat)
               }
-              className={`flex items-center gap-1.5 text-[8px] font-mono transition-all ${
+              className={`flex items-center gap-1.5 text-[9px] font-mono font-semibold transition-all ${
                 selectedCat === cat
                   ? "opacity-100"
                   : selectedCat
                   ? "opacity-30"
-                  : "opacity-70"
+                  : "opacity-80"
               } hover:opacity-100`}
             >
               <span
                 className="w-1.5 h-1.5 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span style={{ color }}>
+              <span className="text-white">
                 {cat} ({count})
               </span>
             </button>
@@ -676,10 +677,10 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       <div className="absolute top-20 right-3 z-[2002] space-y-1.5 pointer-events-auto w-28">
         <button
           onClick={() => setShowLabels(!showLabels)}
-          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[8px] font-mono uppercase border transition-all ${
+          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border transition-all ${
             showLabels
-              ? "border-primary/50 bg-primary/15 text-primary"
-              : "border-border/30 text-muted-foreground/50 hover:border-border"
+              ? "border-white/50 bg-white/15 text-white"
+              : "border-white/20 text-white/70 hover:text-white hover:border-white/40"
           }`}
         >
           {showLabels ? (
@@ -691,17 +692,17 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </button>
         <button
           onClick={() => setShowSearch(!showSearch)}
-          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[8px] font-mono uppercase border transition-all ${
+          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border transition-all ${
             showSearch
-              ? "border-primary/50 bg-primary/15 text-primary"
-              : "border-border/30 text-muted-foreground/50 hover:border-border"
+              ? "border-white/50 bg-white/15 text-white"
+              : "border-white/20 text-white/70 hover:text-white hover:border-white/40"
           }`}
         >
           <Search className="h-2.5 w-2.5" /> Search
         </button>
         <button
           onClick={fetchSatellites}
-          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[8px] font-mono uppercase border border-border/30 text-muted-foreground/50 hover:border-border transition-all"
+          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-all"
         >
           <RefreshCw
             className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`}
@@ -710,7 +711,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </button>
         <button
           onClick={onClose}
-          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[8px] font-mono uppercase border border-red-500/30 text-red-400/70 hover:bg-red-500/10 transition-all"
+          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border border-red-400/40 text-red-300 hover:bg-red-500/10 transition-all"
         >
           <X className="h-2.5 w-2.5" /> Close
         </button>
