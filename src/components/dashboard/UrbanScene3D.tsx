@@ -1396,13 +1396,34 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   }, [showWeather]);
 
   // ===== NASA NRT SATELLITE OVERLAYS ON 3D MAP =====
-  const nrtToday = new Date().toISOString().split("T")[0];
-  const nrtLayers = [
-    { show: showNrtModis, ref: nrtModisRef, opacity: opacityNrtModis, name: "MODIS Aqua NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Aqua_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
-    { show: showNrtViirs, ref: nrtViirsRef, opacity: opacityNrtViirs, name: "VIIRS SNPP NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
-    { show: showNrtNoaa20, ref: nrtNoaa20Ref, opacity: opacityNrtNoaa20, name: "VIIRS NOAA-20 NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nrtToday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
-    { show: showNrtFires, ref: nrtFiresRef, opacity: opacityNrtFires, name: "MODIS Fires NRT", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Thermal_Anomalies_Day/default/${nrtToday}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png` },
-    { show: showNrtNightLights, ref: nrtNightLightsRef, opacity: opacityNrtNightLights, name: "VIIRS Night Lights", url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_DayNightBand_AtSensor_M15/default/2024-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png` },
+  // GIBS NRT imagery has ~3-6hr delay; use yesterday for reliability, fallback to day before
+  const nrtYesterday = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split("T")[0];
+  })();
+  const nrtDayBefore = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 2);
+    return d.toISOString().split("T")[0];
+  })();
+
+  const nrtLayerConfigs = [
+    { show: showNrtModis, ref: nrtModisRef, opacity: opacityNrtModis, name: "MODIS Aqua NRT", maxNativeZoom: 9,
+      url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Aqua_CorrectedReflectance_TrueColor/default/${nrtYesterday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+      fallback: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Aqua_CorrectedReflectance_TrueColor/default/${nrtDayBefore}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtViirs, ref: nrtViirsRef, opacity: opacityNrtViirs, name: "VIIRS SNPP NRT", maxNativeZoom: 9,
+      url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nrtYesterday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+      fallback: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${nrtDayBefore}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtNoaa20, ref: nrtNoaa20Ref, opacity: opacityNrtNoaa20, name: "VIIRS NOAA-20 NRT", maxNativeZoom: 9,
+      url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nrtYesterday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+      fallback: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_NOAA20_CorrectedReflectance_TrueColor/default/${nrtDayBefore}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg` },
+    { show: showNrtFires, ref: nrtFiresRef, opacity: opacityNrtFires, name: "MODIS Fires NRT", maxNativeZoom: 7,
+      url: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Thermal_Anomalies_Day/default/${nrtYesterday}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png`,
+      fallback: `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_Thermal_Anomalies_Day/default/${nrtDayBefore}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png` },
+    { show: showNrtNightLights, ref: nrtNightLightsRef, opacity: opacityNrtNightLights, name: "VIIRS Night Lights", maxNativeZoom: 8,
+      url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_DayNightBand_AtSensor_M15/default/2024-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png",
+      fallback: "" },
   ];
 
   useEffect(() => {
@@ -1411,11 +1432,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     if (!map || !google?.maps) return;
 
     // Remove all existing NRT overlays
-    nrtLayers.forEach(layer => {
+    nrtLayerConfigs.forEach(layer => {
       if (layer.ref.current) {
-        const idx = map.overlayMapTypes.indexOf(layer.ref.current);
-        if (idx >= 0) map.overlayMapTypes.removeAt(idx);
-        // Fallback: iterate
         for (let i = map.overlayMapTypes.getLength() - 1; i >= 0; i--) {
           if (map.overlayMapTypes.getAt(i) === layer.ref.current) {
             map.overlayMapTypes.removeAt(i);
@@ -1426,13 +1444,26 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
 
     // Add enabled NRT overlays
-    nrtLayers.forEach(layer => {
+    nrtLayerConfigs.forEach(layer => {
       if (layer.show) {
         const tileType = new google.maps.ImageMapType({
           getTileUrl: (coord: any, zoom: number) => {
-            const maxZoom = layer.url.includes("Level7") ? 7 : layer.url.includes("Level8") ? 8 : 9;
-            if (zoom > maxZoom) return null;
-            return layer.url.replace("{z}", zoom.toString()).replace("{y}", coord.y.toString()).replace("{x}", coord.x.toString());
+            // Clamp zoom to max native zoom — shows last available resolution when zoomed further
+            const effectiveZoom = Math.min(zoom, layer.maxNativeZoom);
+            // Scale coordinates for the effective zoom level
+            if (zoom > layer.maxNativeZoom) {
+              const scale = Math.pow(2, zoom - effectiveZoom);
+              const scaledX = Math.floor(coord.x / scale);
+              const scaledY = Math.floor(coord.y / scale);
+              return layer.url
+                .replace("{z}", effectiveZoom.toString())
+                .replace("{y}", scaledY.toString())
+                .replace("{x}", scaledX.toString());
+            }
+            return layer.url
+              .replace("{z}", zoom.toString())
+              .replace("{y}", coord.y.toString())
+              .replace("{x}", coord.x.toString());
           },
           tileSize: new google.maps.Size(256, 256),
           opacity: layer.opacity,
