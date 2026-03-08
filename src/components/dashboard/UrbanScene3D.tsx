@@ -130,6 +130,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [conflictPoints, setConflictPoints] = useState<ConflictPoint[]>([]);
   const [streetViewActive, setStreetViewActive] = useState(false);
   const [streetViewTarget, setStreetViewTarget] = useState<{ lat: number; lng: number } | null>(null);
+  const [streetViewPanoPos, setStreetViewPanoPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [streetViewDistance, setStreetViewDistance] = useState<number>(0);
+  const miniMapRef = useRef<HTMLDivElement>(null);
+  const miniMapInstanceRef = useRef<any>(null);
   const [clickToStreetView, setClickToStreetView] = useState(false);
   const clickMarkerRef = useRef<any>(null);
   const [zoomLevel, setZoomLevel] = useState(14);
@@ -490,67 +494,74 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       });
       clickMarkerRef.current = pin;
 
+      const MAX_DISTANCE = 100; // metres — reject panoramas farther than this
       const svService = new google.maps.StreetViewService();
-      svService.getPanorama({ 
-        location: { lat: targetLat, lng: targetLng }, 
-        radius: 200,
+
+      const computeDist = (la1: number, lo1: number, la2: number, lo2: number) => {
+        if (google.maps.geometry?.spherical?.computeDistanceBetween) {
+          return google.maps.geometry.spherical.computeDistanceBetween(
+            new google.maps.LatLng(la1, lo1), new google.maps.LatLng(la2, lo2)
+          );
+        }
+        const R = 6371000, dLa = (la2 - la1) * Math.PI / 180, dLo = (lo2 - lo1) * Math.PI / 180;
+        const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      };
+
+      const activatePano = (data: any) => {
+        const sv = map.getStreetView();
+        const panoLatLng = data.location.latLng;
+        const panoLat = panoLatLng.lat();
+        const panoLng = panoLatLng.lng();
+        const dist = Math.round(computeDist(targetLat, targetLng, panoLat, panoLng));
+
+        if (dist > MAX_DISTANCE) {
+          toast({ title: "Too Far", description: `Nearest panorama is ${dist}m away (max ${MAX_DISTANCE}m). Click closer to a road.`, variant: "destructive", duration: 4000 });
+          setStreetViewActive(false);
+          setStreetViewTarget(null);
+          setStreetViewPanoPos(null);
+          return;
+        }
+
+        setStreetViewPanoPos({ lat: panoLat, lng: panoLng });
+        setStreetViewDistance(dist);
+        sv.setPosition(panoLatLng);
+        const dLng = (targetLng - panoLng) * Math.PI / 180;
+        const lat1r = panoLat * Math.PI / 180;
+        const lat2r = targetLat * Math.PI / 180;
+        const yy = Math.sin(dLng) * Math.cos(lat2r);
+        const xx = Math.cos(lat1r) * Math.sin(lat2r) - Math.sin(lat1r) * Math.cos(lat2r) * Math.cos(dLng);
+        const heading = (Math.atan2(yy, xx) * 180 / Math.PI + 360) % 360;
+        sv.setPov({ heading, pitch: 0 });
+        sv.setVisible(true);
+        streetViewRef.current = sv;
+        const listener = google.maps.event.addListener(sv, "visible_changed", () => {
+          if (!sv.getVisible()) {
+            setStreetViewActive(false);
+            setStreetViewTarget(null);
+            setStreetViewPanoPos(null);
+          }
+        });
+        return () => google.maps.event.removeListener(listener);
+      };
+
+      svService.getPanorama({
+        location: { lat: targetLat, lng: targetLng },
+        radius: MAX_DISTANCE,
         source: google.maps.StreetViewSource.OUTDOOR,
         preference: google.maps.StreetViewPreference.NEAREST,
       }, async (data: any, status: any) => {
         if (status === google.maps.StreetViewStatus.OK) {
-          const sv = map.getStreetView();
-          const panoLatLng = data.location.latLng;
-          sv.setPosition(panoLatLng);
-          
-          // Compute heading FROM the panorama TO the clicked point so the user looks at where they clicked
-          const panoLat = panoLatLng.lat();
-          const panoLng = panoLatLng.lng();
-          const dLng = (targetLng - panoLng) * Math.PI / 180;
-          const lat1 = panoLat * Math.PI / 180;
-          const lat2 = targetLat * Math.PI / 180;
-          const y = Math.sin(dLng) * Math.cos(lat2);
-          const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-          const heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-          
-          sv.setPov({ heading, pitch: 0 });
-          sv.setVisible(true);
-          streetViewRef.current = sv;
-          const listener = google.maps.event.addListener(sv, "visible_changed", () => {
-            if (!sv.getVisible()) {
-              setStreetViewActive(false);
-              setStreetViewTarget(null);
-            }
-          });
-          return () => google.maps.event.removeListener(listener);
+          activatePano(data);
         } else {
-          // Try again with larger radius before falling back to Mapillary
-          svService.getPanorama({ location: { lat: targetLat, lng: targetLng }, radius: 1000 }, async (data2: any, status2: any) => {
-            if (status2 === google.maps.StreetViewStatus.OK) {
-              const sv = map.getStreetView();
-              const panoLatLng = data2.location.latLng;
-              sv.setPosition(panoLatLng);
-              const panoLat = panoLatLng.lat();
-              const panoLng = panoLatLng.lng();
-              const dLng = (targetLng - panoLng) * Math.PI / 180;
-              const lat1 = panoLat * Math.PI / 180;
-              const lat2 = targetLat * Math.PI / 180;
-              const y = Math.sin(dLng) * Math.cos(lat2);
-              const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-              const heading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-              sv.setPov({ heading, pitch: 0 });
-              sv.setVisible(true);
-              streetViewRef.current = sv;
-              toast({ title: "Nearby 360°", description: `Closest panorama is ~${Math.round(google.maps.geometry?.computeDistanceBetween?.(new google.maps.LatLng(targetLat, targetLng), panoLatLng) || 0)}m from your pin.`, duration: 3000 });
-            } else {
-              toast({ title: "Trying Mapillary…", description: "No Google Street View here. Searching Mapillary…", duration: 3000 });
-              const found = await activateMapillary(targetLat, targetLng);
-              if (!found) {
-                toast({ title: "360° View Unavailable", description: `No street-level imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}. Try a city center.`, duration: 4000 });
-              }
-              setStreetViewActive(false);
-              setStreetViewTarget(null);
-            }
-          });
+          toast({ title: "No Street View", description: `No panorama within ${MAX_DISTANCE}m. Click on or near a road.`, variant: "destructive", duration: 4000 });
+          const found = await activateMapillary(targetLat, targetLng);
+          if (!found) {
+            toast({ title: "360° Unavailable", description: `No imagery near ${targetLat.toFixed(4)}°, ${targetLng.toFixed(4)}.`, duration: 4000 });
+          }
+          setStreetViewActive(false);
+          setStreetViewTarget(null);
+          setStreetViewPanoPos(null);
         }
       });
     } else {
@@ -563,10 +574,63 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         clickMarkerRef.current = null;
       }
       setStreetViewTarget(null);
+      setStreetViewPanoPos(null);
     }
   }, [streetViewActive, streetViewTarget, apiKey, activateMapillary]);
 
-  // ===== RENDER AIRCRAFT MARKERS =====
+  // ===== MINI-MAP for street view pin vs panorama =====
+  useEffect(() => {
+    const google = (window as any).google;
+    if (!streetViewActive || !streetViewTarget || !streetViewPanoPos || !miniMapRef.current || !google?.maps || !apiKey) return;
+
+    // Clear previous
+    if (miniMapInstanceRef.current) {
+      miniMapInstanceRef.current = null;
+    }
+    miniMapRef.current.innerHTML = "";
+
+    const midLat = (streetViewTarget.lat + streetViewPanoPos.lat) / 2;
+    const midLng = (streetViewTarget.lng + streetViewPanoPos.lng) / 2;
+
+    const mm = new google.maps.Map(miniMapRef.current, {
+      center: { lat: midLat, lng: midLng },
+      zoom: 19,
+      disableDefaultUI: true,
+      gestureHandling: "none",
+      mapTypeId: "satellite",
+      clickableIcons: false,
+    });
+
+    // Green pin = user's click
+    new google.maps.Marker({
+      position: streetViewTarget,
+      map: mm,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#22c55e", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2 },
+      title: "Your pin",
+    });
+
+    // Blue dot = actual panorama
+    new google.maps.Marker({
+      position: streetViewPanoPos,
+      map: mm,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: "#3b82f6", fillOpacity: 1, strokeColor: "#fff", strokeWeight: 2 },
+      title: "Panorama position",
+    });
+
+    // Line connecting them
+    new google.maps.Polyline({
+      path: [streetViewTarget, streetViewPanoPos],
+      map: mm,
+      strokeColor: "#facc15",
+      strokeWeight: 2,
+      strokeOpacity: 0.8,
+      geodesic: true,
+    });
+
+    miniMapInstanceRef.current = mm;
+  }, [streetViewActive, streetViewTarget, streetViewPanoPos, apiKey]);
+
+
   useEffect(() => {
     const map = mapInstanceRef.current;
     const google = (window as any).google;
@@ -2145,13 +2209,39 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         )}
 
         {streetViewActive && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
-              <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
-              <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
-              <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+          <>
+            {/* Top banner with distance indicator */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[15] pointer-events-auto">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/80 backdrop-blur border border-green-500/40" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.2)" }}>
+                <Compass className="h-4 w-4 text-green-400 animate-spin" style={{ animationDuration: "4s" }} />
+                <span className="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">360° STREET VIEW ACTIVE</span>
+                {streetViewDistance > 0 && (
+                  <span className="text-[9px] font-mono text-yellow-400 border border-yellow-500/30 rounded px-1.5 py-0.5">
+                    {streetViewDistance}m offset
+                  </span>
+                )}
+                {streetViewDistance === 0 && streetViewPanoPos && (
+                  <span className="text-[9px] font-mono text-green-400 border border-green-500/30 rounded px-1.5 py-0.5">
+                    EXACT
+                  </span>
+                )}
+                <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
+              </div>
             </div>
-          </div>
+
+            {/* Mini-map overlay showing pin vs panorama position */}
+            {streetViewTarget && streetViewPanoPos && (
+              <div className="absolute bottom-4 right-4 z-[15] pointer-events-auto">
+                <div className="rounded-lg overflow-hidden border border-cyan-500/40 bg-black/60 backdrop-blur" style={{ width: 180, height: 140, boxShadow: "0 0 15px rgba(0,255,255,0.15)" }}>
+                  <div className="px-2 py-1 bg-black/80 border-b border-cyan-500/20 flex items-center justify-between">
+                    <span className="text-[8px] font-mono text-cyan-400 uppercase tracking-wider">Pin vs Panorama</span>
+                    <span className="text-[8px] font-mono text-yellow-400">{streetViewDistance}m</span>
+                  </div>
+                  <div ref={miniMapRef} className="w-full" style={{ height: 114 }} />
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Mapillary street-level viewer overlay with enhanced walking */}
