@@ -21,6 +21,10 @@ interface SatelliteData {
   velocity?: number;
   raan?: number;
   meanAnomaly?: number;
+  country?: string;
+  operator?: string;
+  source?: string; // which TLE group it came from
+}
 }
 
 interface SatelliteGlobeProps {
