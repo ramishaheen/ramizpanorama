@@ -1036,19 +1036,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
   const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
-  // Satellite count badge - fetch from edge function
-  const [satCount, setSatCount] = useState(0);
-  useEffect(() => {
-    const fetchSats = async () => {
-      try {
-        const { data } = await import("@/integrations/supabase/client").then(m => m.supabase.functions.invoke("celestrak-satellites"));
-        if (data?.satellites) setSatCount(data.satellites.length);
-      } catch {}
-    };
-    fetchSats();
-    const interval = setInterval(fetchSats, 120_000);
-    return () => clearInterval(interval);
-  }, []);
+  // Satellite globe is always available (data loaded internally by SatelliteGlobe)
 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
@@ -1077,17 +1065,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       {/* 3D Mode buttons */}
       <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1.5">
-        {satCount > 0 && (
-          <button
+        <button
             onClick={() => setShowSatGlobe(true)}
             className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
-            title="Open 3D Satellite Globe"
+            title="Open Orbital Intelligence Globe"
           >
             <Satellite className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
-            <span className="text-xs font-mono font-bold text-primary">{satCount}</span>
-            <span className="text-[9px] font-mono text-muted-foreground uppercase">SAT 3D</span>
+            <span className="text-[9px] font-mono text-muted-foreground uppercase">ORBITAL INTEL</span>
           </button>
-        )}
         <button
           onClick={() => setShowUrbanScene(true)}
           className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
