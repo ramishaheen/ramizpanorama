@@ -75,6 +75,54 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
+  const runHealthCheck = useCallback(async () => {
+    setCheckingHealth(true);
+    try {
+      await supabase.functions.invoke("cameras", {
+        method: "POST",
+        body: { action: "health_check" },
+      });
+      await fetchCameras();
+    } catch (e) {
+      console.error("Health check failed:", e);
+    } finally {
+      setCheckingHealth(false);
+    }
+  }, [fetchCameras]);
+
+  const discoverMoreCameras = useCallback(async () => {
+    setDiscovering(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cameras", {
+        method: "POST",
+        body: { action: "discover", country: selectedCountry || "Middle East" },
+      });
+      if (error) throw error;
+      await fetchCameras();
+      console.info("AI camera discovery result:", data);
+    } catch (e) {
+      console.error("AI camera discovery failed:", e);
+    } finally {
+      setDiscovering(false);
+    }
+  }, [fetchCameras, selectedCountry]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      runHealthCheck();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [runHealthCheck]);
+
+  const openCameraSource = (cam: CameraData) => {
+    const rawUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
+    if (!rawUrl) return;
+
+    const match = rawUrl.match(/youtube\.com\/embed\/([^?&/]+)/i);
+    const openUrl = match ? `https://www.youtube.com/watch?v=${match[1]}` : rawUrl;
+    window.open(openUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleShowOnMap = (cam: CameraData) => {
     if (onShowOnMap && cam.lat && cam.lng) {
       onShowOnMap(cam.lat, cam.lng, cam.name);
