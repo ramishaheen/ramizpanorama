@@ -532,6 +532,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     cctvGroupRef.current = L.layerGroup().addTo(map);
     newsGroupRef.current = L.layerGroup().addTo(map);
     telegramGroupRef.current = L.layerGroup().addTo(map);
+    flightGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
