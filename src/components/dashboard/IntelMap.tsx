@@ -13,7 +13,8 @@ import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
-import { Satellite, Building2, Camera, ShieldAlert, Brain } from "lucide-react";
+import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar } from "lucide-react";
+import { IranAirspacePanel } from "./IranAirspacePanel";
 import { ResponseMapModal } from "./ResponseMapModal";
 import { CrisisIntelModal } from "./CrisisIntelModal";
 import { LiveCamerasModal } from "./LiveCamerasModal";
@@ -1810,6 +1811,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showLiveCameras, setShowLiveCameras] = useState(false);
   const [showResponseMap, setShowResponseMap] = useState(false);
   const [showCrisisIntel, setShowCrisisIntel] = useState(false);
+  const [showIranAirspace, setShowIranAirspace] = useState(false);
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
 
   return (
@@ -1892,6 +1894,18 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <Brain className="h-3.5 w-3.5 text-amber-400 group-hover:animate-pulse" />
           <span className="text-[9px] font-mono text-muted-foreground uppercase">CRISIS INTEL</span>
         </button>
+        <button
+          onClick={() => setShowIranAirspace(!showIranAirspace)}
+          className={`flex items-center gap-1.5 backdrop-blur border rounded-md px-2 py-1 shadow-lg transition-all group cursor-pointer ${
+            showIranAirspace
+              ? "bg-destructive/20 border-destructive/50 shadow-[0_0_12px_hsl(0_100%_50%/0.2)]"
+              : "bg-card/90 border-border hover:bg-destructive/10 hover:border-destructive/50"
+          }`}
+          title="Iran Airspace Monitor — FIR Tehran"
+        >
+          <Radar className={`h-3.5 w-3.5 ${showIranAirspace ? "text-destructive animate-pulse" : "text-destructive/70 group-hover:text-destructive"}`} />
+          <span className={`text-[9px] font-mono uppercase ${showIranAirspace ? "text-destructive" : "text-muted-foreground"}`}>IRAN FIR</span>
+        </button>
       </div>
 
 
@@ -1959,6 +1973,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       )}
 
       {showCrisisIntel && <CrisisIntelModal onClose={() => setShowCrisisIntel(false)} />}
+      {showIranAirspace && (
+        <IranAirspacePanel
+          onClose={() => setShowIranAirspace(false)}
+          onTrackAircraft={(icao) => setTrackedFlightId(icao)}
+          onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 10, { duration: 1.2 })}
+        />
+      )}
 
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
