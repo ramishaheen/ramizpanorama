@@ -32,15 +32,23 @@ const HIGHWAY_COLORS: Record<string, string> = {
   service: "#6b7280", unclassified: "#a855f7", living_street: "#14b8a6",
 };
 
-const HIGHWAY_BASE_DENSITY: Record<string, number> = {
-  motorway: 10, trunk: 8, primary: 6, secondary: 5,
-  tertiary: 4, residential: 3, service: 2,
+// Particles per ~100m of road (scaled by road length)
+const HIGHWAY_DENSITY_PER_100M: Record<string, number> = {
+  motorway: 6, trunk: 5, primary: 4, secondary: 4,
+  tertiary: 3, residential: 2.5, service: 2,
+  unclassified: 2, living_street: 1.5,
+};
+
+// Minimum particles per road regardless of length
+const HIGHWAY_MIN_PARTICLES: Record<string, number> = {
+  motorway: 8, trunk: 6, primary: 5, secondary: 4,
+  tertiary: 3, residential: 2, service: 2,
   unclassified: 2, living_street: 1,
 };
 
 const HIGHWAY_SPEED: Record<string, number> = {
-  motorway: 0.008, trunk: 0.006, primary: 0.005, secondary: 0.004,
-  tertiary: 0.003, residential: 0.002, service: 0.0015,
+  motorway: 0.006, trunk: 0.005, primary: 0.004, secondary: 0.003,
+  tertiary: 0.0025, residential: 0.002, service: 0.0015,
   unclassified: 0.002, living_street: 0.001,
 };
 
@@ -67,9 +75,20 @@ function getTimeDensityFactor(): { factor: number; period: string } {
   const hour = new Date().getHours();
   if (hour >= 7 && hour < 9) return { factor: 1.0, period: "RUSH HOUR" };
   if (hour >= 16 && hour < 19) return { factor: 0.95, period: "RUSH HOUR" };
-  if (hour >= 9 && hour < 16) return { factor: 0.65, period: "MIDDAY" };
-  if (hour >= 19 && hour < 23) return { factor: 0.4, period: "EVENING" };
-  return { factor: 0.15, period: "NIGHT" };
+  if (hour >= 9 && hour < 16) return { factor: 0.7, period: "MIDDAY" };
+  if (hour >= 19 && hour < 23) return { factor: 0.55, period: "EVENING" };
+  return { factor: 0.35, period: "NIGHT" };
+}
+
+/** Estimate road length in meters from coordinate array */
+function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dLat = (points[i].lat - points[i - 1].lat) * 111320;
+    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180);
+    total += Math.sqrt(dLat * dLat + dLng * dLng);
+  }
+  return total;
 }
 
 function pickVehicleType(highway: string): VehicleType {
@@ -293,8 +312,11 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
       const { factor } = getTimeDensityFactor();
       const particles: Particle[] = [];
       roads.forEach((road, ri) => {
-        const baseDensity = HIGHWAY_BASE_DENSITY[road.highway] || 2;
-        const density = Math.max(1, Math.round(baseDensity * factor));
+        const roadLenM = estimateRoadLengthM(road.points);
+        const per100m = HIGHWAY_DENSITY_PER_100M[road.highway] || 2;
+        const minP = HIGHWAY_MIN_PARTICLES[road.highway] || 2;
+        const lengthBased = Math.round((roadLenM / 100) * per100m);
+        const density = Math.max(minP, Math.round(Math.max(lengthBased, minP) * factor));
         const baseSpeed = HIGHWAY_SPEED[road.highway] || 0.003;
         const roadColor = HIGHWAY_COLORS[road.highway] || "#8b5cf6";
 
