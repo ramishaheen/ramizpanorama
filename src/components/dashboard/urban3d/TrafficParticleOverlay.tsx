@@ -75,9 +75,20 @@ function getTimeDensityFactor(): { factor: number; period: string } {
   const hour = new Date().getHours();
   if (hour >= 7 && hour < 9) return { factor: 1.0, period: "RUSH HOUR" };
   if (hour >= 16 && hour < 19) return { factor: 0.95, period: "RUSH HOUR" };
-  if (hour >= 9 && hour < 16) return { factor: 0.65, period: "MIDDAY" };
-  if (hour >= 19 && hour < 23) return { factor: 0.4, period: "EVENING" };
-  return { factor: 0.15, period: "NIGHT" };
+  if (hour >= 9 && hour < 16) return { factor: 0.7, period: "MIDDAY" };
+  if (hour >= 19 && hour < 23) return { factor: 0.55, period: "EVENING" };
+  return { factor: 0.35, period: "NIGHT" };
+}
+
+/** Estimate road length in meters from coordinate array */
+function estimateRoadLengthM(points: { lat: number; lng: number }[]): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const dLat = (points[i].lat - points[i - 1].lat) * 111320;
+    const dLng = (points[i].lng - points[i - 1].lng) * 111320 * Math.cos((points[i].lat * Math.PI) / 180);
+    total += Math.sqrt(dLat * dLat + dLng * dLng);
+  }
+  return total;
 }
 
 function pickVehicleType(highway: string): VehicleType {
