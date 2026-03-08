@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, RefreshCw, Plane, Flame, AlertTriangle, Camera, Newspaper, MapPin, Filter, Clock, Shield, ChevronDown, ChevronUp, ExternalLink, Search } from "lucide-react";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
@@ -212,12 +213,12 @@ export const ResponseMapModal = ({ onClose, onFlyTo }: ResponseMapProps) => {
     { id: "alerts" as const, label: "Summary", icon: Shield },
   ];
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
@@ -524,6 +525,7 @@ export const ResponseMapModal = ({ onClose, onFlyTo }: ResponseMapProps) => {
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
