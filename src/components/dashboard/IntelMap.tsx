@@ -1179,7 +1179,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       group.addLayer(marker);
     });
-  }, [flightData, layers.flights, trackedFlightId]);
+  }, [interpolatedFlights, layers.flights, trackedFlightId]);
 
 
   useEffect(() => {
