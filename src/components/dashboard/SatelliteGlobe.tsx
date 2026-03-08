@@ -1302,7 +1302,16 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             el.style.borderLeft = `2px solid ${c}`;
             el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
             return el;
-          });
+          })
+          // City markers as rings on the globe surface
+          .ringsData(CITY_PRESETS.map(c => ({ ...c, maxR: 2, propagationSpeed: 1.5 })))
+          .ringLat((d: any) => d.lat)
+          .ringLng((d: any) => d.lng)
+          .ringAltitude(0.001)
+          .ringColor(() => (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`)
+          .ringMaxRadius((d: any) => d.maxR)
+          .ringPropagationSpeed((d: any) => d.propagationSpeed)
+          .ringRepeatPeriod(2000);
 
         const scene = globe.scene();
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
