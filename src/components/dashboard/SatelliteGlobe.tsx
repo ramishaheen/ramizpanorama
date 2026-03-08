@@ -762,6 +762,16 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     }
   }, []);
 
+  // Listen for city clicks from globe HTML elements
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const city = (e as CustomEvent).detail as CityPreset;
+      if (city) flyToCity(city);
+    };
+    window.addEventListener("globe-city-click", handler);
+    return () => window.removeEventListener("globe-city-click", handler);
+  }, [flyToCity]);
+
   const loadSatelliteCache = useCallback(() => {
     try {
       const raw = localStorage.getItem(SATELLITE_CACHE_KEY);
@@ -1282,12 +1292,39 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .arcDashLength(0.4)
           .arcDashGap(0.15)
           .arcDashAnimateTime(3000)
-          .htmlElementsData(OSINT_MARKERS)
+          .htmlElementsData([
+            ...OSINT_MARKERS,
+            ...CITY_PRESETS.map(c => ({ lat: c.lat, lng: c.lng, label: c.name, type: "city", severity: "info", info: `${c.landmark} — ${c.country}`, cityData: c })),
+          ])
           .htmlLat((d: any) => d.lat)
           .htmlLng((d: any) => d.lng)
           .htmlAltitude(0.005)
           .htmlElement((d: any) => {
             const el = document.createElement("div");
+
+            if (d.type === "city") {
+              el.style.cssText =
+                "cursor:pointer;font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);padding:2px 5px;border-radius:4px;display:flex;align-items:center;gap:3px;transition:all 0.2s;";
+              el.style.color = "#00dcff";
+              el.style.backgroundColor = "rgba(0,20,40,0.7)";
+              el.style.border = "1px solid rgba(0,220,255,0.3)";
+              el.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 6px #00dcff;"></span> ${d.label}`;
+              el.addEventListener("mouseenter", () => {
+                el.style.backgroundColor = "rgba(0,220,255,0.2)";
+                el.style.borderColor = "rgba(0,220,255,0.6)";
+                el.style.transform = "scale(1.15)";
+              });
+              el.addEventListener("mouseleave", () => {
+                el.style.backgroundColor = "rgba(0,20,40,0.7)";
+                el.style.borderColor = "rgba(0,220,255,0.3)";
+                el.style.transform = "scale(1)";
+              });
+              el.addEventListener("click", () => {
+                window.dispatchEvent(new CustomEvent("globe-city-click", { detail: d.cityData }));
+              });
+              return el;
+            }
+
             el.style.cssText =
               "pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;";
             const colors: Record<string, string> = {
@@ -1302,7 +1339,16 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
             el.style.borderLeft = `2px solid ${c}`;
             el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
             return el;
-          });
+          })
+          // City markers as rings on the globe surface
+          .ringsData(CITY_PRESETS.map(c => ({ ...c, maxR: 2, propagationSpeed: 1.5 })))
+          .ringLat((d: any) => d.lat)
+          .ringLng((d: any) => d.lng)
+          .ringAltitude(0.001)
+          .ringColor(() => (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`)
+          .ringMaxRadius((d: any) => d.maxR)
+          .ringPropagationSpeed((d: any) => d.propagationSpeed)
+          .ringRepeatPeriod(2000);
 
         const scene = globe.scene();
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
