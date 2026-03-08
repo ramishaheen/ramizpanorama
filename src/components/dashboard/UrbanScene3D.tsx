@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car, Layers, ChevronLeft, ChevronRight, Rocket } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car, Layers, ChevronLeft, ChevronRight, Rocket, Video, Camera, Signal } from "lucide-react";
 
 interface IntelEvent {
   title: string;
@@ -202,6 +202,15 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [mapillaryToken, setMapillaryToken] = useState<string | null>(null);
   const [mapillaryLoading, setMapillaryLoading] = useState(false);
   const mapillaryViewerRef = useRef<any>(null);
+
+  // Live camera layer
+  const [showCameras, setShowCameras] = useState(true);
+  const [cameras, setCameras] = useState<any[]>([]);
+  const cameraMarkersRef = useRef<any[]>([]);
+  const [activeCameraFeed, setActiveCameraFeed] = useState<any>(null);
+  
+  // City intel HUD (shown in street-level mode)
+  const [cityIntel, setCityIntel] = useState<{ weather?: any; alerts?: number; cameras?: number; traffic?: string } | null>(null);
 
   // Layer panel & opacity
   const [showLayerPanel, setShowLayerPanel] = useState(false);
@@ -855,6 +864,102 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [showTraffic]);
 
+  // ===== LIVE CAMERA LAYER =====
+  useEffect(() => {
+    const fetchCameras = async () => {
+      try {
+        const { data, error } = await supabase.from("cameras").select("*").eq("is_active", true);
+        if (!error && data) setCameras(data);
+      } catch (e) { console.error("Camera fetch error:", e); }
+    };
+    fetchCameras();
+    const iv = setInterval(fetchCameras, 120_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Render camera markers on map
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    cameraMarkersRef.current.forEach(m => m.setMap(null));
+    cameraMarkersRef.current = [];
+
+    if (!showCameras || cameras.length === 0) return;
+
+    const catColors: Record<string, string> = {
+      traffic: "#10b981", tourism: "#8b5cf6", ports: "#3b82f6", weather: "#06b6d4", public: "#f59e0b",
+    };
+
+    cameras.forEach((cam) => {
+      const color = catColors[cam.category] || "#f59e0b";
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" fill="${color}30" stroke="${color}" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="4" fill="${color}"/>
+        <circle cx="12" cy="12" r="6" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.5">
+          <animate attributeName="r" values="6;10" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.5;0" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>`;
+
+      const marker = new google.maps.Marker({
+        position: { lat: cam.lat, lng: cam.lng },
+        map,
+        icon: {
+          url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+          scaledSize: new google.maps.Size(24, 24),
+          anchor: new google.maps.Point(12, 12),
+        },
+        title: `📹 ${cam.name} (${cam.city}, ${cam.country})`,
+        zIndex: 60,
+      });
+
+      const infoContent = `
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:200px;border:1px solid ${color}40;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span style="font-size:14px;">📹</span>
+            <span style="font-weight:700;font-size:12px;color:${color};">${cam.name}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:10px;">
+            <span style="color:#7d8590;">CITY</span><span>${cam.city}, ${cam.country}</span>
+            <span style="color:#7d8590;">TYPE</span><span style="text-transform:uppercase;">${cam.category}</span>
+            <span style="color:#7d8590;">STATUS</span><span style="color:${cam.status === 'active' ? '#22c55e' : '#ef4444'};">${cam.status?.toUpperCase()}</span>
+          </div>
+          <div style="margin-top:8px;text-align:center;font-size:9px;color:${color};cursor:pointer;">▶ CLICK TO VIEW LIVE FEED</div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("mouseover", () => infoWindow.open(map, marker));
+      marker.addListener("mouseout", () => infoWindow.close());
+      marker.addListener("click", () => {
+        setActiveCameraFeed(cam);
+        infoWindow.close();
+      });
+
+      cameraMarkersRef.current.push(marker);
+    });
+  }, [cameras, showCameras]);
+
+  // ===== CITY INTEL HUD =====
+  useEffect(() => {
+    if (!streetViewActive && !mapillaryActive) {
+      setCityIntel(null);
+      return;
+    }
+    const fetchCityIntel = async () => {
+      const nearbyCams = cameras.filter(c => Math.abs(c.lat - lat) < 0.5 && Math.abs(c.lng - lng) < 0.5).length;
+      const nearbyAlerts = nearbyIntel.alerts.length;
+      setCityIntel({
+        cameras: nearbyCams,
+        alerts: nearbyAlerts,
+        traffic: showTraffic ? "Active" : "Off",
+      });
+    };
+    fetchCityIntel();
+  }, [streetViewActive, mapillaryActive, lat, lng, cameras, nearbyIntel, showTraffic]);
+
+
   // ===== REAL-TIME ROCKET/MISSILE LAYER =====
   useEffect(() => {
     const fetchRockets = async () => {
@@ -1451,6 +1556,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       cityMarkersRef.current.forEach(m => m.setMap(null));
       if (heatmapLayerRef.current) heatmapLayerRef.current.setMap(null);
       if (trafficLayerRef.current) trafficLayerRef.current.setMap(null);
+      cameraMarkersRef.current.forEach(m => m.setMap(null));
       mapListenersRef.current.forEach((listener) => (window as any).google?.maps?.event?.removeListener?.(listener));
       mapListenersRef.current = [];
       if (interpolationRef.current) clearInterval(interpolationRef.current);
@@ -1685,6 +1791,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <div className="border-t border-border/20 my-2" />
 
                 <LayerControl icon={<MapPin className="h-3 w-3" />} label="City Landmarks" color="#00dcff" active={showCities} onToggle={() => setShowCities(!showCities)} count={CITY_LANDMARKS_3D.length} opacity={1} onOpacity={() => {}} source="32 cities" />
+                <LayerControl icon={<Video className="h-3 w-3" />} label="Live Cameras" color="#f59e0b" active={showCameras} onToggle={() => setShowCameras(!showCameras)} count={cameras.length} opacity={1} onOpacity={() => {}} source={`${cameras.length} feeds`} />
               </div>
               <div className="px-3 py-2 border-t border-border/30">
                 <span className="text-[7px] font-mono text-muted-foreground/50">Real-time data • Auto-refresh</span>
@@ -1790,7 +1897,102 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
-        {/* HUD Overlay */}
+        {/* Live Camera Feed Viewer */}
+        {activeCameraFeed && (
+          <div className="absolute inset-0 z-[25] pointer-events-auto flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-card/95 backdrop-blur-xl border border-border rounded-lg w-[90%] max-w-3xl max-h-[80vh] overflow-hidden shadow-2xl">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <Video className="h-4 w-4 text-amber-400" />
+                  <span className="text-xs font-mono font-bold text-foreground">{activeCameraFeed.name}</span>
+                  <span className="text-[8px] font-mono text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/50 uppercase">{activeCameraFeed.category}</span>
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-emerald-400">
+                    <Signal className="h-2.5 w-2.5" /> LIVE
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] font-mono text-muted-foreground">{activeCameraFeed.city}, {activeCameraFeed.country}</span>
+                  <button onClick={() => setActiveCameraFeed(null)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-secondary transition-colors">
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+              <div className="aspect-video bg-black">
+                {activeCameraFeed.embed_url ? (
+                  <iframe
+                    src={activeCameraFeed.embed_url}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={activeCameraFeed.name}
+                  />
+                ) : activeCameraFeed.stream_url ? (
+                  <iframe
+                    src={activeCameraFeed.stream_url}
+                    className="w-full h-full"
+                    allowFullScreen
+                    title={activeCameraFeed.name}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-muted-foreground text-sm font-mono">No stream available</span>
+                  </div>
+                )}
+              </div>
+              <div className="px-4 py-2 border-t border-border/50 flex items-center gap-3">
+                <span className="text-[8px] font-mono text-muted-foreground">📍 {activeCameraFeed.lat.toFixed(4)}°N, {activeCameraFeed.lng.toFixed(4)}°E</span>
+                <span className="text-[8px] font-mono text-muted-foreground">SRC: {activeCameraFeed.source_name}</span>
+                <button onClick={() => {
+                  if (mapInstanceRef.current) {
+                    mapInstanceRef.current.panTo({ lat: activeCameraFeed.lat, lng: activeCameraFeed.lng });
+                    mapInstanceRef.current.setZoom(17);
+                  }
+                  setActiveCameraFeed(null);
+                }} className="ml-auto text-[9px] font-mono text-primary border border-primary/30 px-2 py-0.5 rounded hover:bg-primary/10 transition-colors">
+                  📍 Go to Location
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* City Intel HUD — shown during street-level viewing */}
+        {(streetViewActive || mapillaryActive) && cityIntel && (
+          <div className="absolute bottom-16 right-3 z-[18] pointer-events-auto">
+            <div className="bg-black/85 backdrop-blur-xl border border-primary/25 rounded-lg p-3 w-52 space-y-2" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 15px hsl(190 100% 50% / 0.08)" }}>
+              <div className="flex items-center gap-1.5">
+                <Shield className="h-3 w-3 text-primary" />
+                <span className="text-[9px] font-mono font-bold text-primary uppercase">City Intel</span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Camera className="h-2.5 w-2.5" /> Cameras</span>
+                  <span className="text-[9px] font-mono font-bold text-amber-400">{cityIntel.cameras || 0} nearby</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><AlertTriangle className="h-2.5 w-2.5" /> Alerts</span>
+                  <span className={`text-[9px] font-mono font-bold ${(cityIntel.alerts || 0) > 0 ? "text-red-400" : "text-emerald-400"}`}>{cityIntel.alerts || 0} active</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Car className="h-2.5 w-2.5" /> Traffic</span>
+                  <span className="text-[9px] font-mono font-bold text-emerald-400">{cityIntel.traffic}</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Ship className="h-2.5 w-2.5" /> Vessels</span>
+                  <span className="text-[9px] font-mono font-bold text-blue-400">{nearbyIntel.vessels.length} nearby</span>
+                </div>
+                <div className="flex items-center justify-between px-1.5 py-1 rounded bg-secondary/20">
+                  <span className="flex items-center gap-1 text-[8px] font-mono text-muted-foreground"><Radio className="h-2.5 w-2.5" /> Airspace</span>
+                  <span className="text-[9px] font-mono font-bold text-yellow-400">{nearbyIntel.airspace.length} alerts</span>
+                </div>
+              </div>
+              <div className="pt-1 border-t border-border/30">
+                <span className="text-[7px] font-mono text-muted-foreground/50">📍 {lat.toFixed(4)}°N, {Math.abs(lng).toFixed(4)}°{lng >= 0 ? "E" : "W"}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="absolute top-3 left-3 z-10 pointer-events-none">
           <div className="bg-black/70 backdrop-blur border border-primary/30 rounded-lg px-3 py-2 font-mono text-[9px] text-primary/80 space-y-1"
             style={{ boxShadow: "0 0 15px hsl(190 100% 50% / 0.1)" }}>
