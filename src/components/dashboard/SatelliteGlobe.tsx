@@ -451,6 +451,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   } | null>(null);
   const [predictionTrack, setPredictionTrack] = useState<{ lat: number; lng: number }[] | null>(null);
   const [globeStyle, setGlobeStyle] = useState<string>("normal");
+  const [selectedCity, setSelectedCity] = useState<CityPreset | null>(null);
 
   // Globe style presets — change texture, atmosphere, lighting
   const GLOBE_STYLES = [
