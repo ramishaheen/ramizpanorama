@@ -797,7 +797,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         group.add(panelRight);
 
         // Antenna dish for comm/ISR satellites
-        if (sat.category === "Communication" || sat.category === "ISR") {
+        if (sat.category === "Communication" || sat.category === "ISR" || sat.category === "SIGINT/ELINT" || sat.category === "Data Relay" || sat.category === "SAR Imaging") {
           const dishGeo = new THREE.ConeGeometry(bodySize * 0.3, bodySize * 0.4, 8);
           const dishMat = new THREE.MeshPhongMaterial({
             color: 0xcccccc,
