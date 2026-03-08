@@ -1000,6 +1000,118 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         )}
       </div>
 
+      {/* Navigation & Zoom Controls - bottom right */}
+      <div className="absolute bottom-16 right-3 z-[2002] pointer-events-auto flex flex-col items-center gap-1.5">
+        {/* Zoom */}
+        <div className="flex flex-col gap-0.5 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
+          <button
+            onClick={() => {
+              const g = globeRef.current;
+              if (!g) return;
+              const pov = g.pointOfView();
+              g.pointOfView({ ...pov, altitude: Math.max(pov.altitude * 0.75, 0.3) }, 400);
+            }}
+            className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+            title="Zoom In"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => {
+              const g = globeRef.current;
+              if (!g) return;
+              const pov = g.pointOfView();
+              g.pointOfView({ ...pov, altitude: Math.min(pov.altitude * 1.35, 6) }, 400);
+            }}
+            className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+            title="Zoom Out"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Directional pad */}
+        <div className="bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
+          <div className="grid grid-cols-3 gap-0.5 w-[6.5rem]">
+            {/* Row 1: rotate left, up, rotate right */}
+            <button
+              onClick={() => {
+                const g = globeRef.current;
+                if (!g) return;
+                const pov = g.pointOfView();
+                g.pointOfView({ ...pov, lng: pov.lng - 15 }, 400);
+              }}
+              className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+              title="Rotate Left"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => {
+                const g = globeRef.current;
+                if (!g) return;
+                const pov = g.pointOfView();
+                g.pointOfView({ ...pov, lat: Math.min(pov.lat + 15, 85) }, 400);
+              }}
+              className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+              title="Move Up"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => {
+                const g = globeRef.current;
+                if (!g) return;
+                const pov = g.pointOfView();
+                g.pointOfView({ ...pov, lng: pov.lng + 15 }, 400);
+              }}
+              className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+              title="Rotate Right"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Row 2: left, down, right */}
+            <button
+              onClick={() => {
+                const g = globeRef.current;
+                if (!g) return;
+                const pov = g.pointOfView();
+                g.pointOfView({ ...pov, lng: pov.lng - 30 }, 400);
+              }}
+              className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+              title="Pan Left"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => {
+                const g = globeRef.current;
+                if (!g) return;
+                const pov = g.pointOfView();
+                g.pointOfView({ ...pov, lat: Math.max(pov.lat - 15, -85) }, 400);
+              }}
+              className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+              title="Move Down"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => {
+                const g = globeRef.current;
+                if (!g) return;
+                const pov = g.pointOfView();
+                g.pointOfView({ ...pov, lng: pov.lng + 30 }, 400);
+              }}
+              className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+              title="Pan Right"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Bottom city presets */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto">
         <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1">
