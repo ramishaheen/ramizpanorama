@@ -112,6 +112,25 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     }
   }, [fetchCameras, selectedCountry]);
 
+  const scrapeAggregators = useCallback(async () => {
+    setScraping(true);
+    setScrapeResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("cameras", {
+        method: "POST",
+        body: { action: "scrape_aggregators", country: selectedCountry },
+      });
+      if (error) throw error;
+      setScrapeResult(`Found ${data?.found || 0} cameras, added ${data?.inserted || 0} new feeds`);
+      await fetchCameras();
+    } catch (e) {
+      console.error("Scrape aggregators failed:", e);
+      setScrapeResult("Scrape failed — try again");
+    } finally {
+      setScraping(false);
+    }
+  }, [fetchCameras, selectedCountry]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       runHealthCheck();
