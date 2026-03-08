@@ -358,8 +358,8 @@ export const TrafficParticleOverlay = ({ mapRef, enabled, zoom, lat, lng, opacit
           id: el.id,
           highway: el.tags?.highway || "unclassified",
           points: el.geometry.map((g: any) => ({ lat: g.lat, lng: g.lon })),
-          lanes: parseInt(el.tags?.lanes) || (el.tags?.highway === "motorway" ? 4 : el.tags?.highway === "primary" ? 3 : 2),
-          oneway: el.tags?.oneway === "yes",
+          lanes: parseLaneCount(el.tags || {}, el.tags?.highway || "unclassified"),
+          oneway: el.tags?.oneway === "yes" || (el.tags?.oneway ?? "").toString() === "1",
         }));
 
       roadsRef.current = roads;
