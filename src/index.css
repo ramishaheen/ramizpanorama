@@ -330,6 +330,12 @@
   100% { transform: scale(2.2); opacity: 0; }
 }
 
+.flight-leaflet-icon {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .flight-marker-wrap {
   position: relative;
   display: flex;
@@ -337,6 +343,7 @@
   justify-content: center;
   cursor: pointer;
   transition: transform 0.3s ease;
+  z-index: 500;
 }
 
 .flight-marker-wrap:hover {
