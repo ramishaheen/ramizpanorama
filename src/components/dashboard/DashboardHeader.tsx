@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wifi, Volume2, VolumeX, Languages, MessageCircle } from "lucide-react";
+import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
 import { NotificationCenter } from "./NotificationCenter";
+import { LiveChannelsModal } from "./LiveChannelsModal";
 import warosLogo from "@/assets/waros-logo.png";
 import type { Rocket } from "@/data/mockData";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
