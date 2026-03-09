@@ -40,12 +40,27 @@ function isValidYouTubeUrl(url: string): boolean {
 
 // ═══════════════ YOUTUBE PLAYER ═══════════════
 function YouTubePlayer({ videoId, channel }: { videoId: string; channel: YTChannel }) {
+  const embedParams = new URLSearchParams({
+    autoplay: "1",
+    mute: "1",
+    playsinline: "1",
+    rel: "0",
+    modestbranding: "1",
+    enablejsapi: "1",
+    origin: window.location.origin,
+    widget_referrer: window.location.href,
+  });
+
+  const embedSrc = `https://www.youtube.com/embed/${videoId}?${embedParams.toString()}`;
+
   return (
     <div style={{ position: "relative", width: "100%", paddingBottom: "56.25%", background: "#000", borderRadius: 8, overflow: "hidden" }}>
       <iframe
-        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&enablejsapi=1`}
+        key={videoId}
+        src={embedSrc}
+        referrerPolicy="strict-origin-when-cross-origin"
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
-        allow="autoplay; encrypted-media"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
         title={channel.name}
       />
