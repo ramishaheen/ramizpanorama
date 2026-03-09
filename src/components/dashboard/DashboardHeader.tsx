@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wifi, Volume2, VolumeX, Languages, MessageCircle } from "lucide-react";
+import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
 import { NotificationCenter } from "./NotificationCenter";
+import { LiveChannelsModal } from "./LiveChannelsModal";
 import warosLogo from "@/assets/waros-logo.png";
 import type { Rocket } from "@/data/mockData";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
@@ -21,6 +22,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
   const [showBalloon, setShowBalloon] = useState(true);
+  const [showLiveChannels, setShowLiveChannels] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowBalloon(false), 10000);
@@ -71,6 +73,15 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3">
+          {/* Live Channels */}
+          <button
+            onClick={() => setShowLiveChannels(true)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
+            title="YouTube Live Channels"
+          >
+            <Youtube className="h-3 w-3" />
+            <span className="text-[9px] font-mono uppercase tracking-wider font-bold">Live Channels</span>
+          </button>
           {/* Language toggle */}
           <button
             onClick={toggle}
@@ -131,6 +142,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
         </div>
       </header>
       <WarChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
+      {showLiveChannels && <LiveChannelsModal onClose={() => setShowLiveChannels(false)} />}
     </>
   );
 };
