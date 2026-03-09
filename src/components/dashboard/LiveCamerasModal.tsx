@@ -20,7 +20,11 @@ interface CameraData {
   embed_url: string | null; thumbnail_url: string | null;
   lat: number; lng: number; is_active: boolean; status: string;
   error_message: string | null; last_checked_at?: string;
+  stream_type_detected?: string | null;
 }
+
+const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+const STREAM_PROXY_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/stream-proxy`;
 
 interface LiveCamerasModalProps {
   onClose: () => void;
