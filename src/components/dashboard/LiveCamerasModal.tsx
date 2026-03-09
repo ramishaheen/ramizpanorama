@@ -373,7 +373,8 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
         )}
         <iframe key={cam.id} src={embedUrl} className="w-full h-full border-0"
           allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
-          allowFullScreen onLoad={() => setEmbedState("ok")} onError={() => setEmbedState("blocked")} referrerPolicy="no-referrer" />
+          allowFullScreen onLoad={() => setEmbedState("ok")} onError={() => setEmbedState("blocked")}
+          referrerPolicy={embedUrl.includes("youtube.com") || embedUrl.includes("youtu.be") ? "strict-origin-when-cross-origin" : "no-referrer"} />
         <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(99,102,241,0.3)" }}>
           <MonitorPlay className="h-3 w-3 text-indigo-400" />
           <span className="text-[8px] text-indigo-400 font-mono font-bold">EMBED</span>
