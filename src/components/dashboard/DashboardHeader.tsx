@@ -73,6 +73,15 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3">
+          {/* Live Channels */}
+          <button
+            onClick={() => setShowLiveChannels(true)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
+            title="YouTube Live Channels"
+          >
+            <Youtube className="h-3 w-3" />
+            <span className="text-[9px] font-mono uppercase tracking-wider font-bold">Live Channels</span>
+          </button>
           {/* Language toggle */}
           <button
             onClick={toggle}
