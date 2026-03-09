@@ -2390,15 +2390,23 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     src={(() => {
                       let url = activeCameraFeed.embed_url;
                       if (url.includes('youtube.com/embed/')) {
-                        if (!url.includes('autoplay=')) url += (url.includes('?') ? '&' : '?') + 'autoplay=1';
-                        if (!url.includes('mute=')) url += '&mute=1';
+                        const u = new URL(url);
+                        if (!u.searchParams.has('autoplay')) u.searchParams.set('autoplay', '1');
+                        if (!u.searchParams.has('mute')) u.searchParams.set('mute', '1');
+                        if (!u.searchParams.has('playsinline')) u.searchParams.set('playsinline', '1');
+                        if (!u.searchParams.has('rel')) u.searchParams.set('rel', '0');
+                        if (!u.searchParams.has('modestbranding')) u.searchParams.set('modestbranding', '1');
+                        if (!u.searchParams.has('enablejsapi')) u.searchParams.set('enablejsapi', '1');
+                        u.searchParams.set('origin', window.location.origin);
+                        u.searchParams.set('widget_referrer', window.location.href);
+                        url = u.toString();
                       }
                       return url;
                     })()}
                     className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
-                    referrerPolicy="no-referrer"
+                    referrerPolicy="strict-origin-when-cross-origin"
                     title={activeCameraFeed.name}
                   />
                 ) : activeCameraFeed.stream_url ? (
