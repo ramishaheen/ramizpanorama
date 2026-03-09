@@ -60,7 +60,17 @@ const channels: Channel[] = [
 const REGIONS = [...new Set(channels.map((c) => c.region))];
 
 const getEmbedUrl = (channel: Channel, muted: boolean) => {
-  return `https://www.youtube.com/embed/${channel.videoId}?autoplay=1&mute=${muted ? 1 : 0}&rel=0`;
+  const params = new URLSearchParams({
+    autoplay: "1",
+    mute: muted ? "1" : "0",
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1",
+    enablejsapi: "1",
+    origin: window.location.origin,
+    widget_referrer: window.location.href,
+  });
+  return `https://www.youtube.com/embed/${channel.videoId}?${params.toString()}`;
 };
 
 const getDirectUrl = (channel: Channel) => channel.directUrl || null;
@@ -227,7 +237,9 @@ export const LiveNewsFeed = () => {
                 src={getEmbedUrl(channels[activeChannel], muted)}
                 title={channels[activeChannel].name}
                 className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
               />
             )}
           </div>
@@ -380,8 +392,9 @@ export const LiveNewsFeed = () => {
                   src={getEmbedUrl(channels[expandedChannel], muted)}
                   title={channels[expandedChannel].name}
                   className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
                 />
               )}
             </div>
