@@ -60,7 +60,17 @@ const channels: Channel[] = [
 const REGIONS = [...new Set(channels.map((c) => c.region))];
 
 const getEmbedUrl = (channel: Channel, muted: boolean) => {
-  return `https://www.youtube.com/embed/${channel.videoId}?autoplay=1&mute=${muted ? 1 : 0}&rel=0`;
+  const params = new URLSearchParams({
+    autoplay: "1",
+    mute: muted ? "1" : "0",
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1",
+    enablejsapi: "1",
+    origin: window.location.origin,
+    widget_referrer: window.location.href,
+  });
+  return `https://www.youtube.com/embed/${channel.videoId}?${params.toString()}`;
 };
 
 const getDirectUrl = (channel: Channel) => channel.directUrl || null;
