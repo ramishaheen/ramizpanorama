@@ -8,7 +8,7 @@ import {
   X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle,
   Video, Eye, Sparkles, Globe, Copy, Activity, Radio, Signal,
   Shield, ChevronLeft, ChevronRight, Crosshair, Wifi, WifiOff,
-  Layers, Flag, Zap
+  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -21,6 +21,12 @@ interface CameraData {
   lat: number; lng: number; is_active: boolean; status: string;
   error_message: string | null; last_checked_at?: string;
   stream_type_detected?: string | null;
+  youtube_video_id?: string | null;
+  original_url?: string | null;
+  playable_url?: string | null;
+  verification_status?: string | null;
+  verification_error?: string | null;
+  is_verified?: boolean;
 }
 
 const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -33,10 +39,12 @@ interface LiveCamerasModalProps {
 
 interface Stats {
   total: number; online: number; offline: number; unknown: number;
+  youtubeCount?: number;
   byCountry: Record<string, { total: number; online: number }>;
   byCategory: Record<string, number>;
   bySource: Record<string, number>;
   byContinent: Record<string, number>;
+  byVerification?: Record<string, number>;
 }
 
 // ═══════════════ CONSTANTS ═══════════════
@@ -52,6 +60,39 @@ const REGIONS: Record<string, { center: [number, number]; zoom: number }> = {
 
 const CATEGORIES = ["traffic", "tourism", "ports", "weather", "public"];
 const SOURCES = ["EarthCam", "SkylineWebcams", "WebCamera24", "OpenWebcamDB", "Insecam", "Opentopia", "GeoCam"];
+
+// ═══════════════ HELPERS ═══════════════
+const extractYouTubeId = (url: string): string | null => {
+  if (!url) return null;
+  const patterns = [
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/i,
+    /youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})/i,
+    /youtu\.be\/([A-Za-z0-9_-]{11})/i,
+    /youtube\.com\/live\/([A-Za-z0-9_-]{11})/i,
+    /[?&]v=([A-Za-z0-9_-]{11})/i,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m?.[1]) return m[1];
+  }
+  return null;
+};
+
+const getYouTubeThumbnail = (ytId: string) => `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+
+const getVerificationBadge = (status: string | null | undefined) => {
+  switch (status) {
+    case "verified_youtube": return { label: "YOUTUBE", color: "#ef4444", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.25)", icon: "▶" };
+    case "verified_hls": return { label: "HLS LIVE", color: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.25)", icon: "◉" };
+    case "verified_snapshot": return { label: "SNAPSHOT", color: "#06b6d4", bg: "rgba(6,182,212,0.12)", border: "rgba(6,182,212,0.25)", icon: "◎" };
+    case "verified_mjpeg": return { label: "MJPEG", color: "#8b5cf6", bg: "rgba(139,92,246,0.12)", border: "rgba(139,92,246,0.25)", icon: "◉" };
+    case "proxy_required": return { label: "RTSP", color: "#f59e0b", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.25)", icon: "⚡" };
+    case "page_only": return { label: "EMBED", color: "#6366f1", bg: "rgba(99,102,241,0.12)", border: "rgba(99,102,241,0.25)", icon: "▣" };
+    case "blocked": return { label: "BLOCKED", color: "#ef4444", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", icon: "✕" };
+    case "unsupported": return { label: "N/A", color: "#6b7280", bg: "rgba(107,114,128,0.1)", border: "rgba(107,114,128,0.2)", icon: "—" };
+    default: return { label: "PENDING", color: "#9ca3af", bg: "rgba(156,163,175,0.08)", border: "rgba(156,163,175,0.2)", icon: "?" };
+  }
+};
 
 // ═══════════════ MAP HELPERS ═══════════════
 function MapEventHandler({ onMoveEnd }: { onMoveEnd: (bounds: any) => void }) {
@@ -86,128 +127,149 @@ function MapZoomControls() {
       <button style={btnStyle} onClick={() => map.zoomIn()} title="Zoom In">+</button>
       <button style={btnStyle} onClick={() => map.zoomOut()} title="Zoom Out">−</button>
       <button style={{ ...btnStyle, fontSize: 12 }} onClick={() => map.flyTo([28, 45], 5, { duration: 1.2 })} title="Reset View">⌂</button>
-      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([0, -100])} title="Pan Up">↑</button>
-      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([0, 100])} title="Pan Down">↓</button>
-      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([-100, 0])} title="Pan Left">←</button>
-      <button style={{ ...btnStyle, fontSize: 11 }} onClick={() => map.panBy([100, 0])} title="Pan Right">→</button>
     </div>
   );
 }
 
-// ═══════════════ FEED VIEWER (with HLS.js, proxy, reconnection) ═══════════════
+// ═══════════════ YOUTUBE PLAYER ═══════════════
+function YouTubePlayer({ videoId, cam }: { videoId: string; cam: CameraData }) {
+  const [loadState, setLoadState] = useState<"loading" | "ok" | "restricted">("loading");
+  const thumbUrl = getYouTubeThumbnail(videoId);
+
+  useEffect(() => {
+    setLoadState("loading");
+    const timer = setTimeout(() => {
+      setLoadState(prev => prev === "loading" ? "ok" : prev);
+    }, 8000);
+
+    const handler = (e: MessageEvent) => {
+      try {
+        if (typeof e.data === "string" && e.data.includes('"event":"onError"')) {
+          const parsed = JSON.parse(e.data);
+          const errorCode = parsed?.info;
+          if (errorCode === 150 || errorCode === 101) {
+            setLoadState("restricted");
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener("message", handler);
+    return () => { clearTimeout(timer); window.removeEventListener("message", handler); };
+  }, [videoId]);
+
+  if (loadState === "restricted") {
+    return (
+      <div className="w-full h-full relative flex flex-col items-center justify-center" style={{ background: `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.95)), url(${thumbUrl}) center/cover` }}>
+        <img src={thumbUrl} alt={cam.name} className="absolute inset-0 w-full h-full object-cover opacity-20 blur-sm" />
+        <div className="relative z-10 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)" }}>
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            <span className="text-[9px] text-amber-400 font-mono font-bold">EMBED RESTRICTED</span>
+          </div>
+          <div className="text-[10px] text-gray-400 font-mono text-center px-4">
+            This stream blocks inline embedding (Error 153/150)
+          </div>
+          <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-bold text-xs transition-all hover:scale-105"
+            style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)", boxShadow: "0 4px 20px rgba(239,68,68,0.3)" }}>
+            <Youtube className="h-4 w-4" /> WATCH ON YOUTUBE
+          </a>
+          <span className="text-[8px] text-gray-600 font-mono">{cam.city}, {cam.country}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full relative">
+      {loadState === "loading" && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: `linear-gradient(rgba(10,15,24,0.9), rgba(10,15,24,0.95)), url(${thumbUrl}) center/cover` }}>
+          <img src={thumbUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-10" />
+          <div className="relative flex flex-col items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-red-400 animate-spin" />
+            <span className="text-[9px] text-gray-500 font-mono">CONNECTING TO YOUTUBE...</span>
+          </div>
+        </div>
+      )}
+      <iframe
+        key={videoId}
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&modestbranding=1&rel=0&enablejsapi=1`}
+        className="w-full h-full border-0"
+        allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+        allowFullScreen
+        onLoad={() => setLoadState("ok")}
+        referrerPolicy="no-referrer"
+      />
+      <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(239,68,68,0.3)" }}>
+        <Youtube className="h-3 w-3 text-red-500" />
+        <span className="text-[8px] text-red-400 font-mono font-bold">YOUTUBE LIVE</span>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════ FEED VIEWER (with source-type routing) ═══════════════
 function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) {
-  const [feedMode, setFeedMode] = useState<"loading" | "hls" | "embed" | "snapshot" | "mjpeg" | "rtsp" | "unavailable">("loading");
-  const [embedState, setEmbedState] = useState<"loading" | "ok" | "blocked">("loading");
   const [snapTick, setSnapTick] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
   const [proxySnapSrc, setProxySnapSrc] = useState<string | null>(null);
+  const [hlsFailed, setHlsFailed] = useState(false);
+  const [embedState, setEmbedState] = useState<"loading" | "ok" | "blocked">("loading");
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
 
   const MAX_RETRIES = 3;
-  const BACKOFF = [2000, 4000, 8000];
+  const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || cam.stream_url || "");
+  const verStatus = cam.verification_status;
+  const isHls = !ytId && (verStatus === "verified_hls" || cam.stream_type_detected === "hls" || !!(cam.stream_url && /\.m3u8/i.test(cam.stream_url)));
+  const isSnapshot = !ytId && !isHls && (verStatus === "verified_snapshot" || cam.stream_type_detected === "snapshot" || !!cam.snapshot_url);
+  const isMjpeg = !ytId && !isHls && !isSnapshot && (verStatus === "verified_mjpeg" || cam.stream_type_detected === "mjpeg");
+  const isRtsp = !ytId && !isHls && !isSnapshot && !isMjpeg && (verStatus === "proxy_required" || cam.stream_type_detected === "rtsp");
+  const embedUrl = !ytId && !isHls && !isSnapshot && !isMjpeg && !isRtsp ? (cam.embed_url || cam.playable_url || cam.stream_url) : null;
 
-  // Reset state when camera changes
+  // ALL HOOKS MUST BE BEFORE ANY RETURNS
   useEffect(() => {
-    setFeedMode("loading");
-    setEmbedState("loading");
-    setSnapTick(0);
-    setRetryCount(0);
-    setProxySnapSrc(null);
+    setSnapTick(0); setRetryCount(0); setProxySnapSrc(null); setHlsFailed(false); setEmbedState("loading");
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
   }, [cam.id]);
 
-  // Determine feed mode based on stream_type_detected and URLs
   useEffect(() => {
-    const streamType = cam.stream_type_detected;
-    const hlsUrl = cam.stream_url && (cam.stream_url.includes(".m3u8") || cam.source_type === "hls" || streamType === "hls");
-    const mjpegUrl = streamType === "mjpeg";
-    const snapshotUrl = cam.snapshot_url || streamType === "snapshot";
-    const rtspUrl = streamType === "rtsp" || (cam.stream_url && cam.stream_url.startsWith("rtsp://"));
-    const embedUrl = cam.embed_url || cam.stream_url;
-
-    if (hlsUrl && cam.stream_url) {
-      setFeedMode("hls");
-    } else if (mjpegUrl && (cam.stream_url || cam.snapshot_url)) {
-      setFeedMode("mjpeg");
-    } else if (rtspUrl) {
-      setFeedMode("rtsp");
-    } else if (embedUrl) {
-      setFeedMode("embed");
-    } else if (snapshotUrl) {
-      setFeedMode("snapshot");
-    } else {
-      setFeedMode("unavailable");
-    }
-  }, [cam]);
-
-  // HLS.js player
-  useEffect(() => {
-    if (feedMode !== "hls" || !cam.stream_url || !videoRef.current) return;
-
+    if (!isHls || !cam.stream_url || !videoRef.current || hlsFailed) return;
     const video = videoRef.current;
-
     if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        maxBufferLength: 10,
-        maxMaxBufferLength: 30,
-      });
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 10, maxMaxBufferLength: 30 });
       hlsRef.current = hls;
       hls.loadSource(cam.stream_url);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            if (retryCount < MAX_RETRIES) {
-              setTimeout(() => {
-                hls.startLoad();
-                setRetryCount(r => r + 1);
-              }, BACKOFF[retryCount] || 8000);
-            } else {
-              // Fallback to snapshot proxy or embed
-              hls.destroy();
-              hlsRef.current = null;
-              handleFallback();
-            }
-          } else {
-            hls.destroy();
-            hlsRef.current = null;
-            handleFallback();
-          }
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR && retryCount < MAX_RETRIES) {
+            setTimeout(() => { hls.startLoad(); setRetryCount(r => r + 1); }, 4000);
+          } else { hls.destroy(); hlsRef.current = null; setHlsFailed(true); }
         }
       });
-
       return () => { hls.destroy(); hlsRef.current = null; };
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Native HLS (Safari)
       video.src = cam.stream_url;
       video.addEventListener("loadedmetadata", () => { video.play().catch(() => {}); });
     }
-  }, [feedMode, cam.stream_url, retryCount]);
+  }, [isHls, cam.stream_url, retryCount, hlsFailed]);
 
-  // Auto-refresh proxy snapshot every 5s
   useEffect(() => {
-    if (feedMode === "snapshot" || feedMode === "mjpeg") {
-      const iv = setInterval(() => setSnapTick(t => t + 1), 5000);
-      return () => clearInterval(iv);
-    }
-  }, [feedMode]);
+    if (!isSnapshot) return;
+    const iv = setInterval(() => setSnapTick(t => t + 1), 5000);
+    return () => clearInterval(iv);
+  }, [isSnapshot]);
 
-  // Fetch proxy snapshot
   useEffect(() => {
-    if (feedMode !== "snapshot" && feedMode !== "mjpeg") return;
+    if (!isSnapshot) return;
     const snapUrl = cam.snapshot_url || cam.stream_url;
     if (!snapUrl) return;
-
-    // Use proxy to bypass CORS
     const fetchProxy = async () => {
       try {
         const resp = await fetch(STREAM_PROXY_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "proxy", url: snapUrl }),
         });
         if (resp.ok) {
@@ -215,193 +277,113 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
           const objectUrl = URL.createObjectURL(blob);
           setProxySnapSrc(prev => { if (prev) URL.revokeObjectURL(prev); return objectUrl; });
         }
-      } catch {
-        // Fall back to direct URL
-        setProxySnapSrc(snapUrl);
-      }
+      } catch { setProxySnapSrc(snapUrl); }
     };
     fetchProxy();
-  }, [feedMode, cam.snapshot_url, cam.stream_url, snapTick]);
+  }, [isSnapshot, cam.snapshot_url, cam.stream_url, snapTick]);
 
-  const handleFallback = () => {
-    // Cascade: HLS failed → try snapshot proxy → try embed → unavailable
-    if (cam.snapshot_url) {
-      setFeedMode("snapshot");
-    } else if (cam.embed_url) {
-      setFeedMode("embed");
-    } else {
-      setFeedMode("unavailable");
-    }
-  };
-
-  const getEmbedUrl = (url: string): string | null => {
-    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=1&modestbranding=1`;
-    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1`;
-    const dmMatch = url.match(/dailymotion\.com\/video\/([a-z0-9]+)/i);
-    if (dmMatch) return `https://www.dailymotion.com/embed/video/${dmMatch[1]}?autoplay=1&mute=1`;
-    const embeddableDomains = ["youtube.com/embed", "player.vimeo.com", "dailymotion.com/embed", "livestream.com/accounts", "ustream.tv", "twitch.tv/embed", "iframe.dacast.com", "video.ibm.com"];
-    if (embeddableDomains.some(d => url.includes(d))) return url;
-    const windyMatch = url.match(/windy\.com\/webcams\/(\d+)/);
-    if (windyMatch) return `https://webcams.windy.com/webcams/public/embed/player/${windyMatch[1]}/day`;
-    return null;
-  };
-
-  // Detect iframe block via timeout (reduced to 4s)
   useEffect(() => {
-    if (feedMode === "embed" && embedState === "loading") {
-      const timer = setTimeout(() => {
-        setEmbedState(prev => prev === "loading" ? "blocked" : prev);
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [feedMode, embedState]);
+    if (!embedUrl) return;
+    setEmbedState("loading");
+    const timer = setTimeout(() => setEmbedState(prev => prev === "loading" ? "ok" : prev), 8000);
+    return () => clearTimeout(timer);
+  }, [embedUrl]);
 
-  // YouTube error detection
-  useEffect(() => {
-    const primaryUrl = cam.embed_url || cam.stream_url || "";
-    if (!primaryUrl.includes("youtube.com")) return;
-    const handler = (e: MessageEvent) => {
-      try {
-        if (typeof e.data === "string" && e.data.includes('"event":"onError"')) {
-          setEmbedState("blocked");
-        }
-      } catch {}
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [cam.embed_url, cam.stream_url]);
+  // ── RENDERS (after all hooks) ──
 
-  // When embed is blocked, try fallback
-  useEffect(() => {
-    if (feedMode === "embed" && embedState === "blocked") {
-      if (cam.snapshot_url) {
-        setFeedMode("snapshot");
-      } else {
-        setFeedMode("unavailable");
-      }
-    }
-  }, [feedMode, embedState, cam.snapshot_url]);
+  if (ytId) return <YouTubePlayer videoId={ytId} cam={cam} />;
 
-  // ── HLS MODE ──
-  if (feedMode === "hls") {
+  if (isHls && cam.stream_url && !hlsFailed) {
     return (
       <div className="w-full h-full relative" style={{ background: "#0a0f18" }}>
         <video ref={videoRef} className="w-full h-full object-contain" autoPlay muted controls playsInline />
-        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(239,68,68,0.3)" }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[8px] text-red-400 font-mono font-bold">HLS LIVE</span>
+        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(34,197,94,0.3)" }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[8px] text-green-400 font-mono font-bold">HLS LIVE</span>
         </div>
-        {retryCount > 0 && (
-          <div className="absolute bottom-2 left-2 text-[8px] text-amber-400 font-mono">
-            RECONNECT #{retryCount}/{MAX_RETRIES}
-          </div>
+      </div>
+    );
+  }
+
+  if (isSnapshot && (cam.snapshot_url || proxySnapSrc)) {
+    const displaySrc = proxySnapSrc || cam.snapshot_url || cam.thumbnail_url;
+    return (
+      <div className="w-full h-full relative flex items-center justify-center" style={{ background: "#0a0f18" }}>
+        {displaySrc && <img src={displaySrc} alt={cam.name} className="max-w-full max-h-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
+        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(6,182,212,0.2)" }}>
+          <ImageIcon className="h-3 w-3 text-cyan-400" />
+          <span className="text-[8px] text-cyan-400 font-mono font-bold">SNAPSHOT #{snapTick}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isMjpeg && (cam.stream_url || cam.snapshot_url)) {
+    return (
+      <div className="w-full h-full relative flex items-center justify-center" style={{ background: "#0a0f18" }}>
+        <img src={(cam.stream_url || cam.snapshot_url)!} alt={cam.name} className="max-w-full max-h-full object-contain" />
+        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(139,92,246,0.3)" }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+          <span className="text-[8px] text-purple-400 font-mono font-bold">MJPEG STREAM</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isRtsp) {
+    const rawUrl = cam.stream_url || cam.embed_url;
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: "#0a0f18" }}>
+        <Video className="h-10 w-10 text-amber-500" />
+        <div className="text-[10px] text-amber-400 font-mono font-bold">RTSP STREAM</div>
+        <div className="text-[8px] text-gray-600 font-mono">Requires proxy conversion</div>
+        {rawUrl && (
+          <button onClick={() => navigator.clipboard.writeText(rawUrl)}
+            className="px-4 py-2 rounded text-[10px] text-white font-mono font-bold flex items-center gap-2 hover:bg-amber-500/20 transition-all"
+            style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)" }}>
+            <Copy className="h-3.5 w-3.5" /> COPY RTSP URL
+          </button>
         )}
       </div>
     );
   }
 
-  // ── EMBED MODE ──
-  if (feedMode === "embed") {
-    const primaryUrl = cam.embed_url || cam.stream_url || "";
-    const embeddableUrl = getEmbedUrl(primaryUrl);
-
-    if (embeddableUrl && embedState !== "blocked") {
-      return (
-        <div className="w-full h-full relative">
-          {embedState === "loading" && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: "#0a0f18" }}>
-              <div className="flex flex-col items-center gap-2">
-                <RefreshCw className="h-5 w-5 text-cyan-400 animate-spin" />
-                <span className="text-[9px] text-gray-500 font-mono">CONNECTING TO FEED...</span>
-              </div>
-            </div>
-          )}
-          <iframe
-            key={cam.id}
-            src={embeddableUrl + (embeddableUrl.includes("youtube.com") ? "&enablejsapi=1" : "")}
-            className="w-full h-full border-0"
-            allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
-            allowFullScreen
-            onLoad={() => setEmbedState("ok")}
-            onError={() => setEmbedState("blocked")}
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      );
-    }
-  }
-
-  // ── SNAPSHOT / MJPEG MODE (proxied) ──
-  if (feedMode === "snapshot" || feedMode === "mjpeg") {
-    const displaySrc = proxySnapSrc || cam.snapshot_url || cam.thumbnail_url;
-    if (displaySrc) {
-      return (
-        <div className="w-full h-full relative flex items-center justify-center" style={{ background: "#0a0f18" }}>
-          <img src={displaySrc} alt={cam.name} className="max-w-full max-h-full object-contain"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(6,182,212,0.2)" }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-[8px] text-cyan-400 font-mono font-bold">
-              {feedMode === "mjpeg" ? "MJPEG PROXY" : "SNAPSHOT • PROXIED"}
-            </span>
-          </div>
-          <div className="absolute bottom-2 left-2 text-[8px] text-gray-600 font-mono">
-            FRAME #{snapTick}
-          </div>
-        </div>
-      );
-    }
-  }
-
-  // ── RTSP MODE ──
-  if (feedMode === "rtsp") {
-    const rawUrl = cam.stream_url || cam.embed_url;
+  if (embedUrl && verStatus !== "unsupported" && verStatus !== "blocked") {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: "#0a0f18" }}>
-        <div className="relative">
-          <Video className="h-10 w-10 text-amber-500" />
-        </div>
-        <div className="text-center">
-          <div className="text-[10px] text-amber-400 font-mono font-bold">RTSP STREAM</div>
-          <div className="text-[8px] text-gray-600 font-mono mt-0.5">Requires native player (VLC)</div>
-        </div>
-        {rawUrl && (
-          <div className="flex flex-col items-center gap-2">
-            <button onClick={() => navigator.clipboard.writeText(rawUrl)}
-              className="px-4 py-2 rounded text-[10px] text-white font-mono font-bold flex items-center gap-2 hover:bg-amber-500/20 transition-all"
-              style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)" }}>
-              <Copy className="h-3.5 w-3.5" /> COPY RTSP URL
-            </button>
-            <span className="text-[7px] text-gray-700 font-mono">Open in VLC: Media → Open Network Stream</span>
+      <div className="w-full h-full relative">
+        {embedState === "loading" && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: "#0a0f18" }}>
+            <div className="flex flex-col items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-cyan-400 animate-spin" />
+              <span className="text-[9px] text-gray-500 font-mono">CONNECTING TO FEED...</span>
+            </div>
           </div>
         )}
+        <iframe key={cam.id} src={embedUrl} className="w-full h-full border-0"
+          allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+          allowFullScreen onLoad={() => setEmbedState("ok")} onError={() => setEmbedState("blocked")} referrerPolicy="no-referrer" />
+        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(99,102,241,0.3)" }}>
+          <MonitorPlay className="h-3 w-3 text-indigo-400" />
+          <span className="text-[8px] text-indigo-400 font-mono font-bold">EMBED</span>
+        </div>
       </div>
     );
   }
 
   // ── UNAVAILABLE ──
-  const rawUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
+  const rawUrl = cam.original_url || cam.embed_url || cam.stream_url || cam.snapshot_url;
+  const badge = getVerificationBadge(verStatus);
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: "#0a0f18" }}>
-      <div className="relative">
-        <Camera className="h-10 w-10 text-gray-700" />
-        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-500/30 flex items-center justify-center">
-          <AlertTriangle className="h-2 w-2 text-amber-400" />
-        </span>
-      </div>
+      <Camera className="h-10 w-10 text-gray-700" />
       <div className="text-center">
         <div className="text-[10px] text-gray-400 font-mono font-bold">FEED UNAVAILABLE</div>
-        <div className="text-[8px] text-gray-600 font-mono mt-0.5">
-          {retryCount >= MAX_RETRIES ? `Failed after ${MAX_RETRIES} retries` : "Source blocks inline embedding"}
+        <div className="text-[8px] font-mono mt-1 px-2 py-0.5 rounded" style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
+          {badge.icon} {badge.label}: {cam.verification_error || verStatus || "Unknown source type"}
         </div>
       </div>
       {rawUrl && (
-        <button onClick={() => {
-          const ytM = rawUrl.match(/youtube\.com\/embed\/([^?&/]+)/i);
-          window.open(ytM ? `https://www.youtube.com/watch?v=${ytM[1]}` : rawUrl, "_blank", "noopener,noreferrer");
-        }}
+        <button onClick={() => window.open(rawUrl, "_blank", "noopener,noreferrer")}
           className="px-4 py-2 rounded text-[10px] text-white font-mono font-bold flex items-center gap-2 hover:bg-cyan-500/20 transition-all"
           style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
           <Eye className="h-3.5 w-3.5" /> VIEW EXTERNALLY
@@ -411,17 +393,56 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
   );
 }
 
+// ═══════════════ CHANNEL LIST ITEM ═══════════════
+function ChannelItem({ cam, isSelected, onClick }: { cam: CameraData; isSelected: boolean; onClick: () => void }) {
+  const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
+  const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url;
+  const badge = getVerificationBadge(cam.verification_status);
+  const isOnline = cam.status === "active";
+
+  return (
+    <button onClick={onClick}
+      className={`w-full text-left flex gap-2 p-2 rounded-lg transition-all ${isSelected ? "ring-1 ring-cyan-500/40" : "hover:bg-white/[0.03]"}`}
+      style={{ background: isSelected ? "rgba(6,182,212,0.08)" : "transparent", borderBottom: "1px solid rgba(6,182,212,0.05)" }}>
+      {/* Thumbnail */}
+      <div className="w-16 h-10 rounded overflow-hidden flex-shrink-0 relative" style={{ background: "#111827" }}>
+        {thumbUrl ? (
+          <img src={thumbUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center"><Camera className="h-4 w-4 text-gray-700" /></div>
+        )}
+        {/* Status dot */}
+        <span className={`absolute top-0.5 right-0.5 w-2 h-2 rounded-full border border-black/50 ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
+        {/* YouTube icon */}
+        {ytId && <Youtube className="absolute bottom-0.5 left-0.5 h-3 w-3 text-red-500 drop-shadow" />}
+      </div>
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="text-[9px] font-bold text-gray-200 truncate">{cam.name}</div>
+        <div className="flex items-center gap-1 mt-0.5">
+          <Flag className="h-2 w-2 text-gray-600" />
+          <span className="text-[8px] text-cyan-400/80 font-bold">{cam.country}</span>
+          <span className="text-[7px] text-gray-600">• {cam.city}</span>
+        </div>
+        <div className="flex items-center gap-1 mt-0.5">
+          <span className="text-[7px] px-1 py-0 rounded font-bold" style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
+            {badge.label}
+          </span>
+          <span className="text-[7px] text-gray-600 uppercase">{cam.category}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 // ═══════════════ MAIN COMPONENT ═══════════════
 export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps) => {
-  // ── State ──
   const [cameras, setCameras] = useState<CameraData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState<CameraData | null>(null);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
-  const [pipCamera, setPipCamera] = useState<CameraData | null>(null);
-  const [pipSize, setPipSize] = useState<"sm" | "md" | "lg">("md");
   const [stats, setStats] = useState<Stats | null>(null);
 
   // Filters
@@ -437,20 +458,15 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [discovering, setDiscovering] = useState(false);
   const [checkingHealth, setCheckingHealth] = useState(false);
 
-  // ── Data Fetching ──
+  // Data Fetching
   const fetchCameras = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("cameras", {
         method: "POST",
         body: {
-          action: "list",
-          country: selectedCountry,
-          category: selectedCategory,
-          source: selectedSource,
-          status: selectedStatus,
-          search: searchQuery,
-          limit: 500,
+          action: "list", country: selectedCountry, category: selectedCategory,
+          source: selectedSource, status: selectedStatus, search: searchQuery, limit: 500,
         },
       });
       if (error) throw error;
@@ -458,22 +474,15 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
     } catch (e) {
       console.error("Failed to fetch cameras:", e);
       setCameras([]);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [selectedCountry, selectedCategory, selectedSource, selectedStatus, searchQuery]);
 
   const fetchStats = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("cameras", {
-        method: "POST",
-        body: { action: "stats" },
-      });
+      const { data, error } = await supabase.functions.invoke("cameras", { method: "POST", body: { action: "stats" } });
       if (error) throw error;
       setStats(data as Stats);
-    } catch (e) {
-      console.error("Failed to fetch stats:", e);
-    }
+    } catch (e) { console.error("Failed to fetch stats:", e); }
   }, []);
 
   useEffect(() => { fetchCameras(); }, [fetchCameras]);
@@ -481,98 +490,61 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (selectedCamera) setSelectedCamera(null);
-        else onClose();
-      }
+      if (e.key === "Escape") { if (selectedCamera) setSelectedCamera(null); else onClose(); }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose, selectedCamera]);
 
   useEffect(() => {
-    if (flyTarget) {
-      const timer = setTimeout(() => setFlyTarget(null), 2000);
-      return () => clearTimeout(timer);
-    }
+    if (flyTarget) { const timer = setTimeout(() => setFlyTarget(null), 2000); return () => clearTimeout(timer); }
   }, [flyTarget]);
 
-  // ── Actions ──
-  const handleRegionSelect = (region: string) => {
-    setSelectedRegion(region);
-    setFlyTarget(REGIONS[region]);
-    setSelectedCountry(null);
-  };
-
-  const handleCameraClick = (cam: CameraData) => {
-    setSelectedCamera(cam);
-    setRightPanelOpen(true);
-  };
+  // Actions
+  const handleRegionSelect = (region: string) => { setSelectedRegion(region); setFlyTarget(REGIONS[region]); setSelectedCountry(null); };
+  const handleCameraClick = (cam: CameraData) => { setSelectedCamera(cam); setRightPanelOpen(true); };
 
   const openCameraSource = (cam: CameraData) => {
-    const rawUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
-    if (!rawUrl) return;
-    const match = rawUrl.match(/youtube\.com\/embed\/([^?&/]+)/i);
-    window.open(match ? `https://www.youtube.com/watch?v=${match[1]}` : rawUrl, "_blank", "noopener,noreferrer");
-  };
-
-  const copyLink = (cam: CameraData) => {
-    const url = cam.embed_url || cam.stream_url || cam.snapshot_url || "";
-    navigator.clipboard.writeText(url);
+    const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || cam.stream_url || "");
+    if (ytId) { window.open(`https://www.youtube.com/watch?v=${ytId}`, "_blank", "noopener,noreferrer"); return; }
+    const rawUrl = cam.original_url || cam.embed_url || cam.stream_url || cam.snapshot_url;
+    if (rawUrl) window.open(rawUrl, "_blank", "noopener,noreferrer");
   };
 
   const scrapeAggregators = async () => {
     setScraping(true);
-    try {
-      await supabase.functions.invoke("cameras", { method: "POST", body: { action: "scrape_aggregators", country: selectedCountry } });
-      await Promise.all([fetchCameras(), fetchStats()]);
-    } catch (e) { console.error("Scrape failed:", e); }
-    finally { setScraping(false); }
+    try { await supabase.functions.invoke("cameras", { method: "POST", body: { action: "scrape_aggregators", country: selectedCountry } }); await Promise.all([fetchCameras(), fetchStats()]); }
+    catch (e) { console.error("Scrape failed:", e); } finally { setScraping(false); }
   };
 
   const discoverMore = async () => {
     setDiscovering(true);
-    try {
-      await supabase.functions.invoke("cameras", { method: "POST", body: { action: "discover", country: selectedCountry || "worldwide" } });
-      await Promise.all([fetchCameras(), fetchStats()]);
-    } catch (e) { console.error("Discovery failed:", e); }
-    finally { setDiscovering(false); }
+    try { await supabase.functions.invoke("cameras", { method: "POST", body: { action: "discover", country: selectedCountry || "worldwide" } }); await Promise.all([fetchCameras(), fetchStats()]); }
+    catch (e) { console.error("Discovery failed:", e); } finally { setDiscovering(false); }
   };
 
   const runHealthCheck = async () => {
     setCheckingHealth(true);
-    try {
-      await supabase.functions.invoke("cameras", { method: "POST", body: { action: "health_check" } });
-      await Promise.all([fetchCameras(), fetchStats()]);
-    } catch (e) { console.error("Health check failed:", e); }
-    finally { setCheckingHealth(false); }
+    try { await supabase.functions.invoke("cameras", { method: "POST", body: { action: "health_check" } }); await Promise.all([fetchCameras(), fetchStats()]); }
+    catch (e) { console.error("Health check failed:", e); } finally { setCheckingHealth(false); }
   };
 
-  // ── Computed ──
-  const nearbyCameras = useMemo(() => {
-    if (!selectedCamera) return [];
-    return cameras
-      .filter(c => c.id !== selectedCamera.id)
-      .map(c => ({ ...c, dist: Math.sqrt(Math.pow(c.lat - selectedCamera.lat, 2) + Math.pow(c.lng - selectedCamera.lng, 2)) }))
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, 8);
-  }, [selectedCamera, cameras]);
-
+  // Computed
   const sortedCountries = useMemo(() => {
     if (!stats?.byCountry) return [];
     return Object.entries(stats.byCountry).sort((a, b) => b[1].total - a[1].total);
   }, [stats]);
 
-  const getMarkerColor = (status: string) => {
-    if (status === "active") return { fill: "#22c55e", stroke: "#15803d" };
-    if (status === "error") return { fill: "#ef4444", stroke: "#b91c1c" };
-    return { fill: "#f59e0b", stroke: "#d97706" };
-  };
+  // Group cameras by country for channel list
+  const camerasByCountry = useMemo(() => {
+    const map: Record<string, CameraData[]> = {};
+    cameras.forEach(c => { if (!map[c.country]) map[c.country] = []; map[c.country].push(c); });
+    return Object.entries(map).sort((a, b) => b[1].length - a[1].length);
+  }, [cameras]);
 
   // ═══════════════ RENDER ═══════════════
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex flex-col" style={{ background: "#080c12", fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>
-      {/* Custom tooltip styles */}
       <style>{`
         .leaflet-tooltip.cctv-tip { background: #0d1320 !important; border: 1px solid rgba(6,182,212,0.25) !important; color: #e2e8f0 !important; font-family: monospace !important; font-size: 10px !important; padding: 6px 10px !important; border-radius: 4px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; }
         .leaflet-tooltip.cctv-tip::before { border-top-color: rgba(6,182,212,0.25) !important; }
@@ -595,12 +567,8 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
         <div className="flex items-center gap-0.5 mr-2">
           {Object.keys(REGIONS).map(region => (
             <button key={region} onClick={() => handleRegionSelect(region)}
-              className={`px-1.5 py-1 rounded text-[8px] font-bold tracking-wider transition-all ${
-                selectedRegion === region
-                  ? "text-cyan-300" : "text-gray-600 hover:text-gray-400"
-              }`}
-              style={selectedRegion === region ? { background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" } : { border: "1px solid transparent" }}
-            >
+              className={`px-1.5 py-1 rounded text-[8px] font-bold tracking-wider transition-all ${selectedRegion === region ? "text-cyan-300" : "text-gray-600 hover:text-gray-400"}`}
+              style={selectedRegion === region ? { background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" } : { border: "1px solid transparent" }}>
               {region}
             </button>
           ))}
@@ -612,26 +580,19 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search cameras, cities, countries..."
             className="w-full pl-7 pr-3 py-1.5 rounded text-[10px] text-gray-200 placeholder:text-gray-600 focus:outline-none"
-            style={{ background: "#111827", border: "1px solid rgba(6,182,212,0.15)" }}
-          />
+            style={{ background: "#111827", border: "1px solid rgba(6,182,212,0.15)" }} />
         </div>
 
         {/* Status Filters */}
         <div className="flex items-center gap-1 ml-1">
           <button onClick={() => setSelectedStatus(selectedStatus === "online" ? null : "online")}
-            className={`px-1.5 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${
-              selectedStatus === "online" ? "text-white" : "text-white/60 hover:text-white"
-            }`}
-            style={selectedStatus === "online" ? { background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)" } : { border: "1px solid transparent" }}
-          >
+            className={`px-1.5 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${selectedStatus === "online" ? "text-white" : "text-white/60 hover:text-white"}`}
+            style={selectedStatus === "online" ? { background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)" } : { border: "1px solid transparent" }}>
             <Wifi className="h-3 w-3" /> ONLINE
           </button>
           <button onClick={() => setSelectedStatus(selectedStatus === "offline" ? null : "offline")}
-            className={`px-1.5 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${
-              selectedStatus === "offline" ? "text-white" : "text-white/60 hover:text-white"
-            }`}
-            style={selectedStatus === "offline" ? { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)" } : { border: "1px solid transparent" }}
-          >
+            className={`px-1.5 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${selectedStatus === "offline" ? "text-white" : "text-white/60 hover:text-white"}`}
+            style={selectedStatus === "offline" ? { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)" } : { border: "1px solid transparent" }}>
             <WifiOff className="h-3 w-3" /> OFFLINE
           </button>
         </div>
@@ -641,7 +602,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           <button onClick={scrapeAggregators} disabled={scraping}
             className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-white hover:text-white transition-all"
             style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
-            <Globe className={`h-3 w-3 ${scraping ? "animate-spin" : ""}`} /> {scraping ? "SCRAPING..." : "SCRAPE SOURCES"}
+            <Globe className={`h-3 w-3 ${scraping ? "animate-spin" : ""}`} /> {scraping ? "SCRAPING..." : "SCRAPE"}
           </button>
           <button onClick={discoverMore} disabled={discovering}
             className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-white hover:text-white transition-all"
@@ -663,43 +624,41 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
       {/* ═══ MAIN CONTENT ═══ */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* ── LEFT PANEL ── */}
+        {/* ── LEFT PANEL: Filters ── */}
         {leftPanelOpen && (
-          <div className="w-60 flex flex-col overflow-hidden flex-shrink-0 cctv-scrollbar" style={{ borderRight: "1px solid rgba(6,182,212,0.12)", background: "#0a0f18ee" }}>
+          <div className="w-56 flex flex-col overflow-hidden flex-shrink-0 cctv-scrollbar" style={{ borderRight: "1px solid rgba(6,182,212,0.12)", background: "#0a0f18ee" }}>
             {/* Stats */}
             <div className="p-3" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)" }}>
               <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-2">GLOBAL OVERVIEW</div>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { label: "TOTAL", value: stats?.total || cameras.length, color: "text-white" },
-                  { label: "ONLINE", value: stats?.online || cameras.filter(c => c.status === "active").length, color: "text-green-400" },
-                  { label: "OFFLINE", value: stats?.offline || cameras.filter(c => c.status !== "active").length, color: "text-red-400" },
+                  { label: "ONLINE", value: stats?.online || 0, color: "text-green-400" },
+                  { label: "OFFLINE", value: stats?.offline || 0, color: "text-red-400" },
+                  { label: "YOUTUBE", value: stats?.youtubeCount || 0, color: "text-red-400" },
                 ].map(s => (
                   <div key={s.label} className="rounded p-1.5 text-center" style={{ background: "#111827" }}>
-                    <div className={`text-base font-bold ${s.color}`}>{s.value}</div>
+                    <div className={`text-sm font-bold ${s.color}`}>{s.value}</div>
                     <div className="text-[7px] text-gray-600">{s.label}</div>
                   </div>
                 ))}
               </div>
-              <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "#111827" }}>
-                <div className="h-full rounded-full transition-all" style={{
-                  width: `${(stats?.total || cameras.length) > 0 ? ((stats?.online || 0) / (stats?.total || cameras.length)) * 100 : 0}%`,
-                  background: "linear-gradient(90deg, #22c55e, #06b6d4)"
-                }} />
-              </div>
             </div>
 
-            {/* Continents */}
-            {stats?.byContinent && (
+            {/* Verification Stats */}
+            {stats?.byVerification && (
               <div className="p-3" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)" }}>
-                <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-1.5">BY CONTINENT</div>
+                <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-1.5">SOURCE TYPES</div>
                 <div className="space-y-0.5">
-                  {Object.entries(stats.byContinent).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([continent, count]) => (
-                    <div key={continent} className="flex items-center justify-between px-1.5 py-1 rounded text-[9px]" style={{ background: "#111827" }}>
-                      <span className="text-gray-400">{continent}</span>
-                      <span className="text-cyan-400 font-bold">{count}</span>
-                    </div>
-                  ))}
+                  {Object.entries(stats.byVerification).sort((a, b) => b[1] - a[1]).map(([status, count]) => {
+                    const b = getVerificationBadge(status);
+                    return (
+                      <div key={status} className="flex items-center justify-between px-1.5 py-1 rounded text-[8px]" style={{ background: "#111827" }}>
+                        <span style={{ color: b.color }}>{b.icon} {b.label}</span>
+                        <span className="font-bold" style={{ color: b.color }}>{count}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -710,9 +669,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
               <div className="flex flex-wrap gap-1">
                 <button onClick={() => setSelectedCategory(null)}
                   className={`px-1.5 py-0.5 rounded text-[8px] font-bold transition-all ${!selectedCategory ? "text-cyan-300" : "text-gray-600 hover:text-gray-400"}`}
-                  style={!selectedCategory ? { background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.25)" } : { border: "1px solid rgba(55,65,81,0.5)" }}>
-                  ALL
-                </button>
+                  style={!selectedCategory ? { background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.25)" } : { border: "1px solid rgba(55,65,81,0.5)" }}>ALL</button>
                 {CATEGORIES.map(cat => (
                   <button key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
                     className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase transition-all ${selectedCategory === cat ? "text-cyan-300" : "text-gray-600 hover:text-gray-400"}`}
@@ -725,38 +682,18 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
 
             {/* Countries */}
             <div className="flex-1 overflow-y-auto cctv-scrollbar p-3">
-              <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-1.5">COUNTRY INTELLIGENCE</div>
+              <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-1.5">COUNTRIES</div>
               <div className="space-y-0.5">
                 {sortedCountries.map(([country, data]) => (
                   <button key={country} onClick={() => setSelectedCountry(selectedCountry === country ? null : country)}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[9px] transition-all ${
-                      selectedCountry === country ? "text-cyan-300" : "text-gray-500 hover:text-gray-300"
-                    }`}
+                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-[9px] transition-all ${selectedCountry === country ? "text-cyan-300" : "text-gray-500 hover:text-gray-300"}`}
                     style={selectedCountry === country ? { background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" } : { border: "1px solid transparent" }}>
-                    <span className="truncate flex items-center gap-1.5">
-                      <Flag className="h-2.5 w-2.5" />{country}
-                    </span>
+                    <span className="truncate flex items-center gap-1.5"><Flag className="h-2.5 w-2.5" />{country}</span>
                     <div className="flex items-center gap-1">
                       <span className="text-green-500/70 text-[8px]">{data.online}</span>
                       <span className="text-gray-700">/</span>
                       <span className="font-bold" style={{ background: "#111827", padding: "1px 5px", borderRadius: "3px" }}>{data.total}</span>
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sources */}
-            <div className="p-3" style={{ borderTop: "1px solid rgba(6,182,212,0.08)" }}>
-              <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-1.5">DATA SOURCES</div>
-              <div className="flex flex-wrap gap-1">
-                {SOURCES.map(src => (
-                  <button key={src} onClick={() => setSelectedSource(selectedSource === src ? null : src)}
-                    className={`px-1.5 py-0.5 rounded text-[7px] font-bold transition-all ${
-                      selectedSource === src ? "text-purple-300" : "text-gray-600 hover:text-gray-400"
-                    }`}
-                    style={selectedSource === src ? { background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.25)" } : { border: "1px solid rgba(55,65,81,0.4)" }}>
-                    {src}
                   </button>
                 ))}
               </div>
@@ -776,15 +713,8 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           )}
 
           <MapContainer center={[28, 45]} zoom={5} className="w-full h-full" zoomControl={false} attributionControl={false} style={{ background: "#070b10" }}>
-            {/* Dark 3D-style terrain tiles */}
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              opacity={0.6}
-            />
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
-              opacity={0.8}
-            />
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" opacity={0.6} />
+            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png" opacity={0.8} />
             <MapEventHandler onMoveEnd={() => {}} />
             <FlyToHandler target={flyTarget} />
             <MapZoomControls />
@@ -793,29 +723,27 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
               if (!cam.lat || !cam.lng) return null;
               const isSelected = selectedCamera?.id === cam.id;
               const isOnline = cam.status === "active";
-              const borderColor = isOnline ? "#22c55e" : "#ef4444";
-              const glowColor = isOnline ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.4)";
+              const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
+              const borderColor = ytId ? "#ef4444" : isOnline ? "#22c55e" : "#ef4444";
+              const glowColor = ytId ? "rgba(239,68,68,0.4)" : isOnline ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.4)";
               const size = isSelected ? 56 : 44;
 
-              // Extract YouTube thumbnail
-              const ytMatch = cam.embed_url?.match(/youtube\.com\/embed\/([^?&/]+)/i);
-              const thumbUrl = ytMatch
-                ? `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`
-                : cam.thumbnail_url || cam.snapshot_url || null;
+              const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url || null;
 
               const icon = L.divIcon({
                 className: "",
                 html: `<div style="position:relative;width:${size}px;height:${size + 14}px;cursor:pointer;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7));">
                   ${thumbUrl
-                    ? `<div style="width:${size}px;height:${size * 0.62}px;border-radius:6px 6px 0 0;overflow:hidden;border:2px solid ${isSelected ? '#06b6d4' : borderColor};border-bottom:none;box-shadow:0 0 12px ${glowColor};${isOnline ? 'animation:pulse 3s ease-in-out infinite;' : ''}">
+                    ? `<div style="width:${size}px;height:${size * 0.62}px;border-radius:6px 6px 0 0;overflow:hidden;border:2px solid ${isSelected ? '#06b6d4' : borderColor};border-bottom:none;box-shadow:0 0 12px ${glowColor};">
                         <img src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#111827;font-size:16px;\\'>📹</div>'" />
+                        ${ytId ? '<div style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,0.9);border-radius:3px;padding:0 3px;"><span style="font-size:7px;color:white;font-weight:900;">▶ YT</span></div>' : ''}
                       </div>
                       <div style="width:${size}px;height:16px;border-radius:0 0 6px 6px;background:${isSelected ? 'rgba(6,182,212,0.9)' : 'rgba(10,15,24,0.95)'};border:2px solid ${isSelected ? '#06b6d4' : borderColor};border-top:none;display:flex;align-items:center;justify-content:center;gap:3px;">
-                        <span style="width:5px;height:5px;border-radius:50%;background:${borderColor};${isOnline ? 'animation:pulse 2s infinite;' : ''}"></span>
-                        <span style="font-size:7px;font-weight:800;color:${isSelected ? '#fff' : '#9ca3af'};font-family:monospace;letter-spacing:0.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:${size - 20}px;">${cam.city}</span>
+                        <span style="width:5px;height:5px;border-radius:50%;background:${isOnline ? '#22c55e' : '#ef4444'};${isOnline ? 'animation:pulse 2s infinite;' : ''}"></span>
+                        <span style="font-size:7px;font-weight:800;color:${isSelected ? '#fff' : '#9ca3af'};font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:${size - 20}px;">${cam.city}</span>
                       </div>`
-                    : `<div style="width:${size}px;height:${size * 0.62 + 16}px;border-radius:6px;background:rgba(10,15,24,0.9);border:2px solid ${isSelected ? '#06b6d4' : borderColor};box-shadow:0 0 12px ${glowColor};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;${isOnline ? 'animation:pulse 3s ease-in-out infinite;' : ''}">
-                        <span style="font-size:18px;filter:drop-shadow(0 0 6px ${borderColor});">📹</span>
+                    : `<div style="width:${size}px;height:${size * 0.62 + 16}px;border-radius:6px;background:rgba(10,15,24,0.9);border:2px solid ${isSelected ? '#06b6d4' : borderColor};box-shadow:0 0 12px ${glowColor};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+                        <span style="font-size:18px;">📹</span>
                         <span style="font-size:7px;font-weight:800;color:#9ca3af;font-family:monospace;">${cam.city}</span>
                       </div>`
                   }
@@ -833,6 +761,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                       <div style={{ color: "#9ca3af", fontSize: 10 }}>{cam.city}, {cam.country}</div>
                       <div style={{ fontSize: 10, color: cam.status === 'active' ? '#22c55e' : '#ef4444', marginTop: 2 }}>
                         {cam.status === "active" ? "● ONLINE" : "● OFFLINE"}
+                        {ytId && " • YouTube"}
                       </div>
                       <div style={{ fontSize: 9, color: "#6b7280", marginTop: 1 }}>{cam.source_name} • {cam.category}</div>
                     </div>
@@ -842,12 +771,12 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
             })}
           </MapContainer>
 
-          {/* Map Overlay - Legend */}
+          {/* Legend */}
           <div className="absolute bottom-3 left-3 z-[5] flex items-center gap-2">
             <div className="rounded px-3 py-1.5 flex items-center gap-3" style={{ background: "rgba(10,15,24,0.9)", border: "1px solid rgba(6,182,212,0.15)" }}>
               {[
                 { color: "#22c55e", label: "ONLINE" },
-                { color: "#ef4444", label: "OFFLINE" },
+                { color: "#ef4444", label: "OFFLINE/YT" },
                 { color: "#f59e0b", label: "UNKNOWN" },
               ].map(l => (
                 <div key={l.label} className="flex items-center gap-1.5">
@@ -858,115 +787,44 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
             </div>
           </div>
 
-          {/* Map Overlay - Feed Count */}
+          {/* Feed Count */}
           <div className="absolute top-3 right-3 z-[5]">
             <div className="rounded px-3 py-1.5" style={{ background: "rgba(10,15,24,0.9)", border: "1px solid rgba(6,182,212,0.15)" }}>
-              <span className="text-[8px] text-gray-500">FEEDS IN VIEW: </span>
+              <span className="text-[8px] text-gray-500">FEEDS: </span>
               <span className="text-sm font-bold text-cyan-400">{cameras.length}</span>
             </div>
           </div>
-
-          {/* ── PiP Floating Feed ── */}
-          {pipCamera && (() => {
-            const pipW = pipSize === "sm" ? 240 : pipSize === "lg" ? 480 : 340;
-            const pipH = pipSize === "sm" ? 135 : pipSize === "lg" ? 270 : 191;
-            const ytMatch = pipCamera.embed_url?.match(/youtube\.com\/embed\/([^?&/]+)/i);
-            const embedSrc = pipCamera.embed_url || pipCamera.stream_url;
-            return (
-              <div
-                className="absolute z-[20] rounded-lg overflow-hidden"
-                style={{
-                  bottom: 50, left: 12, width: pipW, height: pipH + 28,
-                  background: "rgba(8,12,18,0.97)", border: "1px solid rgba(6,182,212,0.3)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.7), 0 0 20px rgba(6,182,212,0.15)",
-                }}
-              >
-                {/* PiP header */}
-                <div className="flex items-center justify-between px-2" style={{ height: 28, background: "rgba(6,182,212,0.08)", borderBottom: "1px solid rgba(6,182,212,0.15)" }}>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[8px] font-mono font-bold text-cyan-400 truncate" style={{ maxWidth: pipW - 100 }}>
-                      {pipCamera.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {(["sm", "md", "lg"] as const).map(s => (
-                      <button key={s} onClick={() => setPipSize(s)}
-                        className="px-1.5 py-0.5 rounded text-[7px] font-bold font-mono transition-all"
-                        style={{
-                          background: pipSize === s ? "rgba(6,182,212,0.2)" : "transparent",
-                          color: pipSize === s ? "#06b6d4" : "#6b7280",
-                          border: pipSize === s ? "1px solid rgba(6,182,212,0.3)" : "1px solid transparent",
-                        }}>
-                        {s.toUpperCase()}
-                      </button>
-                    ))}
-                    <button onClick={() => setPipCamera(null)}
-                      className="ml-1 w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/20 transition-all"
-                      style={{ color: "#ef4444" }}>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-                {/* PiP feed */}
-                <div style={{ width: pipW, height: pipH }}>
-                  {embedSrc ? (
-                    <iframe
-                      src={embedSrc}
-                      className="w-full h-full border-0"
-                      allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ background: "#0a0f18" }}>
-                      <span className="text-[10px] text-gray-600 font-mono">NO FEED AVAILABLE</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
         </div>
 
-        {/* ── RIGHT PANEL ── */}
+        {/* ── RIGHT PANEL: Camera Detail + Channel List ── */}
         {rightPanelOpen && (
-          <div className="w-72 flex flex-col overflow-hidden flex-shrink-0 cctv-scrollbar" style={{ borderLeft: "1px solid rgba(6,182,212,0.12)", background: "#0a0f18ee" }}>
+          <div className="w-80 flex flex-col overflow-hidden flex-shrink-0 cctv-scrollbar" style={{ borderLeft: "1px solid rgba(6,182,212,0.12)", background: "#0a0f18ee" }}>
             {selectedCamera ? (
               <>
-                {/* Camera Detail */}
+                {/* Camera Detail Header */}
                 <div className="p-3" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)" }}>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-[8px] text-cyan-500/50 tracking-[0.2em]">CAMERA INTELLIGENCE</div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => { setPipCamera(selectedCamera); }} className="p-1 hover:bg-cyan-500/10 rounded" title="Picture-in-Picture">
-                        <Video className="h-3 w-3 text-cyan-500" />
-                      </button>
-                      <button onClick={() => setSelectedCamera(null)} className="p-1 hover:bg-white/5 rounded">
-                        <X className="h-3 w-3 text-gray-500" />
-                      </button>
-                    </div>
+                    <div className="text-[8px] text-cyan-500/50 tracking-[0.2em]">CAMERA FEED</div>
+                    <button onClick={() => setSelectedCamera(null)} className="p-1 hover:bg-white/5 rounded">
+                      <X className="h-3 w-3 text-gray-500" />
+                    </button>
                   </div>
                   <div className="text-xs font-bold text-white">{selectedCamera.name}</div>
                   <div className="text-[9px] text-gray-400 mt-0.5">{selectedCamera.city}, {selectedCamera.country}</div>
                   <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                    <span className={`text-[8px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold ${
-                      selectedCamera.status === "active" ? "text-green-400" : "text-red-400"
-                    }`} style={{
-                      background: selectedCamera.status === "active" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-                      border: `1px solid ${selectedCamera.status === "active" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`
-                    }}>
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold ${selectedCamera.status === "active" ? "text-green-400" : "text-red-400"}`}
+                      style={{ background: selectedCamera.status === "active" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", border: `1px solid ${selectedCamera.status === "active" ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}` }}>
                       <span className={`w-1.5 h-1.5 rounded-full ${selectedCamera.status === "active" ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
                       {selectedCamera.status === "active" ? "ONLINE" : "OFFLINE"}
                     </span>
+                    {(() => { const b = getVerificationBadge(selectedCamera.verification_status); return (
+                      <span className="text-[8px] px-1.5 py-0.5 rounded font-bold" style={{ color: b.color, background: b.bg, border: `1px solid ${b.border}` }}>
+                        {b.icon} {b.label}
+                      </span>
+                    ); })()}
                     <span className="text-[8px] px-1.5 py-0.5 rounded text-gray-400 uppercase font-bold" style={{ background: "#111827", border: "1px solid rgba(55,65,81,0.5)" }}>
                       {selectedCamera.category}
                     </span>
-                    {selectedCamera.source_name && (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded text-purple-300 font-bold" style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)" }}>
-                        {selectedCamera.source_name}
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -980,12 +838,13 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                   <button onClick={() => openCameraSource(selectedCamera)}
                     className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-white font-bold hover:bg-cyan-500/20 transition-all"
                     style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
-                    <ExternalLink className="h-3 w-3" /> OPEN LIVE
+                    {selectedCamera.youtube_video_id ? <Youtube className="h-3 w-3 text-red-400" /> : <ExternalLink className="h-3 w-3" />}
+                    {selectedCamera.youtube_video_id ? "YOUTUBE" : "OPEN LIVE"}
                   </button>
-                  <button onClick={() => copyLink(selectedCamera)}
+                  <button onClick={() => { const url = selectedCamera.original_url || selectedCamera.embed_url || selectedCamera.stream_url || ""; navigator.clipboard.writeText(url); }}
                     className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-gray-400 font-bold hover:bg-white/5 transition-all"
                     style={{ background: "#111827", border: "1px solid rgba(55,65,81,0.5)" }}>
-                    <Copy className="h-3 w-3" /> COPY LINK
+                    <Copy className="h-3 w-3" /> COPY
                   </button>
                   {selectedCamera.lat !== 0 && onShowOnMap && (
                     <button onClick={() => { onShowOnMap(selectedCamera.lat, selectedCamera.lng, selectedCamera.name); onClose(); }}
@@ -1000,52 +859,57 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                   </button>
                 </div>
 
-                {/* Nearby Cameras */}
-                <div className="flex-1 overflow-y-auto cctv-scrollbar p-3">
-                  <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-2">NEARBY CAMERAS</div>
-                  <div className="space-y-1">
-                    {nearbyCameras.map(cam => (
-                      <button key={cam.id} onClick={() => handleCameraClick(cam)}
-                        className="w-full text-left p-2 rounded hover:bg-white/[0.03] transition-all"
-                        style={{ background: "#111827", border: "1px solid rgba(55,65,81,0.3)" }}>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cam.status === "active" ? "bg-green-500" : "bg-red-500"}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[9px] font-bold text-gray-300 truncate">{cam.name}</div>
-                            <div className="text-[8px] text-gray-600">{cam.city} • {cam.category}</div>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                    {nearbyCameras.length === 0 && <div className="text-[9px] text-gray-700 text-center py-4">No nearby cameras</div>}
+                {/* Admin Diagnostics */}
+                <div className="p-2" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)" }}>
+                  <div className="text-[7px] text-cyan-500/40 tracking-[0.2em] mb-1">DIAGNOSTICS</div>
+                  <div className="space-y-0.5 text-[8px] font-mono">
+                    <div className="flex justify-between"><span className="text-gray-600">Source Type</span><span className="text-gray-400">{selectedCamera.stream_type_detected || "—"}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Verification</span><span className="text-gray-400">{selectedCamera.verification_status || "pending"}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">YouTube ID</span><span className="text-gray-400">{selectedCamera.youtube_video_id || "—"}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Verified</span><span className={selectedCamera.is_verified ? "text-green-400" : "text-gray-600"}>{selectedCamera.is_verified ? "YES" : "NO"}</span></div>
+                    {selectedCamera.original_url && (
+                      <div className="mt-1"><span className="text-gray-600">URL: </span><span className="text-gray-500 break-all text-[7px]">{selectedCamera.original_url.substring(0, 60)}...</span></div>
+                    )}
                   </div>
+                </div>
+
+                {/* Channel list below selected camera */}
+                <div className="flex-1 overflow-y-auto cctv-scrollbar">
+                  <div className="p-2">
+                    <div className="text-[8px] text-cyan-500/50 tracking-[0.2em] mb-1.5">ALL CHANNELS</div>
+                  </div>
+                  {camerasByCountry.map(([country, cams]) => (
+                    <div key={country}>
+                      <div className="px-3 py-1 flex items-center gap-1.5 sticky top-0" style={{ background: "#0d1320", borderBottom: "1px solid rgba(6,182,212,0.06)" }}>
+                        <Flag className="h-2.5 w-2.5 text-cyan-500/60" />
+                        <span className="text-[8px] font-bold text-cyan-400/80 tracking-wider">{country}</span>
+                        <span className="text-[7px] text-gray-600 ml-auto">{cams.length}</span>
+                      </div>
+                      {cams.map(c => (
+                        <ChannelItem key={c.id} cam={c} isSelected={selectedCamera?.id === c.id} onClick={() => handleCameraClick(c)} />
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
-              /* Camera List */
+              /* Channel List (no camera selected) */
               <div className="flex flex-col h-full">
                 <div className="p-3" style={{ borderBottom: "1px solid rgba(6,182,212,0.08)" }}>
-                  <div className="text-[8px] text-cyan-500/50 tracking-[0.2em]">CAMERA FEEDS ({cameras.length})</div>
+                  <div className="text-[8px] text-cyan-500/50 tracking-[0.2em]">📺 CAMERA CHANNELS ({cameras.length})</div>
                 </div>
                 <div className="flex-1 overflow-y-auto cctv-scrollbar">
-                  {cameras.map(cam => (
-                    <button key={cam.id} onClick={() => handleCameraClick(cam)}
-                      className="w-full text-left p-2.5 hover:bg-white/[0.02] transition-all"
-                      style={{ borderBottom: "1px solid rgba(6,182,212,0.05)" }}>
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                          cam.status === "active" ? "bg-green-500" : cam.status === "error" ? "bg-red-500" : "bg-amber-500"
-                        }`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[9px] font-bold text-gray-300 truncate">{cam.name}</div>
-                          <div className="text-[8px] text-gray-600">{cam.city}, {cam.country}</div>
-                        </div>
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-[7px] text-gray-600 uppercase">{cam.category}</span>
-                          {cam.source_name && <span className="text-[7px] text-purple-400/60">{cam.source_name}</span>}
-                        </div>
+                  {camerasByCountry.map(([country, cams]) => (
+                    <div key={country}>
+                      <div className="px-3 py-1.5 flex items-center gap-1.5 sticky top-0 z-[2]" style={{ background: "#0d1320", borderBottom: "1px solid rgba(6,182,212,0.06)" }}>
+                        <Flag className="h-2.5 w-2.5 text-cyan-500/60" />
+                        <span className="text-[9px] font-bold text-cyan-400/80 tracking-wider">{country}</span>
+                        <span className="text-[8px] text-gray-600 ml-auto">{cams.length} cams</span>
                       </div>
-                    </button>
+                      {cams.map(c => (
+                        <ChannelItem key={c.id} cam={c} isSelected={false} onClick={() => handleCameraClick(c)} />
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -1057,26 +921,12 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
       {/* ═══ BOTTOM STATUS BAR ═══ */}
       <div className="h-7 flex items-center px-4 justify-between flex-shrink-0" style={{ borderTop: "1px solid rgba(6,182,212,0.12)", background: "#0a0f18" }}>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <Activity className="h-3 w-3 text-green-500" />
-            <span className="text-[8px] text-gray-500">SYSTEM OPERATIONAL</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Radio className="h-3 w-3 text-cyan-400" />
-            <span className="text-[8px] text-gray-500">SOURCES: {SOURCES.length} AGGREGATORS</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Signal className="h-3 w-3 text-cyan-400" />
-            <span className="text-[8px] text-gray-500">FEEDS: {stats?.total || cameras.length} TOTAL • {stats?.online || 0} ACTIVE</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Layers className="h-3 w-3 text-cyan-400" />
-            <span className="text-[8px] text-gray-500">COUNTRIES: {sortedCountries.length}</span>
-          </div>
+          <div className="flex items-center gap-1.5"><Activity className="h-3 w-3 text-green-500" /><span className="text-[8px] text-gray-500">SYSTEM OPERATIONAL</span></div>
+          <div className="flex items-center gap-1.5"><Signal className="h-3 w-3 text-cyan-400" /><span className="text-[8px] text-gray-500">FEEDS: {stats?.total || cameras.length} • ACTIVE: {stats?.online || 0} • YT: {stats?.youtubeCount || 0}</span></div>
+          <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-cyan-400" /><span className="text-[8px] text-gray-500">COUNTRIES: {sortedCountries.length}</span></div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[8px] text-gray-700">⚠ AUTHORIZED PUBLIC SOURCES ONLY • OSINT COMPLIANT</span>
-          <span className="text-[8px] text-gray-700">ESC TO CLOSE</span>
+          <span className="text-[8px] text-gray-700">OSINT COMPLIANT • ESC TO CLOSE</span>
         </div>
       </div>
     </div>,
