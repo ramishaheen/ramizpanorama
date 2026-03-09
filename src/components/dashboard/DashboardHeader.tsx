@@ -142,6 +142,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
         </div>
       </header>
       <WarChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
+      {showLiveChannels && <LiveChannelsModal onClose={() => setShowLiveChannels(false)} />}
     </>
   );
 };
