@@ -392,8 +392,9 @@ export const LiveNewsFeed = () => {
                   src={getEmbedUrl(channels[expandedChannel], muted)}
                   title={channels[expandedChannel].name}
                   className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
                 />
               )}
             </div>
