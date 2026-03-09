@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import Hls from "hls.js";
 import { MapContainer, TileLayer, Marker, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -19,7 +20,11 @@ interface CameraData {
   embed_url: string | null; thumbnail_url: string | null;
   lat: number; lng: number; is_active: boolean; status: string;
   error_message: string | null; last_checked_at?: string;
+  stream_type_detected?: string | null;
 }
+
+const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+const STREAM_PROXY_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/stream-proxy`;
 
 interface LiveCamerasModalProps {
   onClose: () => void;
@@ -89,63 +94,174 @@ function MapZoomControls() {
   );
 }
 
-// ═══════════════ FEED VIEWER ═══════════════
+// ═══════════════ FEED VIEWER (with HLS.js, proxy, reconnection) ═══════════════
 function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) {
+  const [feedMode, setFeedMode] = useState<"loading" | "hls" | "embed" | "snapshot" | "mjpeg" | "rtsp" | "unavailable">("loading");
   const [embedState, setEmbedState] = useState<"loading" | "ok" | "blocked">("loading");
   const [snapTick, setSnapTick] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const [proxySnapSrc, setProxySnapSrc] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+
+  const MAX_RETRIES = 3;
+  const BACKOFF = [2000, 4000, 8000];
 
   // Reset state when camera changes
   useEffect(() => {
+    setFeedMode("loading");
     setEmbedState("loading");
     setSnapTick(0);
+    setRetryCount(0);
+    setProxySnapSrc(null);
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
   }, [cam.id]);
 
-  // Auto-refresh snapshot every 5s
+  // Determine feed mode based on stream_type_detected and URLs
   useEffect(() => {
-    if (cam.snapshot_url || embedState === "blocked") {
+    const streamType = cam.stream_type_detected;
+    const hlsUrl = cam.stream_url && (cam.stream_url.includes(".m3u8") || cam.source_type === "hls" || streamType === "hls");
+    const mjpegUrl = streamType === "mjpeg";
+    const snapshotUrl = cam.snapshot_url || streamType === "snapshot";
+    const rtspUrl = streamType === "rtsp" || (cam.stream_url && cam.stream_url.startsWith("rtsp://"));
+    const embedUrl = cam.embed_url || cam.stream_url;
+
+    if (hlsUrl && cam.stream_url) {
+      setFeedMode("hls");
+    } else if (mjpegUrl && (cam.stream_url || cam.snapshot_url)) {
+      setFeedMode("mjpeg");
+    } else if (rtspUrl) {
+      setFeedMode("rtsp");
+    } else if (embedUrl) {
+      setFeedMode("embed");
+    } else if (snapshotUrl) {
+      setFeedMode("snapshot");
+    } else {
+      setFeedMode("unavailable");
+    }
+  }, [cam]);
+
+  // HLS.js player
+  useEffect(() => {
+    if (feedMode !== "hls" || !cam.stream_url || !videoRef.current) return;
+
+    const video = videoRef.current;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        maxBufferLength: 10,
+        maxMaxBufferLength: 30,
+      });
+      hlsRef.current = hls;
+      hls.loadSource(cam.stream_url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}); });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            if (retryCount < MAX_RETRIES) {
+              setTimeout(() => {
+                hls.startLoad();
+                setRetryCount(r => r + 1);
+              }, BACKOFF[retryCount] || 8000);
+            } else {
+              // Fallback to snapshot proxy or embed
+              hls.destroy();
+              hlsRef.current = null;
+              handleFallback();
+            }
+          } else {
+            hls.destroy();
+            hlsRef.current = null;
+            handleFallback();
+          }
+        }
+      });
+
+      return () => { hls.destroy(); hlsRef.current = null; };
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native HLS (Safari)
+      video.src = cam.stream_url;
+      video.addEventListener("loadedmetadata", () => { video.play().catch(() => {}); });
+    }
+  }, [feedMode, cam.stream_url, retryCount]);
+
+  // Auto-refresh proxy snapshot every 5s
+  useEffect(() => {
+    if (feedMode === "snapshot" || feedMode === "mjpeg") {
       const iv = setInterval(() => setSnapTick(t => t + 1), 5000);
       return () => clearInterval(iv);
     }
-  }, [cam.snapshot_url, embedState]);
+  }, [feedMode]);
+
+  // Fetch proxy snapshot
+  useEffect(() => {
+    if (feedMode !== "snapshot" && feedMode !== "mjpeg") return;
+    const snapUrl = cam.snapshot_url || cam.stream_url;
+    if (!snapUrl) return;
+
+    // Use proxy to bypass CORS
+    const fetchProxy = async () => {
+      try {
+        const resp = await fetch(STREAM_PROXY_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "proxy", url: snapUrl }),
+        });
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          setProxySnapSrc(prev => { if (prev) URL.revokeObjectURL(prev); return objectUrl; });
+        }
+      } catch {
+        // Fall back to direct URL
+        setProxySnapSrc(snapUrl);
+      }
+    };
+    fetchProxy();
+  }, [feedMode, cam.snapshot_url, cam.stream_url, snapTick]);
+
+  const handleFallback = () => {
+    // Cascade: HLS failed → try snapshot proxy → try embed → unavailable
+    if (cam.snapshot_url) {
+      setFeedMode("snapshot");
+    } else if (cam.embed_url) {
+      setFeedMode("embed");
+    } else {
+      setFeedMode("unavailable");
+    }
+  };
 
   const getEmbedUrl = (url: string): string | null => {
-    // YouTube - convert any URL to embeddable format
     const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
     if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&controls=1&modestbranding=1`;
-    // Vimeo
     const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
     if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1`;
-    // Dailymotion
     const dmMatch = url.match(/dailymotion\.com\/video\/([a-z0-9]+)/i);
     if (dmMatch) return `https://www.dailymotion.com/embed/video/${dmMatch[1]}?autoplay=1&mute=1`;
-    // Already an embed URL with known embeddable domains
     const embeddableDomains = ["youtube.com/embed", "player.vimeo.com", "dailymotion.com/embed", "livestream.com/accounts", "ustream.tv", "twitch.tv/embed", "iframe.dacast.com", "video.ibm.com"];
     if (embeddableDomains.some(d => url.includes(d))) return url;
-    // Windy webcams
     const windyMatch = url.match(/windy\.com\/webcams\/(\d+)/);
     if (windyMatch) return `https://webcams.windy.com/webcams/public/embed/player/${windyMatch[1]}/day`;
     return null;
   };
 
-  // Try embeddable URL first
-  const primaryUrl = cam.embed_url || cam.stream_url || "";
-  const embeddableUrl = getEmbedUrl(primaryUrl);
-  const snapshotSrc = cam.snapshot_url || cam.thumbnail_url;
-
-  // Detect iframe block via timeout (onLoad fires but content is blocked)
+  // Detect iframe block via timeout (reduced to 4s)
   useEffect(() => {
-    if (embeddableUrl && embedState === "loading") {
+    if (feedMode === "embed" && embedState === "loading") {
       const timer = setTimeout(() => {
-        // If still loading after 8s, likely blocked
         setEmbedState(prev => prev === "loading" ? "blocked" : prev);
-      }, 8000);
+      }, 4000);
       return () => clearTimeout(timer);
     }
-  }, [embeddableUrl, embedState]);
+  }, [feedMode, embedState]);
 
-  // Listen for YouTube postMessage "unavailable" signals
+  // YouTube error detection
   useEffect(() => {
-    if (!embeddableUrl?.includes("youtube.com")) return;
+    const primaryUrl = cam.embed_url || cam.stream_url || "";
+    if (!primaryUrl.includes("youtube.com")) return;
     const handler = (e: MessageEvent) => {
       try {
         if (typeof e.data === "string" && e.data.includes('"event":"onError"')) {
@@ -155,72 +271,117 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [embeddableUrl]);
+  }, [cam.embed_url, cam.stream_url]);
 
-  // Embeddable iframe available
-  if (embeddableUrl && embedState !== "blocked") {
-    return (
-      <div className="w-full h-full relative">
-        {embedState === "loading" && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: "#0a0f18" }}>
-            <div className="flex flex-col items-center gap-2">
-              <RefreshCw className="h-5 w-5 text-cyan-400 animate-spin" />
-              <span className="text-[9px] text-gray-500 font-mono">CONNECTING TO FEED...</span>
-            </div>
-          </div>
-        )}
-        <iframe
-          key={cam.id}
-          src={embeddableUrl + (embeddableUrl.includes("youtube.com") ? "&enablejsapi=1" : "")}
-          className="w-full h-full border-0"
-          allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
-          allowFullScreen
-          onLoad={() => setEmbedState("ok")}
-          onError={() => setEmbedState("blocked")}
-          referrerPolicy="no-referrer"
-        />
-      </div>
-    );
-  }
+  // When embed is blocked, try fallback
+  useEffect(() => {
+    if (feedMode === "embed" && embedState === "blocked") {
+      if (cam.snapshot_url) {
+        setFeedMode("snapshot");
+      } else {
+        setFeedMode("unavailable");
+      }
+    }
+  }, [feedMode, embedState, cam.snapshot_url]);
 
-  // Snapshot / thumbnail fallback with auto-refresh
-  if (snapshotSrc) {
-    const imgSrc = `${snapshotSrc}${snapshotSrc.includes("?") ? "&" : "?"}t=${snapTick}`;
-    return (
-      <div className="w-full h-full relative flex items-center justify-center" style={{ background: "#0a0f18" }}>
-        <img src={imgSrc} alt={cam.name} className="max-w-full max-h-full object-contain"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(6,182,212,0.2)" }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-[8px] text-cyan-400 font-mono font-bold">SNAPSHOT • AUTO-REFRESH</span>
-        </div>
-        <div className="absolute bottom-2 left-2 text-[8px] text-gray-600 font-mono">
-          FRAME #{snapTick}
-        </div>
-      </div>
-    );
-  }
-
-  // HLS stream - open in-app via video element
-  if (cam.stream_url && (cam.stream_url.endsWith(".m3u8") || cam.source_type === "hls")) {
+  // ── HLS MODE ──
+  if (feedMode === "hls") {
     return (
       <div className="w-full h-full relative" style={{ background: "#0a0f18" }}>
-        <video
-          key={cam.id}
-          src={cam.stream_url}
-          className="w-full h-full object-contain"
-          autoPlay muted controls playsInline
-          onError={() => setEmbedState("blocked")}
-        />
+        <video ref={videoRef} className="w-full h-full object-contain" autoPlay muted controls playsInline />
         <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(239,68,68,0.3)" }}>
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[8px] text-red-400 font-mono font-bold">LIVE STREAM</span>
+          <span className="text-[8px] text-red-400 font-mono font-bold">HLS LIVE</span>
         </div>
+        {retryCount > 0 && (
+          <div className="absolute bottom-2 left-2 text-[8px] text-amber-400 font-mono">
+            RECONNECT #{retryCount}/{MAX_RETRIES}
+          </div>
+        )}
       </div>
     );
   }
 
-  // Final fallback - tactical "no feed" display
+  // ── EMBED MODE ──
+  if (feedMode === "embed") {
+    const primaryUrl = cam.embed_url || cam.stream_url || "";
+    const embeddableUrl = getEmbedUrl(primaryUrl);
+
+    if (embeddableUrl && embedState !== "blocked") {
+      return (
+        <div className="w-full h-full relative">
+          {embedState === "loading" && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: "#0a0f18" }}>
+              <div className="flex flex-col items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-cyan-400 animate-spin" />
+                <span className="text-[9px] text-gray-500 font-mono">CONNECTING TO FEED...</span>
+              </div>
+            </div>
+          )}
+          <iframe
+            key={cam.id}
+            src={embeddableUrl + (embeddableUrl.includes("youtube.com") ? "&enablejsapi=1" : "")}
+            className="w-full h-full border-0"
+            allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+            allowFullScreen
+            onLoad={() => setEmbedState("ok")}
+            onError={() => setEmbedState("blocked")}
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      );
+    }
+  }
+
+  // ── SNAPSHOT / MJPEG MODE (proxied) ──
+  if (feedMode === "snapshot" || feedMode === "mjpeg") {
+    const displaySrc = proxySnapSrc || cam.snapshot_url || cam.thumbnail_url;
+    if (displaySrc) {
+      return (
+        <div className="w-full h-full relative flex items-center justify-center" style={{ background: "#0a0f18" }}>
+          <img src={displaySrc} alt={cam.name} className="max-w-full max-h-full object-contain"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(6,182,212,0.2)" }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-[8px] text-cyan-400 font-mono font-bold">
+              {feedMode === "mjpeg" ? "MJPEG PROXY" : "SNAPSHOT • PROXIED"}
+            </span>
+          </div>
+          <div className="absolute bottom-2 left-2 text-[8px] text-gray-600 font-mono">
+            FRAME #{snapTick}
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // ── RTSP MODE ──
+  if (feedMode === "rtsp") {
+    const rawUrl = cam.stream_url || cam.embed_url;
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: "#0a0f18" }}>
+        <div className="relative">
+          <Video className="h-10 w-10 text-amber-500" />
+        </div>
+        <div className="text-center">
+          <div className="text-[10px] text-amber-400 font-mono font-bold">RTSP STREAM</div>
+          <div className="text-[8px] text-gray-600 font-mono mt-0.5">Requires native player (VLC)</div>
+        </div>
+        {rawUrl && (
+          <div className="flex flex-col items-center gap-2">
+            <button onClick={() => navigator.clipboard.writeText(rawUrl)}
+              className="px-4 py-2 rounded text-[10px] text-white font-mono font-bold flex items-center gap-2 hover:bg-amber-500/20 transition-all"
+              style={{ background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)" }}>
+              <Copy className="h-3.5 w-3.5" /> COPY RTSP URL
+            </button>
+            <span className="text-[7px] text-gray-700 font-mono">Open in VLC: Media → Open Network Stream</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── UNAVAILABLE ──
   const rawUrl = cam.embed_url || cam.stream_url || cam.snapshot_url;
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: "#0a0f18" }}>
@@ -231,8 +392,10 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
         </span>
       </div>
       <div className="text-center">
-        <div className="text-[10px] text-gray-400 font-mono font-bold">FEED RESTRICTED</div>
-        <div className="text-[8px] text-gray-600 font-mono mt-0.5">Source blocks inline embedding</div>
+        <div className="text-[10px] text-gray-400 font-mono font-bold">FEED UNAVAILABLE</div>
+        <div className="text-[8px] text-gray-600 font-mono mt-0.5">
+          {retryCount >= MAX_RETRIES ? `Failed after ${MAX_RETRIES} retries` : "Source blocks inline embedding"}
+        </div>
       </div>
       {rawUrl && (
         <button onClick={() => {
@@ -241,7 +404,7 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
         }}
           className="px-4 py-2 rounded text-[10px] text-white font-mono font-bold flex items-center gap-2 hover:bg-cyan-500/20 transition-all"
           style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
-          <Eye className="h-3.5 w-3.5" /> VIEW LIVE FEED
+          <Eye className="h-3.5 w-3.5" /> VIEW EXTERNALLY
         </button>
       )}
     </div>

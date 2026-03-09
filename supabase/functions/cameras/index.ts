@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const AGGREGATOR_SOURCES = ["EarthCam", "SkylineWebcams", "WebCamera24", "OpenWebcamDB", "Insecam", "Opentopia", "GeoCam", "AI Discovery"];
+const MAX_FAILURES = 3;
 
 const extractYouTubeId = (url: string) => {
   const embed = url.match(/youtube\.com\/embed\/([^?&/]+)/i);
@@ -16,22 +17,45 @@ const extractYouTubeId = (url: string) => {
   return null;
 };
 
+const detectStreamType = async (url: string): Promise<string> => {
+  if (/\.m3u8(\?|$)/i.test(url)) return "hls";
+  if (/rtsp:\/\//i.test(url)) return "rtsp";
+  if (/youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com/i.test(url)) return "embed";
+
+  try {
+    const resp = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(8000) });
+    const ct = (resp.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("mpegurl") || ct.includes("x-mpegurl")) return "hls";
+    if (ct.includes("multipart/x-mixed-replace") || ct.includes("mjpeg")) return "mjpeg";
+    if (ct.includes("image/")) return "snapshot";
+    if (ct.includes("text/html")) return "embed";
+    return "unknown";
+  } catch {
+    return "unknown";
+  }
+};
+
 const validateCameraUrl = async (url: string) => {
   const ytId = extractYouTubeId(url);
   try {
     if (ytId) {
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${ytId}&format=json`;
       const ytResp = await fetch(oembedUrl, { signal: AbortSignal.timeout(10000) });
-      if (ytResp.ok) return { status: "active", error: null };
-      return { status: "error", error: `YouTube unavailable (${ytResp.status})` };
+      if (ytResp.ok) return { status: "active", error: null, contentType: "embed" };
+      return { status: "error", error: `YouTube unavailable (${ytResp.status})`, contentType: null };
     }
+
     const headResp = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(10000) });
-    if (headResp.ok) return { status: "active", error: null };
+    const ct = (headResp.headers.get("content-type") || "").toLowerCase();
+    if (headResp.ok) return { status: "active", error: null, contentType: ct };
+
     const getResp = await fetch(url, { method: "GET", headers: { Range: "bytes=0-512" }, redirect: "follow", signal: AbortSignal.timeout(10000) });
-    if (getResp.ok) return { status: "active", error: null };
-    return { status: "error", error: `HTTP ${getResp.status}` };
+    const getCt = (getResp.headers.get("content-type") || "").toLowerCase();
+    if (getResp.ok) return { status: "active", error: null, contentType: getCt };
+
+    return { status: "error", error: `HTTP ${getResp.status}`, contentType: null };
   } catch (e) {
-    return { status: "error", error: e instanceof Error ? e.message : "Check failed" };
+    return { status: "error", error: e instanceof Error ? e.message : "Check failed", contentType: null };
   }
 };
 
@@ -101,7 +125,7 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── LIST (with bounds + pagination) ──
+    // ── LIST ──
     if (action === "list") {
       let query = supabase
         .from("cameras")
@@ -117,19 +141,16 @@ serve(async (req) => {
       if (body.status === "offline") query = query.neq("status", "active");
       if (body.search) query = query.or(`name.ilike.%${body.search}%,city.ilike.%${body.search}%,country.ilike.%${body.search}%,source_name.ilike.%${body.search}%`);
 
-      // Viewport-based loading
       if (body.bounds) {
         const { north, south, east, west } = body.bounds;
-        query = query
-          .gte("lat", south).lte("lat", north)
-          .gte("lng", west).lte("lng", east);
+        query = query.gte("lat", south).lte("lat", north).gte("lng", west).lte("lng", east);
       }
 
       const limit = body.limit || 500;
       const offset = body.offset || 0;
       query = query.range(offset, offset + limit - 1);
 
-      const { data, error, count } = await query;
+      const { data, error } = await query;
       if (error) throw error;
       return new Response(JSON.stringify({ cameras: data || [], count: data?.length || 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -155,24 +176,127 @@ serve(async (req) => {
       });
     }
 
-    // ── HEALTH CHECK ──
+    // ── AUTO_DETECT: probe URL and update stream_type_detected ──
+    if (action === "auto_detect") {
+      const targetId = body.id;
+      const targetUrl = body.url;
+
+      if (targetId) {
+        // Detect for a single camera
+        const { data: cam } = await supabase.from("cameras").select("*").eq("id", targetId).single();
+        if (!cam) return new Response(JSON.stringify({ error: "Camera not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+        const url = cam.embed_url || cam.stream_url || cam.snapshot_url;
+        if (!url) return new Response(JSON.stringify({ error: "No URL" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+        const type = await detectStreamType(url);
+        await supabase.from("cameras").update({ stream_type_detected: type, updated_at: new Date().toISOString() }).eq("id", targetId);
+        return new Response(JSON.stringify({ id: targetId, stream_type_detected: type }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (targetUrl) {
+        const type = await detectStreamType(targetUrl);
+        return new Response(JSON.stringify({ url: targetUrl, stream_type_detected: type }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Batch detect all cameras with unknown type
+      const { data: unknowns } = await supabase.from("cameras").select("id, embed_url, stream_url, snapshot_url").eq("is_active", true).eq("stream_type_detected", "unknown").limit(50);
+      const results: any[] = [];
+      for (const cam of unknowns || []) {
+        const url = cam.embed_url || cam.stream_url || cam.snapshot_url;
+        if (!url) continue;
+        const type = await detectStreamType(url);
+        await supabase.from("cameras").update({ stream_type_detected: type, updated_at: new Date().toISOString() }).eq("id", cam.id);
+        results.push({ id: cam.id, type });
+      }
+      return new Response(JSON.stringify({ detected: results.length, results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── HEALTH CHECK (smart, with auto-disable) ──
     if (action === "health_check") {
       const { data: cameras } = await supabase.from("cameras").select("*").eq("is_active", true);
       const results: any[] = [];
+      let disabled = 0;
+
       for (const cam of cameras || []) {
         const urlToCheck = cam.embed_url || cam.stream_url || cam.snapshot_url;
         if (!urlToCheck) {
-          await supabase.from("cameras").update({ status: "error", error_message: "No URL configured", last_checked_at: new Date().toISOString() }).eq("id", cam.id);
-          results.push({ id: cam.id, status: "error" });
+          const newFailCount = (cam.failure_count || 0) + 1;
+          const shouldDisable = newFailCount >= MAX_FAILURES;
+          await supabase.from("cameras").update({
+            status: "error",
+            error_message: "No URL configured",
+            failure_count: newFailCount,
+            is_active: !shouldDisable,
+            last_checked_at: new Date().toISOString(),
+          }).eq("id", cam.id);
+          if (shouldDisable) disabled++;
+          results.push({ id: cam.id, status: "error", disabled: shouldDisable });
           continue;
         }
+
         const check = await validateCameraUrl(urlToCheck);
-        await supabase.from("cameras").update({ status: check.status, error_message: check.error, last_checked_at: new Date().toISOString() }).eq("id", cam.id);
-        results.push({ id: cam.id, status: check.status });
+
+        if (check.status === "active") {
+          // Reset failure count on success, detect stream type
+          const streamType = check.contentType ? (
+            check.contentType.includes("mpegurl") ? "hls" :
+            check.contentType.includes("mjpeg") || check.contentType.includes("multipart") ? "mjpeg" :
+            check.contentType.includes("image/") ? "snapshot" :
+            cam.stream_type_detected || "embed"
+          ) : cam.stream_type_detected || "unknown";
+
+          await supabase.from("cameras").update({
+            status: "active",
+            error_message: null,
+            failure_count: 0,
+            stream_type_detected: streamType,
+            last_checked_at: new Date().toISOString(),
+          }).eq("id", cam.id);
+          results.push({ id: cam.id, status: "active" });
+        } else {
+          const newFailCount = (cam.failure_count || 0) + 1;
+          const shouldDisable = newFailCount >= MAX_FAILURES;
+          await supabase.from("cameras").update({
+            status: "error",
+            error_message: check.error,
+            failure_count: newFailCount,
+            is_active: !shouldDisable,
+            last_checked_at: new Date().toISOString(),
+          }).eq("id", cam.id);
+          if (shouldDisable) disabled++;
+          results.push({ id: cam.id, status: "error", failCount: newFailCount, disabled: shouldDisable });
+        }
       }
-      return new Response(JSON.stringify({ checked: results.length, results }), {
+
+      return new Response(JSON.stringify({ checked: results.length, disabled, results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ── PROXY_SNAPSHOT: fetch snapshot and return base64 ──
+    if (action === "proxy_snapshot") {
+      const url = body.url;
+      if (!url) return new Response(JSON.stringify({ error: "url required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      try {
+        const resp = await fetch(url, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; CameraProxy/1.0)" },
+          redirect: "follow",
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const buf = await resp.arrayBuffer();
+        const ct = resp.headers.get("content-type") || "image/jpeg";
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        return new Response(JSON.stringify({ data: `data:${ct};base64,${b64}`, contentType: ct }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Fetch failed" }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // ── SCRAPE AGGREGATORS ──
@@ -243,6 +367,7 @@ serve(async (req) => {
 
         const validCats = ["traffic", "tourism", "ports", "weather", "public"];
         const validTypes = ["embed_page", "snapshot", "hls"];
+        const detectedType = await detectStreamType(primaryUrl);
         const payload = {
           name: cam.name, country: cam.country, city: cam.city,
           category: validCats.includes(cam.category) ? cam.category : "public",
@@ -250,7 +375,8 @@ serve(async (req) => {
           source_name: cam.source_name || "Aggregator",
           embed_url: cam.embed_url || null, stream_url: cam.stream_url || null, snapshot_url: cam.snapshot_url || null,
           lat: Number(cam.lat) || 0, lng: Number(cam.lng) || 0,
-          is_active: true, status: "active", last_checked_at: new Date().toISOString(),
+          is_active: true, status: "active", stream_type_detected: detectedType,
+          failure_count: 0, last_checked_at: new Date().toISOString(),
         };
         const { data: created } = await supabase.from("cameras").insert(payload).select().single();
         if (created) { inserted.push(created); existingUrls.add(primaryUrl); }
@@ -309,12 +435,14 @@ serve(async (req) => {
         if (!cam?.embed_url || existingUrls.has(cam.embed_url)) continue;
         const check = await validateCameraUrl(cam.embed_url);
         if (check.status !== "active") continue;
+        const detectedType = await detectStreamType(cam.embed_url);
         const payload = {
           name: cam.name, country: cam.country, city: cam.city,
           category: ["traffic", "tourism", "ports", "weather", "public"].includes(cam.category) ? cam.category : "public",
           source_type: "embed_page", source_name: "AI Discovery",
           embed_url: cam.embed_url, lat: Number(cam.lat) || 0, lng: Number(cam.lng) || 0,
-          is_active: true, status: "active", last_checked_at: new Date().toISOString(),
+          is_active: true, status: "active", stream_type_detected: detectedType,
+          failure_count: 0, last_checked_at: new Date().toISOString(),
         };
         const { data: created } = await supabase.from("cameras").insert(payload).select().single();
         if (created) { inserted.push(created); existingUrls.add(cam.embed_url); }

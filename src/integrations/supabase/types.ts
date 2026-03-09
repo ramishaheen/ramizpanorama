@@ -61,16 +61,21 @@ export type Database = {
           created_at: string
           embed_url: string | null
           error_message: string | null
+          failure_count: number
           id: string
           is_active: boolean
           last_checked_at: string | null
           lat: number
           lng: number
           name: string
+          proxy_url: string | null
           snapshot_url: string | null
           source_name: string
           source_type: Database["public"]["Enums"]["camera_source_type"]
           status: Database["public"]["Enums"]["camera_status"]
+          stream_type_detected:
+            | Database["public"]["Enums"]["stream_type_detected"]
+            | null
           stream_url: string | null
           thumbnail_url: string | null
           updated_at: string
@@ -82,16 +87,21 @@ export type Database = {
           created_at?: string
           embed_url?: string | null
           error_message?: string | null
+          failure_count?: number
           id?: string
           is_active?: boolean
           last_checked_at?: string | null
           lat?: number
           lng?: number
           name: string
+          proxy_url?: string | null
           snapshot_url?: string | null
           source_name?: string
           source_type?: Database["public"]["Enums"]["camera_source_type"]
           status?: Database["public"]["Enums"]["camera_status"]
+          stream_type_detected?:
+            | Database["public"]["Enums"]["stream_type_detected"]
+            | null
           stream_url?: string | null
           thumbnail_url?: string | null
           updated_at?: string
@@ -103,16 +113,21 @@ export type Database = {
           created_at?: string
           embed_url?: string | null
           error_message?: string | null
+          failure_count?: number
           id?: string
           is_active?: boolean
           last_checked_at?: string | null
           lat?: number
           lng?: number
           name?: string
+          proxy_url?: string | null
           snapshot_url?: string | null
           source_name?: string
           source_type?: Database["public"]["Enums"]["camera_source_type"]
           status?: Database["public"]["Enums"]["camera_status"]
+          stream_type_detected?:
+            | Database["public"]["Enums"]["stream_type_detected"]
+            | null
           stream_url?: string | null
           thumbnail_url?: string | null
           updated_at?: string
@@ -369,6 +384,13 @@ export type Database = {
       risk_trend: "rising" | "falling" | "stable"
       rocket_status: "launched" | "in_flight" | "intercepted" | "impact"
       severity_level: "low" | "medium" | "high" | "critical"
+      stream_type_detected:
+        | "hls"
+        | "mjpeg"
+        | "snapshot"
+        | "embed"
+        | "rtsp"
+        | "unknown"
       timeline_event_type: "airspace" | "maritime" | "alert" | "diplomatic"
       vessel_type: "MILITARY" | "CARGO" | "TANKER" | "FISHING" | "UNKNOWN"
     }
@@ -506,6 +528,14 @@ export const Constants = {
       risk_trend: ["rising", "falling", "stable"],
       rocket_status: ["launched", "in_flight", "intercepted", "impact"],
       severity_level: ["low", "medium", "high", "critical"],
+      stream_type_detected: [
+        "hls",
+        "mjpeg",
+        "snapshot",
+        "embed",
+        "rtsp",
+        "unknown",
+      ],
       timeline_event_type: ["airspace", "maritime", "alert", "diplomatic"],
       vessel_type: ["MILITARY", "CARGO", "TANKER", "FISHING", "UNKNOWN"],
     },
