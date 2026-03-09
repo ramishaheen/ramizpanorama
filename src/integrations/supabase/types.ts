@@ -64,10 +64,13 @@ export type Database = {
           failure_count: number
           id: string
           is_active: boolean
+          is_verified: boolean | null
           last_checked_at: string | null
           lat: number
           lng: number
           name: string
+          original_url: string | null
+          playable_url: string | null
           proxy_url: string | null
           snapshot_url: string | null
           source_name: string
@@ -79,6 +82,9 @@ export type Database = {
           stream_url: string | null
           thumbnail_url: string | null
           updated_at: string
+          verification_error: string | null
+          verification_status: string | null
+          youtube_video_id: string | null
         }
         Insert: {
           category?: Database["public"]["Enums"]["camera_category"]
@@ -90,10 +96,13 @@ export type Database = {
           failure_count?: number
           id?: string
           is_active?: boolean
+          is_verified?: boolean | null
           last_checked_at?: string | null
           lat?: number
           lng?: number
           name: string
+          original_url?: string | null
+          playable_url?: string | null
           proxy_url?: string | null
           snapshot_url?: string | null
           source_name?: string
@@ -105,6 +114,9 @@ export type Database = {
           stream_url?: string | null
           thumbnail_url?: string | null
           updated_at?: string
+          verification_error?: string | null
+          verification_status?: string | null
+          youtube_video_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["camera_category"]
@@ -116,10 +128,13 @@ export type Database = {
           failure_count?: number
           id?: string
           is_active?: boolean
+          is_verified?: boolean | null
           last_checked_at?: string | null
           lat?: number
           lng?: number
           name?: string
+          original_url?: string | null
+          playable_url?: string | null
           proxy_url?: string | null
           snapshot_url?: string | null
           source_name?: string
@@ -131,6 +146,9 @@ export type Database = {
           stream_url?: string | null
           thumbnail_url?: string | null
           updated_at?: string
+          verification_error?: string | null
+          verification_status?: string | null
+          youtube_video_id?: string | null
         }
         Relationships: []
       }
