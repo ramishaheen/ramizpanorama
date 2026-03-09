@@ -180,6 +180,18 @@ function YouTubePlayer({ videoId, cam }: { videoId: string; cam: CameraData }) {
     );
   }
 
+  const youtubeEmbedSrc = `https://www.youtube.com/embed/${videoId}?${new URLSearchParams({
+    autoplay: "1",
+    mute: "1",
+    controls: "1",
+    modestbranding: "1",
+    rel: "0",
+    enablejsapi: "1",
+    playsinline: "1",
+    origin: window.location.origin,
+    widget_referrer: window.location.href,
+  }).toString()}`;
+
   return (
     <div className="w-full h-full relative">
       {loadState === "loading" && (
@@ -193,12 +205,12 @@ function YouTubePlayer({ videoId, cam }: { videoId: string; cam: CameraData }) {
       )}
       <iframe
         key={videoId}
-        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&modestbranding=1&rel=0&enablejsapi=1`}
+        src={youtubeEmbedSrc}
         className="w-full h-full border-0"
-        allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
         onLoad={() => setLoadState("ok")}
-        referrerPolicy="no-referrer"
+        referrerPolicy="strict-origin-when-cross-origin"
       />
       <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(239,68,68,0.3)" }}>
         <Youtube className="h-3 w-3 text-red-500" />
