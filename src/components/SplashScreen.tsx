@@ -120,7 +120,7 @@ export const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
         <motion.img
           src={warosLogo}
           alt="War OS"
-          className="h-20 w-20 relative z-10"
+          className="h-60 w-60 relative z-10"
           initial={{ scale: 0, rotate: -180, opacity: 0 }}
           animate={{ scale: 1, rotate: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 15, duration: 0.8 }}
