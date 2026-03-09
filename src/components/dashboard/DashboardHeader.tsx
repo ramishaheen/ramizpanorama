@@ -22,6 +22,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
   const [showBalloon, setShowBalloon] = useState(true);
+  const [showLiveChannels, setShowLiveChannels] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowBalloon(false), 10000);
