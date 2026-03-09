@@ -219,25 +219,19 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
   const hlsRef = useRef<Hls | null>(null);
 
   const MAX_RETRIES = 3;
+  const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || cam.stream_url || "");
+  const verStatus = cam.verification_status;
+  const isHls = !ytId && (verStatus === "verified_hls" || cam.stream_type_detected === "hls" || !!(cam.stream_url && /\.m3u8/i.test(cam.stream_url)));
+  const isSnapshot = !ytId && !isHls && (verStatus === "verified_snapshot" || cam.stream_type_detected === "snapshot" || !!cam.snapshot_url);
+  const isMjpeg = !ytId && !isHls && !isSnapshot && (verStatus === "verified_mjpeg" || cam.stream_type_detected === "mjpeg");
+  const isRtsp = !ytId && !isHls && !isSnapshot && !isMjpeg && (verStatus === "proxy_required" || cam.stream_type_detected === "rtsp");
+  const embedUrl = !ytId && !isHls && !isSnapshot && !isMjpeg && !isRtsp ? (cam.embed_url || cam.playable_url || cam.stream_url) : null;
 
-  // Reset on camera change
+  // ALL HOOKS MUST BE BEFORE ANY RETURNS
   useEffect(() => {
     setSnapTick(0); setRetryCount(0); setProxySnapSrc(null); setHlsFailed(false); setEmbedState("loading");
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
   }, [cam.id]);
-
-  // Determine playback mode from verification_status / youtube_video_id
-  const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || cam.stream_url || "");
-  const verStatus = cam.verification_status;
-
-  // ── YOUTUBE MODE ──
-  if (ytId) {
-    return <YouTubePlayer videoId={ytId} cam={cam} />;
-  }
-
-  // ── HLS MODE ──
-  const isHls = verStatus === "verified_hls" || cam.stream_type_detected === "hls" ||
-    (cam.stream_url && /\.m3u8/i.test(cam.stream_url));
 
   useEffect(() => {
     if (!isHls || !cam.stream_url || !videoRef.current || hlsFailed) return;
@@ -252,9 +246,7 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
         if (data.fatal) {
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR && retryCount < MAX_RETRIES) {
             setTimeout(() => { hls.startLoad(); setRetryCount(r => r + 1); }, 4000);
-          } else {
-            hls.destroy(); hlsRef.current = null; setHlsFailed(true);
-          }
+          } else { hls.destroy(); hlsRef.current = null; setHlsFailed(true); }
         }
       });
       return () => { hls.destroy(); hlsRef.current = null; };
@@ -263,21 +255,6 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
       video.addEventListener("loadedmetadata", () => { video.play().catch(() => {}); });
     }
   }, [isHls, cam.stream_url, retryCount, hlsFailed]);
-
-  if (isHls && cam.stream_url && !hlsFailed) {
-    return (
-      <div className="w-full h-full relative" style={{ background: "#0a0f18" }}>
-        <video ref={videoRef} className="w-full h-full object-contain" autoPlay muted controls playsInline />
-        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(34,197,94,0.3)" }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[8px] text-green-400 font-mono font-bold">HLS LIVE</span>
-        </div>
-      </div>
-    );
-  }
-
-  // ── SNAPSHOT MODE ──
-  const isSnapshot = verStatus === "verified_snapshot" || cam.stream_type_detected === "snapshot" || cam.snapshot_url;
 
   useEffect(() => {
     if (!isSnapshot) return;
@@ -305,6 +282,29 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
     fetchProxy();
   }, [isSnapshot, cam.snapshot_url, cam.stream_url, snapTick]);
 
+  useEffect(() => {
+    if (!embedUrl) return;
+    setEmbedState("loading");
+    const timer = setTimeout(() => setEmbedState(prev => prev === "loading" ? "ok" : prev), 8000);
+    return () => clearTimeout(timer);
+  }, [embedUrl]);
+
+  // ── RENDERS (after all hooks) ──
+
+  if (ytId) return <YouTubePlayer videoId={ytId} cam={cam} />;
+
+  if (isHls && cam.stream_url && !hlsFailed) {
+    return (
+      <div className="w-full h-full relative" style={{ background: "#0a0f18" }}>
+        <video ref={videoRef} className="w-full h-full object-contain" autoPlay muted controls playsInline />
+        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(34,197,94,0.3)" }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[8px] text-green-400 font-mono font-bold">HLS LIVE</span>
+        </div>
+      </div>
+    );
+  }
+
   if (isSnapshot && (cam.snapshot_url || proxySnapSrc)) {
     const displaySrc = proxySnapSrc || cam.snapshot_url || cam.thumbnail_url;
     return (
@@ -318,13 +318,10 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
     );
   }
 
-  // ── MJPEG MODE ──
-  const isMjpeg = verStatus === "verified_mjpeg" || cam.stream_type_detected === "mjpeg";
   if (isMjpeg && (cam.stream_url || cam.snapshot_url)) {
-    const mjpegUrl = cam.stream_url || cam.snapshot_url;
     return (
       <div className="w-full h-full relative flex items-center justify-center" style={{ background: "#0a0f18" }}>
-        <img src={mjpegUrl!} alt={cam.name} className="max-w-full max-h-full object-contain" />
+        <img src={(cam.stream_url || cam.snapshot_url)!} alt={cam.name} className="max-w-full max-h-full object-contain" />
         <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(139,92,246,0.3)" }}>
           <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
           <span className="text-[8px] text-purple-400 font-mono font-bold">MJPEG STREAM</span>
@@ -333,17 +330,13 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
     );
   }
 
-  // ── RTSP MODE ──
-  const isRtsp = verStatus === "proxy_required" || cam.stream_type_detected === "rtsp";
   if (isRtsp) {
     const rawUrl = cam.stream_url || cam.embed_url;
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: "#0a0f18" }}>
         <Video className="h-10 w-10 text-amber-500" />
-        <div className="text-center">
-          <div className="text-[10px] text-amber-400 font-mono font-bold">RTSP STREAM</div>
-          <div className="text-[8px] text-gray-600 font-mono mt-0.5">Requires proxy conversion to HLS</div>
-        </div>
+        <div className="text-[10px] text-amber-400 font-mono font-bold">RTSP STREAM</div>
+        <div className="text-[8px] text-gray-600 font-mono">Requires proxy conversion</div>
         {rawUrl && (
           <button onClick={() => navigator.clipboard.writeText(rawUrl)}
             className="px-4 py-2 rounded text-[10px] text-white font-mono font-bold flex items-center gap-2 hover:bg-amber-500/20 transition-all"
@@ -355,17 +348,7 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
     );
   }
 
-  // ── EMBED/PAGE MODE ──
-  const embedUrl = cam.embed_url || cam.playable_url || cam.stream_url;
-
-  useEffect(() => {
-    if (!embedUrl || ytId) return;
-    setEmbedState("loading");
-    const timer = setTimeout(() => setEmbedState(prev => prev === "loading" ? "ok" : prev), 8000);
-    return () => clearTimeout(timer);
-  }, [embedUrl, ytId]);
-
-  if (embedUrl && !ytId && verStatus !== "unsupported" && verStatus !== "blocked") {
+  if (embedUrl && verStatus !== "unsupported" && verStatus !== "blocked") {
     return (
       <div className="w-full h-full relative">
         {embedState === "loading" && (
@@ -376,16 +359,9 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
             </div>
           </div>
         )}
-        <iframe
-          key={cam.id}
-          src={embedUrl}
-          className="w-full h-full border-0"
+        <iframe key={cam.id} src={embedUrl} className="w-full h-full border-0"
           allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
-          allowFullScreen
-          onLoad={() => setEmbedState("ok")}
-          onError={() => setEmbedState("blocked")}
-          referrerPolicy="no-referrer"
-        />
+          allowFullScreen onLoad={() => setEmbedState("ok")} onError={() => setEmbedState("blocked")} referrerPolicy="no-referrer" />
         <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(99,102,241,0.3)" }}>
           <MonitorPlay className="h-3 w-3 text-indigo-400" />
           <span className="text-[8px] text-indigo-400 font-mono font-bold">EMBED</span>
