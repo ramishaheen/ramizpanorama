@@ -138,12 +138,6 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
               {t(translations["status.online"].en, translations["status.online"].ar)}
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5">
-            <Wifi className="h-3 w-3 text-success animate-pulse" />
-            <span className="text-[10px] font-mono text-success">
-              {t(translations["status.online"].en, translations["status.online"].ar)}
-            </span>
-          </div>
           <div className="text-right hidden sm:block">
             <div className="text-[10px] font-mono text-foreground">
               {now.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: '2-digit' })}

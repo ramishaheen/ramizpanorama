@@ -230,6 +230,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [emulatedTick, setEmulatedTick] = useState(0);
   const satIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const rafRef = useRef<number>();
+  const resizeObsRef = useRef<ResizeObserver | null>(null);
+  const nonSatArcsRef = useRef<any[]>([]);
+  const satArcsRef = useRef<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [cleanUI, setCleanUI] = useState(false);
@@ -357,8 +360,19 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         if (globeContainerRef.current && globe) { globe.width(globeContainerRef.current.clientWidth); globe.height(globeContainerRef.current.clientHeight); }
       });
       resizeObs.observe(globeContainerRef.current);
+      resizeObsRef.current = resizeObs;
     });
-    return () => { destroyed = true; if (rafRef.current) cancelAnimationFrame(rafRef.current); if (satIntervalRef.current) clearInterval(satIntervalRef.current); };
+    return () => {
+      destroyed = true;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (satIntervalRef.current) clearInterval(satIntervalRef.current);
+      resizeObsRef.current?.disconnect();
+      resizeObsRef.current = null;
+      if (globeRef.current) {
+        try { (globeRef.current as any)._destructor?.(); } catch {}
+        globeRef.current = null;
+      }
+    };
   }, []);
 
   // Update satellite positions every second for visible orbital movement
@@ -472,27 +486,74 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { lat: 34.0, lng: 43.5, label: "Central Iraq", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 18 },
   ], []);
 
-  // Emulated OSINT events with category-specific icons
-  const emulatedEvents = useMemo(() => [
-    { lat: 33.5, lng: 36.3, type: "Airstrike", icon: "💥", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs", severity: "critical" as const },
-    { lat: 32.6, lng: 44.0, type: "IED", icon: "💣", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road", severity: "high" as const },
-    { lat: 15.3, lng: 44.2, type: "Drone Strike", icon: "👁", color: "#ef4444", ts: Date.now() - 3600000 * 1, label: "UAV strike — Sanaa outskirts", severity: "critical" as const },
-    { lat: 31.5, lng: 34.5, type: "Rocket Barrage", icon: "🚀", color: "#dc2626", ts: Date.now() - 3600000 * 3, label: "Rocket barrage — Gaza border", severity: "critical" as const },
-    { lat: 36.3, lng: 43.1, type: "Recon Overflight", icon: "✈️", color: "#00d4ff", ts: Date.now() - 3600000 * 7, label: "ISR overflight — Mosul", severity: "low" as const },
-    { lat: 34.9, lng: 51.3, type: "Centrifuge Activity", icon: "⚛️", color: "#a855f7", ts: Date.now() - 3600000 * 9, label: "Fordow — unusual centrifuge activity", severity: "high" as const },
-    { lat: 29.2, lng: 50.3, type: "Naval Movement", icon: "⚓", color: "#22c55e", ts: Date.now() - 3600000 * 4, label: "IRGCN fast boats — Kharg Island", severity: "medium" as const },
-    { lat: 25.3, lng: 55.3, type: "Cyber Incident", icon: "🖥", color: "#e879f9", ts: Date.now() - 3600000 * 11, label: "Cyber probe — Dubai infrastructure", severity: "medium" as const },
-    { lat: 33.3, lng: 44.4, type: "Protest", icon: "✊", color: "#eab308", ts: Date.now() - 3600000 * 6, label: "Mass gathering — Baghdad", severity: "low" as const },
-    { lat: 37.0, lng: 35.4, type: "Military Buildup", icon: "🪖", color: "#ef4444", ts: Date.now() - 3600000 * 14, label: "Armor movement — Incirlik", severity: "high" as const },
-    { lat: 30.1, lng: 31.4, type: "Border Incident", icon: "🚧", color: "#f97316", ts: Date.now() - 3600000 * 16, label: "Sinai border clash", severity: "medium" as const },
-    { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", icon: "🚢", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb", severity: "medium" as const },
-    { lat: 35.7, lng: 51.4, type: "SIGINT Spike", icon: "📡", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran", severity: "high" as const },
-    { lat: 24.7, lng: 46.7, type: "Air Defense Test", icon: "🛡", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh", severity: "medium" as const },
-    { lat: 32.1, lng: 34.8, type: "Iron Dome Activation", icon: "🛡", color: "#ef4444", ts: Date.now() - 3600000 * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
-    { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", icon: "🛢", color: "#f97316", ts: Date.now() - 3600000 * 3.5, label: "Security alert — Ras Tanura", severity: "high" as const },
-    { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", icon: "🎯", color: "#dc2626", ts: Date.now() - 3600000 * 1.5, label: "Convoy movement — South Lebanon", severity: "critical" as const },
-    { lat: 36.8, lng: 40.5, type: "Kurdish Clash", icon: "⚔️", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const },
-  ], []);
+  // Comprehensive OSINT event emulation — Middle East + Global hotspots
+  const emulatedEvents = useMemo(() => {
+    const H = 3600000; // 1 hour in ms
+    const now = Date.now();
+    return [
+      // ── KINETIC EVENTS ──
+      { lat: 33.5, lng: 36.3, type: "Airstrike", icon: "💥", color: "#ef4444", ts: now - H * 2, label: "Airstrike — Damascus suburbs (Syria)", severity: "critical" as const },
+      { lat: 15.3, lng: 44.2, type: "Drone Strike", icon: "👁", color: "#ef4444", ts: now - H * 1, label: "UAV strike — Sanaa outskirts (Yemen)", severity: "critical" as const },
+      { lat: 31.5, lng: 34.5, type: "Rocket Barrage", icon: "🚀", color: "#dc2626", ts: now - H * 3, label: "Rocket barrage — Gaza border", severity: "critical" as const },
+      { lat: 32.1, lng: 34.8, type: "Iron Dome", icon: "🛡", color: "#ef4444", ts: now - H * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
+      { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", icon: "🎯", color: "#dc2626", ts: now - H * 1.5, label: "Armed convoy movement — South Lebanon", severity: "critical" as const },
+      { lat: 32.6, lng: 44.0, type: "IED", icon: "💣", color: "#f97316", ts: now - H * 5, label: "IED detonation — Karbala highway (Iraq)", severity: "high" as const },
+      { lat: 36.8, lng: 40.5, type: "Skirmish", icon: "⚔️", color: "#f97316", ts: now - H * 10, label: "Border skirmish — NE Syria / Kurdish region", severity: "high" as const },
+      { lat: 14.8, lng: 42.9, type: "Airstrike", icon: "💥", color: "#ef4444", ts: now - H * 6, label: "Coalition airstrike — Hudaydah port area", severity: "critical" as const },
+      { lat: 32.5, lng: 43.7, type: "IED", icon: "💣", color: "#f97316", ts: now - H * 7.5, label: "VBIED detonation — Diyala (Iraq)", severity: "high" as const },
+      { lat: 33.2, lng: 36.8, type: "Shelling", icon: "💥", color: "#dc2626", ts: now - H * 4, label: "Artillery shelling — Deraa (Syria)", severity: "high" as const },
+      { lat: 31.8, lng: 35.2, type: "Rocket Launch", icon: "🚀", color: "#dc2626", ts: now - H * 2.5, label: "Rocket launch detected — West Bank", severity: "critical" as const },
+      { lat: 36.2, lng: 37.2, type: "Explosion", icon: "💥", color: "#f97316", ts: now - H * 9, label: "Warehouse explosion — Aleppo industrial zone", severity: "high" as const },
+      // ── INTELLIGENCE / ISR ──
+      { lat: 36.3, lng: 43.1, type: "Recon Overflight", icon: "✈️", color: "#00d4ff", ts: now - H * 7, label: "ISR overflight detected — Mosul (Iraq)", severity: "low" as const },
+      { lat: 35.7, lng: 51.4, type: "SIGINT Spike", icon: "📡", color: "#e879f9", ts: now - H * 13, label: "SIGINT spike — Tehran comms cluster", severity: "high" as const },
+      { lat: 34.9, lng: 51.3, type: "Nuclear Activity", icon: "⚛️", color: "#a855f7", ts: now - H * 9, label: "Fordow — unusual centrifuge activity", severity: "high" as const },
+      { lat: 28.8, lng: 50.9, type: "Nuclear Monitor", icon: "☢️", color: "#a855f7", ts: now - H * 11, label: "Bushehr NPP — elevated radiation reading", severity: "medium" as const },
+      { lat: 31.0, lng: 35.2, type: "Nuclear Activity", icon: "⚛️", color: "#a855f7", ts: now - H * 18, label: "Dimona facility — satellite imagery change", severity: "high" as const },
+      { lat: 34.0, lng: 44.0, type: "HUMINT Report", icon: "🕵️", color: "#6366f1", ts: now - H * 8, label: "HUMINT: militia regrouping — Anbar (Iraq)", severity: "medium" as const },
+      { lat: 38.2, lng: 48.5, type: "SIGINT Spike", icon: "📡", color: "#e879f9", ts: now - H * 15, label: "SIGINT — encrypted comms burst, NW Iran", severity: "medium" as const },
+      { lat: 33.3, lng: 36.5, type: "Electronic Warfare", icon: "📡", color: "#e879f9", ts: now - H * 6.5, label: "EW jamming activity — Damascus-Beirut axis", severity: "high" as const },
+      // ── MARITIME ──
+      { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", icon: "🚢", color: "#00d4ff", ts: now - H * 8, label: "Vessel seizure attempt — Bab el-Mandeb", severity: "medium" as const },
+      { lat: 29.2, lng: 50.3, type: "Naval Movement", icon: "⚓", color: "#22c55e", ts: now - H * 4, label: "IRGCN fast boats — Kharg Island patrol", severity: "medium" as const },
+      { lat: 26.4, lng: 56.3, type: "Naval Movement", icon: "⚓", color: "#22c55e", ts: now - H * 2.8, label: "USS carrier group — Strait of Hormuz transit", severity: "low" as const },
+      { lat: 30.5, lng: 32.3, type: "Ship Diversion", icon: "🚢", color: "#f97316", ts: now - H * 19, label: "Tanker diversion — Suez Canal approach", severity: "low" as const },
+      { lat: 15.5, lng: 42.5, type: "Drone Attack", icon: "👁", color: "#ef4444", ts: now - H * 3.5, label: "Maritime drone — Red Sea commercial vessel", severity: "critical" as const },
+      { lat: 25.5, lng: 57.0, type: "Naval Patrol", icon: "⚓", color: "#22c55e", ts: now - H * 5.5, label: "Iranian destroyer — Gulf of Oman", severity: "medium" as const },
+      // ── CYBER / ELECTRONIC ──
+      { lat: 25.3, lng: 55.3, type: "Cyber Incident", icon: "🖥", color: "#e879f9", ts: now - H * 11, label: "Cyber probe — Dubai critical infrastructure", severity: "medium" as const },
+      { lat: 32.0, lng: 34.8, type: "Cyber Incident", icon: "🖥", color: "#e879f9", ts: now - H * 14, label: "Ransomware — Israeli municipal networks", severity: "high" as const },
+      { lat: 35.7, lng: 51.4, type: "Cyberattack", icon: "🖥", color: "#e879f9", ts: now - H * 16, label: "DDoS surge — Iranian banking sector", severity: "medium" as const },
+      { lat: 30.1, lng: 31.2, type: "GPS Spoofing", icon: "📡", color: "#e879f9", ts: now - H * 5, label: "GPS spoofing incident — Cairo airspace", severity: "high" as const },
+      // ── MILITARY MOVEMENTS ──
+      { lat: 37.0, lng: 35.4, type: "Military Buildup", icon: "🪖", color: "#ef4444", ts: now - H * 14, label: "Armored column movement — Incirlik Air Base", severity: "high" as const },
+      { lat: 35.5, lng: 44.4, type: "Military Buildup", icon: "🪖", color: "#ef4444", ts: now - H * 21, label: "Force buildup — NW Iraq / Erbil sector", severity: "medium" as const },
+      { lat: 24.7, lng: 46.7, type: "Air Defense Test", icon: "🛡", color: "#a855f7", ts: now - H * 20, label: "Patriot battery test fire — Riyadh", severity: "medium" as const },
+      { lat: 25.1, lng: 51.3, type: "Air Patrol", icon: "✈️", color: "#00d4ff", ts: now - H * 1.8, label: "USAF B-52 deterrence patrol — Al Udeid AOG", severity: "low" as const },
+      { lat: 41.0, lng: 29.0, type: "Military Exercise", icon: "🪖", color: "#f97316", ts: now - H * 22, label: "NATO naval exercise — Bosphorus strait", severity: "low" as const },
+      { lat: 39.9, lng: 32.9, type: "Military Buildup", icon: "🪖", color: "#f97316", ts: now - H * 17, label: "Turkish armor massing — Kurdish border", severity: "high" as const },
+      // ── POLITICAL / DIPLOMATIC ──
+      { lat: 33.3, lng: 44.4, type: "Protest", icon: "✊", color: "#eab308", ts: now - H * 6, label: "Mass anti-government gathering — Baghdad", severity: "low" as const },
+      { lat: 30.1, lng: 31.4, type: "Border Incident", icon: "🚧", color: "#f97316", ts: now - H * 16, label: "Sinai border clash — Egypt / Gaza", severity: "medium" as const },
+      { lat: 15.4, lng: 44.2, type: "Peace Talks", icon: "🤝", color: "#22c55e", ts: now - H * 23, label: "UN-mediated ceasefire talks — Sanaa", severity: "low" as const },
+      { lat: 35.7, lng: 51.4, type: "Sanctions", icon: "⚠️", color: "#eab308", ts: now - H * 20, label: "New US sanctions package targeting Iran", severity: "medium" as const },
+      // ── ENERGY / INFRASTRUCTURE ──
+      { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", icon: "🛢", color: "#f97316", ts: now - H * 3.5, label: "Security alert — Ras Tanura refinery", severity: "high" as const },
+      { lat: 30.4, lng: 48.0, type: "Pipeline Incident", icon: "🛢", color: "#f97316", ts: now - H * 12, label: "Pipeline sabotage — Basra export terminal", severity: "high" as const },
+      { lat: 24.5, lng: 54.4, type: "Power Grid", icon: "⚡", color: "#eab308", ts: now - H * 18, label: "Power grid disruption — Abu Dhabi outskirts", severity: "medium" as const },
+      { lat: 29.5, lng: 48.0, type: "Infrastructure", icon: "🏗", color: "#f97316", ts: now - H * 9, label: "Port facility incident — Kuwait City", severity: "medium" as const },
+      // ── HUMANITARIAN / HEALTH ──
+      { lat: 15.6, lng: 32.5, type: "Humanitarian Crisis", icon: "🆘", color: "#22c55e", ts: now - H * 10, label: "Refugee camp overload — Sudan border", severity: "high" as const },
+      { lat: 33.5, lng: 36.3, type: "Aid Convoy", icon: "🚑", color: "#22c55e", ts: now - H * 4.5, label: "Aid convoy blocked — Damascus checkpoint", severity: "medium" as const },
+      // ── GLOBAL HOTSPOTS ──
+      { lat: 50.0, lng: 36.3, type: "Frontline Change", icon: "⚔️", color: "#dc2626", ts: now - H * 1.2, label: "Frontline update — Kharkiv sector (Ukraine)", severity: "critical" as const },
+      { lat: 47.8, lng: 35.2, type: "Airstrike", icon: "💥", color: "#ef4444", ts: now - H * 0.8, label: "Missile strike — Zaporizhzhia (Ukraine)", severity: "critical" as const },
+      { lat: 48.5, lng: 38.1, type: "Artillery", icon: "💥", color: "#f97316", ts: now - H * 2.2, label: "Artillery exchange — Donetsk front", severity: "high" as const },
+      { lat: 22.3, lng: 114.2, type: "Military Activity", icon: "🪖", color: "#f97316", ts: now - H * 4.5, label: "PLA carrier exercise — South China Sea", severity: "medium" as const },
+      { lat: 35.7, lng: 128.0, type: "Missile Test", icon: "🚀", color: "#dc2626", ts: now - H * 8, label: "DPRK ballistic missile test — East Sea", severity: "critical" as const },
+      { lat: 8.5, lng: 38.5, type: "Airstrike", icon: "💥", color: "#ef4444", ts: now - H * 12, label: "Airstrike — Tigray region (Ethiopia)", severity: "high" as const },
+    ];
+  }, []);
 
   // Unified event feed with icons
   const getEventIcon = (type: string) => {
@@ -701,7 +762,40 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     console.log(`[4D] Rendering ${points.length} points on globe`);
     globe.pointsData(points);
 
-    // SATELLITES — render as HTML icon elements for visible satellite icons (not dots/lines)
+    // Non-satellite arcs: rockets + geo-fusion threat corridors
+    const nonSatArcs: any[] = [];
+    if (layers.rockets && rockets.length) {
+      rockets.forEach(r => {
+        nonSatArcs.push({ startLat: r.originLat, startLng: r.originLng, endLat: r.targetLat, endLng: r.targetLng,
+          colors: [r.severity === "critical" ? "rgba(239,68,68,0.9)" : "rgba(255,107,0,0.9)", r.status === "intercepted" ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.6)"] });
+      });
+    }
+    if (layers.geoFusion) {
+      nonSatArcs.push(
+        { startLat: 35.69, startLng: 51.39, endLat: 33.51, endLng: 36.29, colors: ["rgba(239,68,68,0.6)", "rgba(239,68,68,0.2)"] },
+        { startLat: 15.35, startLng: 44.21, endLat: 12.58, endLng: 43.33, colors: ["rgba(249,115,22,0.5)", "rgba(249,115,22,0.2)"] },
+        { startLat: 26.57, startLng: 56.25, endLat: 25.20, endLng: 55.27, colors: ["rgba(234,179,8,0.5)", "rgba(234,179,8,0.15)"] },
+        { startLat: 33.31, startLng: 44.37, endLat: 36.34, endLng: 43.13, colors: ["rgba(168,85,247,0.5)", "rgba(168,85,247,0.15)"] },
+        { startLat: 33.5, startLng: 36.3, endLat: 31.5, endLng: 34.5, colors: ["rgba(239,68,68,0.4)", "rgba(239,68,68,0.1)"] },
+        { startLat: 35.69, startLng: 51.39, endLat: 15.35, endLng: 44.21, colors: ["rgba(168,85,247,0.3)", "rgba(168,85,247,0.1)"] },
+      );
+    }
+    nonSatArcsRef.current = nonSatArcs;
+    globe.arcsData([...nonSatArcs, ...satArcsRef.current]);
+
+    if (layers.borders) {
+      globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
+    } else {
+      globe.polygonsData([]);
+    }
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticMaritime, globeReady]);
+
+  // ============= SATELLITE LAYER UPDATE (decoupled — updates every second with orbital positions) =============
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe || !globeReady) return;
+
+    // SATELLITES — render as HTML icon elements
     if (layers.satellites && panopticSats && allSatellites.length) {
       const satHtmlElements = allSatellites.slice(0, 200).map(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
@@ -721,32 +815,28 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           satCol,
           el: (() => {
             const wrapper = document.createElement("div");
-            wrapper.style.cssText = `display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;transition:transform 0.3s ease;`;
+            wrapper.style.cssText = `position:relative;display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;transition:transform 0.3s ease;`;
             wrapper.onmouseenter = () => { wrapper.style.transform = "scale(1.5)"; wrapper.style.zIndex = "999"; };
             wrapper.onmouseleave = () => { wrapper.style.transform = "scale(1)"; wrapper.style.zIndex = "auto"; };
 
-            // Icon element
             const icon = document.createElement("div");
             icon.style.cssText = `font-size:${size}px;filter:drop-shadow(0 0 ${isISR ? 8 : 4}px ${satCol});line-height:1;text-align:center;`;
             icon.textContent = catIcon;
             wrapper.appendChild(icon);
 
-            // Pulse ring for ISR/Military
             if (isISR || isMil) {
               const ring = document.createElement("div");
               ring.style.cssText = `position:absolute;width:${size + 10}px;height:${size + 10}px;border-radius:50%;border:1px solid ${satCol};opacity:0.4;animation:satPulse 2s ease-out infinite;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;`;
               wrapper.appendChild(ring);
             }
 
-            // Name label for important sats
             if (showLabel) {
-              const label = document.createElement("div");
-              label.style.cssText = `font-family:monospace;font-size:7px;color:${satCol};letter-spacing:1px;font-weight:bold;white-space:nowrap;margin-top:1px;text-shadow:0 0 4px rgba(0,0,0,0.9),0 0 8px ${satCol}40;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;`;
-              label.textContent = s.name.length > 12 ? s.name.slice(0, 12) : s.name;
-              wrapper.appendChild(label);
+              const lbl = document.createElement("div");
+              lbl.style.cssText = `font-family:monospace;font-size:7px;color:${satCol};letter-spacing:1px;font-weight:bold;white-space:nowrap;margin-top:1px;text-shadow:0 0 4px rgba(0,0,0,0.9),0 0 8px ${satCol}40;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;`;
+              lbl.textContent = s.name.length > 12 ? s.name.slice(0, 12) : s.name;
+              wrapper.appendChild(lbl);
             }
 
-            // Tooltip on click
             wrapper.title = `${catIcon} ${s.name}\n${s.category} • ${Math.round(s.alt)}km\nInc ${s.inclination.toFixed(1)}° • Period ${period}min`;
             return wrapper;
           })(),
@@ -759,27 +849,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       globe.objectsData([]);
     }
 
-    // ARCS — rockets, threat corridors, scan cones
-    const arcs: any[] = [];
-    if (layers.rockets && rockets.length) {
-      rockets.forEach(r => {
-        arcs.push({ startLat: r.originLat, startLng: r.originLng, endLat: r.targetLat, endLng: r.targetLng,
-          colors: [r.severity === "critical" ? "rgba(239,68,68,0.9)" : "rgba(255,107,0,0.9)", r.status === "intercepted" ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.6)"] });
-      });
-    }
-    if (layers.geoFusion) {
-      arcs.push(
-        { startLat: 35.69, startLng: 51.39, endLat: 33.51, endLng: 36.29, colors: ["rgba(239,68,68,0.6)", "rgba(239,68,68,0.2)"] },
-        { startLat: 15.35, startLng: 44.21, endLat: 12.58, endLng: 43.33, colors: ["rgba(249,115,22,0.5)", "rgba(249,115,22,0.2)"] },
-        { startLat: 26.57, startLng: 56.25, endLat: 25.20, endLng: 55.27, colors: ["rgba(234,179,8,0.5)", "rgba(234,179,8,0.15)"] },
-        { startLat: 33.31, startLng: 44.37, endLat: 36.34, endLng: 43.13, colors: ["rgba(168,85,247,0.5)", "rgba(168,85,247,0.15)"] },
-        { startLat: 33.5, startLng: 36.3, endLat: 31.5, endLng: 34.5, colors: ["rgba(239,68,68,0.4)", "rgba(239,68,68,0.1)"] },
-        { startLat: 35.69, startLng: 51.39, endLat: 15.35, endLng: 44.21, colors: ["rgba(168,85,247,0.3)", "rgba(168,85,247,0.1)"] },
-      );
-    }
-    // Satellite orbital track arcs — trace partial orbit paths for top satellites
+    // Satellite orbital track arcs — trace partial orbit paths for top ISR/Military/EO sats
+    const satArcs: any[] = [];
     if (layers.satellites && panopticSats) {
-      // Orbital tracks: compute positions ±15° along mean anomaly for visible orbit segments
       const trackSats = allSatellites.filter(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         return isISR || s.category === "Military" || s.category === "Early Warning" || s.category === "Earth Observation";
@@ -787,39 +859,29 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
       trackSats.forEach(s => {
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const trackCol = isMil ? "rgba(239,68,68,0.35)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.3)" : s.category === "Navigation" ? "rgba(34,197,94,0.25)" : "rgba(168,85,247,0.25)";
+        const trackCol = isMil ? "rgba(239,68,68,0.35)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.3)" : "rgba(168,85,247,0.25)";
         const trackColFade = isMil ? "rgba(239,68,68,0.08)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.06)" : "rgba(100,100,100,0.06)";
 
-        // Generate 3 arc segments along the orbit: behind, at, ahead
-        const offsets = [-12, -6, 6, 12]; // degrees offset on mean anomaly
+        const offsets = [-12, -6, 6, 12];
         for (let i = 0; i < offsets.length - 1; i++) {
           const ma1 = s.meanAnomaly + offsets[i];
           const ma2 = s.meanAnomaly + offsets[i + 1];
           const pos1 = propagateSatelliteAtMA(s.inclination, s.raan, ma1, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
           const pos2 = propagateSatelliteAtMA(s.inclination, s.raan, ma2, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
-          arcs.push({
-            startLat: pos1.lat, startLng: pos1.lng,
-            endLat: pos2.lat, endLng: pos2.lng,
-            colors: [trackCol, trackColFade],
-          });
+          satArcs.push({ startLat: pos1.lat, startLng: pos1.lng, endLat: pos2.lat, endLng: pos2.lng, colors: [trackCol, trackColFade] });
         }
 
-        // Scan cone arc from satellite to ground footprint
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         if (isISR) {
           const coneCol = isMil ? "rgba(239,68,68,0.4)" : "rgba(0,212,255,0.35)";
-          arcs.push({ startLat: s.lat, startLng: s.lng, endLat: s.lat + Math.sin(s.meanAnomaly * 0.05) * 3, endLng: s.lng + Math.cos(s.meanAnomaly * 0.05) * 3, colors: [coneCol, "rgba(255,255,255,0.05)"] });
+          satArcs.push({ startLat: s.lat, startLng: s.lng, endLat: s.lat + Math.sin(s.meanAnomaly * 0.05) * 3, endLng: s.lng + Math.cos(s.meanAnomaly * 0.05) * 3, colors: [coneCol, "rgba(255,255,255,0.05)"] });
         }
       });
     }
-    globe.arcsData(arcs);
-
-    if (layers.borders) {
-      globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
-    } else {
-      globe.polygonsData([]);
-    }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady]);
+    satArcsRef.current = satArcs;
+    globe.arcsData([...nonSatArcsRef.current, ...satArcs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSatellites, layers.satellites, panopticSats, densityMult, globeReady]);
 
   const chipLayers = [
     { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
@@ -911,6 +973,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         {/* GLOBE */}
         <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
           <div ref={globeContainerRef} className="absolute inset-0" />
+          {!globeReady && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[hsl(220,25%,5%)] z-10">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-[11px] font-mono text-primary tracking-widest animate-pulse">INITIALIZING 4D GLOBE...</span>
+              </div>
+            </div>
+          )}
 
           {/* Search */}
           {!cleanUI && (

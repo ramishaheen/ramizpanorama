@@ -14,9 +14,9 @@ export const DataRow = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-export const LayerControl = ({ icon, label, color, active, onToggle, count, opacity, onOpacity, source }: {
+export const LayerControl = ({ icon, label, color, active, onToggle, count, opacity, onOpacity, source, showOpacity = true }: {
   icon: React.ReactNode; label: string; color: string; active: boolean; onToggle: () => void;
-  count?: number; opacity: number; onOpacity: (v: number) => void; source?: string;
+  count?: number; opacity: number; onOpacity: (v: number) => void; source?: string; showOpacity?: boolean;
 }) => (
   <div className={`rounded-lg border transition-all duration-200 ${active ? "border-white/15 bg-white/5" : "border-transparent"}`}>
     <div className="flex items-center gap-2 px-2 py-1.5">
@@ -31,7 +31,7 @@ export const LayerControl = ({ icon, label, color, active, onToggle, count, opac
         <span className={`absolute top-0.5 w-3 h-3 rounded-full transition-all duration-200 ${active ? "left-3.5" : "left-0.5"}`} style={{ background: active ? color : "#4b5563" }} />
       </button>
     </div>
-    {active && onOpacity !== (() => {}) && (
+    {active && showOpacity && (
       <div className="px-2 pb-1.5 space-y-0.5">
         <div className="flex items-center gap-2">
           <span className="text-[7px] font-mono text-muted-foreground/50 w-10">Opacity</span>
