@@ -549,28 +549,142 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
   const totalActive = Object.values(layers).filter(Boolean).length;
 
-  // Timeline
-  const [playing, setPlaying] = useState(true);
-  const [timelineValue, setTimelineValue] = useState(50);
+  // Timeline — 24h window
+  const [playing, setPlaying] = useState(false);
+  const [timelineValue, setTimelineValue] = useState(100); // 0-100 maps to 24h ago → now
   const [speed, setSpeed] = useState("1m/s");
   const [orbitMode, setOrbitMode] = useState<"OFF" | "FLAT" | "SPIRAL IN" | "SPIRAL OUT">("OFF");
   const speedOptions = ["1m/s", "3m/s", "5m/s", "15m/s", "1h/s"];
   const orbitOptions: typeof orbitMode[] = ["OFF", "FLAT", "SPIRAL IN", "SPIRAL OUT"];
+  const orbitRef = useRef<number>();
 
+  // Speed multiplier for timeline auto-advance
+  const speedMultiplier = useMemo(() => {
+    const map: Record<string, number> = { "1m/s": 0.07, "3m/s": 0.21, "5m/s": 0.35, "15m/s": 1.05, "1h/s": 4.2 };
+    return map[speed] || 0.07;
+  }, [speed]);
+
+  // Auto-advance timeline when playing
+  useEffect(() => {
+    if (!playing) return;
+    const iv = setInterval(() => {
+      setTimelineValue(prev => {
+        const next = prev + speedMultiplier;
+        if (next >= 100) { setPlaying(false); return 100; }
+        return next;
+      });
+    }, 100);
+    return () => clearInterval(iv);
+  }, [playing, speedMultiplier]);
+
+  // Timeline timestamp mapping
+  const timelineTimestamp = useMemo(() => {
+    const now = Date.now();
+    const twentyFourH = 24 * 60 * 60 * 1000;
+    return now - twentyFourH + (timelineValue / 100) * twentyFourH;
+  }, [timelineValue]);
+
+  const timelineLabel = useMemo(() => {
+    const d = new Date(timelineTimestamp);
+    return d.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  }, [timelineTimestamp]);
+
+  // Orbit camera control
+  useEffect(() => {
+    if (orbitMode === "OFF") {
+      if (orbitRef.current) cancelAnimationFrame(orbitRef.current);
+      const controls = globeRef.current?.controls() as any;
+      if (controls) controls.autoRotate = false;
+      return;
+    }
+    const controls = globeRef.current?.controls() as any;
+    if (!controls) return;
+
+    if (orbitMode === "FLAT") {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 1.5;
+    } else {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 2.0;
+      let frame = 0;
+      const animate = () => {
+        frame++;
+        const globe = globeRef.current;
+        if (!globe) return;
+        const pov = globe.pointOfView();
+        const dir = orbitMode === "SPIRAL IN" ? -0.002 : 0.002;
+        const newAlt = Math.max(0.3, Math.min(5, pov.altitude + dir));
+        globe.pointOfView({ ...pov, altitude: newAlt }, 0);
+        if ((orbitMode === "SPIRAL IN" && newAlt <= 0.3) || (orbitMode === "SPIRAL OUT" && newAlt >= 5)) return;
+        orbitRef.current = requestAnimationFrame(animate);
+      };
+      orbitRef.current = requestAnimationFrame(animate);
+    }
+    return () => {
+      if (orbitRef.current) cancelAnimationFrame(orbitRef.current);
+      if (controls) controls.autoRotate = false;
+    };
+  }, [orbitMode]);
+
+  // Emulated GPS jamming zones
+  const gpsJammingZones = useMemo(() => [
+    { lat: 35.5, lng: 44.4, label: "NW Iraq Corridor", severity: "high", radius: 0.3, ts: Date.now() - 3600000 * 4 },
+    { lat: 33.8, lng: 35.9, label: "Eastern Med / Lebanon", severity: "critical", radius: 0.25, ts: Date.now() - 3600000 * 1 },
+    { lat: 32.0, lng: 34.8, label: "Tel Aviv TMA", severity: "high", radius: 0.2, ts: Date.now() - 3600000 * 6 },
+    { lat: 36.2, lng: 37.1, label: "Aleppo Corridor", severity: "medium", radius: 0.2, ts: Date.now() - 3600000 * 8 },
+    { lat: 29.0, lng: 50.8, label: "Persian Gulf South", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 12 },
+    { lat: 26.5, lng: 56.3, label: "Strait of Hormuz", severity: "critical", radius: 0.3, ts: Date.now() - 3600000 * 2 },
+    { lat: 15.5, lng: 44.2, label: "Yemen Highlands", severity: "high", radius: 0.25, ts: Date.now() - 3600000 * 10 },
+    { lat: 34.0, lng: 43.5, label: "Central Iraq", severity: "medium", radius: 0.2, ts: Date.now() - 3600000 * 18 },
+  ], []);
+
+  // Emulated additional intel events with timestamps for timeline filtering
+  const emulatedEvents = useMemo(() => [
+    { lat: 33.5, lng: 36.3, type: "Airstrike", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs" },
+    { lat: 32.6, lng: 44.0, type: "IED", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road" },
+    { lat: 15.3, lng: 44.2, type: "Drone Strike", color: "#ef4444", ts: Date.now() - 3600000 * 1, label: "UAV strike — Sanaa outskirts" },
+    { lat: 31.5, lng: 34.5, type: "Rocket Barrage", color: "#dc2626", ts: Date.now() - 3600000 * 3, label: "Rocket barrage — Gaza border" },
+    { lat: 36.3, lng: 43.1, type: "Recon Overflight", color: "#00d4ff", ts: Date.now() - 3600000 * 7, label: "ISR overflight — Mosul" },
+    { lat: 34.9, lng: 51.3, type: "Centrifuge Activity", color: "#a855f7", ts: Date.now() - 3600000 * 9, label: "Fordow — unusual activity" },
+    { lat: 29.2, lng: 50.3, type: "Naval Movement", color: "#22c55e", ts: Date.now() - 3600000 * 4, label: "IRGCN fast boats — Kharg" },
+    { lat: 25.3, lng: 55.3, type: "Cyber Incident", color: "#e879f9", ts: Date.now() - 3600000 * 11, label: "Cyber probe — Dubai infrastructure" },
+    { lat: 33.3, lng: 44.4, type: "Protest", color: "#eab308", ts: Date.now() - 3600000 * 6, label: "Mass gathering — Baghdad" },
+    { lat: 37.0, lng: 35.4, type: "Military Buildup", color: "#ef4444", ts: Date.now() - 3600000 * 14, label: "Armor movement — Incirlik" },
+    { lat: 30.1, lng: 31.4, type: "Border Incident", color: "#f97316", ts: Date.now() - 3600000 * 16, label: "Sinai border clash" },
+    { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb" },
+    { lat: 35.7, lng: 51.4, type: "SIGINT Spike", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran" },
+    { lat: 24.7, lng: 46.7, type: "Air Defense Test", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh" },
+  ], []);
+
+  // Timeline dots from all events
   const timelineDots = useMemo(() => {
+    const now = Date.now();
+    const h24 = 24 * 60 * 60 * 1000;
     const dots: { position: number; color: string; label: string }[] = [];
+    
+    emulatedEvents.forEach(ev => {
+      const pos = ((ev.ts - (now - h24)) / h24) * 100;
+      if (pos >= 0 && pos <= 100) dots.push({ position: pos, color: ev.color, label: ev.label });
+    });
+
     if (geoFusionData?.events) {
-      geoFusionData.events.slice(0, 20).forEach((ev, i) => {
-        dots.push({ position: 5 + (i / 20) * 90, color: ev.severity >= 4 ? "#ef4444" : ev.severity >= 3 ? "#f97316" : "#00d4ff", label: ev.event_type });
+      geoFusionData.events.slice(0, 15).forEach((ev, i) => {
+        dots.push({ position: 15 + (i / 15) * 70, color: ev.severity >= 4 ? "#ef4444" : ev.severity >= 3 ? "#f97316" : "#00d4ff", label: ev.event_type });
       });
     }
     if (earthquakes.length) {
-      earthquakes.slice(0, 10).forEach((eq, i) => {
-        dots.push({ position: 10 + (i / 10) * 80, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", label: `M${eq.magnitude}` });
+      earthquakes.slice(0, 8).forEach((eq, i) => {
+        const eqTime = eq.time || (now - Math.random() * h24);
+        const pos = ((eqTime - (now - h24)) / h24) * 100;
+        dots.push({ position: Math.max(0, Math.min(100, pos)), color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", label: `M${eq.magnitude}` });
       });
     }
+    gpsJammingZones.forEach(z => {
+      const pos = ((z.ts - (now - h24)) / h24) * 100;
+      if (pos >= 0 && pos <= 100) dots.push({ position: pos, color: "#e879f9", label: `GPS JAM: ${z.label}` });
+    });
     return dots;
-  }, [geoFusionData, earthquakes]);
+  }, [geoFusionData, earthquakes, emulatedEvents, gpsJammingZones]);
 
   const chipLayers = [
     { id: "flights", label: "Commercial Flights", icon: <Plane className="h-3 w-3" />, color: "#00d4ff" },
