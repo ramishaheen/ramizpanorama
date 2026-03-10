@@ -115,8 +115,8 @@ function generateProjectedRoute(ac: Aircraft, trailHistory: { lat: number; lng: 
 }
 
 export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanSceneProps) => {
-  const [lat, setLat] = useState(initialCoords?.lat || initialEvent?.lat || 29.5);
-  const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 47.5);
+  const [lat, setLat] = useState(initialCoords?.lat || initialEvent?.lat || 31.95);
+  const [lng, setLng] = useState(initialCoords?.lng || initialEvent?.lng || 35.93);
   
   const [searchInput, setSearchInput] = useState("");
   const [showSearch, setShowSearch] = useState(true);
