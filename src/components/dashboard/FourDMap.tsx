@@ -107,21 +107,43 @@ const KEY_ISR_SATS = ["WORLDVIEW", "WV-LEGION", "GAOFEN", "BARS-M", "COSMOS 2", 
 // Rich emulated data ensures the globe always looks populated even when APIs haven't responded
 
 const EMULATED_SATELLITES: SatPoint[] = [
+  // ISR / Earth Observation — key intelligence assets
   { name: "WORLDVIEW-3", lat: 28.5, lng: 47.2, alt: 617, category: "Earth Observation", inclination: 97.9, raan: 200, meanAnomaly: 45, meanMotion: 15.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "WV-LEGION-2", lat: 33.1, lng: 38.5, alt: 524, category: "Earth Observation", inclination: 97.4, raan: 185, meanAnomaly: 120, meanMotion: 15.3, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "WORLDVIEW-2", lat: 36.0, lng: 52.0, alt: 770, category: "Earth Observation", inclination: 97.2, raan: 190, meanAnomaly: 88, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "GAOFEN-7", lat: 25.3, lng: 55.1, alt: 505, category: "Earth Observation", inclination: 98.0, raan: 210, meanAnomaly: 200, meanMotion: 15.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "SENTINEL-2A", lat: 31.0, lng: 35.0, alt: 786, category: "Earth Observation", inclination: 98.6, raan: 205, meanAnomaly: 60, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "LANDSAT 9", lat: 27.0, lng: 48.0, alt: 705, category: "Earth Observation", inclination: 98.2, raan: 195, meanAnomaly: 30, meanMotion: 14.95, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "PLEIADES NEO 4", lat: 38.2, lng: 42.0, alt: 620, category: "Earth Observation", inclination: 97.9, raan: 215, meanAnomaly: 140, meanMotion: 15.15, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  // Military / Intelligence
   { name: "BARS-M No.1", lat: 40.2, lng: 44.5, alt: 555, category: "Military", inclination: 97.6, raan: 175, meanAnomaly: 310, meanMotion: 15.1, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "USA 314 (KH-11)", lat: 30.0, lng: 50.0, alt: 260, category: "Military", inclination: 97.9, raan: 220, meanAnomaly: 150, meanMotion: 15.6, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
   { name: "COSMOS 2558", lat: 42.0, lng: 36.0, alt: 430, category: "Military", inclination: 97.3, raan: 160, meanAnomaly: 270, meanMotion: 15.3, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "NROL-82", lat: 35.5, lng: 42.0, alt: 310, category: "Military", inclination: 63.4, raan: 140, meanAnomaly: 90, meanMotion: 15.5, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
+  { name: "LACROSSE 5", lat: 44.0, lng: 55.0, alt: 710, category: "Military", inclination: 68.0, raan: 130, meanAnomaly: 220, meanMotion: 14.85, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "USA 245 (TOPAZ)", lat: 22.0, lng: 58.0, alt: 360, category: "Military", inclination: 63.4, raan: 155, meanAnomaly: 180, meanMotion: 15.4, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
+  // Early Warning
   { name: "SBIRS GEO-5", lat: 0.1, lng: 42.0, alt: 35786, category: "Early Warning", inclination: 0.1, raan: 0, meanAnomaly: 180, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "SBIRS GEO-4", lat: 0.0, lng: 63.0, alt: 35786, category: "Early Warning", inclination: 0.05, raan: 0, meanAnomaly: 90, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "DSP F-23", lat: 0.2, lng: 25.0, alt: 35786, category: "Early Warning", inclination: 0.1, raan: 10, meanAnomaly: 270, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  // Navigation
   { name: "GPS IIF-12", lat: 55.0, lng: 30.0, alt: 20200, category: "Navigation", inclination: 55.0, raan: 100, meanAnomaly: 0, meanMotion: 2.0, eccentricity: 0.01, epochYear: 2024, epochDay: 200 },
-  { name: "SENTINEL-2A", lat: 31.0, lng: 35.0, alt: 786, category: "Earth Observation", inclination: 98.6, raan: 205, meanAnomaly: 60, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
-  { name: "LANDSAT 9", lat: 27.0, lng: 48.0, alt: 705, category: "Earth Observation", inclination: 98.2, raan: 195, meanAnomaly: 30, meanMotion: 14.95, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "GLONASS-M 58", lat: 64.8, lng: 48.0, alt: 19130, category: "Navigation", inclination: 64.8, raan: 80, meanAnomaly: 120, meanMotion: 2.13, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "GALILEO 26", lat: 56.0, lng: 35.0, alt: 23222, category: "Navigation", inclination: 56.0, raan: 120, meanAnomaly: 60, meanMotion: 1.7, eccentricity: 0.0002, epochYear: 2024, epochDay: 200 },
+  // Weather
   { name: "METEOSAT-12", lat: 0.0, lng: 41.5, alt: 35786, category: "Weather", inclination: 0.1, raan: 0, meanAnomaly: 90, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "NOAA-20", lat: 50.0, lng: 60.0, alt: 824, category: "Weather", inclination: 98.7, raan: 230, meanAnomaly: 300, meanMotion: 14.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "FENGYUN 4A", lat: 0.1, lng: 105.0, alt: 35786, category: "Weather", inclination: 0.05, raan: 0, meanAnomaly: 45, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  // Comms / Starlink
   { name: "STARLINK-5001", lat: 22.0, lng: 40.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 260, meanAnomaly: 100, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
   { name: "STARLINK-5233", lat: 38.0, lng: 55.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 300, meanAnomaly: 200, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "STARLINK-6100", lat: 15.0, lng: 32.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 340, meanAnomaly: 50, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  // Space Station
+  { name: "ISS (ZARYA)", lat: 34.0, lng: 40.0, alt: 420, category: "Space Station", inclination: 51.6, raan: 250, meanAnomaly: 330, meanMotion: 15.5, eccentricity: 0.0005, epochYear: 2024, epochDay: 200 },
+  { name: "TIANGONG", lat: 41.3, lng: 115.0, alt: 390, category: "Space Station", inclination: 41.5, raan: 200, meanAnomaly: 160, meanMotion: 15.6, eccentricity: 0.0003, epochYear: 2024, epochDay: 200 },
+  // Communication
+  { name: "INTELSAT 39", lat: 0.1, lng: 62.0, alt: 35786, category: "Communication", inclination: 0.05, raan: 0, meanAnomaly: 135, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "ARABSAT 6A", lat: 0.0, lng: 30.5, alt: 35786, category: "Communication", inclination: 0.05, raan: 5, meanAnomaly: 200, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
 ];
 
 const EMULATED_FLIGHTS = [
