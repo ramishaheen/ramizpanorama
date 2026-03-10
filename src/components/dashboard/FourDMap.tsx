@@ -204,6 +204,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
+  const [emulatedTick, setEmulatedTick] = useState(0);
   const satIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const rafRef = useRef<number>();
   const [searchQuery, setSearchQuery] = useState("");
