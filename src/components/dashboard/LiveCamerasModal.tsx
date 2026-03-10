@@ -459,6 +459,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [loading, setLoading] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState<CameraData | null>(null);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [detailsCamera, setDetailsCamera] = useState<CameraData | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
