@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap, Pause, Play, Eye, Anchor, Lock } from "lucide-react";
+import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap, Pause, Play, Eye, Anchor, Lock, Search, Target, AlertTriangle, Radar } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useEarthquakes } from "@/hooks/useEarthquakes";
@@ -10,7 +10,6 @@ import { useAISVessels } from "@/hooks/useAISVessels";
 import { useGeoFusion } from "@/hooks/useGeoFusion";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { getCountryGeoJSON } from "@/data/countryBorders";
-import militarySatSprite from "@/assets/military-sat-sprite.png";
 import type { Rocket as RocketType } from "@/data/mockData";
 
 interface FourDMapProps {
@@ -26,7 +25,7 @@ interface LayerConfig {
   count?: number;
 }
 
-// SGP4-lite propagator (reused from SatelliteGlobe)
+// SGP4-lite propagator
 function propagateSatellite(
   inclination: number, raan: number, meanAnomaly: number,
   meanMotion: number, eccentricity: number, epochYear: number,
@@ -39,8 +38,7 @@ function propagateSatellite(
   const totalRevs = elapsedDays * meanMotion;
   const currentMA = (((meanAnomaly + totalRevs * 360) % 360) + 360) % 360;
   const E = currentMA + (eccentricity * 180) / Math.PI * Math.sin((currentMA * Math.PI) / 180);
-  const nu = E;
-  const argLat = (nu * Math.PI) / 180;
+  const argLat = (E * Math.PI) / 180;
   const incRad = (inclination * Math.PI) / 180;
   const lat = Math.asin(Math.sin(incRad) * Math.sin(argLat)) * (180 / Math.PI);
   const greenwichOffset = now.getUTCHours() * 15 + now.getUTCMinutes() * 0.25 + now.getUTCSeconds() * (0.25 / 60);
@@ -50,18 +48,9 @@ function propagateSatellite(
 }
 
 interface SatPoint {
-  name: string;
-  lat: number;
-  lng: number;
-  alt: number;
-  category: string;
-  inclination: number;
-  raan: number;
-  meanAnomaly: number;
-  meanMotion: number;
-  eccentricity: number;
-  epochYear: number;
-  epochDay: number;
+  name: string; lat: number; lng: number; alt: number; category: string;
+  inclination: number; raan: number; meanAnomaly: number; meanMotion: number;
+  eccentricity: number; epochYear: number; epochDay: number;
 }
 
 function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
@@ -74,9 +63,8 @@ function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
     const epochYearRaw = parseInt(tle1.substring(18, 20).trim());
     const epochDay = parseFloat(tle1.substring(20, 32).trim());
     const epochYear = epochYearRaw > 56 ? 1900 + epochYearRaw : 2000 + epochYearRaw;
-    const GM = 398600.4418;
     const T = 86400 / meanMotion;
-    const a = Math.pow((GM * T * T) / (4 * Math.PI * Math.PI), 1 / 3);
+    const a = Math.pow((398600.4418 * T * T) / (4 * Math.PI * Math.PI), 1 / 3);
     const alt = Math.max(a - 6371, 200);
     const pos = propagateSatellite(inclination, raan, meanAnomaly, meanMotion, eccentricity, epochYear, epochDay);
     const n = name.toUpperCase();
@@ -87,6 +75,7 @@ function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
     else if (n.includes("LANDSAT") || n.includes("SENTINEL") || n.includes("WORLDVIEW")) category = "Earth Observation";
     else if (n.includes("ISS") || n.includes("TIANGONG")) category = "Space Station";
     else if (n.includes("SBIRS") || n.includes("DSP")) category = "Early Warning";
+    else if (n.includes("STARLINK")) category = "Starlink";
     return { name: name.trim(), lat: pos.lat, lng: pos.lng, alt: Math.min(alt, 42000), category, inclination, raan, meanAnomaly, meanMotion, eccentricity, epochYear, epochDay };
   } catch { return null; }
 }
@@ -97,6 +86,47 @@ const TLE_URLS = [
 ];
 
 const ALL_COUNTRY_CODES = ["IR", "IQ", "SY", "IL", "JO", "LB", "SA", "AE", "BH", "KW", "QA", "OM", "YE", "EG", "TR"];
+
+// Search locations database
+const SEARCH_LOCATIONS: { name: string; lat: number; lng: number; type: string }[] = [
+  { name: "Tehran", lat: 35.69, lng: 51.39, type: "city" },
+  { name: "Baghdad", lat: 33.31, lng: 44.37, type: "city" },
+  { name: "Damascus", lat: 33.51, lng: 36.29, type: "city" },
+  { name: "Beirut", lat: 33.89, lng: 35.50, type: "city" },
+  { name: "Jerusalem", lat: 31.77, lng: 35.23, type: "city" },
+  { name: "Tel Aviv", lat: 32.08, lng: 34.78, type: "city" },
+  { name: "Riyadh", lat: 24.71, lng: 46.68, type: "city" },
+  { name: "Dubai", lat: 25.20, lng: 55.27, type: "city" },
+  { name: "Doha", lat: 25.29, lng: 51.53, type: "city" },
+  { name: "Ankara", lat: 39.93, lng: 32.85, type: "city" },
+  { name: "Istanbul", lat: 41.01, lng: 28.98, type: "city" },
+  { name: "Cairo", lat: 30.04, lng: 31.24, type: "city" },
+  { name: "Amman", lat: 31.95, lng: 35.93, type: "city" },
+  { name: "Kuwait City", lat: 29.38, lng: 47.99, type: "city" },
+  { name: "Muscat", lat: 23.59, lng: 58.59, type: "city" },
+  { name: "Manama", lat: 26.07, lng: 50.55, type: "city" },
+  { name: "Sanaa", lat: 15.35, lng: 44.21, type: "city" },
+  { name: "Aden", lat: 12.79, lng: 45.04, type: "city" },
+  { name: "Isfahan", lat: 32.65, lng: 51.68, type: "city" },
+  { name: "Tabriz", lat: 38.08, lng: 46.29, type: "city" },
+  { name: "Natanz", lat: 33.51, lng: 51.92, type: "facility" },
+  { name: "Fordow", lat: 34.88, lng: 51.23, type: "facility" },
+  { name: "Bushehr NPP", lat: 28.83, lng: 50.89, type: "facility" },
+  { name: "Dimona", lat: 31.00, lng: 35.15, type: "facility" },
+  { name: "Incirlik Air Base", lat: 37.00, lng: 35.43, type: "military" },
+  { name: "Al Udeid Air Base", lat: 25.12, lng: 51.31, type: "military" },
+  { name: "Strait of Hormuz", lat: 26.57, lng: 56.25, type: "chokepoint" },
+  { name: "Suez Canal", lat: 30.46, lng: 32.35, type: "chokepoint" },
+  { name: "Bab el-Mandeb", lat: 12.58, lng: 43.33, type: "chokepoint" },
+  { name: "Golan Heights", lat: 33.00, lng: 35.80, type: "conflict" },
+  { name: "Gaza", lat: 31.50, lng: 34.47, type: "conflict" },
+  { name: "Mosul", lat: 36.34, lng: 43.13, type: "city" },
+  { name: "Aleppo", lat: 36.20, lng: 37.15, type: "city" },
+  { name: "Hodeida", lat: 14.80, lng: 42.95, type: "city" },
+  { name: "Kharg Island", lat: 29.23, lng: 50.32, type: "facility" },
+  { name: "Jeddah", lat: 21.54, lng: 39.17, type: "city" },
+  { name: "Basra", lat: 30.51, lng: 47.81, type: "city" },
+];
 
 export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const globeContainerRef = useRef<HTMLDivElement>(null);
@@ -114,17 +144,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     geoFusion: true,
     borders: true,
     gpsJamming: false,
+    militaryFlights: true,
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
   const satIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const rafRef = useRef<number>();
 
-  // Hooks for data
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Hooks
   const { data: earthquakes } = useEarthquakes();
   const { data: wildfires } = useWildfires();
   const { data: conflictEvents } = useConflictEvents();
-  const { stations: nuclearStations } = useNuclearMonitors();
+  const { stations: nuclearStations, facilities: nuclearFacilities } = useNuclearMonitors();
   const { data: aisVessels } = useAISVessels();
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
@@ -133,13 +168,63 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     setLayers(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  // Fetch TLE data for satellites
+  // Search results
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+
+    // Search locations
+    const locResults = SEARCH_LOCATIONS
+      .filter(l => l.name.toLowerCase().includes(q))
+      .map(l => ({ ...l, source: "location" as const }));
+
+    // Search satellites
+    const satResults = satellites
+      .filter(s => s.name.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map(s => ({ name: s.name, lat: s.lat, lng: s.lng, type: "satellite", source: "satellite" as const }));
+
+    // Search conflict events
+    const conflictResults = conflictEvents
+      .filter(e => e.location.toLowerCase().includes(q) || e.country.toLowerCase().includes(q) || e.event_type.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map(e => ({ name: `${e.event_type} — ${e.location}`, lat: e.lat, lng: e.lng, type: "conflict", source: "event" as const }));
+
+    // Search vessels
+    const vesselResults = aisVessels
+      .filter(v => v.name.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map(v => ({ name: `🚢 ${v.name} (${v.flag})`, lat: v.lat, lng: v.lng, type: "vessel", source: "vessel" as const }));
+
+    // Search geo-fusion events
+    const fusionResults = (geoFusionData?.events || [])
+      .filter(e => e.location.toLowerCase().includes(q) || e.event_type.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map(e => ({ name: `📡 ${e.event_type} — ${e.location}`, lat: e.lat, lng: e.lng, type: "fusion", source: "event" as const }));
+
+    // Try coordinate parsing (lat, lng)
+    const coordMatch = q.match(/^(-?\d+\.?\d*)\s*[,\s]\s*(-?\d+\.?\d*)$/);
+    const coordResults = coordMatch
+      ? [{ name: `📍 ${coordMatch[1]}, ${coordMatch[2]}`, lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]), type: "coordinate", source: "location" as const }]
+      : [];
+
+    return [...coordResults, ...locResults, ...satResults, ...conflictResults, ...vesselResults, ...fusionResults].slice(0, 12);
+  }, [searchQuery, satellites, conflictEvents, aisVessels, geoFusionData]);
+
+  const handleSearchSelect = useCallback((result: { lat: number; lng: number; name: string }) => {
+    const globe = globeRef.current;
+    if (globe) {
+      globe.pointOfView({ lat: result.lat, lng: result.lng, altitude: 0.8 }, 1500);
+    }
+    setSearchQuery("");
+    setSearchFocused(false);
+  }, []);
+
+  // Fetch TLEs
   useEffect(() => {
     async function fetchTLEs() {
       try {
-        const { data: proxyData } = await supabase.functions.invoke("tle-proxy", {
-          body: { urls: TLE_URLS },
-        });
+        const { data: proxyData } = await supabase.functions.invoke("tle-proxy", { body: { urls: TLE_URLS } });
         if (!proxyData?.results) return;
         const allSats: SatPoint[] = [];
         for (const result of proxyData.results) {
@@ -151,34 +236,27 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             }
           }
         }
-        // Limit to ~800 for performance
-        const limited = allSats.length > 800
-          ? allSats.filter((_, i) => i % Math.ceil(allSats.length / 800) === 0)
-          : allSats;
+        const limited = allSats.length > 800 ? allSats.filter((_, i) => i % Math.ceil(allSats.length / 800) === 0) : allSats;
         setSatellites(limited);
-      } catch (e) {
-        console.error("4D TLE fetch error:", e);
-      }
+      } catch (e) { console.error("4D TLE fetch error:", e); }
     }
     fetchTLEs();
   }, []);
 
-  // Fetch live flights
+  // Fetch flights
   useEffect(() => {
     async function fetchFlights() {
       try {
         const { data } = await supabase.functions.invoke("live-flights");
         if (data?.flights) setFlights(data.flights.slice(0, 500));
-      } catch (e) {
-        console.error("4D flights error:", e);
-      }
+      } catch (e) { console.error("4D flights error:", e); }
     }
     fetchFlights();
     const iv = setInterval(fetchFlights, 30000);
     return () => clearInterval(iv);
   }, []);
 
-  // Initialize globe
+  // Initialize globe — NO auto-rotate
   useEffect(() => {
     if (!globeContainerRef.current) return;
     let destroyed = false;
@@ -190,10 +268,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
         .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png")
         .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
-        .atmosphereColor("hsl(190, 100%, 50%)")
-        .atmosphereAltitude(0.2)
+        .atmosphereColor("hsl(190, 80%, 40%)")
+        .atmosphereAltitude(0.18)
         .showAtmosphere(true)
-        
         .width(globeContainerRef.current.clientWidth)
         .height(globeContainerRef.current.clientHeight)
         .pointsData([])
@@ -214,29 +291,29 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .arcEndLat("endLat")
         .arcEndLng("endLng")
         .arcColor("colors")
-        .arcStroke(0.5)
+        .arcStroke(0.6)
         .arcDashLength(0.4)
-        .arcDashGap(0.2)
-        .arcDashAnimateTime(1500)
-        .arcAltitudeAutoScale(0.3)
+        .arcDashGap(0.15)
+        .arcDashAnimateTime(1200)
+        .arcAltitudeAutoScale(0.35)
         .polygonsData([])
-        .polygonCapColor(() => "rgba(0, 255, 200, 0.06)")
-        .polygonSideColor(() => "rgba(0, 255, 200, 0.15)")
-        .polygonStrokeColor(() => "rgba(0, 255, 200, 0.4)")
-        .polygonAltitude(0.005);
+        .polygonCapColor(() => "rgba(0, 200, 180, 0.04)")
+        .polygonSideColor(() => "rgba(0, 200, 180, 0.12)")
+        .polygonStrokeColor(() => "rgba(0, 220, 200, 0.35)")
+        .polygonAltitude(0.004);
 
-      globe.pointOfView({ lat: 30, lng: 45, altitude: 2.5 });
+      globe.pointOfView({ lat: 30, lng: 45, altitude: 2.2 });
 
-      // Enable auto-rotate
+      // NO auto-rotate
       const controls = globe.controls() as any;
       if (controls) {
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.3;
+        controls.autoRotate = false;
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.15;
       }
 
       globeRef.current = globe;
 
-      // Handle resize
       const resizeObs = new ResizeObserver(() => {
         if (globeContainerRef.current && globe) {
           globe.width(globeContainerRef.current.clientWidth);
@@ -253,7 +330,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     };
   }, []);
 
-  // Update satellite positions every 500ms
+  // Update sat positions every 500ms
   useEffect(() => {
     if (!satellites.length) return;
     const updateSats = () => {
@@ -267,22 +344,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => clearInterval(satIntervalRef.current);
   }, [satellites.length]);
 
-  // Update globe data based on active layers
+  // Update globe data
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
 
-    // Collect points
     const points: any[] = [];
 
     if (layers.earthquakes && earthquakes.length) {
       earthquakes.forEach(eq => {
         points.push({
-          lat: eq.lat, lng: eq.lng,
-          pointAlt: 0.01,
+          lat: eq.lat, lng: eq.lng, pointAlt: 0.01,
           color: eq.magnitude >= 5 ? "#ef4444" : eq.magnitude >= 3 ? "#ff6b00" : "#fbbf24",
           radius: Math.max(0.15, eq.magnitude * 0.08),
-          label: `🔴 M${eq.magnitude} — ${eq.place}`,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #ef4444;padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:#ef4444;font-weight:bold">⚠ SEISMIC EVENT</div>
+            <div>M${eq.magnitude} — ${eq.place}</div>
+            <div style="color:#888;font-size:9px">${eq.lat.toFixed(3)}°, ${eq.lng.toFixed(3)}° • Depth: ${eq.depth}km</div>
+          </div>`,
         });
       });
     }
@@ -290,59 +369,81 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     if (layers.wildfires && wildfires.length) {
       wildfires.forEach(f => {
         points.push({
-          lat: f.lat, lng: f.lng,
-          pointAlt: 0.005,
-          color: "#ff4500",
-          radius: Math.max(0.1, f.brightness / 500),
-          label: `🔥 Fire — FRP: ${f.frp} — ${f.confidence}`,
+          lat: f.lat, lng: f.lng, pointAlt: 0.005,
+          color: f.frp > 50 ? "#ff2200" : "#ff6600",
+          radius: Math.max(0.1, f.brightness / 400),
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #ff4500;padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:#ff4500;font-weight:bold">🔥 THERMAL ANOMALY</div>
+            <div>FRP: ${f.frp} MW • Confidence: ${f.confidence}</div>
+            <div style="color:#888;font-size:9px">FIRMS/VIIRS • ${f.date} ${f.time}</div>
+          </div>`,
         });
       });
     }
 
     if (layers.conflicts && conflictEvents.length) {
       conflictEvents.forEach(ev => {
+        const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
         points.push({
-          lat: ev.lat, lng: ev.lng,
-          pointAlt: 0.015,
-          color: ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308",
-          radius: 0.2,
-          label: `⚔️ ${ev.event_type} — ${ev.location}, ${ev.country}`,
+          lat: ev.lat, lng: ev.lng, pointAlt: 0.015, color: col, radius: 0.22,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:${col};font-weight:bold">⚔ ${ev.event_type.toUpperCase()}</div>
+            <div>${ev.location}, ${ev.country}</div>
+            <div style="color:#888;font-size:9px">${ev.fatalities > 0 ? `Fatalities: ${ev.fatalities} • ` : ""}${ev.source}</div>
+          </div>`,
         });
       });
     }
 
-    if (layers.nuclear && nuclearStations.length) {
+    if (layers.nuclear) {
       nuclearStations.forEach(st => {
         points.push({
-          lat: st.lat, lng: st.lng,
-          pointAlt: 0.02,
-          color: "#a855f7",
-          radius: 0.15,
-          label: `☢️ ${st.name} — ${st.dose_rate} ${st.unit}`,
+          lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.15,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:#a855f7;font-weight:bold">☢ RADIATION MONITOR</div>
+            <div>${st.name} — ${st.country}</div>
+            <div style="color:#888;font-size:9px">${st.dose_rate} ${st.unit} • ${st.network}</div>
+          </div>`,
+        });
+      });
+      nuclearFacilities.forEach(fac => {
+        points.push({
+          lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.2,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:#e879f9;font-weight:bold">⚛ NUCLEAR FACILITY</div>
+            <div>${fac.name} — ${fac.country}</div>
+            <div style="color:#888;font-size:9px">${fac.type} • ${fac.status}${fac.capacity_mw ? ` • ${fac.capacity_mw}MW` : ""}</div>
+          </div>`,
         });
       });
     }
 
     if (layers.maritime && aisVessels.length) {
       aisVessels.forEach(v => {
+        const col = v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : "#22c55e";
         points.push({
-          lat: v.lat, lng: v.lng,
-          pointAlt: 0.003,
-          color: v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : "#22c55e",
-          radius: 0.12,
-          label: `🚢 ${v.name} (${v.flag}) — ${v.speed}kn → ${v.destination || "Unknown"}`,
+          lat: v.lat, lng: v.lng, pointAlt: 0.003, color: col, radius: 0.12,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:${col};font-weight:bold">🚢 ${v.type}</div>
+            <div>${v.name} (${v.flag})</div>
+            <div style="color:#888;font-size:9px">${v.speed}kn • HDG ${v.heading}° → ${v.destination || "Unknown"}</div>
+          </div>`,
         });
       });
     }
 
     if (layers.flights && flights.length) {
       flights.forEach(f => {
+        const isMil = f.military || f.callsign?.match(/^(RCH|EVAC|DUKE|REAC|NAVY|JAKE|RRR)/i);
+        if (!layers.militaryFlights && isMil) return;
         points.push({
-          lat: f.lat || f.latitude, lng: f.lng || f.longitude,
-          pointAlt: 0.04,
-          color: f.military ? "#ef4444" : "#00d4ff",
-          radius: 0.08,
-          label: `✈️ ${f.callsign || f.icao24 || "Unknown"} — ${f.velocity ? Math.round(f.velocity * 3.6) + " km/h" : ""}`,
+          lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.04,
+          color: isMil ? "#ef4444" : "#00d4ff", radius: isMil ? 0.12 : 0.06,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${isMil ? "#ef4444" : "#00d4ff"};padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:${isMil ? "#ef4444" : "#00d4ff"};font-weight:bold">✈ ${isMil ? "MILITARY" : "CIVIL"} AIRCRAFT</div>
+            <div>${f.callsign || f.icao24 || "UNKNOWN"}</div>
+            <div style="color:#888;font-size:9px">${f.velocity ? Math.round(f.velocity * 3.6) + " km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"} • ${f.origin_country || ""}</div>
+          </div>`,
         });
       });
     }
@@ -352,102 +453,115 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         const aqi = aq.aqi || 0;
         const color = aqi > 150 ? "#dc2626" : aqi > 100 ? "#f97316" : aqi > 50 ? "#eab308" : "#22c55e";
         points.push({
-          lat: aq.lat, lng: aq.lng,
-          pointAlt: 0.008,
-          color,
-          radius: 0.1,
-          label: `🌬️ ${aq.city} — AQI: ${aqi} (${aq.aqi_level})`,
+          lat: aq.lat, lng: aq.lng, pointAlt: 0.008, color, radius: 0.1,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${color};padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:${color};font-weight:bold">🌬 AIR QUALITY</div>
+            <div>${aq.city} — AQI: ${aqi}</div>
+            <div style="color:#888;font-size:9px">${aq.aqi_level} • PM2.5: ${aq.pm25 || "—"}</div>
+          </div>`,
         });
       });
     }
 
     if (layers.geoFusion && geoFusionData?.events?.length) {
       geoFusionData.events.forEach(ev => {
+        const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
         points.push({
-          lat: ev.lat, lng: ev.lng,
-          pointAlt: 0.02,
-          color: ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308",
-          radius: 0.18,
-          label: `📡 ${ev.event_type} — ${ev.location}, ${ev.country}`,
+          lat: ev.lat, lng: ev.lng, pointAlt: 0.02, color: col, radius: 0.18,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:${col};font-weight:bold">📡 ${ev.event_type.toUpperCase()}</div>
+            <div>${ev.location}, ${ev.country}</div>
+            <div style="color:#888;font-size:9px">${ev.source} • ${ev.confidence} confidence</div>
+          </div>`,
         });
       });
     }
 
     globe.pointsData(points);
 
-    // Satellites as objects
+    // Satellites
     if (layers.satellites && satellites.length) {
-      const satObjects = satellites.map(s => ({
-        lat: s.lat,
-        lng: s.lng,
+      globe.objectsData(satellites.map(s => ({
+        lat: s.lat, lng: s.lng,
         alt: s.alt / 6371 * 0.15,
-        label: `🛰️ ${s.name} — ${s.category} — Alt: ${Math.round(s.alt)}km`,
-        satColor: s.category === "Military" ? "#ef4444" : s.category === "Navigation" ? "#22c55e" : "#00d4ff",
-      }));
-      globe.objectsData(satObjects);
+        label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #00d4ff;padding:6px 10px;border-radius:4px;color:#f0f0f0">
+          <div style="color:#00d4ff;font-weight:bold">🛰 ${s.category.toUpperCase()}</div>
+          <div>${s.name}</div>
+          <div style="color:#888;font-size:9px">Alt: ${Math.round(s.alt)}km • Inc: ${s.inclination.toFixed(1)}°</div>
+        </div>`,
+        satColor: s.category === "Military" ? "#ef4444" : s.category === "Early Warning" ? "#ff3366" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : "#00d4ff",
+      })));
     } else {
       globe.objectsData([]);
     }
 
     // Arcs for rockets
     if (layers.rockets && rockets.length) {
-      const arcs = rockets.map(r => ({
-        startLat: r.originLat,
-        startLng: r.originLng,
-        endLat: r.targetLat,
-        endLng: r.targetLng,
+      globe.arcsData(rockets.map(r => ({
+        startLat: r.originLat, startLng: r.originLng,
+        endLat: r.targetLat, endLng: r.targetLng,
         colors: [
           r.severity === "critical" ? "rgba(239,68,68,0.9)" : "rgba(255,107,0,0.9)",
           r.status === "intercepted" ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.6)",
         ],
-      }));
-      globe.arcsData(arcs);
+      })));
     } else {
       globe.arcsData([]);
     }
 
-    // Polygons for borders
+    // Polygons
     if (layers.borders) {
-      const geojson = getCountryGeoJSON(ALL_COUNTRY_CODES);
-      globe.polygonsData(geojson.features);
+      globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, aisVessels, flights, airQualityData, geoFusionData, satellites, rockets]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, flights, airQualityData, geoFusionData, satellites, rockets]);
 
-  // Layer configs for UI
+  // Stats
+  const stats = useMemo(() => ({
+    sats: satellites.length,
+    aircraft: flights.length,
+    vessels: aisVessels.length,
+    quakes: earthquakes.length,
+    fires: wildfires.length,
+    conflicts: conflictEvents.length,
+    rockets: rockets.length,
+    nuclear: nuclearStations.length + (nuclearFacilities?.length || 0),
+    fusion: geoFusionData?.events?.length || 0,
+    airQ: airQualityData.length,
+  }), [satellites, flights, aisVessels, earthquakes, wildfires, conflictEvents, rockets, nuclearStations, nuclearFacilities, geoFusionData, airQualityData]);
+
   const layerConfigs: LayerConfig[] = [
-    { id: "satellites", label: "Satellites", icon: <Satellite className="h-3.5 w-3.5" />, color: "#00d4ff", count: layers.satellites ? satellites.length : 0 },
-    { id: "flights", label: "Aircraft", icon: <Plane className="h-3.5 w-3.5" />, color: "#00d4ff", count: layers.flights ? flights.length : 0 },
-    { id: "maritime", label: "Maritime / AIS", icon: <Ship className="h-3.5 w-3.5" />, color: "#22c55e", count: layers.maritime ? aisVessels.length : 0 },
-    { id: "earthquakes", label: "Earthquakes", icon: <Activity className="h-3.5 w-3.5" />, color: "#ef4444", count: layers.earthquakes ? earthquakes.length : 0 },
-    { id: "wildfires", label: "Wildfires", icon: <Flame className="h-3.5 w-3.5" />, color: "#ff4500", count: layers.wildfires ? wildfires.length : 0 },
-    { id: "conflicts", label: "Conflicts", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: layers.conflicts ? conflictEvents.length : 0 },
-    { id: "rockets", label: "Rockets / Missiles", icon: <Rocket className="h-3.5 w-3.5" />, color: "#ef4444", count: layers.rockets ? rockets.length : 0 },
-    { id: "nuclear", label: "Nuclear Monitors", icon: <Radio className="h-3.5 w-3.5" />, color: "#a855f7", count: layers.nuclear ? nuclearStations.length : 0 },
-    { id: "airQuality", label: "Air Quality", icon: <Wind className="h-3.5 w-3.5" />, color: "#22c55e", count: layers.airQuality ? airQualityData.length : 0 },
-    { id: "geoFusion", label: "Geo-Fusion Events", icon: <Zap className="h-3.5 w-3.5" />, color: "#eab308", count: layers.geoFusion ? (geoFusionData?.events?.length || 0) : 0 },
+    { id: "satellites", label: "Satellites", icon: <Satellite className="h-3.5 w-3.5" />, color: "#00d4ff", count: stats.sats },
+    { id: "flights", label: "Aircraft", icon: <Plane className="h-3.5 w-3.5" />, color: "#00d4ff", count: stats.aircraft },
+    { id: "militaryFlights", label: "Military Flights", icon: <Shield className="h-3.5 w-3.5" />, color: "#ef4444" },
+    { id: "maritime", label: "Maritime / AIS", icon: <Ship className="h-3.5 w-3.5" />, color: "#22c55e", count: stats.vessels },
+    { id: "earthquakes", label: "Earthquakes", icon: <Activity className="h-3.5 w-3.5" />, color: "#ef4444", count: stats.quakes },
+    { id: "wildfires", label: "Wildfires", icon: <Flame className="h-3.5 w-3.5" />, color: "#ff4500", count: stats.fires },
+    { id: "conflicts", label: "Conflicts", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: stats.conflicts },
+    { id: "rockets", label: "Rockets / Missiles", icon: <Rocket className="h-3.5 w-3.5" />, color: "#ef4444", count: stats.rockets },
+    { id: "nuclear", label: "Nuclear Intel", icon: <Radio className="h-3.5 w-3.5" />, color: "#a855f7", count: stats.nuclear },
+    { id: "airQuality", label: "Air Quality", icon: <Wind className="h-3.5 w-3.5" />, color: "#22c55e", count: stats.airQ },
+    { id: "geoFusion", label: "Geo-Fusion Events", icon: <Zap className="h-3.5 w-3.5" />, color: "#eab308", count: stats.fusion },
     { id: "borders", label: "Country Borders", icon: <MapPin className="h-3.5 w-3.5" />, color: "#00ffc8" },
-    { id: "gpsJamming", label: "GPS Jamming", icon: <Shield className="h-3.5 w-3.5" />, color: "#e879f9" },
+    { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3.5 w-3.5" />, color: "#e879f9" },
   ];
 
   const totalActive = Object.values(layers).filter(Boolean).length;
 
-  // Timeline playback state
+  // Timeline
   const [playing, setPlaying] = useState(true);
   const [timelineValue, setTimelineValue] = useState(50);
   const [speed, setSpeed] = useState("1m/s");
   const [orbitMode, setOrbitMode] = useState<"OFF" | "FLAT" | "SPIRAL IN" | "SPIRAL OUT">("OFF");
   const speedOptions = ["1m/s", "3m/s", "5m/s", "15m/s", "1h/s"];
-  const orbitOptions: ("OFF" | "FLAT" | "SPIRAL IN" | "SPIRAL OUT")[] = ["OFF", "FLAT", "SPIRAL IN", "SPIRAL OUT"];
+  const orbitOptions: typeof orbitMode[] = ["OFF", "FLAT", "SPIRAL IN", "SPIRAL OUT"];
 
-  // Timeline event dots (from geo fusion events and earthquakes)
   const timelineDots = useMemo(() => {
     const dots: { position: number; color: string; label: string }[] = [];
     if (geoFusionData?.events) {
       geoFusionData.events.slice(0, 20).forEach((ev, i) => {
-        const severity = ev.severity >= 4 ? "#ef4444" : ev.severity >= 3 ? "#f97316" : "#00d4ff";
-        dots.push({ position: 5 + (i / 20) * 90, color: severity, label: ev.event_type });
+        dots.push({ position: 5 + (i / 20) * 90, color: ev.severity >= 4 ? "#ef4444" : ev.severity >= 3 ? "#f97316" : "#00d4ff", label: ev.event_type });
       });
     }
     if (earthquakes.length) {
@@ -458,7 +572,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return dots;
   }, [geoFusionData, earthquakes]);
 
-  // Layer chip configs for bottom bar
   const chipLayers = [
     { id: "flights", label: "Commercial Flights", icon: <Plane className="h-3 w-3" />, color: "#00d4ff" },
     { id: "militaryFlights", label: "Military Flights", icon: <Shield className="h-3 w-3" />, color: "#ef4444" },
@@ -468,7 +581,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "borders", label: "Airspace Closures", icon: <Shield className="h-3 w-3" />, color: "#ef4444" },
   ];
 
-  // Event type indicators for second row
   const eventTypes = [
     { label: "Kinetic", color: "#ef4444" },
     { label: "Retaliation", color: "#ef4444" },
@@ -479,194 +591,277 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { label: "Airspace Closure", color: "#22c55e" },
   ];
 
+  // Search type icons
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "city": return "🏙";
+      case "facility": return "⚛";
+      case "military": return "🎯";
+      case "chokepoint": return "⚓";
+      case "conflict": return "⚔";
+      case "satellite": return "🛰";
+      case "vessel": return "🚢";
+      case "fusion": return "📡";
+      case "coordinate": return "📍";
+      default: return "📌";
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
+    <div className="fixed inset-0 z-[9999] bg-[hsl(220,25%,5%)] flex flex-col">
+      {/* Scanline overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[10000] opacity-[0.03]" style={{
+        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,210,255,0.1) 2px, rgba(0,210,255,0.1) 4px)",
+      }} />
+
       <div className="flex flex-1 min-h-0">
-        {/* Left Panel */}
-        <div className="w-64 flex-shrink-0 bg-card/95 backdrop-blur border-r border-border flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-            <Globe className="h-4 w-4 text-primary" />
-            <span className="text-xs font-bold tracking-wider text-foreground uppercase">4D Intelligence Layers</span>
+        {/* Left Panel — Palantir-style */}
+        <div className="w-60 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Radar className="h-4 w-4 text-primary" />
+                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              </div>
+              <div>
+                <div className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">GOTHAM • 4D</div>
+                <div className="text-[8px] tracking-[0.15em] text-muted-foreground uppercase">Intelligence Fusion</div>
+              </div>
+            </div>
           </div>
-          <div className="px-4 py-2 border-b border-border/50">
-            <span className="text-[10px] text-muted-foreground font-mono">
-              {totalActive} / {layerConfigs.length} layers active
+
+          {/* Stats bar */}
+          <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)]">
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { label: "SAT", value: stats.sats, color: "#00d4ff" },
+                { label: "AIR", value: stats.aircraft, color: "#00d4ff" },
+                { label: "SEA", value: stats.vessels, color: "#22c55e" },
+                { label: "EQ", value: stats.quakes, color: "#ef4444" },
+                { label: "FIRE", value: stats.fires, color: "#ff4500" },
+                { label: "INTEL", value: stats.fusion, color: "#eab308" },
+              ].map(s => (
+                <div key={s.label} className="text-center py-1 rounded bg-[hsl(220,18%,8%)] border border-[hsl(220,15%,15%)]">
+                  <div className="text-[9px] font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
+                  <div className="text-[7px] font-mono text-muted-foreground tracking-wider">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Layer count */}
+          <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
+            <span className="text-[9px] text-muted-foreground font-mono tracking-wider">
+              {totalActive}/{layerConfigs.length} LAYERS ACTIVE
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+
+          {/* Layer toggles */}
+          <div className="flex-1 overflow-y-auto py-1">
             {layerConfigs.map(layer => (
               <button
                 key={layer.id}
                 onClick={() => toggleLayer(layer.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left transition-all duration-200 ${
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${
                   layers[layer.id]
-                    ? "bg-primary/10 border border-primary/30"
-                    : "bg-transparent border border-transparent hover:bg-muted/50 hover:border-border/50"
+                    ? "bg-[hsl(190,30%,10%)] border-l-primary"
+                    : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)] hover:border-l-[hsl(190,60%,20%)]"
                 }`}
               >
                 <Checkbox
                   checked={layers[layer.id]}
                   onCheckedChange={() => toggleLayer(layer.id)}
-                  className="h-3.5 w-3.5 pointer-events-none"
+                  className="h-3 w-3 pointer-events-none rounded-sm"
                 />
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: layers[layer.id] ? layer.color : "#4b5563" }}
-                />
-                <span className={`flex items-center gap-1.5 text-[11px] font-medium ${
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
+                <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${
                   layers[layer.id] ? "text-foreground" : "text-muted-foreground"
                 }`}>
                   {layer.icon}
                   {layer.label}
                 </span>
-                {layer.count !== undefined && layers[layer.id] && (
-                  <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                    {layer.count}
-                  </span>
+                {layer.count !== undefined && layers[layer.id] && layer.count > 0 && (
+                  <span className="ml-auto text-[8px] font-mono px-1 py-0.5 rounded bg-[hsl(220,15%,15%)] text-muted-foreground">{layer.count}</span>
                 )}
               </button>
             ))}
           </div>
-          <div className="px-4 py-2 border-t border-border text-[9px] text-muted-foreground font-mono">
-            WAROS 4D • Multi-Source Intel Globe
+
+          {/* Footer */}
+          <div className="px-3 py-2 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)]">
+            <div className="text-[7px] font-mono text-muted-foreground tracking-[0.15em] uppercase">
+              WAROS • PALANTIR-CLASS OSINT
+            </div>
+            <div className="text-[7px] font-mono text-primary/40 mt-0.5">
+              {new Date().toISOString().replace("T", " ").slice(0, 19)} UTC
+            </div>
           </div>
         </div>
 
-        {/* Globe */}
+        {/* Globe area */}
         <div className="flex-1 relative">
           <div ref={globeContainerRef} className="w-full h-full" />
+
+          {/* Search bar — top center */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-96">
+            <div className="relative">
+              <div className="flex items-center bg-[hsl(220,20%,7%)/0.92] backdrop-blur-md border border-[hsl(190,60%,20%)] rounded-md overflow-hidden shadow-[0_0_20px_hsl(190,100%,50%/0.08)]">
+                <Search className="h-3.5 w-3.5 text-primary ml-3 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  placeholder="Search locations, satellites, vessels, events..."
+                  className="w-full bg-transparent text-[11px] font-mono text-foreground placeholder:text-muted-foreground px-3 py-2.5 outline-none"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="mr-2 text-muted-foreground hover:text-foreground">
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Search dropdown */}
+              {searchFocused && searchResults.length > 0 && (
+                <div className="absolute top-full mt-1 w-full bg-[hsl(220,20%,7%)] border border-[hsl(190,60%,18%)] rounded-md shadow-xl overflow-hidden max-h-80 overflow-y-auto">
+                  {searchResults.map((r, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSearchSelect(r)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[hsl(190,30%,12%)] transition-colors border-b border-[hsl(220,15%,12%)] last:border-0"
+                    >
+                      <span className="text-xs">{getTypeIcon(r.type)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-mono text-foreground truncate">{r.name}</div>
+                        <div className="text-[8px] font-mono text-muted-foreground">
+                          {r.lat.toFixed(2)}°, {r.lng.toFixed(2)}° • {r.type.toUpperCase()}
+                        </div>
+                      </div>
+                      <Target className="h-3 w-3 text-primary/50 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/80 backdrop-blur border border-border text-foreground hover:bg-destructive/20 hover:border-destructive/50 hover:text-destructive transition-colors"
+            className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(190,60%,18%)] text-foreground hover:bg-destructive/20 hover:border-destructive/50 hover:text-destructive transition-colors"
           >
-            <X className="h-4 w-4" />
-            <span className="text-xs font-mono">Close</span>
+            <X className="h-3.5 w-3.5" />
+            <span className="text-[10px] font-mono tracking-wider">CLOSE</span>
           </button>
 
           {/* Title overlay */}
           <div className="absolute top-4 left-4 z-10">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-card/80 backdrop-blur border border-primary/30">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(190,60%,18%)]">
               <Globe className="h-4 w-4 text-primary" />
-              <span className="text-sm font-bold text-foreground">
+              <span className="text-xs font-bold font-mono tracking-[0.15em] text-foreground">
                 4D <span className="text-primary">MAP</span>
               </span>
-              <span className="text-[9px] font-mono text-muted-foreground ml-2">
-                LIVE MULTI-SOURCE INTELLIGENCE
+              <div className="w-px h-3 bg-[hsl(190,60%,20%)] mx-1" />
+              <span className="text-[8px] font-mono text-muted-foreground tracking-[0.1em]">
+                MULTI-SOURCE INTELLIGENCE FUSION
               </span>
+              <div className="flex items-center gap-1 ml-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                <span className="text-[8px] font-mono text-success">LIVE</span>
+              </div>
             </div>
+          </div>
+
+          {/* Right side stats */}
+          <div className="absolute top-16 right-4 z-10 space-y-1.5">
+            {[
+              { label: "SATELLITES", value: stats.sats, color: "#00d4ff", active: layers.satellites },
+              { label: "AIRCRAFT", value: stats.aircraft, color: "#00d4ff", active: layers.flights },
+              { label: "VESSELS", value: stats.vessels, color: "#22c55e", active: layers.maritime },
+              { label: "THREATS", value: stats.conflicts + stats.rockets, color: "#ef4444", active: layers.conflicts },
+            ].filter(s => s.active && s.value > 0).map(s => (
+              <div key={s.label} className="flex items-center gap-2 px-2.5 py-1 rounded bg-[hsl(220,20%,7%)/0.75] backdrop-blur border border-[hsl(220,15%,15%)]">
+                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="text-[8px] font-mono text-muted-foreground tracking-wider">{s.label}</span>
+                <span className="text-[10px] font-mono font-bold" style={{ color: s.color }}>{s.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Bottom Timeline Bar */}
-      <div className="flex-shrink-0 bg-card/95 backdrop-blur border-t border-border">
-        {/* Row 1: Timeline slider + controls */}
-        <div className="flex items-center gap-2 px-3 py-2">
-          {/* Play/Pause */}
+      {/* Bottom Timeline Bar — darker, sharper */}
+      <div className="flex-shrink-0 bg-[hsl(220,20%,6%)] border-t border-[hsl(190,60%,15%)]">
+        {/* Row 1: Timeline */}
+        <div className="flex items-center gap-2 px-3 py-1.5">
           <button
             onClick={() => setPlaying(!playing)}
-            className="flex items-center justify-center h-7 w-7 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+            className="flex items-center justify-center h-6 w-6 rounded border border-[hsl(190,60%,20%)] text-primary hover:bg-primary/10 transition-colors"
           >
-            {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </button>
-
-          {/* Timeline slider with event dots */}
-          <div className="flex-1 relative h-6 flex items-center">
-            {/* Event dots on timeline */}
+          <div className="flex-1 relative h-5 flex items-center">
             {timelineDots.map((dot, i) => (
-              <div
-                key={i}
-                className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full z-10 pointer-events-none"
-                style={{ left: `${dot.position}%`, backgroundColor: dot.color }}
-                title={dot.label}
-              />
+              <div key={i} className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full z-10 pointer-events-none" style={{ left: `${dot.position}%`, backgroundColor: dot.color }} title={dot.label} />
             ))}
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={timelineValue}
-              onChange={e => setTimelineValue(parseInt(e.target.value))}
-              className="w-full h-1 appearance-none bg-border rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-[0_0_6px_hsl(190_100%_50%/0.5)] [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20"
-            />
+            <input type="range" min={0} max={100} value={timelineValue} onChange={e => setTimelineValue(parseInt(e.target.value))}
+              className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-[0_0_8px_hsl(190_100%_50%/0.4)] [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20" />
           </div>
         </div>
 
-        {/* Row 2: Speed + Orbit + View controls */}
-        <div className="flex items-center gap-2 px-3 py-1.5 border-t border-border/30">
-          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Speed:</span>
+        {/* Row 2: Speed + Orbit */}
+        <div className="flex items-center gap-1.5 px-3 py-1 border-t border-[hsl(220,15%,10%)]">
+          <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">SPEED:</span>
           {speedOptions.map(s => (
-            <button
-              key={s}
-              onClick={() => setSpeed(s)}
-              className={`px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${
-                speed === s
-                  ? "border-primary/60 bg-primary/15 text-primary"
-                  : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
-            >
+            <button key={s} onClick={() => setSpeed(s)}
+              className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${speed === s ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
               {s}
             </button>
           ))}
-
-          <div className="w-px h-4 bg-border/50 mx-1" />
-
-          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Orbit:</span>
+          <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-1" />
+          <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">ORBIT:</span>
           {orbitOptions.map(o => (
-            <button
-              key={o}
-              onClick={() => setOrbitMode(o)}
-              className={`px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${
-                orbitMode === o
-                  ? "border-primary/60 bg-primary/15 text-primary"
-                  : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
-            >
+            <button key={o} onClick={() => setOrbitMode(o)}
+              className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${orbitMode === o ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
               {o}
             </button>
           ))}
-
-          <div className="w-px h-4 bg-border/50 mx-1" />
-
-          <span className="text-[9px] font-mono text-muted-foreground">3°/s</span>
-          <span className="text-[9px] font-mono text-primary ml-1">Tehran</span>
+          <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-1" />
+          <span className="text-[8px] font-mono text-muted-foreground">3°/s</span>
+          <span className="text-[8px] font-mono text-primary ml-1">Tehran</span>
+          <div className="flex-1" />
+          <span className="text-[8px] font-mono text-muted-foreground">250km</span>
+          <span className="text-[8px] font-mono text-muted-foreground ml-2">-45°</span>
+          <span className="text-[8px] font-mono text-muted-foreground ml-2">60° FOV</span>
         </div>
 
         {/* Row 3: Layer chips */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-border/30 flex-wrap">
+        <div className="flex items-center gap-1 px-3 py-1 border-t border-[hsl(220,15%,10%)] flex-wrap">
           {chipLayers.map(chip => (
-            <button
-              key={chip.id}
-              onClick={() => toggleLayer(chip.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[10px] font-mono transition-colors ${
-                layers[chip.id]
-                  ? "border-primary/50 bg-primary/10 text-primary"
-                  : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground"
-              }`}
-            >
-              {chip.icon}
-              {chip.label}
+            <button key={chip.id} onClick={() => toggleLayer(chip.id)}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${
+                layers[chip.id] ? "border-primary/40 bg-primary/8 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
+              {chip.icon} {chip.label}
             </button>
           ))}
-
-          <div className="w-px h-4 bg-border/50 mx-1" />
-
-          <button className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground text-[10px] font-mono transition-colors">
+          <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-0.5" />
+          <button className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground transition-colors">
             <Eye className="h-3 w-3" /> Ground Truth Cards
           </button>
-          <button className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground text-[10px] font-mono transition-colors">
+          <button className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground transition-colors">
             VHF Intercept
           </button>
         </div>
 
-        {/* Row 4: Event type legend */}
-        <div className="flex items-center gap-3 px-3 py-1.5 border-t border-border/30">
+        {/* Row 4: Event legend */}
+        <div className="flex items-center gap-2.5 px-3 py-1 border-t border-[hsl(220,15%,10%)]">
           {eventTypes.map(evt => (
-            <div key={evt.label} className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color }} />
-              <span className="text-[9px] font-mono text-muted-foreground">{evt.label}</span>
+            <div key={evt.label} className="flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: evt.color }} />
+              <span className="text-[8px] font-mono text-muted-foreground">{evt.label}</span>
             </div>
           ))}
         </div>
