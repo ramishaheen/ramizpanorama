@@ -234,7 +234,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const wildfires = useMemo(() => wildfiresRaw.length > 0 ? wildfiresRaw : EMULATED_WILDFIRES, [wildfiresRaw]);
   const aisVessels = useMemo(() => aisVesselsRaw.length > 0 ? aisVesselsRaw : EMULATED_VESSELS, [aisVesselsRaw]);
   const allFlights = useMemo(() => flights.length > 0 ? flights : EMULATED_FLIGHTS, [flights]);
-  const allSatellites = useMemo(() => satellites.length > 0 ? satellites : EMULATED_SATELLITES, [satellites]);
+  const allSatellites = useMemo(() => {
+    if (satellites.length > 0) return satellites;
+    // Propagate emulated positions based on tick
+    return EMULATED_SATELLITES.map(s => {
+      const pos = propagateSatellite(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
+      return { ...s, lat: pos.lat, lng: pos.lng };
+    });
+  }, [satellites, emulatedTick]);
 
   const toggleLayer = useCallback((id: string) => setLayers(prev => ({ ...prev, [id]: !prev[id] })), []);
 
