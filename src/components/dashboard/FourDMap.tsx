@@ -32,6 +32,24 @@ function propagateSatellite(inclination: number, raan: number, meanAnomaly: numb
   return { lat: Math.max(-85, Math.min(85, lat)), lng };
 }
 
+// Propagate at a specific mean anomaly (for orbit track visualization)
+function propagateSatelliteAtMA(inclination: number, raan: number, meanAnomaly: number, meanMotion: number, eccentricity: number, epochYear: number, epochDay: number): { lat: number; lng: number } {
+  const now = new Date();
+  const startOfYear = new Date(epochYear, 0, 1);
+  const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+  const elapsedDays = currentDayOfYear - epochDay;
+  const totalRevs = elapsedDays * meanMotion;
+  const currentMA = (((meanAnomaly + totalRevs * 360) % 360) + 360) % 360;
+  const E = currentMA + (eccentricity * 180) / Math.PI * Math.sin((currentMA * Math.PI) / 180);
+  const argLat = (E * Math.PI) / 180;
+  const incRad = (inclination * Math.PI) / 180;
+  const lat = Math.asin(Math.sin(incRad) * Math.sin(argLat)) * (180 / Math.PI);
+  const greenwichOffset = now.getUTCHours() * 15 + now.getUTCMinutes() * 0.25 + now.getUTCSeconds() * (0.25 / 60);
+  const ascNode = raan - greenwichOffset;
+  const lng = (((ascNode + Math.atan2(Math.cos(incRad) * Math.sin(argLat), Math.cos(argLat)) * (180 / Math.PI)) % 360) + 540) % 360 - 180;
+  return { lat: Math.max(-85, Math.min(85, lat)), lng };
+}
+
 interface SatPoint { name: string; lat: number; lng: number; alt: number; category: string; inclination: number; raan: number; meanAnomaly: number; meanMotion: number; eccentricity: number; epochYear: number; epochDay: number; }
 
 function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
@@ -730,15 +748,39 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         { startLat: 35.69, startLng: 51.39, endLat: 15.35, endLng: 44.21, colors: ["rgba(168,85,247,0.3)", "rgba(168,85,247,0.1)"] },
       );
     }
-    // Satellite scan cone arcs
+    // Satellite orbital track arcs — trace partial orbit paths for top satellites
     if (layers.satellites && panopticSats) {
-      isrSatellites.slice(0, 12).forEach((s, i) => {
+      // Orbital tracks: compute positions ±15° along mean anomaly for visible orbit segments
+      const trackSats = allSatellites.filter(s => {
+        const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
+        return isISR || s.category === "Military" || s.category === "Early Warning" || s.category === "Earth Observation";
+      }).slice(0, 30);
+
+      trackSats.forEach(s => {
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const col = isMil ? "rgba(239,68,68,0.4)" : "rgba(0,212,255,0.35)";
-        // Deterministic ground footprint based on index
-        const groundLat = s.lat + Math.sin(i * 1.5) * 3;
-        const groundLng = s.lng + Math.cos(i * 1.5) * 3;
-        arcs.push({ startLat: s.lat, startLng: s.lng, endLat: groundLat, endLng: groundLng, colors: [col, "rgba(255,255,255,0.05)"] });
+        const trackCol = isMil ? "rgba(239,68,68,0.35)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.3)" : s.category === "Navigation" ? "rgba(34,197,94,0.25)" : "rgba(168,85,247,0.25)";
+        const trackColFade = isMil ? "rgba(239,68,68,0.08)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.06)" : "rgba(100,100,100,0.06)";
+
+        // Generate 3 arc segments along the orbit: behind, at, ahead
+        const offsets = [-12, -6, 6, 12]; // degrees offset on mean anomaly
+        for (let i = 0; i < offsets.length - 1; i++) {
+          const ma1 = s.meanAnomaly + offsets[i];
+          const ma2 = s.meanAnomaly + offsets[i + 1];
+          const pos1 = propagateSatelliteAtMA(s.inclination, s.raan, ma1, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
+          const pos2 = propagateSatelliteAtMA(s.inclination, s.raan, ma2, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
+          arcs.push({
+            startLat: pos1.lat, startLng: pos1.lng,
+            endLat: pos2.lat, endLng: pos2.lng,
+            colors: [trackCol, trackColFade],
+          });
+        }
+
+        // Scan cone arc from satellite to ground footprint
+        const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
+        if (isISR) {
+          const coneCol = isMil ? "rgba(239,68,68,0.4)" : "rgba(0,212,255,0.35)";
+          arcs.push({ startLat: s.lat, startLng: s.lng, endLat: s.lat + Math.sin(s.meanAnomaly * 0.05) * 3, endLng: s.lng + Math.cos(s.meanAnomaly * 0.05) * 3, colors: [coneCol, "rgba(255,255,255,0.05)"] });
+        }
       });
     }
     globe.arcsData(arcs);
@@ -836,8 +878,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         )}
 
         {/* GLOBE */}
-        <div className="flex-1 relative" style={{ filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
-          <div ref={globeContainerRef} className="w-full h-full" />
+        <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
+          <div ref={globeContainerRef} className="absolute inset-0" />
 
           {/* Search */}
           {!cleanUI && (
@@ -905,7 +947,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
         {/* RIGHT PANEL — Attributes + Feed */}
         {!cleanUI && (
-          <div className="w-64 flex-shrink-0 bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden" style={{ minWidth: 256 }}>
+          <div className="w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden pointer-events-auto" style={{ minWidth: 256 }}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-primary" />
