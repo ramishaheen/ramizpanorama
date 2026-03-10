@@ -681,7 +681,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     }
   }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, flights, airQualityData, geoFusionData, satellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents]);
 
-
+  const chipLayers = [
     { id: "flights", label: "Commercial Flights", icon: <Plane className="h-3 w-3" />, color: "#00d4ff" },
     { id: "militaryFlights", label: "Military Flights", icon: <Shield className="h-3 w-3" />, color: "#ef4444" },
     { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3 w-3" />, color: "#22c55e" },
