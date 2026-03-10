@@ -61,10 +61,8 @@ function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
   } catch { return null; }
 }
 
-const TLE_URLS = [
-  "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle",
-  "https://celestrak.org/NORAD/elements/gp.php?GROUP=military&FORMAT=tle",
-];
+// TLE groups to fetch via the proxy
+const TLE_GROUPS = ["active", "military", "resource", "weather", "gnss", "geo", "science", "stations", "last-30-days"];
 
 const ALL_COUNTRY_CODES = ["IR", "IQ", "SY", "IL", "JO", "LB", "SA", "AE", "BH", "KW", "QA", "OM", "YE", "EG", "TR"];
 
@@ -109,21 +107,43 @@ const KEY_ISR_SATS = ["WORLDVIEW", "WV-LEGION", "GAOFEN", "BARS-M", "COSMOS 2", 
 // Rich emulated data ensures the globe always looks populated even when APIs haven't responded
 
 const EMULATED_SATELLITES: SatPoint[] = [
+  // ISR / Earth Observation — key intelligence assets
   { name: "WORLDVIEW-3", lat: 28.5, lng: 47.2, alt: 617, category: "Earth Observation", inclination: 97.9, raan: 200, meanAnomaly: 45, meanMotion: 15.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "WV-LEGION-2", lat: 33.1, lng: 38.5, alt: 524, category: "Earth Observation", inclination: 97.4, raan: 185, meanAnomaly: 120, meanMotion: 15.3, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "WORLDVIEW-2", lat: 36.0, lng: 52.0, alt: 770, category: "Earth Observation", inclination: 97.2, raan: 190, meanAnomaly: 88, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "GAOFEN-7", lat: 25.3, lng: 55.1, alt: 505, category: "Earth Observation", inclination: 98.0, raan: 210, meanAnomaly: 200, meanMotion: 15.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "SENTINEL-2A", lat: 31.0, lng: 35.0, alt: 786, category: "Earth Observation", inclination: 98.6, raan: 205, meanAnomaly: 60, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "LANDSAT 9", lat: 27.0, lng: 48.0, alt: 705, category: "Earth Observation", inclination: 98.2, raan: 195, meanAnomaly: 30, meanMotion: 14.95, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "PLEIADES NEO 4", lat: 38.2, lng: 42.0, alt: 620, category: "Earth Observation", inclination: 97.9, raan: 215, meanAnomaly: 140, meanMotion: 15.15, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  // Military / Intelligence
   { name: "BARS-M No.1", lat: 40.2, lng: 44.5, alt: 555, category: "Military", inclination: 97.6, raan: 175, meanAnomaly: 310, meanMotion: 15.1, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "USA 314 (KH-11)", lat: 30.0, lng: 50.0, alt: 260, category: "Military", inclination: 97.9, raan: 220, meanAnomaly: 150, meanMotion: 15.6, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
   { name: "COSMOS 2558", lat: 42.0, lng: 36.0, alt: 430, category: "Military", inclination: 97.3, raan: 160, meanAnomaly: 270, meanMotion: 15.3, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
   { name: "NROL-82", lat: 35.5, lng: 42.0, alt: 310, category: "Military", inclination: 63.4, raan: 140, meanAnomaly: 90, meanMotion: 15.5, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
+  { name: "LACROSSE 5", lat: 44.0, lng: 55.0, alt: 710, category: "Military", inclination: 68.0, raan: 130, meanAnomaly: 220, meanMotion: 14.85, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "USA 245 (TOPAZ)", lat: 22.0, lng: 58.0, alt: 360, category: "Military", inclination: 63.4, raan: 155, meanAnomaly: 180, meanMotion: 15.4, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
+  // Early Warning
   { name: "SBIRS GEO-5", lat: 0.1, lng: 42.0, alt: 35786, category: "Early Warning", inclination: 0.1, raan: 0, meanAnomaly: 180, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "SBIRS GEO-4", lat: 0.0, lng: 63.0, alt: 35786, category: "Early Warning", inclination: 0.05, raan: 0, meanAnomaly: 90, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "DSP F-23", lat: 0.2, lng: 25.0, alt: 35786, category: "Early Warning", inclination: 0.1, raan: 10, meanAnomaly: 270, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  // Navigation
   { name: "GPS IIF-12", lat: 55.0, lng: 30.0, alt: 20200, category: "Navigation", inclination: 55.0, raan: 100, meanAnomaly: 0, meanMotion: 2.0, eccentricity: 0.01, epochYear: 2024, epochDay: 200 },
-  { name: "SENTINEL-2A", lat: 31.0, lng: 35.0, alt: 786, category: "Earth Observation", inclination: 98.6, raan: 205, meanAnomaly: 60, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
-  { name: "LANDSAT 9", lat: 27.0, lng: 48.0, alt: 705, category: "Earth Observation", inclination: 98.2, raan: 195, meanAnomaly: 30, meanMotion: 14.95, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "GLONASS-M 58", lat: 64.8, lng: 48.0, alt: 19130, category: "Navigation", inclination: 64.8, raan: 80, meanAnomaly: 120, meanMotion: 2.13, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "GALILEO 26", lat: 56.0, lng: 35.0, alt: 23222, category: "Navigation", inclination: 56.0, raan: 120, meanAnomaly: 60, meanMotion: 1.7, eccentricity: 0.0002, epochYear: 2024, epochDay: 200 },
+  // Weather
   { name: "METEOSAT-12", lat: 0.0, lng: 41.5, alt: 35786, category: "Weather", inclination: 0.1, raan: 0, meanAnomaly: 90, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "NOAA-20", lat: 50.0, lng: 60.0, alt: 824, category: "Weather", inclination: 98.7, raan: 230, meanAnomaly: 300, meanMotion: 14.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "FENGYUN 4A", lat: 0.1, lng: 105.0, alt: 35786, category: "Weather", inclination: 0.05, raan: 0, meanAnomaly: 45, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  // Comms / Starlink
   { name: "STARLINK-5001", lat: 22.0, lng: 40.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 260, meanAnomaly: 100, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
   { name: "STARLINK-5233", lat: 38.0, lng: 55.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 300, meanAnomaly: 200, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "STARLINK-6100", lat: 15.0, lng: 32.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 340, meanAnomaly: 50, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  // Space Station
+  { name: "ISS (ZARYA)", lat: 34.0, lng: 40.0, alt: 420, category: "Space Station", inclination: 51.6, raan: 250, meanAnomaly: 330, meanMotion: 15.5, eccentricity: 0.0005, epochYear: 2024, epochDay: 200 },
+  { name: "TIANGONG", lat: 41.3, lng: 115.0, alt: 390, category: "Space Station", inclination: 41.5, raan: 200, meanAnomaly: 160, meanMotion: 15.6, eccentricity: 0.0003, epochYear: 2024, epochDay: 200 },
+  // Communication
+  { name: "INTELSAT 39", lat: 0.1, lng: 62.0, alt: 35786, category: "Communication", inclination: 0.05, raan: 0, meanAnomaly: 135, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "ARABSAT 6A", lat: 0.0, lng: 30.5, alt: 35786, category: "Communication", inclination: 0.05, raan: 5, meanAnomaly: 200, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
 ];
 
 const EMULATED_FLIGHTS = [
@@ -184,6 +204,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
+  const [emulatedTick, setEmulatedTick] = useState(0);
   const satIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const rafRef = useRef<number>();
   const [searchQuery, setSearchQuery] = useState("");
@@ -214,7 +235,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const wildfires = useMemo(() => wildfiresRaw.length > 0 ? wildfiresRaw : EMULATED_WILDFIRES, [wildfiresRaw]);
   const aisVessels = useMemo(() => aisVesselsRaw.length > 0 ? aisVesselsRaw : EMULATED_VESSELS, [aisVesselsRaw]);
   const allFlights = useMemo(() => flights.length > 0 ? flights : EMULATED_FLIGHTS, [flights]);
-  const allSatellites = useMemo(() => satellites.length > 0 ? satellites : EMULATED_SATELLITES, [satellites]);
+  const allSatellites = useMemo(() => {
+    if (satellites.length > 0) return satellites;
+    // Propagate emulated positions based on tick
+    return EMULATED_SATELLITES.map(s => {
+      const pos = propagateSatellite(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
+      return { ...s, lat: pos.lat, lng: pos.lng };
+    });
+  }, [satellites, emulatedTick]);
 
   const toggleLayer = useCallback((id: string) => setLayers(prev => ({ ...prev, [id]: !prev[id] })), []);
 
@@ -236,15 +264,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     setSearchQuery(""); setSearchFocused(false);
   }, []);
 
-  // Fetch TLEs
+  // Fetch TLEs via proxy — uses { data: { groupName: tleText } } response format
   useEffect(() => {
     async function fetchTLEs() {
       try {
-        const { data: proxyData } = await supabase.functions.invoke("tle-proxy", { body: { urls: TLE_URLS } });
-        if (!proxyData?.results) return;
+        const { data: proxyData } = await supabase.functions.invoke("tle-proxy", { body: { groups: TLE_GROUPS } });
+        if (!proxyData?.data) { console.warn("[4D] No TLE data returned"); return; }
         const allSats: SatPoint[] = [];
-        for (const result of proxyData.results) {
-          const lines = (result.body || "").split("\n").map((l: string) => l.trim()).filter(Boolean);
+        for (const [, tleText] of Object.entries(proxyData.data)) {
+          const lines = (tleText as string).split("\n").map((l: string) => l.trim()).filter(Boolean);
           for (let i = 0; i < lines.length - 2; i += 3) {
             if (lines[i + 1]?.startsWith("1 ") && lines[i + 2]?.startsWith("2 ")) {
               const sat = parseTLE(lines[i], lines[i + 1], lines[i + 2]);
@@ -252,9 +280,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             }
           }
         }
-        const limited = allSats.length > 800 ? allSats.filter((_, i) => i % Math.ceil(allSats.length / 800) === 0) : allSats;
-        if (limited.length > 0) setSatellites(limited);
-      } catch (e) { console.warn("[4D] TLE fetch failed, using emulated satellites"); }
+        // Deduplicate by name, keep first occurrence
+        const seen = new Set<string>();
+        const unique = allSats.filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true; });
+        // Limit to ~1500 for performance
+        const limited = unique.length > 1500 ? unique.filter((_, i) => i % Math.ceil(unique.length / 1500) === 0) : unique;
+        if (limited.length > 0) { setSatellites(limited); console.log(`[4D] Loaded ${limited.length} real satellites from TLE data`); }
+      } catch (e) { console.warn("[4D] TLE fetch failed, using emulated satellites", e); }
     }
     fetchTLEs();
   }, []);
@@ -305,7 +337,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => { destroyed = true; if (rafRef.current) cancelAnimationFrame(rafRef.current); if (satIntervalRef.current) clearInterval(satIntervalRef.current); };
   }, []);
 
-  // Update real sat positions periodically (only if we have real TLE data)
+  // Update satellite positions every second for visible orbital movement
   useEffect(() => {
     if (satellites.length === 0) return;
     const updateSats = () => {
@@ -314,8 +346,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         return { ...s, lat: pos.lat, lng: pos.lng };
       }));
     };
-    satIntervalRef.current = setInterval(updateSats, 2000);
+    satIntervalRef.current = setInterval(updateSats, 1000);
     return () => clearInterval(satIntervalRef.current);
+  }, [satellites.length]);
+
+  // For emulated fallback: tick counter forces re-propagation
+  useEffect(() => {
+    if (satellites.length > 0) return;
+    const iv = setInterval(() => setEmulatedTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
   }, [satellites.length]);
 
   const stats = useMemo(() => ({
@@ -584,17 +623,26 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     console.log(`[4D] Rendering ${points.length} points on globe`);
     globe.pointsData(points);
 
-    // SATELLITES as 3D objects
+    // SATELLITES — render as visible colored points on globe + 3D objects for labels
     if (layers.satellites && panopticSats && allSatellites.length) {
-      const satObjects = allSatellites.map(s => {
+      allSatellites.forEach(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : "#888888";
+        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : s.category === "Space Station" ? "#ffffff" : s.category === "Starlink" ? "#888888" : "#666666";
+        points.push({
+          lat: s.lat, lng: s.lng, pointAlt: Math.min(s.alt / 6371 * 0.15, 0.8),
+          color: satCol, radius: (isISR ? 0.18 : isMil ? 0.14 : 0.08) * densityMult,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}30"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol}">◆</span><span style="color:${satCol};font-weight:bold;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
+        });
+      });
+
+      // 3D object labels only for ISR satellites
+      const satObjects = isrSatellites.map(s => {
+        const isMil = s.category === "Military" || s.category === "Early Warning";
+        const satCol = isMil ? "#ef4444" : "#00d4ff";
         return {
           lat: s.lat, lng: s.lng, alt: s.alt / 6371 * 0.15,
-          label: isISR
-            ? `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol};font-size:10px">◆</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`
-            : `<div style="font-family:monospace;font-size:10px;background:rgba(10,10,20,0.9);border:1px solid ${satCol};padding:4px 8px;border-radius:3px;color:#f0f0f0"><div style="color:${satCol};font-weight:bold">🛰 ${s.name}</div><div style="color:#888;font-size:8px">${Math.round(s.alt)}km • ${s.category}</div></div>`,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol};font-size:10px">◆</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
         };
       });
       globe.objectsData(satObjects);
@@ -760,9 +808,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             </div>
           )}
 
-          {/* X button */}
-          <button onClick={onClose} className="absolute top-3 right-3 z-30 w-8 h-8 flex items-center justify-center rounded bg-[hsl(220,20%,8%)/0.9] backdrop-blur border border-[hsl(0,60%,40%)] text-[hsl(0,80%,65%)] hover:bg-[hsl(0,60%,20%)] hover:text-[hsl(0,80%,80%)] transition-all shadow-[0_0_12px_hsl(0,80%,50%/0.2)]">
-            <X className="h-4 w-4" />
+          {/* X close button — always visible, prominent */}
+          <button onClick={onClose} className="absolute top-3 right-3 z-[10002] w-10 h-10 flex items-center justify-center rounded-lg bg-destructive/90 backdrop-blur-md border-2 border-destructive text-destructive-foreground hover:bg-destructive hover:scale-110 transition-all shadow-[0_0_20px_hsl(0,80%,50%/0.4)] font-bold">
+            <X className="h-5 w-5" strokeWidth={3} />
           </button>
 
           {/* Title + HUD */}
