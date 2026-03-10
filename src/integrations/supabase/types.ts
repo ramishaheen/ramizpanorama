@@ -53,6 +53,36 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       camera_events: {
         Row: {
           camera_id: string
@@ -250,6 +280,269 @@ export type Database = {
         }
         Relationships: []
       }
+      intel_connectors: {
+        Row: {
+          auth_reference: string | null
+          config: Json | null
+          connector_type: Database["public"]["Enums"]["connector_type"]
+          created_at: string
+          enabled: boolean
+          endpoint_url: string | null
+          id: string
+          last_sync_at: string | null
+          provider_name: string
+          rate_limit: number | null
+          updated_at: string
+        }
+        Insert: {
+          auth_reference?: string | null
+          config?: Json | null
+          connector_type: Database["public"]["Enums"]["connector_type"]
+          created_at?: string
+          enabled?: boolean
+          endpoint_url?: string | null
+          id?: string
+          last_sync_at?: string | null
+          provider_name: string
+          rate_limit?: number | null
+          updated_at?: string
+        }
+        Update: {
+          auth_reference?: string | null
+          config?: Json | null
+          connector_type?: Database["public"]["Enums"]["connector_type"]
+          created_at?: string
+          enabled?: boolean
+          endpoint_url?: string | null
+          id?: string
+          last_sync_at?: string | null
+          provider_name?: string
+          rate_limit?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      intel_events: {
+        Row: {
+          city: string | null
+          confidence: number
+          country: string | null
+          created_at: string
+          event_type: string
+          id: string
+          lat: number
+          lng: number
+          severity: Database["public"]["Enums"]["event_severity"]
+          source_id: string | null
+          source_link: string | null
+          summary: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          verification_status: Database["public"]["Enums"]["event_verification"]
+          verified_by: string | null
+        }
+        Insert: {
+          city?: string | null
+          confidence?: number
+          country?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          lat?: number
+          lng?: number
+          severity?: Database["public"]["Enums"]["event_severity"]
+          source_id?: string | null
+          source_link?: string | null
+          summary?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["event_verification"]
+          verified_by?: string | null
+        }
+        Update: {
+          city?: string | null
+          confidence?: number
+          country?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          lat?: number
+          lng?: number
+          severity?: Database["public"]["Enums"]["event_severity"]
+          source_id?: string | null
+          source_link?: string | null
+          summary?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          verification_status?: Database["public"]["Enums"]["event_verification"]
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intel_events_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "intel_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intel_incidents: {
+        Row: {
+          analyst_notes: string | null
+          city: string | null
+          correlation_rule: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          lat: number
+          lng: number
+          related_event_ids: string[] | null
+          related_source_ids: string[] | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: Database["public"]["Enums"]["event_severity"]
+          status: Database["public"]["Enums"]["incident_status"]
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          analyst_notes?: string | null
+          city?: string | null
+          correlation_rule?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          related_event_ids?: string[] | null
+          related_source_ids?: string[] | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: Database["public"]["Enums"]["event_severity"]
+          status?: Database["public"]["Enums"]["incident_status"]
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          analyst_notes?: string | null
+          city?: string | null
+          correlation_rule?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          related_event_ids?: string[] | null
+          related_source_ids?: string[] | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: Database["public"]["Enums"]["event_severity"]
+          status?: Database["public"]["Enums"]["incident_status"]
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      intel_sources: {
+        Row: {
+          address_text: string | null
+          category: Database["public"]["Enums"]["source_category"]
+          city: string
+          country: string
+          created_at: string
+          embed_url: string | null
+          id: string
+          last_checked_at: string | null
+          lat: number
+          lng: number
+          notes: string | null
+          ownership_type: Database["public"]["Enums"]["ownership_type"]
+          playable_url: string | null
+          provider_name: string | null
+          public_permission_status: Database["public"]["Enums"]["permission_status"]
+          reliability_score: number
+          review_status: Database["public"]["Enums"]["review_status"]
+          reviewed_by: string | null
+          source_name: string
+          source_type: Database["public"]["Enums"]["source_type"]
+          source_url: string | null
+          stream_type_detected: string | null
+          submitted_by: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          updated_at: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          address_text?: string | null
+          category?: Database["public"]["Enums"]["source_category"]
+          city?: string
+          country?: string
+          created_at?: string
+          embed_url?: string | null
+          id?: string
+          last_checked_at?: string | null
+          lat?: number
+          lng?: number
+          notes?: string | null
+          ownership_type?: Database["public"]["Enums"]["ownership_type"]
+          playable_url?: string | null
+          provider_name?: string | null
+          public_permission_status?: Database["public"]["Enums"]["permission_status"]
+          reliability_score?: number
+          review_status?: Database["public"]["Enums"]["review_status"]
+          reviewed_by?: string | null
+          source_name: string
+          source_type?: Database["public"]["Enums"]["source_type"]
+          source_url?: string | null
+          stream_type_detected?: string | null
+          submitted_by?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          address_text?: string | null
+          category?: Database["public"]["Enums"]["source_category"]
+          city?: string
+          country?: string
+          created_at?: string
+          embed_url?: string | null
+          id?: string
+          last_checked_at?: string | null
+          lat?: number
+          lng?: number
+          notes?: string | null
+          ownership_type?: Database["public"]["Enums"]["ownership_type"]
+          playable_url?: string | null
+          provider_name?: string | null
+          public_permission_status?: Database["public"]["Enums"]["permission_status"]
+          reliability_score?: number
+          review_status?: Database["public"]["Enums"]["review_status"]
+          reviewed_by?: string | null
+          source_name?: string
+          source_type?: Database["public"]["Enums"]["source_type"]
+          source_url?: string | null
+          stream_type_detected?: string | null
+          submitted_by?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
       launch_history: {
         Row: {
           date: string
@@ -273,6 +566,33 @@ export type Database = {
           impact?: number
           intercepted?: number
           launches?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          email?: string | null
+          id?: string
           updated_at?: string
         }
         Relationships: []
@@ -361,6 +681,135 @@ export type Database = {
         }
         Relationships: []
       }
+      snapshot_analysis: {
+        Row: {
+          analyzed_at: string
+          blockage_estimate: number | null
+          change_score: number | null
+          current_hash: string | null
+          id: string
+          motion_estimate: number | null
+          occupancy_estimate: number | null
+          previous_hash: string | null
+          source_id: string
+          visibility_estimate: number | null
+        }
+        Insert: {
+          analyzed_at?: string
+          blockage_estimate?: number | null
+          change_score?: number | null
+          current_hash?: string | null
+          id?: string
+          motion_estimate?: number | null
+          occupancy_estimate?: number | null
+          previous_hash?: string | null
+          source_id: string
+          visibility_estimate?: number | null
+        }
+        Update: {
+          analyzed_at?: string
+          blockage_estimate?: number | null
+          change_score?: number | null
+          current_hash?: string | null
+          id?: string
+          motion_estimate?: number | null
+          occupancy_estimate?: number | null
+          previous_hash?: string | null
+          source_id?: string
+          visibility_estimate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snapshot_analysis_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "intel_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_health: {
+        Row: {
+          checked_at: string
+          error_message: string | null
+          failure_count: number
+          id: string
+          last_failure_at: string | null
+          last_success_at: string | null
+          response_time_ms: number | null
+          source_id: string
+          status: Database["public"]["Enums"]["health_status"]
+        }
+        Insert: {
+          checked_at?: string
+          error_message?: string | null
+          failure_count?: number
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          response_time_ms?: number | null
+          source_id: string
+          status?: Database["public"]["Enums"]["health_status"]
+        }
+        Update: {
+          checked_at?: string
+          error_message?: string | null
+          failure_count?: number
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          response_time_ms?: number | null
+          source_id?: string
+          status?: Database["public"]["Enums"]["health_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_health_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "intel_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      source_reviews: {
+        Row: {
+          action: Database["public"]["Enums"]["review_status"]
+          checks: Json
+          created_at: string
+          id: string
+          notes: string | null
+          reviewer_id: string | null
+          source_id: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["review_status"]
+          checks?: Json
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewer_id?: string | null
+          source_id: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["review_status"]
+          checks?: Json
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewer_id?: string | null
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_reviews_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "intel_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_intel_cache: {
         Row: {
           fetched_at: string
@@ -406,6 +855,75 @@ export type Database = {
         }
         Relationships: []
       }
+      traffic_segments: {
+        Row: {
+          congestion_level: Database["public"]["Enums"]["congestion_level"]
+          created_at: string
+          id: string
+          incident_severity:
+            | Database["public"]["Enums"]["event_severity"]
+            | null
+          incident_type: string | null
+          lat: number
+          lng: number
+          polyline_json: Json | null
+          road_name: string
+          source_provider: string | null
+          speed_index: number | null
+          updated_at: string
+        }
+        Insert: {
+          congestion_level?: Database["public"]["Enums"]["congestion_level"]
+          created_at?: string
+          id?: string
+          incident_severity?:
+            | Database["public"]["Enums"]["event_severity"]
+            | null
+          incident_type?: string | null
+          lat?: number
+          lng?: number
+          polyline_json?: Json | null
+          road_name?: string
+          source_provider?: string | null
+          speed_index?: number | null
+          updated_at?: string
+        }
+        Update: {
+          congestion_level?: Database["public"]["Enums"]["congestion_level"]
+          created_at?: string
+          id?: string
+          incident_severity?:
+            | Database["public"]["Enums"]["event_severity"]
+            | null
+          incident_type?: string | null
+          lat?: number
+          lng?: number
+          polyline_json?: Json | null
+          road_name?: string
+          source_provider?: string | null
+          speed_index?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       vessels: {
         Row: {
           destination: string | null
@@ -442,6 +960,78 @@ export type Database = {
           speed?: number
           timestamp?: string
           type?: Database["public"]["Enums"]["vessel_type"]
+        }
+        Relationships: []
+      }
+      watchlist_items: {
+        Row: {
+          added_at: string
+          id: string
+          notes: string | null
+          pinned: boolean
+          source_id: string | null
+          watchlist_id: string
+        }
+        Insert: {
+          added_at?: string
+          id?: string
+          notes?: string | null
+          pinned?: boolean
+          source_id?: string | null
+          watchlist_id: string
+        }
+        Update: {
+          added_at?: string
+          id?: string
+          notes?: string | null
+          pinned?: boolean
+          source_id?: string | null
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_items_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "intel_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "watchlist_items_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "watchlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watchlists: {
+        Row: {
+          created_at: string
+          description: string | null
+          filters: Json
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          filters?: Json
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -501,17 +1091,95 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       airspace_alert_type: "NOTAM" | "TFR" | "CLOSURE"
+      app_role: "admin" | "analyst" | "viewer" | "partner"
       camera_category: "traffic" | "tourism" | "ports" | "weather" | "public"
       camera_source_type: "hls" | "snapshot" | "embed_page"
       camera_status: "active" | "inactive" | "error" | "unknown"
+      congestion_level:
+        | "free_flow"
+        | "light"
+        | "moderate"
+        | "heavy"
+        | "standstill"
+        | "unknown"
+      connector_type:
+        | "youtube"
+        | "hls_mjpeg"
+        | "webcam_page"
+        | "traffic_api"
+        | "weather_api"
+        | "news_feed"
+        | "partner_feed"
+      event_severity: "info" | "low" | "medium" | "high" | "critical"
+      event_verification:
+        | "unverified"
+        | "verified"
+        | "dismissed"
+        | "auto_detected"
       geo_alert_type: "DIPLOMATIC" | "MILITARY" | "ECONOMIC" | "HUMANITARIAN"
+      health_status: "online" | "intermittent" | "offline" | "unknown"
+      incident_status:
+        | "open"
+        | "investigating"
+        | "confirmed"
+        | "resolved"
+        | "dismissed"
+      ownership_type:
+        | "government"
+        | "municipality"
+        | "tourism_board"
+        | "private_partner"
+        | "community"
+        | "news_media"
+        | "unknown"
+      permission_status:
+        | "confirmed_public"
+        | "assumed_public"
+        | "partner_approved"
+        | "pending_review"
+        | "denied"
+      review_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "needs_edits"
+        | "partner_only"
+        | "external_link_only"
       risk_trend: "rising" | "falling" | "stable"
       rocket_status: "launched" | "in_flight" | "intercepted" | "impact"
       severity_level: "low" | "medium" | "high" | "critical"
+      source_category:
+        | "traffic"
+        | "tourism"
+        | "city_view"
+        | "weather"
+        | "port"
+        | "airport_public"
+        | "parking"
+        | "event_venue_public"
+        | "border_wait_time_data"
+        | "road_status"
+        | "incident_reporting"
+      source_type:
+        | "youtube_live"
+        | "hls_stream"
+        | "mjpeg_stream"
+        | "image_snapshot"
+        | "official_webcam_page"
+        | "external_embed"
+        | "traffic_api"
+        | "incident_feed"
+        | "partner_feed"
       stream_type_detected:
         | "hls"
         | "mjpeg"
@@ -520,6 +1188,12 @@ export type Database = {
         | "rtsp"
         | "unknown"
       timeline_event_type: "airspace" | "maritime" | "alert" | "diplomatic"
+      validation_status:
+        | "valid"
+        | "invalid"
+        | "pending"
+        | "unreachable"
+        | "duplicate"
       vessel_type: "MILITARY" | "CARGO" | "TANKER" | "FISHING" | "UNKNOWN"
     }
     CompositeTypes: {
@@ -649,13 +1323,94 @@ export const Constants = {
   public: {
     Enums: {
       airspace_alert_type: ["NOTAM", "TFR", "CLOSURE"],
+      app_role: ["admin", "analyst", "viewer", "partner"],
       camera_category: ["traffic", "tourism", "ports", "weather", "public"],
       camera_source_type: ["hls", "snapshot", "embed_page"],
       camera_status: ["active", "inactive", "error", "unknown"],
+      congestion_level: [
+        "free_flow",
+        "light",
+        "moderate",
+        "heavy",
+        "standstill",
+        "unknown",
+      ],
+      connector_type: [
+        "youtube",
+        "hls_mjpeg",
+        "webcam_page",
+        "traffic_api",
+        "weather_api",
+        "news_feed",
+        "partner_feed",
+      ],
+      event_severity: ["info", "low", "medium", "high", "critical"],
+      event_verification: [
+        "unverified",
+        "verified",
+        "dismissed",
+        "auto_detected",
+      ],
       geo_alert_type: ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"],
+      health_status: ["online", "intermittent", "offline", "unknown"],
+      incident_status: [
+        "open",
+        "investigating",
+        "confirmed",
+        "resolved",
+        "dismissed",
+      ],
+      ownership_type: [
+        "government",
+        "municipality",
+        "tourism_board",
+        "private_partner",
+        "community",
+        "news_media",
+        "unknown",
+      ],
+      permission_status: [
+        "confirmed_public",
+        "assumed_public",
+        "partner_approved",
+        "pending_review",
+        "denied",
+      ],
+      review_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "needs_edits",
+        "partner_only",
+        "external_link_only",
+      ],
       risk_trend: ["rising", "falling", "stable"],
       rocket_status: ["launched", "in_flight", "intercepted", "impact"],
       severity_level: ["low", "medium", "high", "critical"],
+      source_category: [
+        "traffic",
+        "tourism",
+        "city_view",
+        "weather",
+        "port",
+        "airport_public",
+        "parking",
+        "event_venue_public",
+        "border_wait_time_data",
+        "road_status",
+        "incident_reporting",
+      ],
+      source_type: [
+        "youtube_live",
+        "hls_stream",
+        "mjpeg_stream",
+        "image_snapshot",
+        "official_webcam_page",
+        "external_embed",
+        "traffic_api",
+        "incident_feed",
+        "partner_feed",
+      ],
       stream_type_detected: [
         "hls",
         "mjpeg",
@@ -665,6 +1420,13 @@ export const Constants = {
         "unknown",
       ],
       timeline_event_type: ["airspace", "maritime", "alert", "diplomatic"],
+      validation_status: [
+        "valid",
+        "invalid",
+        "pending",
+        "unreachable",
+        "duplicate",
+      ],
       vessel_type: ["MILITARY", "CARGO", "TANKER", "FISHING", "UNKNOWN"],
     },
   },
