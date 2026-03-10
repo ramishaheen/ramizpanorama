@@ -32,6 +32,23 @@ function propagateSatellite(inclination: number, raan: number, meanAnomaly: numb
   return { lat: Math.max(-85, Math.min(85, lat)), lng };
 }
 
+// Propagate at a specific mean anomaly (for orbit track visualization)
+function propagateSatelliteAtMA(inclination: number, raan: number, meanAnomaly: number, meanMotion: number, eccentricity: number, epochYear: number, epochDay: number): { lat: number; lng: number } {
+  const now = new Date();
+  const startOfYear = new Date(epochYear, 0, 1);
+  const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+  const elapsedDays = currentDayOfYear - epochDay;
+  const totalRevs = elapsedDays * meanMotion;
+  const currentMA = (((meanAnomaly + totalRevs * 360) % 360) + 360) % 360;
+  const E = currentMA + (eccentricity * 180) / Math.PI * Math.sin((currentMA * Math.PI) / 180);
+  const argLat = (E * Math.PI) / 180;
+  const incRad = (inclination * Math.PI) / 180;
+  const lat = Math.asin(Math.sin(incRad) * Math.sin(argLat)) * (180 / Math.PI);
+  const greenwichOffset = now.getUTCHours() * 15 + now.getUTCMinutes() * 0.25 + now.getUTCSeconds() * (0.25 / 60);
+  const ascNode = raan - greenwichOffset;
+  const lng = (((ascNode + Math.atan2(Math.cos(incRad) * Math.sin(argLat), Math.cos(argLat)) * (180 / Math.PI)) % 360) + 540) % 360 - 180;
+}
+
 interface SatPoint { name: string; lat: number; lng: number; alt: number; category: string; inclination: number; raan: number; meanAnomaly: number; meanMotion: number; eccentricity: number; epochYear: number; epochDay: number; }
 
 function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
