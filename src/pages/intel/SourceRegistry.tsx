@@ -61,23 +61,23 @@ const SourceRegistry = () => {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
+    const payload: any = {
       source_name: form.source_name,
       country: form.country,
       city: form.city,
       lat: parseFloat(form.lat) || 0,
       lng: parseFloat(form.lng) || 0,
-      source_type: form.source_type,
-      category: form.category,
+      source_type: form.source_type as any,
+      category: form.category as any,
       source_url: form.source_url || null,
       embed_url: form.embed_url || null,
       provider_name: form.provider_name,
       notes: form.notes,
       tags: form.tags ? form.tags.split(",").map(t => t.trim()) : [],
-      review_status: "pending",
+      review_status: "pending" as const,
       submitted_by: user?.id,
     };
-    const { error } = await supabase.from("intel_sources").insert(payload);
+    const { error } = await supabase.from("intel_sources").insert([payload]);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
