@@ -1754,11 +1754,6 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     group.clearLayers();
     if (!showArabCCTV || arabCameras.length === 0) return;
 
-    // Fly to Arab World region
-    if (mapRef.current && arabCameras.length > 0) {
-      mapRef.current.flyTo([28, 45], 4, { duration: 1.2 });
-    }
-
     arabCameras.forEach((cam: any) => {
       if (!cam.lat || !cam.lng) return;
       const isOnline = cam.status === "active";
