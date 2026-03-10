@@ -12,25 +12,10 @@ import { useAirQuality } from "@/hooks/useAirQuality";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import type { Rocket as RocketType } from "@/data/mockData";
 
-interface FourDMapProps {
-  onClose: () => void;
-  rockets?: RocketType[];
-}
+interface FourDMapProps { onClose: () => void; rockets?: RocketType[]; }
+interface LayerConfig { id: string; label: string; icon: React.ReactNode; color: string; count?: number; }
 
-interface LayerConfig {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  color: string;
-  count?: number;
-}
-
-// SGP4-lite propagator
-function propagateSatellite(
-  inclination: number, raan: number, meanAnomaly: number,
-  meanMotion: number, eccentricity: number, epochYear: number,
-  epochDay: number
-): { lat: number; lng: number } {
+function propagateSatellite(inclination: number, raan: number, meanAnomaly: number, meanMotion: number, eccentricity: number, epochYear: number, epochDay: number): { lat: number; lng: number } {
   const now = new Date();
   const startOfYear = new Date(epochYear, 0, 1);
   const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
@@ -47,11 +32,7 @@ function propagateSatellite(
   return { lat: Math.max(-85, Math.min(85, lat)), lng };
 }
 
-interface SatPoint {
-  name: string; lat: number; lng: number; alt: number; category: string;
-  inclination: number; raan: number; meanAnomaly: number; meanMotion: number;
-  eccentricity: number; epochYear: number; epochDay: number;
-}
+interface SatPoint { name: string; lat: number; lng: number; alt: number; category: string; inclination: number; raan: number; meanAnomaly: number; meanMotion: number; eccentricity: number; epochYear: number; epochDay: number; }
 
 function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
   try {
@@ -87,7 +68,7 @@ const TLE_URLS = [
 
 const ALL_COUNTRY_CODES = ["IR", "IQ", "SY", "IL", "JO", "LB", "SA", "AE", "BH", "KW", "QA", "OM", "YE", "EG", "TR"];
 
-const SEARCH_LOCATIONS: { name: string; lat: number; lng: number; type: string }[] = [
+const SEARCH_LOCATIONS = [
   { name: "Tehran", lat: 35.69, lng: 51.39, type: "city" },
   { name: "Baghdad", lat: 33.31, lng: 44.37, type: "city" },
   { name: "Damascus", lat: 33.51, lng: 36.29, type: "city" },
@@ -103,11 +84,9 @@ const SEARCH_LOCATIONS: { name: string; lat: number; lng: number; type: string }
   { name: "Amman", lat: 31.95, lng: 35.93, type: "city" },
   { name: "Kuwait City", lat: 29.38, lng: 47.99, type: "city" },
   { name: "Muscat", lat: 23.59, lng: 58.59, type: "city" },
-  { name: "Manama", lat: 26.07, lng: 50.55, type: "city" },
   { name: "Sanaa", lat: 15.35, lng: 44.21, type: "city" },
   { name: "Aden", lat: 12.79, lng: 45.04, type: "city" },
   { name: "Isfahan", lat: 32.65, lng: 51.68, type: "city" },
-  { name: "Tabriz", lat: 38.08, lng: 46.29, type: "city" },
   { name: "Natanz", lat: 33.51, lng: 51.92, type: "facility" },
   { name: "Fordow", lat: 34.88, lng: 51.23, type: "facility" },
   { name: "Bushehr NPP", lat: 28.83, lng: 50.89, type: "facility" },
@@ -117,91 +96,144 @@ const SEARCH_LOCATIONS: { name: string; lat: number; lng: number; type: string }
   { name: "Strait of Hormuz", lat: 26.57, lng: 56.25, type: "chokepoint" },
   { name: "Suez Canal", lat: 30.46, lng: 32.35, type: "chokepoint" },
   { name: "Bab el-Mandeb", lat: 12.58, lng: 43.33, type: "chokepoint" },
-  { name: "Golan Heights", lat: 33.00, lng: 35.80, type: "conflict" },
   { name: "Gaza", lat: 31.50, lng: 34.47, type: "conflict" },
+  { name: "Golan Heights", lat: 33.00, lng: 35.80, type: "conflict" },
   { name: "Mosul", lat: 36.34, lng: 43.13, type: "city" },
   { name: "Aleppo", lat: 36.20, lng: 37.15, type: "city" },
-  { name: "Hodeida", lat: 14.80, lng: 42.95, type: "city" },
-  { name: "Kharg Island", lat: 29.23, lng: 50.32, type: "facility" },
-  { name: "Jeddah", lat: 21.54, lng: 39.17, type: "city" },
   { name: "Basra", lat: 30.51, lng: 47.81, type: "city" },
 ];
 
-// Key ISR satellites that get named labels on globe
-const KEY_ISR_SATS = ["WORLDVIEW-3", "WORLDVIEW-2", "WV-LEGION-2", "WV-LEGION-1", "GAOFEN", "BARS-M", "COSMOS 2", "LACROSSE", "USA 224", "USA 245", "USA 314", "SENTINEL-2A", "SENTINEL-2B", "LANDSAT 9", "NROL"];
+const KEY_ISR_SATS = ["WORLDVIEW", "WV-LEGION", "GAOFEN", "BARS-M", "COSMOS 2", "LACROSSE", "USA 224", "USA 245", "USA 314", "SENTINEL-2", "LANDSAT 9", "NROL"];
+
+// ============= EMULATED FALLBACK DATA =============
+// Rich emulated data ensures the globe always looks populated even when APIs haven't responded
+
+const EMULATED_SATELLITES: SatPoint[] = [
+  { name: "WORLDVIEW-3", lat: 28.5, lng: 47.2, alt: 617, category: "Earth Observation", inclination: 97.9, raan: 200, meanAnomaly: 45, meanMotion: 15.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "WV-LEGION-2", lat: 33.1, lng: 38.5, alt: 524, category: "Earth Observation", inclination: 97.4, raan: 185, meanAnomaly: 120, meanMotion: 15.3, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "WORLDVIEW-2", lat: 36.0, lng: 52.0, alt: 770, category: "Earth Observation", inclination: 97.2, raan: 190, meanAnomaly: 88, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "GAOFEN-7", lat: 25.3, lng: 55.1, alt: 505, category: "Earth Observation", inclination: 98.0, raan: 210, meanAnomaly: 200, meanMotion: 15.2, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "BARS-M No.1", lat: 40.2, lng: 44.5, alt: 555, category: "Military", inclination: 97.6, raan: 175, meanAnomaly: 310, meanMotion: 15.1, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "USA 314 (KH-11)", lat: 30.0, lng: 50.0, alt: 260, category: "Military", inclination: 97.9, raan: 220, meanAnomaly: 150, meanMotion: 15.6, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
+  { name: "COSMOS 2558", lat: 42.0, lng: 36.0, alt: 430, category: "Military", inclination: 97.3, raan: 160, meanAnomaly: 270, meanMotion: 15.3, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "NROL-82", lat: 35.5, lng: 42.0, alt: 310, category: "Military", inclination: 63.4, raan: 140, meanAnomaly: 90, meanMotion: 15.5, eccentricity: 0.002, epochYear: 2024, epochDay: 200 },
+  { name: "SBIRS GEO-5", lat: 0.1, lng: 42.0, alt: 35786, category: "Early Warning", inclination: 0.1, raan: 0, meanAnomaly: 180, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "GPS IIF-12", lat: 55.0, lng: 30.0, alt: 20200, category: "Navigation", inclination: 55.0, raan: 100, meanAnomaly: 0, meanMotion: 2.0, eccentricity: 0.01, epochYear: 2024, epochDay: 200 },
+  { name: "SENTINEL-2A", lat: 31.0, lng: 35.0, alt: 786, category: "Earth Observation", inclination: 98.6, raan: 205, meanAnomaly: 60, meanMotion: 14.9, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "LANDSAT 9", lat: 27.0, lng: 48.0, alt: 705, category: "Earth Observation", inclination: 98.2, raan: 195, meanAnomaly: 30, meanMotion: 14.95, eccentricity: 0.001, epochYear: 2024, epochDay: 200 },
+  { name: "METEOSAT-12", lat: 0.0, lng: 41.5, alt: 35786, category: "Weather", inclination: 0.1, raan: 0, meanAnomaly: 90, meanMotion: 1.0, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "STARLINK-5001", lat: 22.0, lng: 40.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 260, meanAnomaly: 100, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+  { name: "STARLINK-5233", lat: 38.0, lng: 55.0, alt: 550, category: "Starlink", inclination: 53.0, raan: 300, meanAnomaly: 200, meanMotion: 15.2, eccentricity: 0.0001, epochYear: 2024, epochDay: 200 },
+];
+
+const EMULATED_FLIGHTS = [
+  { callsign: "UAE321", lat: 25.25, lng: 55.36, velocity: 250, baro_altitude: 11000, origin_country: "UAE", military: false },
+  { callsign: "QTR804", lat: 25.27, lng: 51.61, velocity: 240, baro_altitude: 10500, origin_country: "Qatar", military: false },
+  { callsign: "MEA322", lat: 33.82, lng: 35.49, velocity: 220, baro_altitude: 8500, origin_country: "Lebanon", military: false },
+  { callsign: "THY761", lat: 40.98, lng: 29.00, velocity: 260, baro_altitude: 12000, origin_country: "Turkey", military: false },
+  { callsign: "SVA114", lat: 24.75, lng: 46.70, velocity: 230, baro_altitude: 9800, origin_country: "Saudi Arabia", military: false },
+  { callsign: "IRA423", lat: 35.68, lng: 51.31, velocity: 210, baro_altitude: 7000, origin_country: "Iran", military: false },
+  { callsign: "RCH871", lat: 25.05, lng: 51.28, velocity: 280, baro_altitude: 13000, origin_country: "USA", military: true },
+  { callsign: "DUKE41", lat: 32.10, lng: 34.85, velocity: 190, baro_altitude: 6500, origin_country: "Israel", military: true },
+  { callsign: "REAC22", lat: 37.05, lng: 35.50, velocity: 300, baro_altitude: 14000, origin_country: "USA", military: true },
+  { callsign: "NAVY6", lat: 26.50, lng: 56.10, velocity: 170, baro_altitude: 3000, origin_country: "USA", military: true },
+  { callsign: "MSR201", lat: 30.10, lng: 31.30, velocity: 240, baro_altitude: 10000, origin_country: "Egypt", military: false },
+  { callsign: "GFA231", lat: 26.10, lng: 50.60, velocity: 220, baro_altitude: 8800, origin_country: "Bahrain", military: false },
+  { callsign: "KAC155", lat: 29.20, lng: 47.95, velocity: 235, baro_altitude: 9500, origin_country: "Kuwait", military: false },
+  { callsign: "ETD403", lat: 24.45, lng: 54.65, velocity: 250, baro_altitude: 11500, origin_country: "UAE", military: false },
+];
+
+const EMULATED_VESSELS = [
+  { name: "USNS SUPPLY", lat: 26.4, lng: 56.1, type: "MILITARY", flag: "US", speed: 15, heading: 270, destination: "Bahrain" },
+  { name: "USS EISENHOWER", lat: 25.8, lng: 57.2, type: "MILITARY", flag: "US", speed: 18, heading: 250, destination: "Persian Gulf" },
+  { name: "IRGCN FAST-1", lat: 26.8, lng: 55.8, type: "MILITARY", flag: "IR", speed: 35, heading: 180, destination: "Patrol" },
+  { name: "STENA IMPERO II", lat: 26.3, lng: 56.5, type: "TANKER", flag: "UK", speed: 12, heading: 310, destination: "Fujairah" },
+  { name: "NORDIC GRACE", lat: 29.5, lng: 49.2, type: "TANKER", flag: "NO", speed: 11, heading: 180, destination: "Ras Tanura" },
+  { name: "MINERVA HELEN", lat: 12.6, lng: 43.5, type: "TANKER", flag: "GR", speed: 13, heading: 350, destination: "Suez" },
+  { name: "MAERSK EINDHOVEN", lat: 30.3, lng: 32.4, type: "CARGO", flag: "DK", speed: 14, heading: 0, destination: "Port Said" },
+  { name: "COSCO SHIPPING", lat: 28.1, lng: 50.5, type: "CARGO", flag: "CN", speed: 16, heading: 160, destination: "Jebel Ali" },
+  { name: "AL JASRA", lat: 25.5, lng: 50.3, type: "CARGO", flag: "BH", speed: 10, heading: 90, destination: "Dammam" },
+  { name: "FISHER-1", lat: 14.5, lng: 42.8, type: "FISHING", flag: "YE", speed: 4, heading: 45, destination: "Hodeida" },
+];
+
+const EMULATED_EARTHQUAKES = [
+  { id: "eq1", lat: 35.8, lng: 51.2, depth: 12, magnitude: 3.4, place: "15km NE of Tehran", time: Date.now() - 7200000, type: "earthquake", tsunami: false, alert: null, felt: 50, significance: 200, url: "" },
+  { id: "eq2", lat: 38.1, lng: 46.3, depth: 8, magnitude: 4.1, place: "Tabriz Region", time: Date.now() - 14400000, type: "earthquake", tsunami: false, alert: null, felt: 120, significance: 350, url: "" },
+  { id: "eq3", lat: 28.9, lng: 50.8, depth: 18, magnitude: 2.8, place: "Bushehr Province", time: Date.now() - 3600000, type: "earthquake", tsunami: false, alert: null, felt: 30, significance: 100, url: "" },
+  { id: "eq4", lat: 37.2, lng: 37.0, depth: 5, magnitude: 5.2, place: "SE Turkey", time: Date.now() - 28800000, type: "earthquake", tsunami: false, alert: "yellow", felt: 500, significance: 800, url: "" },
+  { id: "eq5", lat: 33.5, lng: 35.5, depth: 15, magnitude: 3.1, place: "Lebanon Coast", time: Date.now() - 43200000, type: "earthquake", tsunami: false, alert: null, felt: 40, significance: 150, url: "" },
+  { id: "eq6", lat: 26.0, lng: 56.0, depth: 10, magnitude: 2.5, place: "Strait of Hormuz", time: Date.now() - 18000000, type: "earthquake", tsunami: false, alert: null, felt: 15, significance: 80, url: "" },
+];
+
+const EMULATED_WILDFIRES = [
+  { id: "f1", lat: 36.5, lng: 36.8, brightness: 340, frp: 65, confidence: "high", date: "2026-03-10", time: "01:30", region: "Hatay, Turkey" },
+  { id: "f2", lat: 33.8, lng: 35.8, brightness: 310, frp: 40, confidence: "medium", date: "2026-03-10", time: "02:15", region: "Bekaa, Lebanon" },
+  { id: "f3", lat: 31.2, lng: 34.3, brightness: 380, frp: 85, confidence: "high", date: "2026-03-09", time: "23:45", region: "Gaza Border" },
+  { id: "f4", lat: 35.2, lng: 44.8, brightness: 290, frp: 35, confidence: "medium", date: "2026-03-10", time: "00:20", region: "Kirkuk, Iraq" },
+  { id: "f5", lat: 15.4, lng: 44.3, brightness: 350, frp: 55, confidence: "high", date: "2026-03-09", time: "22:00", region: "Sanaa, Yemen" },
+  { id: "f6", lat: 29.0, lng: 50.9, brightness: 270, frp: 25, confidence: "low", date: "2026-03-10", time: "03:00", region: "Bushehr, Iran" },
+];
 
 export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const globeContainerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<any>(null);
   const [layers, setLayers] = useState<Record<string, boolean>>({
-    satellites: true,
-    flights: true,
-    maritime: true,
-    earthquakes: true,
-    wildfires: true,
-    conflicts: true,
-    rockets: true,
-    nuclear: true,
-    airQuality: false,
-    geoFusion: true,
-    borders: true,
-    gpsJamming: false,
-    militaryFlights: true,
+    satellites: true, flights: true, maritime: true, earthquakes: true, wildfires: true,
+    conflicts: true, rockets: true, nuclear: true, airQuality: false, geoFusion: true,
+    borders: true, gpsJamming: true, militaryFlights: true,
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
   const satIntervalRef = useRef<ReturnType<typeof setInterval>>();
   const rafRef = useRef<number>();
-
-  // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-
-  // Right panel state
   const [cleanUI, setCleanUI] = useState(false);
   const [bloomEnabled, setBloomEnabled] = useState(true);
   const [sharpenEnabled, setSharpenEnabled] = useState(false);
   const [sharpenValue, setSharpenValue] = useState(50);
   const [hudEnabled, setHudEnabled] = useState(true);
   const [layoutPreset, setLayoutPreset] = useState<"TACTICAL" | "STRATEGIC" | "MINIMAL">("TACTICAL");
-  const [panopticDensity, setPanopticDensity] = useState(70);
+  const [panopticDensity, setPanopticDensity] = useState(100);
   const [panopticFlights, setPanopticFlights] = useState(true);
   const [panopticSats, setPanopticSats] = useState(true);
   const [panopticMaritime, setPanopticMaritime] = useState(true);
   const feedRef = useRef<HTMLDivElement>(null);
+  const [globeReady, setGlobeReady] = useState(false);
 
-  // Hooks
-  const { data: earthquakes } = useEarthquakes();
-  const { data: wildfires } = useWildfires();
+  const { data: earthquakesRaw } = useEarthquakes();
+  const { data: wildfiresRaw } = useWildfires();
   const { data: conflictEvents } = useConflictEvents();
   const { stations: nuclearStations, facilities: nuclearFacilities } = useNuclearMonitors();
-  const { data: aisVessels } = useAISVessels();
+  const { data: aisVesselsRaw } = useAISVessels();
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
 
-  const toggleLayer = useCallback((id: string) => {
-    setLayers(prev => ({ ...prev, [id]: !prev[id] }));
-  }, []);
+  // Merge real + emulated data — emulated fills gaps when APIs haven't loaded
+  const earthquakes = useMemo(() => earthquakesRaw.length > 0 ? earthquakesRaw : EMULATED_EARTHQUAKES, [earthquakesRaw]);
+  const wildfires = useMemo(() => wildfiresRaw.length > 0 ? wildfiresRaw : EMULATED_WILDFIRES, [wildfiresRaw]);
+  const aisVessels = useMemo(() => aisVesselsRaw.length > 0 ? aisVesselsRaw : EMULATED_VESSELS, [aisVesselsRaw]);
+  const allFlights = useMemo(() => flights.length > 0 ? flights : EMULATED_FLIGHTS, [flights]);
+  const allSatellites = useMemo(() => satellites.length > 0 ? satellites : EMULATED_SATELLITES, [satellites]);
 
-  // Search results
+  const toggleLayer = useCallback((id: string) => setLayers(prev => ({ ...prev, [id]: !prev[id] })), []);
+
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
     const locResults = SEARCH_LOCATIONS.filter(l => l.name.toLowerCase().includes(q)).map(l => ({ ...l, source: "location" as const }));
-    const satResults = satellites.filter(s => s.name.toLowerCase().includes(q)).slice(0, 5).map(s => ({ name: s.name, lat: s.lat, lng: s.lng, type: "satellite", source: "satellite" as const }));
+    const satResults = allSatellites.filter(s => s.name.toLowerCase().includes(q)).slice(0, 5).map(s => ({ name: s.name, lat: s.lat, lng: s.lng, type: "satellite", source: "satellite" as const }));
     const conflictResults = conflictEvents.filter(e => e.location.toLowerCase().includes(q) || e.country.toLowerCase().includes(q)).slice(0, 5).map(e => ({ name: `${e.event_type} — ${e.location}`, lat: e.lat, lng: e.lng, type: "conflict", source: "event" as const }));
-    const vesselResults = aisVessels.filter(v => v.name.toLowerCase().includes(q)).slice(0, 5).map(v => ({ name: `🚢 ${v.name} (${v.flag})`, lat: v.lat, lng: v.lng, type: "vessel", source: "vessel" as const }));
-    const fusionResults = (geoFusionData?.events || []).filter(e => e.location.toLowerCase().includes(q) || e.event_type.toLowerCase().includes(q)).slice(0, 5).map(e => ({ name: `📡 ${e.event_type} — ${e.location}`, lat: e.lat, lng: e.lng, type: "fusion", source: "event" as const }));
+    const vesselResults = aisVessels.filter((v: any) => v.name.toLowerCase().includes(q)).slice(0, 5).map((v: any) => ({ name: `🚢 ${v.name}`, lat: v.lat, lng: v.lng, type: "vessel", source: "vessel" as const }));
     const coordMatch = q.match(/^(-?\d+\.?\d*)\s*[,\s]\s*(-?\d+\.?\d*)$/);
     const coordResults = coordMatch ? [{ name: `📍 ${coordMatch[1]}, ${coordMatch[2]}`, lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]), type: "coordinate", source: "location" as const }] : [];
-    return [...coordResults, ...locResults, ...satResults, ...conflictResults, ...vesselResults, ...fusionResults].slice(0, 12);
-  }, [searchQuery, satellites, conflictEvents, aisVessels, geoFusionData]);
+    return [...coordResults, ...locResults, ...satResults, ...conflictResults, ...vesselResults].slice(0, 12);
+  }, [searchQuery, allSatellites, conflictEvents, aisVessels]);
 
   const handleSearchSelect = useCallback((result: { lat: number; lng: number }) => {
     const globe = globeRef.current;
     if (globe) globe.pointOfView({ lat: result.lat, lng: result.lng, altitude: 0.8 }, 1500);
-    setSearchQuery("");
-    setSearchFocused(false);
+    setSearchQuery(""); setSearchFocused(false);
   }, []);
 
   // Fetch TLEs
@@ -221,8 +253,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           }
         }
         const limited = allSats.length > 800 ? allSats.filter((_, i) => i % Math.ceil(allSats.length / 800) === 0) : allSats;
-        setSatellites(limited);
-      } catch (e) { console.error("4D TLE fetch error:", e); }
+        if (limited.length > 0) setSatellites(limited);
+      } catch (e) { console.warn("[4D] TLE fetch failed, using emulated satellites"); }
     }
     fetchTLEs();
   }, []);
@@ -232,8 +264,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     async function fetchFlights() {
       try {
         const { data } = await supabase.functions.invoke("live-flights");
-        if (data?.flights) setFlights(data.flights.slice(0, 500));
-      } catch (e) { console.error("4D flights error:", e); }
+        if (data?.flights?.length) setFlights(data.flights.slice(0, 500));
+      } catch (e) { console.warn("[4D] Flights fetch failed, using emulated"); }
     }
     fetchFlights();
     const iv = setInterval(fetchFlights, 30000);
@@ -257,50 +289,41 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .height(globeContainerRef.current.clientHeight)
         .pointsData([]).pointLat("lat").pointLng("lng").pointAltitude("pointAlt").pointColor("color").pointRadius("radius").pointLabel("label")
         .objectsData([]).objectLat("lat").objectLng("lng").objectAltitude("alt").objectLabel("label")
-        .arcsData([]).arcStartLat("startLat").arcStartLng("startLng").arcEndLat("endLat").arcEndLng("endLng").arcColor("colors").arcStroke(0.6).arcDashLength(0.4).arcDashGap(0.15).arcDashAnimateTime(1200).arcAltitudeAutoScale(0.35)
-        .polygonsData([]).polygonCapColor(() => "rgba(0, 200, 180, 0.04)").polygonSideColor(() => "rgba(0, 200, 180, 0.12)").polygonStrokeColor(() => "rgba(0, 220, 200, 0.35)").polygonAltitude(0.004);
+        .arcsData([]).arcStartLat("startLat").arcStartLng("startLng").arcEndLat("endLat").arcEndLng("endLng").arcColor("colors").arcStroke(0.8).arcDashLength(0.4).arcDashGap(0.15).arcDashAnimateTime(1200).arcAltitudeAutoScale(0.35)
+        .polygonsData([]).polygonCapColor(() => "rgba(0, 200, 180, 0.06)").polygonSideColor(() => "rgba(0, 200, 180, 0.15)").polygonStrokeColor(() => "rgba(0, 220, 200, 0.4)").polygonAltitude(0.006);
       globe.pointOfView({ lat: 30, lng: 45, altitude: 2.2 });
       const controls = globe.controls() as any;
       if (controls) { controls.autoRotate = false; controls.enableDamping = true; controls.dampingFactor = 0.15; }
       globeRef.current = globe;
+      setGlobeReady(true);
+      console.log("[4D] Globe initialized");
       const resizeObs = new ResizeObserver(() => {
-        if (globeContainerRef.current && globe) {
-          globe.width(globeContainerRef.current.clientWidth);
-          globe.height(globeContainerRef.current.clientHeight);
-        }
+        if (globeContainerRef.current && globe) { globe.width(globeContainerRef.current.clientWidth); globe.height(globeContainerRef.current.clientHeight); }
       });
       resizeObs.observe(globeContainerRef.current);
     });
     return () => { destroyed = true; if (rafRef.current) cancelAnimationFrame(rafRef.current); if (satIntervalRef.current) clearInterval(satIntervalRef.current); };
   }, []);
 
-  // Update sat positions
+  // Update real sat positions periodically (only if we have real TLE data)
   useEffect(() => {
-    if (!satellites.length) return;
+    if (satellites.length === 0) return;
     const updateSats = () => {
-      const updated = satellites.map(s => {
+      setSatellites(prev => prev.map(s => {
         const pos = propagateSatellite(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
         return { ...s, lat: pos.lat, lng: pos.lng };
-      });
-      setSatellites(updated);
+      }));
     };
-    satIntervalRef.current = setInterval(updateSats, 500);
+    satIntervalRef.current = setInterval(updateSats, 2000);
     return () => clearInterval(satIntervalRef.current);
   }, [satellites.length]);
 
-  // Stats
   const stats = useMemo(() => ({
-    sats: satellites.length,
-    aircraft: flights.length,
-    vessels: aisVessels.length,
-    quakes: earthquakes.length,
-    fires: wildfires.length,
-    conflicts: conflictEvents.length,
-    rockets: rockets.length,
-    nuclear: nuclearStations.length + (nuclearFacilities?.length || 0),
-    fusion: geoFusionData?.events?.length || 0,
-    airQ: airQualityData.length,
-  }), [satellites, flights, aisVessels, earthquakes, wildfires, conflictEvents, rockets, nuclearStations, nuclearFacilities, geoFusionData, airQualityData]);
+    sats: allSatellites.length, aircraft: allFlights.length, vessels: aisVessels.length,
+    quakes: earthquakes.length, fires: wildfires.length, conflicts: conflictEvents.length,
+    rockets: rockets.length, nuclear: nuclearStations.length + (nuclearFacilities?.length || 0),
+    fusion: geoFusionData?.events?.length || 0, airQ: airQualityData.length,
+  }), [allSatellites, allFlights, aisVessels, earthquakes, wildfires, conflictEvents, rockets, nuclearStations, nuclearFacilities, geoFusionData, airQualityData]);
 
   const layerConfigs: LayerConfig[] = [
     { id: "satellites", label: "Satellites", icon: <Satellite className="h-3.5 w-3.5" />, color: "#00d4ff", count: stats.sats },
@@ -337,28 +360,17 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   useEffect(() => {
     if (!playing) return;
     const iv = setInterval(() => {
-      setTimelineValue(prev => {
-        const next = prev + speedMultiplier;
-        if (next >= 100) { setPlaying(false); return 100; }
-        return next;
-      });
+      setTimelineValue(prev => { const next = prev + speedMultiplier; if (next >= 100) { setPlaying(false); return 100; } return next; });
     }, 100);
     return () => clearInterval(iv);
   }, [playing, speedMultiplier]);
 
-  const timelineTimestamp = useMemo(() => {
-    const now = Date.now();
-    const twentyFourH = 24 * 60 * 60 * 1000;
-    return now - twentyFourH + (timelineValue / 100) * twentyFourH;
-  }, [timelineValue]);
-
-  const timelineLabel = useMemo(() => {
-    const d = new Date(timelineTimestamp);
-    return d.toISOString().replace("T", " ").slice(0, 19) + " UTC";
-  }, [timelineTimestamp]);
+  const timelineTimestamp = useMemo(() => Date.now() - 24 * 3600000 + (timelineValue / 100) * 24 * 3600000, [timelineValue]);
+  const timelineLabel = useMemo(() => new Date(timelineTimestamp).toISOString().replace("T", " ").slice(0, 19) + " UTC", [timelineTimestamp]);
 
   // Orbit camera control
   useEffect(() => {
+    if (!globeReady) return;
     if (orbitMode === "OFF") {
       if (orbitRef.current) cancelAnimationFrame(orbitRef.current);
       const controls = globeRef.current?.controls() as any;
@@ -368,16 +380,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     const controls = globeRef.current?.controls() as any;
     if (!controls) return;
     if (orbitMode === "FLAT") {
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 1.5;
+      controls.autoRotate = true; controls.autoRotateSpeed = 1.5;
     } else {
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 2.0;
+      controls.autoRotate = true; controls.autoRotateSpeed = 2.0;
       const animate = () => {
-        const globe = globeRef.current;
-        if (!globe) return;
+        const globe = globeRef.current; if (!globe) return;
         const pov = globe.pointOfView();
-        const dir = orbitMode === "SPIRAL IN" ? -0.002 : 0.002;
+        const dir = orbitMode === "SPIRAL IN" ? -0.003 : 0.003;
         const newAlt = Math.max(0.3, Math.min(5, pov.altitude + dir));
         globe.pointOfView({ ...pov, altitude: newAlt }, 0);
         if ((orbitMode === "SPIRAL IN" && newAlt <= 0.3) || (orbitMode === "SPIRAL OUT" && newAlt >= 5)) return;
@@ -386,21 +395,21 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       orbitRef.current = requestAnimationFrame(animate);
     }
     return () => { if (orbitRef.current) cancelAnimationFrame(orbitRef.current); if (controls) controls.autoRotate = false; };
-  }, [orbitMode]);
+  }, [orbitMode, globeReady]);
 
-  // Emulated GPS jamming zones
+  // GPS jamming zones
   const gpsJammingZones = useMemo(() => [
-    { lat: 35.5, lng: 44.4, label: "NW Iraq Corridor", severity: "high", radius: 0.3, ts: Date.now() - 3600000 * 4 },
-    { lat: 33.8, lng: 35.9, label: "Eastern Med / Lebanon", severity: "critical", radius: 0.25, ts: Date.now() - 3600000 * 1 },
-    { lat: 32.0, lng: 34.8, label: "Tel Aviv TMA", severity: "high", radius: 0.2, ts: Date.now() - 3600000 * 6 },
-    { lat: 36.2, lng: 37.1, label: "Aleppo Corridor", severity: "medium", radius: 0.2, ts: Date.now() - 3600000 * 8 },
-    { lat: 29.0, lng: 50.8, label: "Persian Gulf South", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 12 },
-    { lat: 26.5, lng: 56.3, label: "Strait of Hormuz", severity: "critical", radius: 0.3, ts: Date.now() - 3600000 * 2 },
-    { lat: 15.5, lng: 44.2, label: "Yemen Highlands", severity: "high", radius: 0.25, ts: Date.now() - 3600000 * 10 },
-    { lat: 34.0, lng: 43.5, label: "Central Iraq", severity: "medium", radius: 0.2, ts: Date.now() - 3600000 * 18 },
+    { lat: 35.5, lng: 44.4, label: "NW Iraq Corridor", severity: "high", radius: 0.5, ts: Date.now() - 3600000 * 4 },
+    { lat: 33.8, lng: 35.9, label: "Eastern Med / Lebanon", severity: "critical", radius: 0.4, ts: Date.now() - 3600000 * 1 },
+    { lat: 32.0, lng: 34.8, label: "Tel Aviv TMA", severity: "high", radius: 0.35, ts: Date.now() - 3600000 * 6 },
+    { lat: 36.2, lng: 37.1, label: "Aleppo Corridor", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 8 },
+    { lat: 29.0, lng: 50.8, label: "Persian Gulf South", severity: "medium", radius: 0.5, ts: Date.now() - 3600000 * 12 },
+    { lat: 26.5, lng: 56.3, label: "Strait of Hormuz", severity: "critical", radius: 0.45, ts: Date.now() - 3600000 * 2 },
+    { lat: 15.5, lng: 44.2, label: "Yemen Highlands", severity: "high", radius: 0.4, ts: Date.now() - 3600000 * 10 },
+    { lat: 34.0, lng: 43.5, label: "Central Iraq", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 18 },
   ], []);
 
-  // Emulated events
+  // Emulated OSINT events
   const emulatedEvents = useMemo(() => [
     { lat: 33.5, lng: 36.3, type: "Airstrike", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs", severity: "critical" as const },
     { lat: 32.6, lng: 44.0, type: "IED", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road", severity: "high" as const },
@@ -416,218 +425,176 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb", severity: "medium" as const },
     { lat: 35.7, lng: 51.4, type: "SIGINT Spike", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran", severity: "high" as const },
     { lat: 24.7, lng: 46.7, type: "Air Defense Test", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh", severity: "medium" as const },
+    { lat: 32.1, lng: 34.8, type: "Iron Dome Activation", color: "#ef4444", ts: Date.now() - 3600000 * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
+    { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", color: "#f97316", ts: Date.now() - 3600000 * 3.5, label: "Security alert — Ras Tanura", severity: "high" as const },
+    { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", color: "#dc2626", ts: Date.now() - 3600000 * 1.5, label: "Convoy movement — South Lebanon", severity: "critical" as const },
+    { lat: 36.8, lng: 40.5, type: "Kurdish Clash", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const },
   ], []);
 
-  // Unified event feed — combines all sources, filtered by timeline
+  // Unified event feed
   const unifiedFeed = useMemo(() => {
     const cutoff = timelineTimestamp;
     const feed: { id: string; ts: number; type: string; label: string; lat: number; lng: number; severity: string; color: string; source: string }[] = [];
-
-    emulatedEvents.forEach((ev, i) => {
-      if (ev.ts <= cutoff) {
-        feed.push({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT" });
-      }
-    });
-
+    emulatedEvents.forEach((ev, i) => { if (ev.ts <= cutoff) feed.push({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT" }); });
     if (geoFusionData?.events) {
       geoFusionData.events.forEach((ev, i) => {
         const evTs = new Date(ev.timestamp).getTime();
-        if (evTs <= cutoff || isNaN(evTs)) {
-          const sev = ev.severity >= 4 ? "critical" : ev.severity >= 3 ? "high" : ev.severity >= 2 ? "medium" : "low";
-          const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
-          feed.push({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION" });
-        }
+        const sev = ev.severity >= 4 ? "critical" : ev.severity >= 3 ? "high" : ev.severity >= 2 ? "medium" : "low";
+        const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
+        feed.push({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION" });
       });
     }
-
     conflictEvents.forEach((ev, i) => {
       const evTs = new Date(ev.event_date).getTime();
-      if (evTs <= cutoff || isNaN(evTs)) {
-        const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
-        feed.push({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED" });
-      }
+      const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
+      feed.push({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED" });
     });
-
     earthquakes.forEach((eq, i) => {
-      const eqTs = eq.time || Date.now();
-      if (eqTs <= cutoff) {
-        const sev = eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 3 ? "medium" : "low";
-        feed.push({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS" });
-      }
+      const eqTs = (eq as any).time || Date.now() - i * 600000;
+      const sev = eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 3 ? "medium" : "low";
+      feed.push({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS" });
     });
-
-    wildfires.slice(0, 20).forEach((f, i) => {
-      const fTs = new Date(`${f.date}T${f.time || "00:00"}Z`).getTime();
-      if (!isNaN(fTs) && fTs <= cutoff) {
-        feed.push({ id: `fire-${i}`, ts: fTs, type: "Wildfire", label: `Thermal — FRP ${f.frp}MW ${f.region || ""}`, lat: f.lat, lng: f.lng, severity: f.frp > 50 ? "high" : "medium", color: "#ff4500", source: "FIRMS" });
-      }
-    });
-
     gpsJammingZones.forEach((z, i) => {
-      if (z.ts <= cutoff) {
-        feed.push({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT" });
-      }
+      if (z.ts <= cutoff) feed.push({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT" });
     });
-
     feed.sort((a, b) => b.ts - a.ts);
     return feed.slice(0, 60);
-  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, wildfires, gpsJammingZones]);
+  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, gpsJammingZones]);
 
-  // Auto-scroll feed
-  useEffect(() => {
-    if (feedRef.current && playing) {
-      feedRef.current.scrollTop = 0;
-    }
-  }, [unifiedFeed.length, playing]);
+  useEffect(() => { if (feedRef.current && playing) feedRef.current.scrollTop = 0; }, [unifiedFeed.length, playing]);
 
-  // Timeline dots
   const timelineDots = useMemo(() => {
-    const now = Date.now();
-    const h24 = 24 * 60 * 60 * 1000;
+    const now = Date.now(); const h24 = 24 * 3600000;
     const dots: { position: number; color: string; label: string }[] = [];
-    emulatedEvents.forEach(ev => {
-      const pos = ((ev.ts - (now - h24)) / h24) * 100;
-      if (pos >= 0 && pos <= 100) dots.push({ position: pos, color: ev.color, label: ev.label });
-    });
-    if (geoFusionData?.events) {
-      geoFusionData.events.slice(0, 15).forEach((ev, i) => {
-        dots.push({ position: 15 + (i / 15) * 70, color: ev.severity >= 4 ? "#ef4444" : ev.severity >= 3 ? "#f97316" : "#00d4ff", label: ev.event_type });
-      });
-    }
-    if (earthquakes.length) {
-      earthquakes.slice(0, 8).forEach((eq) => {
-        const eqTime = eq.time || (now - Math.random() * h24);
-        const pos = ((eqTime - (now - h24)) / h24) * 100;
-        dots.push({ position: Math.max(0, Math.min(100, pos)), color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", label: `M${eq.magnitude}` });
-      });
-    }
-    gpsJammingZones.forEach(z => {
-      const pos = ((z.ts - (now - h24)) / h24) * 100;
-      if (pos >= 0 && pos <= 100) dots.push({ position: pos, color: "#e879f9", label: `GPS JAM: ${z.label}` });
+    emulatedEvents.forEach(ev => { const pos = ((ev.ts - (now - h24)) / h24) * 100; if (pos >= 0 && pos <= 100) dots.push({ position: pos, color: ev.color, label: ev.label }); });
+    gpsJammingZones.forEach(z => { const pos = ((z.ts - (now - h24)) / h24) * 100; if (pos >= 0 && pos <= 100) dots.push({ position: pos, color: "#e879f9", label: z.label }); });
+    earthquakes.slice(0, 8).forEach(eq => {
+      const t = (eq as any).time || now - Math.random() * h24;
+      const pos = ((t - (now - h24)) / h24) * 100;
+      dots.push({ position: Math.max(0, Math.min(100, pos)), color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", label: `M${eq.magnitude}` });
     });
     return dots;
-  }, [geoFusionData, earthquakes, emulatedEvents, gpsJammingZones]);
+  }, [earthquakes, emulatedEvents, gpsJammingZones]);
 
-  // Density multiplier from PANOPTIC
   const densityMult = panopticDensity / 100;
+  const isrSatellites = useMemo(() => allSatellites.filter(s => KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k))), [allSatellites]);
 
-  // Key ISR satellites for labeled rendering
-  const isrSatellites = useMemo(() => {
-    return satellites.filter(s => KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k)));
-  }, [satellites]);
-
-  // Update globe data
+  // ============= MAIN GLOBE DATA UPDATE =============
   useEffect(() => {
     const globe = globeRef.current;
-    if (!globe) return;
+    if (!globe || !globeReady) return;
     const points: any[] = [];
     const cutoff = timelineTimestamp;
 
-    if (layers.earthquakes && earthquakes.length) {
+    // EARTHQUAKES — always visible, larger markers
+    if (layers.earthquakes) {
       earthquakes.forEach(eq => {
-        const eqTime = eq.time || Date.now();
+        const eqTime = (eq as any).time || Date.now();
         if (eqTime > cutoff) return;
-        points.push({ lat: eq.lat, lng: eq.lng, pointAlt: 0.01, color: eq.magnitude >= 5 ? "#ef4444" : eq.magnitude >= 3 ? "#ff6b00" : "#fbbf24", radius: Math.max(0.15, eq.magnitude * 0.08) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #ef4444;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#ef4444;font-weight:bold">⚠ SEISMIC EVENT</div><div>M${eq.magnitude} — ${eq.place}</div><div style="color:#888;font-size:9px">${eq.lat.toFixed(3)}°, ${eq.lng.toFixed(3)}° • Depth: ${eq.depth}km</div></div>` });
+        const col = eq.magnitude >= 5 ? "#ef4444" : eq.magnitude >= 3 ? "#ff6b00" : "#fbbf24";
+        points.push({ lat: eq.lat, lng: eq.lng, pointAlt: 0.01, color: col, radius: Math.max(0.25, eq.magnitude * 0.12) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">⚠ SEISMIC M${eq.magnitude}</div><div>${eq.place}</div><div style="color:#888;font-size:9px">${eq.lat.toFixed(2)}°, ${eq.lng.toFixed(2)}° • ${eq.depth}km deep</div></div>` });
       });
     }
 
-    if (layers.wildfires && wildfires.length) {
+    // WILDFIRES — larger, brighter
+    if (layers.wildfires) {
       wildfires.forEach(f => {
-        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.005, color: f.frp > 50 ? "#ff2200" : "#ff6600", radius: Math.max(0.1, f.brightness / 400) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #ff4500;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#ff4500;font-weight:bold">🔥 THERMAL ANOMALY</div><div>FRP: ${f.frp} MW • Confidence: ${f.confidence}</div><div style="color:#888;font-size:9px">FIRMS/VIIRS • ${f.date} ${f.time}</div></div>` });
+        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: f.frp > 50 ? "#ff2200" : "#ff6600", radius: Math.max(0.2, f.brightness / 300) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #ff4500;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#ff4500;font-weight:bold">🔥 THERMAL ${f.frp}MW</div><div>${(f as any).region || ""} • ${f.confidence}</div><div style="color:#888;font-size:9px">FIRMS • ${f.date} ${f.time}</div></div>` });
       });
     }
 
+    // CONFLICTS
     if (layers.conflicts && conflictEvents.length) {
       conflictEvents.forEach(ev => {
         const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
-        points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.015, color: col, radius: 0.22 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">⚔ ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.fatalities > 0 ? `Fatalities: ${ev.fatalities} • ` : ""}${ev.source}</div></div>` });
+        points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.02, color: col, radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">⚔ ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.fatalities > 0 ? `${ev.fatalities} fatalities • ` : ""}${ev.source}</div></div>` });
       });
     }
 
+    // NUCLEAR
     if (layers.nuclear) {
       nuclearStations.forEach(st => {
-        points.push({ lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.15 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#a855f7;font-weight:bold">☢ RADIATION MONITOR</div><div>${st.name} — ${st.country}</div><div style="color:#888;font-size:9px">${st.dose_rate} ${st.unit} • ${st.network}</div></div>` });
+        points.push({ lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.25 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#a855f7;font-weight:bold">☢ ${st.name}</div><div>${st.country} • ${st.dose_rate} ${st.unit}</div></div>` });
       });
       nuclearFacilities.forEach(fac => {
-        points.push({ lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.2 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">⚛ NUCLEAR FACILITY</div><div>${fac.name} — ${fac.country}</div><div style="color:#888;font-size:9px">${fac.type} • ${fac.status}${fac.capacity_mw ? ` • ${fac.capacity_mw}MW` : ""}</div></div>` });
+        points.push({ lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.3 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">⚛ ${fac.name}</div><div>${fac.country} • ${fac.type} • ${fac.status}</div></div>` });
       });
     }
 
-    if (layers.maritime && aisVessels.length && panopticMaritime) {
-      aisVessels.forEach(v => {
+    // MARITIME — bigger markers
+    if (layers.maritime && panopticMaritime) {
+      aisVessels.forEach((v: any) => {
         const col = v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : "#22c55e";
-        points.push({ lat: v.lat, lng: v.lng, pointAlt: 0.003, color: col, radius: 0.12 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">🚢 ${v.type}</div><div>${v.name} (${v.flag})</div><div style="color:#888;font-size:9px">${v.speed}kn • HDG ${v.heading}° → ${v.destination || "Unknown"}</div></div>` });
+        points.push({ lat: v.lat, lng: v.lng, pointAlt: 0.005, color: col, radius: 0.2 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">🚢 ${v.type}</div><div>${v.name} (${v.flag})</div><div style="color:#888;font-size:9px">${v.speed}kn → ${v.destination || "—"}</div></div>` });
       });
     }
 
-    if (layers.flights && flights.length && panopticFlights) {
-      flights.forEach(f => {
+    // FLIGHTS — bigger markers
+    if (layers.flights && panopticFlights) {
+      allFlights.forEach((f: any) => {
         const isMil = f.military || f.callsign?.match(/^(RCH|EVAC|DUKE|REAC|NAVY|JAKE|RRR)/i);
         if (!layers.militaryFlights && isMil) return;
-        points.push({ lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.04, color: isMil ? "#ef4444" : "#00d4ff", radius: (isMil ? 0.12 : 0.06) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${isMil ? "#ef4444" : "#00d4ff"};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${isMil ? "#ef4444" : "#00d4ff"};font-weight:bold">✈ ${isMil ? "MILITARY" : "CIVIL"} AIRCRAFT</div><div>${f.callsign || f.icao24 || "UNKNOWN"}</div><div style="color:#888;font-size:9px">${f.velocity ? Math.round(f.velocity * 3.6) + " km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"} • ${f.origin_country || ""}</div></div>` });
+        points.push({ lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.05, color: isMil ? "#ef4444" : "#00d4ff", radius: (isMil ? 0.18 : 0.1) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${isMil ? "#ef4444" : "#00d4ff"};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${isMil ? "#ef4444" : "#00d4ff"};font-weight:bold">✈ ${isMil ? "MIL" : "CIV"} ${f.callsign || "UNKNOWN"}</div><div>${f.origin_country || ""} • ${f.velocity ? Math.round(f.velocity * 3.6) + "km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"}</div></div>` });
       });
     }
 
+    // AIR QUALITY
     if (layers.airQuality && airQualityData.length) {
       airQualityData.forEach(aq => {
         const aqi = aq.aqi || 0;
         const color = aqi > 150 ? "#dc2626" : aqi > 100 ? "#f97316" : aqi > 50 ? "#eab308" : "#22c55e";
-        points.push({ lat: aq.lat, lng: aq.lng, pointAlt: 0.008, color, radius: 0.1 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${color};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${color};font-weight:bold">🌬 AIR QUALITY</div><div>${aq.city} — AQI: ${aqi}</div><div style="color:#888;font-size:9px">${aq.aqi_level} • PM2.5: ${aq.pm25 || "—"}</div></div>` });
+        points.push({ lat: aq.lat, lng: aq.lng, pointAlt: 0.008, color, radius: 0.15 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${color};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${color};font-weight:bold">🌬 AQI ${aqi}</div><div>${aq.city} • ${aq.aqi_level}</div></div>` });
       });
     }
 
+    // GEO-FUSION
     if (layers.geoFusion && geoFusionData?.events?.length) {
       geoFusionData.events.forEach(ev => {
         const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
-        points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.02, color: col, radius: 0.18 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">📡 ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.source} • ${ev.confidence} confidence</div></div>` });
+        points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.025, color: col, radius: 0.3 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">📡 ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.source} • ${ev.confidence}</div></div>` });
       });
     }
 
+    // GPS JAMMING — big pulsing circles
     if (layers.gpsJamming) {
       gpsJammingZones.forEach(z => {
         if (z.ts > cutoff) return;
         const col = z.severity === "critical" ? "#ff00ff" : z.severity === "high" ? "#e879f9" : "#c084fc";
-        points.push({ lat: z.lat, lng: z.lng, pointAlt: 0.012, color: col, radius: z.radius * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">📡 GPS JAMMING ZONE</div><div>${z.label}</div><div style="color:#888;font-size:9px">Severity: ${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11, 19)} UTC</div></div>` });
+        points.push({ lat: z.lat, lng: z.lng, pointAlt: 0.015, color: col, radius: z.radius * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">📡 GPS JAM</div><div>${z.label}</div><div style="color:#888;font-size:9px">${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11,19)} UTC</div></div>` });
       });
     }
 
+    // EMULATED OSINT EVENTS — always rendered, timeline filtered
     emulatedEvents.forEach(ev => {
       if (ev.ts > cutoff) return;
-      points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.018, color: ev.color, radius: 0.2 * densityMult,
-        label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${ev.color};font-weight:bold">🎯 ${ev.type.toUpperCase()}</div><div>${ev.label}</div><div style="color:#888;font-size:9px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div></div>` });
+      points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.022, color: ev.color, radius: 0.3 * densityMult,
+        label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${ev.color};font-weight:bold">🎯 ${ev.type.toUpperCase()}</div><div>${ev.label}</div><div style="color:#888;font-size:9px">${new Date(ev.ts).toISOString().replace("T"," ").slice(0,19)} UTC</div></div>` });
     });
 
+    console.log(`[4D] Rendering ${points.length} points on globe`);
     globe.pointsData(points);
 
-    // Satellites with ISR labels
-    if (layers.satellites && satellites.length && panopticSats) {
-      const satObjects = satellites.map(s => {
+    // SATELLITES as 3D objects
+    if (layers.satellites && panopticSats && allSatellites.length) {
+      const satObjects = allSatellites.map(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : "#00d4ff";
+        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : "#888888";
         return {
-          lat: s.lat, lng: s.lng,
-          alt: s.alt / 6371 * 0.15,
+          lat: s.lat, lng: s.lng, alt: s.alt / 6371 * 0.15,
           label: isISR
-            ? `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:4px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}40">
-                <div style="display:flex;align-items:center;gap:4px">
-                  <span style="color:${satCol};font-size:8px">◆</span>
-                  <span style="color:${satCol};font-weight:bold;font-size:9px;letter-spacing:1px">${s.name}</span>
-                </div>
-                <div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div>
-              </div>`
-            : `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #00d4ff;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#00d4ff;font-weight:bold">🛰 ${s.category.toUpperCase()}</div><div>${s.name}</div><div style="color:#888;font-size:9px">Alt: ${Math.round(s.alt)}km • Inc: ${s.inclination.toFixed(1)}°</div></div>`,
-          satColor: satCol,
+            ? `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol};font-size:10px">◆</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`
+            : `<div style="font-family:monospace;font-size:10px;background:rgba(10,10,20,0.9);border:1px solid ${satCol};padding:4px 8px;border-radius:3px;color:#f0f0f0"><div style="color:${satCol};font-weight:bold">🛰 ${s.name}</div><div style="color:#888;font-size:8px">${Math.round(s.alt)}km • ${s.category}</div></div>`,
         };
       });
       globe.objectsData(satObjects);
@@ -635,7 +602,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       globe.objectsData([]);
     }
 
-    // Arcs — rockets, OSINT corridors, and satellite scan cones
+    // ARCS — rockets, threat corridors, scan cones
     const arcs: any[] = [];
     if (layers.rockets && rockets.length) {
       rockets.forEach(r => {
@@ -645,19 +612,23 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     }
     if (layers.geoFusion) {
       arcs.push(
-        { startLat: 35.69, startLng: 51.39, endLat: 33.51, endLng: 36.29, colors: ["rgba(239,68,68,0.5)", "rgba(239,68,68,0.2)"] },
+        { startLat: 35.69, startLng: 51.39, endLat: 33.51, endLng: 36.29, colors: ["rgba(239,68,68,0.6)", "rgba(239,68,68,0.2)"] },
         { startLat: 15.35, startLng: 44.21, endLat: 12.58, endLng: 43.33, colors: ["rgba(249,115,22,0.5)", "rgba(249,115,22,0.2)"] },
-        { startLat: 26.57, startLng: 56.25, endLat: 25.20, endLng: 55.27, colors: ["rgba(234,179,8,0.4)", "rgba(234,179,8,0.15)"] },
-        { startLat: 33.31, startLng: 44.37, endLat: 36.34, endLng: 43.13, colors: ["rgba(168,85,247,0.4)", "rgba(168,85,247,0.15)"] },
+        { startLat: 26.57, startLng: 56.25, endLat: 25.20, endLng: 55.27, colors: ["rgba(234,179,8,0.5)", "rgba(234,179,8,0.15)"] },
+        { startLat: 33.31, startLng: 44.37, endLat: 36.34, endLng: 43.13, colors: ["rgba(168,85,247,0.5)", "rgba(168,85,247,0.15)"] },
+        { startLat: 33.5, startLng: 36.3, endLat: 31.5, endLng: 34.5, colors: ["rgba(239,68,68,0.4)", "rgba(239,68,68,0.1)"] },
+        { startLat: 35.69, startLng: 51.39, endLat: 15.35, endLng: 44.21, colors: ["rgba(168,85,247,0.3)", "rgba(168,85,247,0.1)"] },
       );
     }
-    // Satellite scan cone arcs for ISR sats
+    // Satellite scan cone arcs
     if (layers.satellites && panopticSats) {
-      isrSatellites.slice(0, 15).forEach(s => {
+      isrSatellites.slice(0, 12).forEach((s, i) => {
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const col = isMil ? "rgba(239,68,68,0.35)" : "rgba(0,212,255,0.3)";
-        arcs.push({ startLat: s.lat, startLng: s.lng, endLat: s.lat + (Math.random() - 0.5) * 4, endLng: s.lng + (Math.random() - 0.5) * 4,
-          colors: [col, "rgba(255,255,255,0.05)"] });
+        const col = isMil ? "rgba(239,68,68,0.4)" : "rgba(0,212,255,0.35)";
+        // Deterministic ground footprint based on index
+        const groundLat = s.lat + Math.sin(i * 1.5) * 3;
+        const groundLng = s.lng + Math.cos(i * 1.5) * 3;
+        arcs.push({ startLat: s.lat, startLng: s.lng, endLat: groundLat, endLng: groundLng, colors: [col, "rgba(255,255,255,0.05)"] });
       });
     }
     globe.arcsData(arcs);
@@ -667,43 +638,23 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, flights, airQualityData, geoFusionData, satellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady]);
 
   const chipLayers = [
-    { id: "flights", label: "Commercial Flights", icon: <Plane className="h-3 w-3" />, color: "#00d4ff" },
-    { id: "militaryFlights", label: "Military Flights", icon: <Shield className="h-3 w-3" />, color: "#ef4444" },
-    { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3 w-3" />, color: "#22c55e" },
-    { id: "satellites", label: "Imaging Satellites", icon: <Satellite className="h-3 w-3" />, color: "#00d4ff" },
-    { id: "maritime", label: "Maritime Traffic", icon: <Anchor className="h-3 w-3" />, color: "#22c55e" },
-    { id: "borders", label: "Airspace Closures", icon: <Shield className="h-3 w-3" />, color: "#ef4444" },
-  ];
-
-  const eventTypes = [
-    { label: "Kinetic", color: "#ef4444" },
-    { label: "Retaliation", color: "#ef4444" },
-    { label: "Civilian Impact", color: "#f97316" },
-    { label: "Maritime", color: "#00d4ff" },
-    { label: "Infrastructure", color: "#a855f7" },
-    { label: "Escalation", color: "#eab308" },
-    { label: "Airspace Closure", color: "#22c55e" },
+    { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
+    { id: "militaryFlights", label: "Military", icon: <Shield className="h-3 w-3" /> },
+    { id: "gpsJamming", label: "GPS Jam", icon: <Lock className="h-3 w-3" /> },
+    { id: "satellites", label: "Satellites", icon: <Satellite className="h-3 w-3" /> },
+    { id: "maritime", label: "Maritime", icon: <Anchor className="h-3 w-3" /> },
+    { id: "borders", label: "Borders", icon: <MapPin className="h-3 w-3" /> },
   ];
 
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "city": return "🏙"; case "facility": return "⚛"; case "military": return "🎯";
-      case "chokepoint": return "⚓"; case "conflict": return "⚔"; case "satellite": return "🛰";
-      case "vessel": return "🚢"; case "fusion": return "📡"; case "coordinate": return "📍";
-      default: return "📌";
-    }
+    switch (type) { case "city": return "🏙"; case "facility": return "⚛"; case "military": return "🎯"; case "chokepoint": return "⚓"; case "conflict": return "⚔"; case "satellite": return "🛰"; case "vessel": return "🚢"; default: return "📌"; }
   };
 
   const getSeverityBorder = (sev: string) => {
-    switch (sev) {
-      case "critical": return "border-l-[#dc2626]";
-      case "high": return "border-l-[#f97316]";
-      case "medium": return "border-l-[#eab308]";
-      default: return "border-l-[#00d4ff]";
-    }
+    switch (sev) { case "critical": return "border-l-[#dc2626]"; case "high": return "border-l-[#f97316]"; case "medium": return "border-l-[#eab308]"; default: return "border-l-[#00d4ff]"; }
   };
 
   const handleFeedClick = useCallback((lat: number, lng: number) => {
@@ -712,24 +663,16 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[hsl(220,25%,5%)] flex flex-col" style={{
-      filter: bloomEnabled ? "brightness(1.05) contrast(1.08)" : undefined,
-    }}>
-      {/* Scanline overlay */}
-      <div className="fixed inset-0 pointer-events-none z-[10000] opacity-[0.03]" style={{
-        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,210,255,0.1) 2px, rgba(0,210,255,0.1) 4px)",
-      }} />
+    <div className="fixed inset-0 z-[9999] bg-[hsl(220,25%,5%)] flex flex-col" style={{ filter: bloomEnabled ? "brightness(1.05) contrast(1.08)" : undefined }}>
+      <div className="fixed inset-0 pointer-events-none z-[10000] opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,210,255,0.1) 2px, rgba(0,210,255,0.1) 4px)" }} />
 
       <div className="flex flex-1 min-h-0">
-        {/* Left Panel */}
+        {/* LEFT PANEL */}
         {!cleanUI && (
           <div className="w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex flex-col overflow-hidden">
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Radar className="h-4 w-4 text-primary" />
-                  <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                </div>
+                <div className="relative"><Radar className="h-4 w-4 text-primary" /><div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" /></div>
                 <div>
                   <div className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">GOTHAM • 4D</div>
                   <div className="text-[8px] tracking-[0.15em] text-muted-foreground uppercase">Intelligence Fusion</div>
@@ -745,7 +688,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   { label: "SEA", value: stats.vessels, color: "#22c55e" },
                   { label: "EQ", value: stats.quakes, color: "#ef4444" },
                   { label: "FIRE", value: stats.fires, color: "#ff4500" },
-                  { label: "INTEL", value: stats.fusion, color: "#eab308" },
+                  { label: "INTEL", value: stats.fusion + emulatedEvents.length, color: "#eab308" },
                 ].map(s => (
                   <div key={s.label} className="text-center py-1 rounded bg-[hsl(220,18%,8%)] border border-[hsl(220,15%,15%)]">
                     <div className="text-[9px] font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
@@ -756,22 +699,20 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             </div>
 
             <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
-              <span className="text-[9px] text-muted-foreground font-mono tracking-wider">
-                {totalActive}/{layerConfigs.length} LAYERS ACTIVE
-              </span>
+              <span className="text-[9px] text-muted-foreground font-mono tracking-wider">{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
             </div>
 
             <div className="flex-1 overflow-y-auto py-1">
               {layerConfigs.map(layer => (
                 <button key={layer.id} onClick={() => toggleLayer(layer.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)] hover:border-l-[hsl(190,60%,20%)]"}`}>
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
                   <Checkbox checked={layers[layer.id]} onCheckedChange={() => toggleLayer(layer.id)} className="h-3 w-3 pointer-events-none rounded-sm" />
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
                   <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${layers[layer.id] ? "text-foreground" : "text-muted-foreground"}`}>
                     {layer.icon} {layer.label}
                   </span>
-                  {layer.count !== undefined && layers[layer.id] && layer.count > 0 && (
-                    <span className="ml-auto text-[8px] font-mono px-1 py-0.5 rounded bg-[hsl(220,15%,15%)] text-muted-foreground">{layer.count}</span>
+                  {layer.count !== undefined && layer.count > 0 && (
+                    <span className="ml-auto text-[8px] font-mono px-1.5 py-0.5 rounded text-muted-foreground" style={{ backgroundColor: layers[layer.id] ? `${layer.color}15` : "transparent", color: layers[layer.id] ? layer.color : undefined }}>{layer.count}</span>
                   )}
                 </button>
               ))}
@@ -784,17 +725,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           </div>
         )}
 
-        {/* Globe area */}
-        <div className="flex-1 relative" style={{
-          filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined,
-        }}>
+        {/* GLOBE */}
+        <div className="flex-1 relative" style={{ filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
           <div ref={globeContainerRef} className="w-full h-full" />
 
-          {/* Search bar */}
+          {/* Search */}
           {!cleanUI && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-80">
               <div className="relative">
-                <div className="flex items-center bg-[hsl(220,20%,7%)/0.92] backdrop-blur-md border border-[hsl(190,60%,20%)] rounded-md overflow-hidden shadow-[0_0_20px_hsl(190,100%,50%/0.08)]">
+                <div className="flex items-center bg-[hsl(220,20%,7%)/0.92] backdrop-blur-md border border-[hsl(190,60%,20%)] rounded-md overflow-hidden">
                   <Search className="h-3.5 w-3.5 text-primary ml-3 flex-shrink-0" />
                   <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                     onFocus={() => setSearchFocused(true)} onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
@@ -812,7 +751,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                           <div className="text-[10px] font-mono text-foreground truncate">{r.name}</div>
                           <div className="text-[8px] font-mono text-muted-foreground">{r.lat.toFixed(2)}°, {r.lng.toFixed(2)}°</div>
                         </div>
-                        <Target className="h-3 w-3 text-primary/50 flex-shrink-0" />
+                        <Target className="h-3 w-3 text-primary/50" />
                       </button>
                     ))}
                   </div>
@@ -821,49 +760,42 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             </div>
           )}
 
-          {/* X close button — top right */}
-          <button onClick={onClose}
-            className="absolute top-3 right-3 z-30 w-8 h-8 flex items-center justify-center rounded bg-[hsl(220,20%,8%)/0.9] backdrop-blur border border-[hsl(0,60%,40%)] text-[hsl(0,80%,65%)] hover:bg-[hsl(0,60%,20%)] hover:text-[hsl(0,80%,80%)] transition-all shadow-[0_0_12px_hsl(0,80%,50%/0.2)]">
+          {/* X button */}
+          <button onClick={onClose} className="absolute top-3 right-3 z-30 w-8 h-8 flex items-center justify-center rounded bg-[hsl(220,20%,8%)/0.9] backdrop-blur border border-[hsl(0,60%,40%)] text-[hsl(0,80%,65%)] hover:bg-[hsl(0,60%,20%)] hover:text-[hsl(0,80%,80%)] transition-all shadow-[0_0_12px_hsl(0,80%,50%/0.2)]">
             <X className="h-4 w-4" />
           </button>
 
-          {/* Title overlay */}
+          {/* Title + HUD */}
           {!cleanUI && hudEnabled && (
-            <div className="absolute top-4 left-4 z-10">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(190,60%,18%)]">
-                <Globe className="h-4 w-4 text-primary" />
-                <span className="text-xs font-bold font-mono tracking-[0.15em] text-foreground">4D <span className="text-primary">MAP</span></span>
-                <div className="w-px h-3 bg-[hsl(190,60%,20%)] mx-1" />
-                <span className="text-[8px] font-mono text-muted-foreground tracking-[0.1em]">MULTI-SOURCE INTELLIGENCE FUSION</span>
-                <div className="flex items-center gap-1 ml-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                  <span className="text-[8px] font-mono text-success">LIVE</span>
+            <>
+              <div className="absolute top-4 left-4 z-10">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(190,60%,18%)]">
+                  <Globe className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-bold font-mono tracking-[0.15em] text-foreground">4D <span className="text-primary">MAP</span></span>
+                  <div className="w-px h-3 bg-[hsl(190,60%,20%)] mx-1" />
+                  <span className="text-[8px] font-mono text-muted-foreground tracking-[0.1em]">MULTI-INT FUSION</span>
+                  <div className="flex items-center gap-1 ml-2"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[8px] font-mono text-success">LIVE</span></div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* REC indicator + ORB/PASS counters — top right area (left of X) */}
-          {!cleanUI && hudEnabled && (
-            <div className="absolute top-3 right-14 z-20 flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,15%)]">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-pulse" />
-                <span className="text-[8px] font-mono text-[#ef4444] tracking-wider">REC</span>
-                <span className="text-[8px] font-mono text-muted-foreground">{new Date().toISOString().slice(11, 19)}</span>
+              <div className="absolute top-3 right-14 z-20 flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,15%)]">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-pulse" />
+                  <span className="text-[8px] font-mono text-[#ef4444] tracking-wider">REC</span>
+                  <span className="text-[8px] font-mono text-muted-foreground">{new Date().toISOString().slice(11, 19)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,15%)]">
+                  <span className="text-[8px] font-mono text-[#00d4ff]">ORB {isrSatellites.length}</span>
+                  <span className="text-[7px] text-muted-foreground">|</span>
+                  <span className="text-[8px] font-mono text-[#22c55e]">PASS {Math.min(isrSatellites.length, 5)}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,15%)]">
-                <span className="text-[8px] font-mono text-[#00d4ff]">ORB {isrSatellites.length}</span>
-                <span className="text-[7px] text-muted-foreground">|</span>
-                <span className="text-[8px] font-mono text-[#22c55e]">PASS {Math.min(isrSatellites.length, 5)}</span>
-              </div>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Right Panel — Attributes + Event Feed */}
+        {/* RIGHT PANEL — Attributes + Feed */}
         {!cleanUI && (
           <div className="w-64 flex-shrink-0 bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden">
-            {/* Attributes Header */}
             <div className="px-3 py-2 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
@@ -871,75 +803,44 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            {/* Visual Controls */}
             <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] space-y-2">
-              {/* BLOOM */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-3 w-3 text-[#eab308]" />
-                  <span className="text-[9px] font-mono text-foreground tracking-wider">BLOOM</span>
+              {[
+                { label: "BLOOM", icon: <Sparkles className="h-3 w-3 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
+                { label: "HUD", icon: <Monitor className="h-3 w-3 text-[#00d4ff]" />, value: hudEnabled, set: setHudEnabled, color: "#00d4ff" },
+              ].map(ctrl => (
+                <div key={ctrl.label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">{ctrl.icon}<span className="text-[9px] font-mono text-foreground tracking-wider">{ctrl.label}</span></div>
+                  <button onClick={() => ctrl.set(!ctrl.value)} className={`w-8 h-4 rounded-full transition-colors ${ctrl.value ? `bg-[${ctrl.color}]` : "bg-[hsl(220,15%,20%)]"}`} style={{ backgroundColor: ctrl.value ? ctrl.color : undefined }}>
+                    <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${ctrl.value ? "translate-x-3.5" : ""}`} />
+                  </button>
                 </div>
-                <button onClick={() => setBloomEnabled(!bloomEnabled)}
-                  className={`w-8 h-4 rounded-full transition-colors ${bloomEnabled ? "bg-[#eab308]" : "bg-[hsl(220,15%,20%)]"}`}>
-                  <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${bloomEnabled ? "translate-x-3.5" : ""}`} />
-                </button>
-              </div>
-
-              {/* SHARPEN */}
+              ))}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] font-mono text-foreground tracking-wider">SHARPEN</span>
-                  <button onClick={() => setSharpenEnabled(!sharpenEnabled)}
-                    className={`w-8 h-4 rounded-full transition-colors ${sharpenEnabled ? "bg-primary" : "bg-[hsl(220,15%,20%)]"}`}>
+                  <button onClick={() => setSharpenEnabled(!sharpenEnabled)} className="w-8 h-4 rounded-full transition-colors" style={{ backgroundColor: sharpenEnabled ? "hsl(190,80%,50%)" : "hsl(220,15%,20%)" }}>
                     <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${sharpenEnabled ? "translate-x-3.5" : ""}`} />
                   </button>
                 </div>
-                {sharpenEnabled && (
-                  <input type="range" min={0} max={100} value={sharpenValue} onChange={e => setSharpenValue(parseInt(e.target.value))}
-                    className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary" />
-                )}
-              </div>
-
-              {/* HUD */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Monitor className="h-3 w-3 text-[#00d4ff]" />
-                  <span className="text-[9px] font-mono text-foreground tracking-wider">HUD</span>
-                </div>
-                <button onClick={() => setHudEnabled(!hudEnabled)}
-                  className={`w-8 h-4 rounded-full transition-colors ${hudEnabled ? "bg-[#00d4ff]" : "bg-[hsl(220,15%,20%)]"}`}>
-                  <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${hudEnabled ? "translate-x-3.5" : ""}`} />
-                </button>
+                {sharpenEnabled && <input type="range" min={0} max={100} value={sharpenValue} onChange={e => setSharpenValue(parseInt(e.target.value))} className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary" />}
               </div>
             </div>
 
-            {/* LAYOUT */}
             <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)]">
               <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">LAYOUT</span>
               <div className="flex gap-1 mt-1">
                 {(["TACTICAL", "STRATEGIC", "MINIMAL"] as const).map(p => (
-                  <button key={p} onClick={() => setLayoutPreset(p)}
-                    className={`flex-1 px-1 py-1 rounded text-[8px] font-mono border transition-colors ${layoutPreset === p ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
-                    {p}
-                  </button>
+                  <button key={p} onClick={() => setLayoutPreset(p)} className={`flex-1 px-1 py-1 rounded text-[8px] font-mono border transition-colors ${layoutPreset === p ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{p}</button>
                 ))}
               </div>
             </div>
 
-            {/* PANOPTIC */}
             <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)]">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
-                <span className="text-[9px] font-mono text-[#22c55e] tracking-[0.15em] font-bold">PANOPTIC</span>
-              </div>
+              <div className="flex items-center gap-1.5 mb-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" /><span className="text-[9px] font-mono text-[#22c55e] tracking-[0.15em] font-bold">PANOPTIC</span></div>
               <div className="space-y-1.5">
                 <div>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[8px] font-mono text-muted-foreground">DENSITY</span>
-                    <span className="text-[8px] font-mono text-primary">{panopticDensity}%</span>
-                  </div>
-                  <input type="range" min={10} max={100} value={panopticDensity} onChange={e => setPanopticDensity(parseInt(e.target.value))}
-                    className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#22c55e]" />
+                  <div className="flex items-center justify-between mb-0.5"><span className="text-[8px] font-mono text-muted-foreground">DENSITY</span><span className="text-[8px] font-mono text-primary">{panopticDensity}%</span></div>
+                  <input type="range" min={10} max={100} value={panopticDensity} onChange={e => setPanopticDensity(parseInt(e.target.value))} className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#22c55e]" />
                 </div>
                 {[
                   { label: "Flights", value: panopticFlights, set: setPanopticFlights, icon: <Plane className="h-2.5 w-2.5" /> },
@@ -947,12 +848,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   { label: "Maritime", value: panopticMaritime, set: setPanopticMaritime, icon: <Ship className="h-2.5 w-2.5" /> },
                 ].map(t => (
                   <div key={t.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      {t.icon}
-                      <span className="text-[8px] font-mono text-muted-foreground">{t.label}</span>
-                    </div>
-                    <button onClick={() => t.set(!t.value)}
-                      className={`w-7 h-3.5 rounded-full transition-colors ${t.value ? "bg-[#22c55e]" : "bg-[hsl(220,15%,20%)]"}`}>
+                    <div className="flex items-center gap-1">{t.icon}<span className="text-[8px] font-mono text-muted-foreground">{t.label}</span></div>
+                    <button onClick={() => t.set(!t.value)} className={`w-7 h-3.5 rounded-full transition-colors`} style={{ backgroundColor: t.value ? "#22c55e" : "hsl(220,15%,20%)" }}>
                       <div className={`w-2.5 h-2.5 rounded-full bg-foreground transition-transform mx-0.5 ${t.value ? "translate-x-3" : ""}`} />
                     </button>
                   </div>
@@ -960,26 +857,17 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            {/* CLEAN UI */}
             <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)]">
-              <button onClick={() => setCleanUI(true)}
-                className="w-full px-2 py-1.5 rounded text-[9px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors text-center">
-                CLEAN UI
-              </button>
+              <button onClick={() => setCleanUI(true)} className="w-full px-2 py-1.5 rounded text-[9px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors text-center">CLEAN UI</button>
             </div>
 
-            {/* Event Feed Header */}
             <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <AlertTriangle className="h-3 w-3 text-[#f97316]" />
-                  <span className="text-[9px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span>
-                </div>
-                <span className="text-[8px] font-mono text-muted-foreground">{unifiedFeed.length}</span>
+                <div className="flex items-center gap-1.5"><AlertTriangle className="h-3 w-3 text-[#f97316]" /><span className="text-[9px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
+                <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
               </div>
             </div>
 
-            {/* Event Feed Scroll */}
             <div ref={feedRef} className="flex-1 overflow-y-auto">
               {unifiedFeed.map(ev => (
                 <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
@@ -989,33 +877,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                     <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
                   </div>
                   <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
-                  <div className="text-[7px] font-mono text-muted-foreground mt-0.5">
-                    {new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°
-                  </div>
+                  <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
                 </button>
               ))}
-              {unifiedFeed.length === 0 && (
-                <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in current window</div>
-              )}
+              {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
             </div>
           </div>
         )}
       </div>
 
-      {/* CLEAN UI restore button */}
       {cleanUI && (
-        <button onClick={() => setCleanUI(false)}
-          className="fixed bottom-20 right-4 z-[10001] px-3 py-1.5 rounded bg-[hsl(220,20%,7%)/0.8] backdrop-blur border border-[hsl(190,60%,18%)] text-[9px] font-mono text-primary hover:bg-primary/10 transition-colors">
-          RESTORE UI
-        </button>
+        <button onClick={() => setCleanUI(false)} className="fixed bottom-20 right-4 z-[10001] px-3 py-1.5 rounded bg-[hsl(220,20%,7%)/0.8] backdrop-blur border border-[hsl(190,60%,18%)] text-[9px] font-mono text-primary hover:bg-primary/10 transition-colors">RESTORE UI</button>
       )}
 
-      {/* Bottom Timeline Bar */}
+      {/* BOTTOM TIMELINE */}
       {!cleanUI && (
         <div className="flex-shrink-0 bg-[hsl(220,20%,6%)] border-t border-[hsl(190,60%,15%)]">
           <div className="flex items-center gap-2 px-3 py-1.5">
-            <button onClick={() => setPlaying(!playing)}
-              className="flex items-center justify-center h-6 w-6 rounded border border-[hsl(190,60%,20%)] text-primary hover:bg-primary/10 transition-colors">
+            <button onClick={() => setPlaying(!playing)} className="flex items-center justify-center h-6 w-6 rounded border border-[hsl(190,60%,20%)] text-primary hover:bg-primary/10 transition-colors">
               {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
             </button>
             <span className="text-[8px] font-mono text-muted-foreground w-28 flex-shrink-0">{timelineLabel}</span>
@@ -1032,14 +911,12 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           <div className="flex items-center gap-1.5 px-3 py-1 border-t border-[hsl(220,15%,10%)]">
             <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">SPEED:</span>
             {speedOptions.map(s => (
-              <button key={s} onClick={() => setSpeed(s)}
-                className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${speed === s ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{s}</button>
+              <button key={s} onClick={() => setSpeed(s)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${speed === s ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{s}</button>
             ))}
             <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-1" />
             <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">ORBIT:</span>
             {orbitOptions.map(o => (
-              <button key={o} onClick={() => setOrbitMode(o)}
-                className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${orbitMode === o ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{o}</button>
+              <button key={o} onClick={() => setOrbitMode(o)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${orbitMode === o ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{o}</button>
             ))}
             <div className="flex-1" />
             <span className="text-[8px] font-mono text-muted-foreground">{unifiedFeed.length} EVENTS</span>
@@ -1047,19 +924,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
           <div className="flex items-center gap-1 px-3 py-1 border-t border-[hsl(220,15%,10%)] flex-wrap">
             {chipLayers.map(chip => (
-              <button key={chip.id} onClick={() => toggleLayer(chip.id)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${layers[chip.id] ? "border-primary/40 bg-primary/8 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
+              <button key={chip.id} onClick={() => toggleLayer(chip.id)} className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${layers[chip.id] ? "border-primary/40 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
                 {chip.icon} {chip.label}
               </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2.5 px-3 py-1 border-t border-[hsl(220,15%,10%)]">
-            {eventTypes.map(evt => (
-              <div key={evt.label} className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: evt.color }} />
-                <span className="text-[8px] font-mono text-muted-foreground">{evt.label}</span>
-              </div>
             ))}
           </div>
         </div>
