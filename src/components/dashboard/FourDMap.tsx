@@ -552,24 +552,26 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // CONFLICTS
+    // CONFLICTS — event-type specific icons
     if (layers.conflicts && conflictEvents.length) {
       conflictEvents.forEach(ev => {
         const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
+        const evType = (ev.event_type || "").toLowerCase();
+        const cIcon = evType.includes("battle") ? "⚔️" : evType.includes("explosion") ? "💥" : evType.includes("protest") ? "✊" : evType.includes("riot") ? "🔥" : evType.includes("violence") ? "⚠️" : "🎯";
         points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.02, color: col, radius: 0.35 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">⚔ ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.fatalities > 0 ? `${ev.fatalities} fatalities • ` : ""}${ev.source}</div></div>` });
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> ${ev.event_type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">📍 ${ev.location}, ${ev.country}</div><div style="color:#888;font-size:8px;margin-top:1px">${ev.fatalities > 0 ? `💀 ${ev.fatalities} fatalities • ` : ""}Source: ${ev.source}</div></div>` });
       });
     }
 
-    // NUCLEAR
+    // NUCLEAR — radiation symbol with facility details
     if (layers.nuclear) {
       nuclearStations.forEach(st => {
-        points.push({ lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.25 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#a855f7;font-weight:bold">☢ ${st.name}</div><div>${st.country} • ${st.dose_rate} ${st.unit}</div></div>` });
+        points.push({ lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.3 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(168,85,247,0.2)"><div style="color:#a855f7;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">☢️</span> RADIATION MONITOR</div><div style="font-size:9px;margin-top:2px">${st.name}</div><div style="color:#888;font-size:8px;margin-top:1px">📊 ${st.dose_rate} ${st.unit} • ${st.country}</div></div>` });
       });
       nuclearFacilities.forEach(fac => {
-        points.push({ lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.3 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">⚛ ${fac.name}</div><div>${fac.country} • ${fac.type} • ${fac.status}</div></div>` });
+        points.push({ lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(232,121,249,0.2)"><div style="color:#e879f9;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">⚛️</span> NUCLEAR FACILITY</div><div style="font-size:9px;margin-top:2px">${fac.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${fac.country} • ${fac.type} • Status: ${fac.status}</div></div>` });
       });
     }
 
