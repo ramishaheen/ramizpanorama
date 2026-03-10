@@ -836,8 +836,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         )}
 
         {/* GLOBE */}
-        <div className="flex-1 relative" style={{ filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
-          <div ref={globeContainerRef} className="w-full h-full" />
+        <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
+          <div ref={globeContainerRef} className="absolute inset-0" />
 
           {/* Search */}
           {!cleanUI && (
