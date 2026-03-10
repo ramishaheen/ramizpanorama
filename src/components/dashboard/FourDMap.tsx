@@ -183,10 +183,10 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     if (!globeContainerRef.current) return;
     let destroyed = false;
 
-    import("globe.gl").then(({ default: Globe }) => {
+    import("globe.gl").then(({ default: GlobeConstructor }) => {
       if (destroyed || !globeContainerRef.current) return;
 
-      const globe = Globe()
+      const globe = new GlobeConstructor(globeContainerRef.current)
         .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
         .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png")
         .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
@@ -196,7 +196,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .animateIn(true)
         .width(globeContainerRef.current.clientWidth)
         .height(globeContainerRef.current.clientHeight)
-        // Points config
         .pointsData([])
         .pointLat("lat")
         .pointLng("lng")
@@ -204,27 +203,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .pointColor("color")
         .pointRadius("radius")
         .pointLabel("label")
-        // Custom objects (satellites)
         .objectsData([])
         .objectLat("lat")
         .objectLng("lng")
         .objectAltitude("alt")
         .objectLabel("label")
-        .objectThreeObject((d: any) => {
-          const THREE = (globe as any).scene().constructor.module || window.THREE || (globalThis as any).THREE;
-          // Fallback: create a simple sphere
-          try {
-            const group = new (window as any).THREE.Group();
-            const geo = new (window as any).THREE.SphereGeometry(0.4, 8, 8);
-            const mat = new (window as any).THREE.MeshBasicMaterial({ color: d.satColor || "#00ffff" });
-            const mesh = new (window as any).THREE.Mesh(geo, mat);
-            group.add(mesh);
-            return group;
-          } catch {
-            return undefined;
-          }
-        })
-        // Arcs (rockets)
         .arcsData([])
         .arcStartLat("startLat")
         .arcStartLng("startLng")
@@ -236,13 +219,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .arcDashGap(0.2)
         .arcDashAnimateTime(1500)
         .arcAltitudeAutoScale(0.3)
-        // Polygons (borders)
         .polygonsData([])
         .polygonCapColor(() => "rgba(0, 255, 200, 0.06)")
         .polygonSideColor(() => "rgba(0, 255, 200, 0.15)")
         .polygonStrokeColor(() => "rgba(0, 255, 200, 0.4)")
-        .polygonAltitude(0.005)
-        (globeContainerRef.current);
+        .polygonAltitude(0.005);
 
       globe.pointOfView({ lat: 30, lng: 45, altitude: 2.5 });
 
