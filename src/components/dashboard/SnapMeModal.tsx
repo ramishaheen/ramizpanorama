@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback } from "react";
-import { X, Upload, Camera, MapPin, Loader2, Target } from "lucide-react";
+import { X, Upload, Camera, MapPin, Loader2, Target, Eye, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SnapLocation {
@@ -19,28 +18,58 @@ interface SnapMeModalProps {
   onPinLocation: (lat: number, lng: number, name: string, reasoning: string) => void;
 }
 
+/** Resize image on a canvas so longest side ≤ maxPx, return base64 + mime */
+function resizeImage(dataUrl: string, maxPx = 2048): Promise<{ base64: string; mime: string }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (Math.max(width, height) > maxPx) {
+        const scale = maxPx / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      const mime = "image/jpeg";
+      const out = canvas.toDataURL(mime, 0.92);
+      resolve({ base64: out.split(",")[1], mime });
+    };
+    img.src = dataUrl;
+  });
+}
+
+type AnalysisStage = "idle" | "pass1" | "pass2";
+
 export const SnapMeModal = ({ onClose, onPinLocation }: SnapMeModalProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [mimeType, setMimeType] = useState("image/jpeg");
-  const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState<AnalysisStage>("idle");
   const [locations, setLocations] = useState<SnapLocation[]>([]);
   const [overallAnalysis, setOverallAnalysis] = useState("");
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
 
-  const processFile = useCallback((file: File) => {
+  const processFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
     setError(null);
     setLocations([]);
     setOverallAnalysis("");
-    setMimeType(file.type);
+    setStage("idle");
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const dataUrl = e.target?.result as string;
       setImagePreview(dataUrl);
-      setImageBase64(dataUrl.split(",")[1]);
+      // Resize for optimal AI analysis
+      const { base64, mime } = await resizeImage(dataUrl, 2048);
+      setImageBase64(base64);
+      setMimeType(mime);
     };
     reader.readAsDataURL(file);
   }, []);
@@ -53,22 +82,28 @@ export const SnapMeModal = ({ onClose, onPinLocation }: SnapMeModalProps) => {
 
   const analyze = async () => {
     if (!imageBase64) return;
-    setLoading(true);
     setError(null);
     try {
+      setStage("pass1");
       const { data, error: fnErr } = await supabase.functions.invoke("snap-locate", {
         body: { image_base64: imageBase64, mime_type: mimeType },
       });
       if (fnErr) throw fnErr;
       if (data?.error) throw new Error(data.error);
+      // The edge function handles both passes; we simulate stage 2 timing
+      setStage("pass2");
+      // Small delay so user sees "Stage 2" before results render
+      await new Promise((r) => setTimeout(r, 400));
       setLocations(data.locations || []);
       setOverallAnalysis(data.overall_analysis || "");
     } catch (err: any) {
       setError(err.message || "Analysis failed");
     } finally {
-      setLoading(false);
+      setStage("idle");
     }
   };
+
+  const loading = stage !== "idle";
 
   const confidenceColor = (c: number) => {
     if (c >= 0.8) return "text-green-400";
@@ -92,6 +127,7 @@ export const SnapMeModal = ({ onClose, onPinLocation }: SnapMeModalProps) => {
           <div className="flex items-center gap-2">
             <Camera className="h-4 w-4 text-primary" />
             <span className="font-mono text-sm font-bold text-foreground tracking-wider">SNAP ME — AI GEOLOCATION</span>
+            <span className="text-[9px] font-mono text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded">2-PASS</span>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="h-4 w-4" />
@@ -108,11 +144,12 @@ export const SnapMeModal = ({ onClose, onPinLocation }: SnapMeModalProps) => {
                 ref={dropRef}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
-                onClick={() => fileRef.current?.click()}
-                className={`border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all min-h-[280px] ${
+                onClick={() => !loading && fileRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg flex flex-col items-center justify-center transition-all min-h-[280px] ${
+                  loading ? "cursor-wait opacity-70" :
                   imagePreview
-                    ? "border-primary/30 bg-secondary/20"
-                    : "border-border hover:border-primary/50 hover:bg-primary/5"
+                    ? "border-primary/30 bg-secondary/20 cursor-pointer"
+                    : "border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
                 }`}
               >
                 <input
@@ -128,7 +165,7 @@ export const SnapMeModal = ({ onClose, onPinLocation }: SnapMeModalProps) => {
                   <div className="text-center space-y-2 p-6">
                     <Upload className="h-10 w-10 text-muted-foreground mx-auto" />
                     <p className="text-sm font-mono text-muted-foreground">Drop image or click to upload</p>
-                    <p className="text-[10px] text-muted-foreground/60">JPG, PNG, WEBP</p>
+                    <p className="text-[10px] text-muted-foreground/60">JPG, PNG, WEBP — auto-resized to 2048px</p>
                   </div>
                 )}
               </div>
@@ -136,11 +173,11 @@ export const SnapMeModal = ({ onClose, onPinLocation }: SnapMeModalProps) => {
               {imagePreview && !loading && locations.length === 0 && (
                 <Button onClick={analyze} className="w-full gap-2 font-mono text-xs">
                   <Target className="h-3.5 w-3.5" />
-                  ANALYZE LOCATION
+                  ANALYZE LOCATION (2-PASS)
                 </Button>
               )}
 
-              {imagePreview && (
+              {imagePreview && !loading && (
                 <button
                   onClick={() => { setImagePreview(null); setImageBase64(null); setLocations([]); setOverallAnalysis(""); setError(null); }}
                   className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
@@ -149,10 +186,36 @@ export const SnapMeModal = ({ onClose, onPinLocation }: SnapMeModalProps) => {
                 </button>
               )}
 
+              {/* Two-stage progress indicator */}
               {loading && (
-                <div className="flex items-center gap-2 text-sm text-primary font-mono">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Analyzing visual cues…
+                <div className="space-y-2 rounded-lg border border-border/50 bg-secondary/20 p-3">
+                  <div className="flex items-center gap-2">
+                    {stage === "pass1" ? (
+                      <Eye className="h-4 w-4 text-primary animate-pulse" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-green-400" />
+                    )}
+                    <span className={`text-xs font-mono ${stage === "pass1" ? "text-primary" : "text-green-400"}`}>
+                      Stage 1: Extracting visual evidence…
+                    </span>
+                    {stage !== "pass1" && <span className="text-[9px] text-green-400">✓</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {stage === "pass2" ? (
+                      <Crosshair className="h-4 w-4 text-primary animate-pulse" />
+                    ) : (
+                      <Crosshair className="h-4 w-4 text-muted-foreground/40" />
+                    )}
+                    <span className={`text-xs font-mono ${stage === "pass2" ? "text-primary" : "text-muted-foreground/40"}`}>
+                      Stage 2: Pinpointing coordinates…
+                    </span>
+                  </div>
+                  <div className="h-1 w-full bg-secondary rounded-full overflow-hidden mt-1">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-1000"
+                      style={{ width: stage === "pass1" ? "40%" : "85%" }}
+                    />
+                  </div>
                 </div>
               )}
 
