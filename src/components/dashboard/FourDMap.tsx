@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap } from "lucide-react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap, Pause, Play, Eye, Anchor, Lock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useEarthquakes } from "@/hooks/useEarthquakes";
@@ -433,89 +433,242 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
   const totalActive = Object.values(layers).filter(Boolean).length;
 
+  // Timeline playback state
+  const [playing, setPlaying] = useState(true);
+  const [timelineValue, setTimelineValue] = useState(50);
+  const [speed, setSpeed] = useState("1m/s");
+  const [orbitMode, setOrbitMode] = useState<"OFF" | "FLAT" | "SPIRAL IN" | "SPIRAL OUT">("OFF");
+  const speedOptions = ["1m/s", "3m/s", "5m/s", "15m/s", "1h/s"];
+  const orbitOptions: ("OFF" | "FLAT" | "SPIRAL IN" | "SPIRAL OUT")[] = ["OFF", "FLAT", "SPIRAL IN", "SPIRAL OUT"];
+
+  // Timeline event dots (from geo fusion events and earthquakes)
+  const timelineDots = useMemo(() => {
+    const dots: { position: number; color: string; label: string }[] = [];
+    if (geoFusionData?.events) {
+      geoFusionData.events.slice(0, 20).forEach((ev, i) => {
+        const severity = ev.severity >= 4 ? "#ef4444" : ev.severity >= 3 ? "#f97316" : "#00d4ff";
+        dots.push({ position: 5 + (i / 20) * 90, color: severity, label: ev.event_type });
+      });
+    }
+    if (earthquakes.length) {
+      earthquakes.slice(0, 10).forEach((eq, i) => {
+        dots.push({ position: 10 + (i / 10) * 80, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", label: `M${eq.magnitude}` });
+      });
+    }
+    return dots;
+  }, [geoFusionData, earthquakes]);
+
+  // Layer chip configs for bottom bar
+  const chipLayers = [
+    { id: "flights", label: "Commercial Flights", icon: <Plane className="h-3 w-3" />, color: "#00d4ff" },
+    { id: "militaryFlights", label: "Military Flights", icon: <Shield className="h-3 w-3" />, color: "#ef4444" },
+    { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3 w-3" />, color: "#22c55e" },
+    { id: "satellites", label: "Imaging Satellites", icon: <Satellite className="h-3 w-3" />, color: "#00d4ff" },
+    { id: "maritime", label: "Maritime Traffic", icon: <Anchor className="h-3 w-3" />, color: "#22c55e" },
+    { id: "borders", label: "Airspace Closures", icon: <Shield className="h-3 w-3" />, color: "#ef4444" },
+  ];
+
+  // Event type indicators for second row
+  const eventTypes = [
+    { label: "Kinetic", color: "#ef4444" },
+    { label: "Retaliation", color: "#ef4444" },
+    { label: "Civilian Impact", color: "#f97316" },
+    { label: "Maritime", color: "#00d4ff" },
+    { label: "Infrastructure", color: "#a855f7" },
+    { label: "Escalation", color: "#eab308" },
+    { label: "Airspace Closure", color: "#22c55e" },
+  ];
+
   return (
-    <div className="fixed inset-0 z-[9999] bg-background flex">
-      {/* Left Panel */}
-      <div className="w-64 flex-shrink-0 bg-card/95 backdrop-blur border-r border-border flex flex-col overflow-hidden">
-        {/* Panel Header */}
-        <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-          <Globe className="h-4 w-4 text-primary" />
-          <span className="text-xs font-bold tracking-wider text-foreground uppercase">4D Intelligence Layers</span>
-        </div>
-
-        {/* Active count */}
-        <div className="px-4 py-2 border-b border-border/50">
-          <span className="text-[10px] text-muted-foreground font-mono">
-            {totalActive} / {layerConfigs.length} layers active
-          </span>
-        </div>
-
-        {/* Layer toggles */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {layerConfigs.map(layer => (
-            <button
-              key={layer.id}
-              onClick={() => toggleLayer(layer.id)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left transition-all duration-200 ${
-                layers[layer.id]
-                  ? "bg-primary/10 border border-primary/30"
-                  : "bg-transparent border border-transparent hover:bg-muted/50 hover:border-border/50"
-              }`}
-            >
-              <Checkbox
-                checked={layers[layer.id]}
-                onCheckedChange={() => toggleLayer(layer.id)}
-                className="h-3.5 w-3.5 pointer-events-none"
-              />
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: layers[layer.id] ? layer.color : "#4b5563" }}
-              />
-              <span className={`flex items-center gap-1.5 text-[11px] font-medium ${
-                layers[layer.id] ? "text-foreground" : "text-muted-foreground"
-              }`}>
-                {layer.icon}
-                {layer.label}
-              </span>
-              {layer.count !== undefined && layers[layer.id] && (
-                <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                  {layer.count}
+    <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
+      <div className="flex flex-1 min-h-0">
+        {/* Left Panel */}
+        <div className="w-64 flex-shrink-0 bg-card/95 backdrop-blur border-r border-border flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+            <Globe className="h-4 w-4 text-primary" />
+            <span className="text-xs font-bold tracking-wider text-foreground uppercase">4D Intelligence Layers</span>
+          </div>
+          <div className="px-4 py-2 border-b border-border/50">
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {totalActive} / {layerConfigs.length} layers active
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {layerConfigs.map(layer => (
+              <button
+                key={layer.id}
+                onClick={() => toggleLayer(layer.id)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-left transition-all duration-200 ${
+                  layers[layer.id]
+                    ? "bg-primary/10 border border-primary/30"
+                    : "bg-transparent border border-transparent hover:bg-muted/50 hover:border-border/50"
+                }`}
+              >
+                <Checkbox
+                  checked={layers[layer.id]}
+                  onCheckedChange={() => toggleLayer(layer.id)}
+                  className="h-3.5 w-3.5 pointer-events-none"
+                />
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: layers[layer.id] ? layer.color : "#4b5563" }}
+                />
+                <span className={`flex items-center gap-1.5 text-[11px] font-medium ${
+                  layers[layer.id] ? "text-foreground" : "text-muted-foreground"
+                }`}>
+                  {layer.icon}
+                  {layer.label}
                 </span>
-              )}
-            </button>
-          ))}
+                {layer.count !== undefined && layers[layer.id] && (
+                  <span className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {layer.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="px-4 py-2 border-t border-border text-[9px] text-muted-foreground font-mono">
+            WAROS 4D • Multi-Source Intel Globe
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-2 border-t border-border text-[9px] text-muted-foreground font-mono">
-          WAROS 4D • Multi-Source Intel Globe
+        {/* Globe */}
+        <div className="flex-1 relative">
+          <div ref={globeContainerRef} className="w-full h-full" />
+
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/80 backdrop-blur border border-border text-foreground hover:bg-destructive/20 hover:border-destructive/50 hover:text-destructive transition-colors"
+          >
+            <X className="h-4 w-4" />
+            <span className="text-xs font-mono">Close</span>
+          </button>
+
+          {/* Title overlay */}
+          <div className="absolute top-4 left-4 z-10">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-card/80 backdrop-blur border border-primary/30">
+              <Globe className="h-4 w-4 text-primary" />
+              <span className="text-sm font-bold text-foreground">
+                4D <span className="text-primary">MAP</span>
+              </span>
+              <span className="text-[9px] font-mono text-muted-foreground ml-2">
+                LIVE MULTI-SOURCE INTELLIGENCE
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Globe */}
-      <div className="flex-1 relative">
-        <div ref={globeContainerRef} className="w-full h-full" />
+      {/* Bottom Timeline Bar */}
+      <div className="flex-shrink-0 bg-card/95 backdrop-blur border-t border-border">
+        {/* Row 1: Timeline slider + controls */}
+        <div className="flex items-center gap-2 px-3 py-2">
+          {/* Play/Pause */}
+          <button
+            onClick={() => setPlaying(!playing)}
+            className="flex items-center justify-center h-7 w-7 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+          >
+            {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+          </button>
 
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card/80 backdrop-blur border border-border text-foreground hover:bg-destructive/20 hover:border-destructive/50 hover:text-destructive transition-colors"
-        >
-          <X className="h-4 w-4" />
-          <span className="text-xs font-mono">Close</span>
-        </button>
-
-        {/* Title overlay */}
-        <div className="absolute top-4 left-4 z-10">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-card/80 backdrop-blur border border-primary/30">
-            <Globe className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold text-foreground">
-              4D <span className="text-primary">MAP</span>
-            </span>
-            <span className="text-[9px] font-mono text-muted-foreground ml-2">
-              LIVE MULTI-SOURCE INTELLIGENCE
-            </span>
+          {/* Timeline slider with event dots */}
+          <div className="flex-1 relative h-6 flex items-center">
+            {/* Event dots on timeline */}
+            {timelineDots.map((dot, i) => (
+              <div
+                key={i}
+                className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full z-10 pointer-events-none"
+                style={{ left: `${dot.position}%`, backgroundColor: dot.color }}
+                title={dot.label}
+              />
+            ))}
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={timelineValue}
+              onChange={e => setTimelineValue(parseInt(e.target.value))}
+              className="w-full h-1 appearance-none bg-border rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-[0_0_6px_hsl(190_100%_50%/0.5)] [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20"
+            />
           </div>
+        </div>
+
+        {/* Row 2: Speed + Orbit + View controls */}
+        <div className="flex items-center gap-2 px-3 py-1.5 border-t border-border/30">
+          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Speed:</span>
+          {speedOptions.map(s => (
+            <button
+              key={s}
+              onClick={() => setSpeed(s)}
+              className={`px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${
+                speed === s
+                  ? "border-primary/60 bg-primary/15 text-primary"
+                  : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+
+          <div className="w-px h-4 bg-border/50 mx-1" />
+
+          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Orbit:</span>
+          {orbitOptions.map(o => (
+            <button
+              key={o}
+              onClick={() => setOrbitMode(o)}
+              className={`px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${
+                orbitMode === o
+                  ? "border-primary/60 bg-primary/15 text-primary"
+                  : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+
+          <div className="w-px h-4 bg-border/50 mx-1" />
+
+          <span className="text-[9px] font-mono text-muted-foreground">3°/s</span>
+          <span className="text-[9px] font-mono text-primary ml-1">Tehran</span>
+        </div>
+
+        {/* Row 3: Layer chips */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-border/30 flex-wrap">
+          {chipLayers.map(chip => (
+            <button
+              key={chip.id}
+              onClick={() => toggleLayer(chip.id)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[10px] font-mono transition-colors ${
+                layers[chip.id]
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground"
+              }`}
+            >
+              {chip.icon}
+              {chip.label}
+            </button>
+          ))}
+
+          <div className="w-px h-4 bg-border/50 mx-1" />
+
+          <button className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground text-[10px] font-mono transition-colors">
+            <Eye className="h-3 w-3" /> Ground Truth Cards
+          </button>
+          <button className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground text-[10px] font-mono transition-colors">
+            VHF Intercept
+          </button>
+        </div>
+
+        {/* Row 4: Event type legend */}
+        <div className="flex items-center gap-3 px-3 py-1.5 border-t border-border/30">
+          {eventTypes.map(evt => (
+            <div key={evt.label} className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color }} />
+              <span className="text-[9px] font-mono text-muted-foreground">{evt.label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
