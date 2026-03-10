@@ -579,13 +579,29 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // FLIGHTS — bigger markers
+    // FLIGHTS — type-specific icons and labels
     if (layers.flights && panopticFlights) {
       allFlights.forEach((f: any) => {
-        const isMil = f.military || f.callsign?.match(/^(RCH|EVAC|DUKE|REAC|NAVY|JAKE|RRR)/i);
+        const isMil = f.military || f.callsign?.match(/^(RCH|EVAC|DUKE|REAC|NAVY|JAKE|RRR|FORTE|VADER|IAM)/i);
         if (!layers.militaryFlights && isMil) return;
-        points.push({ lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.05, color: isMil ? "#ef4444" : "#00d4ff", radius: (isMil ? 0.18 : 0.1) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${isMil ? "#ef4444" : "#00d4ff"};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${isMil ? "#ef4444" : "#00d4ff"};font-weight:bold">✈ ${isMil ? "MIL" : "CIV"} ${f.callsign || "UNKNOWN"}</div><div>${f.origin_country || ""} • ${f.velocity ? Math.round(f.velocity * 3.6) + "km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"}</div></div>` });
+        const acType = (f.type || "").toUpperCase();
+        // Determine icon based on aircraft type
+        let icon = isMil ? "🎖" : "✈️";
+        let typeLabel = isMil ? "MILITARY" : "AIRLINER";
+        if (acType.includes("F-15") || acType.includes("F-16") || acType.includes("F-35") || acType.includes("F-22") || acType.includes("SU-") || acType.includes("MIG")) { icon = "🔴"; typeLabel = "FIGHTER"; }
+        else if (acType.includes("C-17") || acType.includes("C-130") || acType.includes("C-5") || acType.includes("AN-")) { icon = "📦"; typeLabel = "TRANSPORT"; }
+        else if (acType.includes("KC-") || acType.includes("TANKER")) { icon = "⛽"; typeLabel = "TANKER"; }
+        else if (acType.includes("P-8") || acType.includes("P-3")) { icon = "🔍"; typeLabel = "MPA/ASW"; }
+        else if (acType.includes("RQ-") || acType.includes("MQ-") || acType.includes("HERON") || acType.includes("HERMES")) { icon = "👁"; typeLabel = "UAV/DRONE"; }
+        else if (acType.includes("E-3") || acType.includes("E-2") || acType.includes("E-8")) { icon = "📡"; typeLabel = "AWACS"; }
+        else if (acType.includes("B7") || acType.includes("B73") || acType.includes("B77") || acType.includes("B78") || acType.includes("B787")) { icon = "✈️"; typeLabel = "BOEING"; }
+        else if (acType.includes("A3") || acType.includes("A32") || acType.includes("A33") || acType.includes("A35") || acType.includes("A38")) { icon = "✈️"; typeLabel = "AIRBUS"; }
+        else if (acType.includes("HELI") || acType.includes("H60") || acType.includes("AH-") || acType.includes("UH-") || acType.includes("CH-")) { icon = "🚁"; typeLabel = "HELICOPTER"; }
+        const col = isMil ? "#ef4444" : "#00d4ff";
+        const hdg = f.heading ? `HDG ${Math.round(f.heading)}°` : "";
+        const route = f.route ? `<div style="color:#aaa;font-size:8px;margin-top:1px">📍 ${f.route}</div>` : "";
+        points.push({ lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.05, color: col, radius: (isMil ? 0.18 : 0.1) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${col}25"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> ${typeLabel} — ${f.callsign || "UNKNOWN"}</div><div style="font-size:9px;margin-top:2px">${acType || "—"} • ${f.airline || f.origin_country || ""}</div><div style="color:#888;font-size:8px;margin-top:1px">${f.velocity ? Math.round(f.velocity * 3.6) + " km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"} • ${hdg}</div>${route}</div>` });
       });
     }
 
