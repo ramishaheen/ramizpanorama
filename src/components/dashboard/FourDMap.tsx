@@ -147,20 +147,25 @@ const EMULATED_SATELLITES: SatPoint[] = [
 ];
 
 const EMULATED_FLIGHTS = [
-  { callsign: "UAE321", lat: 25.25, lng: 55.36, velocity: 250, baro_altitude: 11000, origin_country: "UAE", military: false },
-  { callsign: "QTR804", lat: 25.27, lng: 51.61, velocity: 240, baro_altitude: 10500, origin_country: "Qatar", military: false },
-  { callsign: "MEA322", lat: 33.82, lng: 35.49, velocity: 220, baro_altitude: 8500, origin_country: "Lebanon", military: false },
-  { callsign: "THY761", lat: 40.98, lng: 29.00, velocity: 260, baro_altitude: 12000, origin_country: "Turkey", military: false },
-  { callsign: "SVA114", lat: 24.75, lng: 46.70, velocity: 230, baro_altitude: 9800, origin_country: "Saudi Arabia", military: false },
-  { callsign: "IRA423", lat: 35.68, lng: 51.31, velocity: 210, baro_altitude: 7000, origin_country: "Iran", military: false },
-  { callsign: "RCH871", lat: 25.05, lng: 51.28, velocity: 280, baro_altitude: 13000, origin_country: "USA", military: true },
-  { callsign: "DUKE41", lat: 32.10, lng: 34.85, velocity: 190, baro_altitude: 6500, origin_country: "Israel", military: true },
-  { callsign: "REAC22", lat: 37.05, lng: 35.50, velocity: 300, baro_altitude: 14000, origin_country: "USA", military: true },
-  { callsign: "NAVY6", lat: 26.50, lng: 56.10, velocity: 170, baro_altitude: 3000, origin_country: "USA", military: true },
-  { callsign: "MSR201", lat: 30.10, lng: 31.30, velocity: 240, baro_altitude: 10000, origin_country: "Egypt", military: false },
-  { callsign: "GFA231", lat: 26.10, lng: 50.60, velocity: 220, baro_altitude: 8800, origin_country: "Bahrain", military: false },
-  { callsign: "KAC155", lat: 29.20, lng: 47.95, velocity: 235, baro_altitude: 9500, origin_country: "Kuwait", military: false },
-  { callsign: "ETD403", lat: 24.45, lng: 54.65, velocity: 250, baro_altitude: 11500, origin_country: "UAE", military: false },
+  // Commercial airliners
+  { callsign: "UAE321", lat: 25.25, lng: 55.36, velocity: 250, baro_altitude: 11000, origin_country: "UAE", military: false, type: "A380", airline: "Emirates", heading: 315, route: "DXB→LHR" },
+  { callsign: "QTR804", lat: 25.27, lng: 51.61, velocity: 240, baro_altitude: 10500, origin_country: "Qatar", military: false, type: "B777", airline: "Qatar Airways", heading: 290, route: "DOH→CDG" },
+  { callsign: "MEA322", lat: 33.82, lng: 35.49, velocity: 220, baro_altitude: 8500, origin_country: "Lebanon", military: false, type: "A321", airline: "MEA", heading: 180, route: "BEY→CAI" },
+  { callsign: "THY761", lat: 40.98, lng: 29.00, velocity: 260, baro_altitude: 12000, origin_country: "Turkey", military: false, type: "B738", airline: "Turkish Airlines", heading: 120, route: "IST→DXB" },
+  { callsign: "SVA114", lat: 24.75, lng: 46.70, velocity: 230, baro_altitude: 9800, origin_country: "Saudi Arabia", military: false, type: "B789", airline: "Saudia", heading: 340, route: "RUH→LHR" },
+  { callsign: "IRA423", lat: 35.68, lng: 51.31, velocity: 210, baro_altitude: 7000, origin_country: "Iran", military: false, type: "A310", airline: "Iran Air", heading: 245, route: "IKA→IST" },
+  { callsign: "MSR201", lat: 30.10, lng: 31.30, velocity: 240, baro_altitude: 10000, origin_country: "Egypt", military: false, type: "B738", airline: "EgyptAir", heading: 45, route: "CAI→AMM" },
+  { callsign: "GFA231", lat: 26.10, lng: 50.60, velocity: 220, baro_altitude: 8800, origin_country: "Bahrain", military: false, type: "A320", airline: "Gulf Air", heading: 200, route: "BAH→MCT" },
+  { callsign: "KAC155", lat: 29.20, lng: 47.95, velocity: 235, baro_altitude: 9500, origin_country: "Kuwait", military: false, type: "B777", airline: "Kuwait Airways", heading: 310, route: "KWI→LHR" },
+  { callsign: "ETD403", lat: 24.45, lng: 54.65, velocity: 250, baro_altitude: 11500, origin_country: "UAE", military: false, type: "A350", airline: "Etihad", heading: 330, route: "AUH→JFK" },
+  // Military — C-17, F-15, P-8, tanker, drone
+  { callsign: "RCH871", lat: 25.05, lng: 51.28, velocity: 280, baro_altitude: 13000, origin_country: "USA", military: true, type: "C-17", airline: "USAF", heading: 270, route: "Al Udeid→Ramstein" },
+  { callsign: "DUKE41", lat: 32.10, lng: 34.85, velocity: 190, baro_altitude: 6500, origin_country: "Israel", military: true, type: "F-15I", airline: "IAF", heading: 30, route: "CAP Patrol" },
+  { callsign: "REAC22", lat: 37.05, lng: 35.50, velocity: 300, baro_altitude: 14000, origin_country: "USA", military: true, type: "KC-135", airline: "USAF", heading: 90, route: "Tanker Track" },
+  { callsign: "NAVY6", lat: 26.50, lng: 56.10, velocity: 170, baro_altitude: 3000, origin_country: "USA", military: true, type: "P-8A", airline: "USN", heading: 180, route: "ASW Patrol — Hormuz" },
+  { callsign: "FORTE12", lat: 34.00, lng: 40.00, velocity: 320, baro_altitude: 18000, origin_country: "USA", military: true, type: "RQ-4", airline: "USAF", heading: 60, route: "ISR — Syria" },
+  { callsign: "VADER01", lat: 33.50, lng: 43.00, velocity: 150, baro_altitude: 5000, origin_country: "USA", military: true, type: "MQ-9", airline: "USAF", heading: 145, route: "ISR — Iraq" },
+  { callsign: "IAM3101", lat: 41.80, lng: 12.50, velocity: 260, baro_altitude: 12000, origin_country: "Italy", military: true, type: "KC-767", airline: "AMI", heading: 100, route: "Tanker Orbit" },
 ];
 
 const EMULATED_VESSELS = [
@@ -448,53 +453,76 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { lat: 34.0, lng: 43.5, label: "Central Iraq", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 18 },
   ], []);
 
-  // Emulated OSINT events
+  // Emulated OSINT events with category-specific icons
   const emulatedEvents = useMemo(() => [
-    { lat: 33.5, lng: 36.3, type: "Airstrike", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs", severity: "critical" as const },
-    { lat: 32.6, lng: 44.0, type: "IED", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road", severity: "high" as const },
-    { lat: 15.3, lng: 44.2, type: "Drone Strike", color: "#ef4444", ts: Date.now() - 3600000 * 1, label: "UAV strike — Sanaa outskirts", severity: "critical" as const },
-    { lat: 31.5, lng: 34.5, type: "Rocket Barrage", color: "#dc2626", ts: Date.now() - 3600000 * 3, label: "Rocket barrage — Gaza border", severity: "critical" as const },
-    { lat: 36.3, lng: 43.1, type: "Recon Overflight", color: "#00d4ff", ts: Date.now() - 3600000 * 7, label: "ISR overflight — Mosul", severity: "low" as const },
-    { lat: 34.9, lng: 51.3, type: "Centrifuge Activity", color: "#a855f7", ts: Date.now() - 3600000 * 9, label: "Fordow — unusual activity", severity: "high" as const },
-    { lat: 29.2, lng: 50.3, type: "Naval Movement", color: "#22c55e", ts: Date.now() - 3600000 * 4, label: "IRGCN fast boats — Kharg", severity: "medium" as const },
-    { lat: 25.3, lng: 55.3, type: "Cyber Incident", color: "#e879f9", ts: Date.now() - 3600000 * 11, label: "Cyber probe — Dubai infrastructure", severity: "medium" as const },
-    { lat: 33.3, lng: 44.4, type: "Protest", color: "#eab308", ts: Date.now() - 3600000 * 6, label: "Mass gathering — Baghdad", severity: "low" as const },
-    { lat: 37.0, lng: 35.4, type: "Military Buildup", color: "#ef4444", ts: Date.now() - 3600000 * 14, label: "Armor movement — Incirlik", severity: "high" as const },
-    { lat: 30.1, lng: 31.4, type: "Border Incident", color: "#f97316", ts: Date.now() - 3600000 * 16, label: "Sinai border clash", severity: "medium" as const },
-    { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb", severity: "medium" as const },
-    { lat: 35.7, lng: 51.4, type: "SIGINT Spike", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran", severity: "high" as const },
-    { lat: 24.7, lng: 46.7, type: "Air Defense Test", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh", severity: "medium" as const },
-    { lat: 32.1, lng: 34.8, type: "Iron Dome Activation", color: "#ef4444", ts: Date.now() - 3600000 * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
-    { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", color: "#f97316", ts: Date.now() - 3600000 * 3.5, label: "Security alert — Ras Tanura", severity: "high" as const },
-    { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", color: "#dc2626", ts: Date.now() - 3600000 * 1.5, label: "Convoy movement — South Lebanon", severity: "critical" as const },
-    { lat: 36.8, lng: 40.5, type: "Kurdish Clash", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const },
+    { lat: 33.5, lng: 36.3, type: "Airstrike", icon: "💥", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs", severity: "critical" as const },
+    { lat: 32.6, lng: 44.0, type: "IED", icon: "💣", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road", severity: "high" as const },
+    { lat: 15.3, lng: 44.2, type: "Drone Strike", icon: "👁", color: "#ef4444", ts: Date.now() - 3600000 * 1, label: "UAV strike — Sanaa outskirts", severity: "critical" as const },
+    { lat: 31.5, lng: 34.5, type: "Rocket Barrage", icon: "🚀", color: "#dc2626", ts: Date.now() - 3600000 * 3, label: "Rocket barrage — Gaza border", severity: "critical" as const },
+    { lat: 36.3, lng: 43.1, type: "Recon Overflight", icon: "✈️", color: "#00d4ff", ts: Date.now() - 3600000 * 7, label: "ISR overflight — Mosul", severity: "low" as const },
+    { lat: 34.9, lng: 51.3, type: "Centrifuge Activity", icon: "⚛️", color: "#a855f7", ts: Date.now() - 3600000 * 9, label: "Fordow — unusual centrifuge activity", severity: "high" as const },
+    { lat: 29.2, lng: 50.3, type: "Naval Movement", icon: "⚓", color: "#22c55e", ts: Date.now() - 3600000 * 4, label: "IRGCN fast boats — Kharg Island", severity: "medium" as const },
+    { lat: 25.3, lng: 55.3, type: "Cyber Incident", icon: "🖥", color: "#e879f9", ts: Date.now() - 3600000 * 11, label: "Cyber probe — Dubai infrastructure", severity: "medium" as const },
+    { lat: 33.3, lng: 44.4, type: "Protest", icon: "✊", color: "#eab308", ts: Date.now() - 3600000 * 6, label: "Mass gathering — Baghdad", severity: "low" as const },
+    { lat: 37.0, lng: 35.4, type: "Military Buildup", icon: "🪖", color: "#ef4444", ts: Date.now() - 3600000 * 14, label: "Armor movement — Incirlik", severity: "high" as const },
+    { lat: 30.1, lng: 31.4, type: "Border Incident", icon: "🚧", color: "#f97316", ts: Date.now() - 3600000 * 16, label: "Sinai border clash", severity: "medium" as const },
+    { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", icon: "🚢", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb", severity: "medium" as const },
+    { lat: 35.7, lng: 51.4, type: "SIGINT Spike", icon: "📡", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran", severity: "high" as const },
+    { lat: 24.7, lng: 46.7, type: "Air Defense Test", icon: "🛡", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh", severity: "medium" as const },
+    { lat: 32.1, lng: 34.8, type: "Iron Dome Activation", icon: "🛡", color: "#ef4444", ts: Date.now() - 3600000 * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
+    { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", icon: "🛢", color: "#f97316", ts: Date.now() - 3600000 * 3.5, label: "Security alert — Ras Tanura", severity: "high" as const },
+    { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", icon: "🎯", color: "#dc2626", ts: Date.now() - 3600000 * 1.5, label: "Convoy movement — South Lebanon", severity: "critical" as const },
+    { lat: 36.8, lng: 40.5, type: "Kurdish Clash", icon: "⚔️", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const },
   ], []);
 
-  // Unified event feed
+  // Unified event feed with icons
+  const getEventIcon = (type: string) => {
+    const t = type.toLowerCase();
+    if (t.includes("airstrike") || t.includes("strike")) return "💥";
+    if (t.includes("ied") || t.includes("bomb") || t.includes("explosion")) return "💣";
+    if (t.includes("drone") || t.includes("uav")) return "👁";
+    if (t.includes("rocket") || t.includes("missile")) return "🚀";
+    if (t.includes("earthquake") || t.includes("seismic")) return "🌍";
+    if (t.includes("fire") || t.includes("thermal")) return "🔥";
+    if (t.includes("naval") || t.includes("maritime") || t.includes("vessel")) return "⚓";
+    if (t.includes("cyber")) return "🖥";
+    if (t.includes("protest") || t.includes("gather")) return "✊";
+    if (t.includes("military") || t.includes("buildup") || t.includes("armor")) return "🪖";
+    if (t.includes("sigint") || t.includes("gps") || t.includes("jam")) return "📡";
+    if (t.includes("nuclear") || t.includes("centrifuge")) return "⚛️";
+    if (t.includes("iron dome") || t.includes("air defense") || t.includes("intercept")) return "🛡";
+    if (t.includes("border")) return "🚧";
+    if (t.includes("oil") || t.includes("tanker")) return "🛢";
+    if (t.includes("hezbollah") || t.includes("convoy") || t.includes("movement")) return "🎯";
+    if (t.includes("battle") || t.includes("clash") || t.includes("skirmish")) return "⚔️";
+    if (t.includes("recon") || t.includes("overflight") || t.includes("isr")) return "✈️";
+    return "📌";
+  };
+
   const unifiedFeed = useMemo(() => {
     const cutoff = timelineTimestamp;
-    const feed: { id: string; ts: number; type: string; label: string; lat: number; lng: number; severity: string; color: string; source: string }[] = [];
-    emulatedEvents.forEach((ev, i) => { if (ev.ts <= cutoff) feed.push({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT" }); });
+    const feed: { id: string; ts: number; type: string; label: string; lat: number; lng: number; severity: string; color: string; source: string; icon: string }[] = [];
+    emulatedEvents.forEach((ev, i) => { if (ev.ts <= cutoff) feed.push({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT", icon: ev.icon }); });
     if (geoFusionData?.events) {
       geoFusionData.events.forEach((ev, i) => {
         const evTs = new Date(ev.timestamp).getTime();
         const sev = ev.severity >= 4 ? "critical" : ev.severity >= 3 ? "high" : ev.severity >= 2 ? "medium" : "low";
         const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
-        feed.push({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION" });
+        feed.push({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION", icon: getEventIcon(ev.event_type) });
       });
     }
     conflictEvents.forEach((ev, i) => {
       const evTs = new Date(ev.event_date).getTime();
       const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
-      feed.push({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED" });
+      feed.push({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED", icon: getEventIcon(ev.event_type) });
     });
     earthquakes.forEach((eq, i) => {
       const eqTs = (eq as any).time || Date.now() - i * 600000;
       const sev = eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 3 ? "medium" : "low";
-      feed.push({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS" });
+      feed.push({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS", icon: "🌍" });
     });
     gpsJammingZones.forEach((z, i) => {
-      if (z.ts <= cutoff) feed.push({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT" });
+      if (z.ts <= cutoff) feed.push({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT", icon: "📡" });
     });
     feed.sort((a, b) => b.ts - a.ts);
     return feed.slice(0, 60);
@@ -525,62 +553,85 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     const points: any[] = [];
     const cutoff = timelineTimestamp;
 
-    // EARTHQUAKES — always visible, larger markers
+    // EARTHQUAKES — seismic wave icon, scaled by magnitude
     if (layers.earthquakes) {
       earthquakes.forEach(eq => {
         const eqTime = (eq as any).time || Date.now();
         if (eqTime > cutoff) return;
         const col = eq.magnitude >= 5 ? "#ef4444" : eq.magnitude >= 3 ? "#ff6b00" : "#fbbf24";
-        points.push({ lat: eq.lat, lng: eq.lng, pointAlt: 0.01, color: col, radius: Math.max(0.25, eq.magnitude * 0.12) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">⚠ SEISMIC M${eq.magnitude}</div><div>${eq.place}</div><div style="color:#888;font-size:9px">${eq.lat.toFixed(2)}°, ${eq.lng.toFixed(2)}° • ${eq.depth}km deep</div></div>` });
+        const sevIcon = eq.magnitude >= 5 ? "🔴" : eq.magnitude >= 3 ? "🟠" : "🟡";
+        const alertStr = (eq as any).alert ? `<div style="color:#ef4444;font-size:8px;margin-top:1px">⚠ ALERT: ${(eq as any).alert.toUpperCase()}</div>` : "";
+        points.push({ lat: eq.lat, lng: eq.lng, pointAlt: 0.01, color: col, radius: Math.max(0.3, eq.magnitude * 0.15) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sevIcon}</span> SEISMIC M${eq.magnitude}</div><div style="font-size:9px;margin-top:2px">📍 ${eq.place}</div><div style="color:#888;font-size:8px;margin-top:1px">${eq.lat.toFixed(2)}°, ${eq.lng.toFixed(2)}° • ${eq.depth}km deep${eq.felt ? ` • Felt: ${eq.felt}` : ""}</div>${alertStr}</div>` });
       });
     }
 
-    // WILDFIRES — larger, brighter
+    // WILDFIRES — fire icon, sized by FRP
     if (layers.wildfires) {
       wildfires.forEach(f => {
-        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: f.frp > 50 ? "#ff2200" : "#ff6600", radius: Math.max(0.2, f.brightness / 300) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #ff4500;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#ff4500;font-weight:bold">🔥 THERMAL ${f.frp}MW</div><div>${(f as any).region || ""} • ${f.confidence}</div><div style="color:#888;font-size:9px">FIRMS • ${f.date} ${f.time}</div></div>` });
+        const isIntense = f.frp > 50;
+        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: isIntense ? "#ff2200" : "#ff6600", radius: Math.max(0.25, f.brightness / 250) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${isIntense ? "#ff2200" : "#ff6600"};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px rgba(255,69,0,0.2)"><div style="color:${isIntense ? "#ff2200" : "#ff6600"};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">🔥</span> THERMAL ANOMALY</div><div style="font-size:9px;margin-top:2px">${(f as any).region || "Unknown"} • FRP: ${f.frp}MW</div><div style="color:#888;font-size:8px;margin-top:1px">Confidence: ${f.confidence} • Brightness: ${f.brightness}K</div><div style="color:#666;font-size:8px">FIRMS/VIIRS • ${f.date} ${f.time} UTC</div></div>` });
       });
     }
 
-    // CONFLICTS
+    // CONFLICTS — event-type specific icons
     if (layers.conflicts && conflictEvents.length) {
       conflictEvents.forEach(ev => {
         const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
+        const evType = (ev.event_type || "").toLowerCase();
+        const cIcon = evType.includes("battle") ? "⚔️" : evType.includes("explosion") ? "💥" : evType.includes("protest") ? "✊" : evType.includes("riot") ? "🔥" : evType.includes("violence") ? "⚠️" : "🎯";
         points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.02, color: col, radius: 0.35 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">⚔ ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.fatalities > 0 ? `${ev.fatalities} fatalities • ` : ""}${ev.source}</div></div>` });
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> ${ev.event_type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">📍 ${ev.location}, ${ev.country}</div><div style="color:#888;font-size:8px;margin-top:1px">${ev.fatalities > 0 ? `💀 ${ev.fatalities} fatalities • ` : ""}Source: ${ev.source}</div></div>` });
       });
     }
 
-    // NUCLEAR
+    // NUCLEAR — radiation symbol with facility details
     if (layers.nuclear) {
       nuclearStations.forEach(st => {
-        points.push({ lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.25 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#a855f7;font-weight:bold">☢ ${st.name}</div><div>${st.country} • ${st.dose_rate} ${st.unit}</div></div>` });
+        points.push({ lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.3 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(168,85,247,0.2)"><div style="color:#a855f7;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">☢️</span> RADIATION MONITOR</div><div style="font-size:9px;margin-top:2px">${st.name}</div><div style="color:#888;font-size:8px;margin-top:1px">📊 ${st.dose_rate} ${st.unit} • ${st.country}</div></div>` });
       });
       nuclearFacilities.forEach(fac => {
-        points.push({ lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.3 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">⚛ ${fac.name}</div><div>${fac.country} • ${fac.type} • ${fac.status}</div></div>` });
+        points.push({ lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(232,121,249,0.2)"><div style="color:#e879f9;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">⚛️</span> NUCLEAR FACILITY</div><div style="font-size:9px;margin-top:2px">${fac.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${fac.country} • ${fac.type} • Status: ${fac.status}</div></div>` });
       });
     }
 
-    // MARITIME — bigger markers
+    // MARITIME — type-specific vessel icons
     if (layers.maritime && panopticMaritime) {
       aisVessels.forEach((v: any) => {
-        const col = v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : "#22c55e";
-        points.push({ lat: v.lat, lng: v.lng, pointAlt: 0.005, color: col, radius: 0.2 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">🚢 ${v.type}</div><div>${v.name} (${v.flag})</div><div style="color:#888;font-size:9px">${v.speed}kn → ${v.destination || "—"}</div></div>` });
+        const col = v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : v.type === "FISHING" ? "#22d3ee" : "#22c55e";
+        const vIcon = v.type === "MILITARY" ? "⚓" : v.type === "TANKER" ? "🛢" : v.type === "CARGO" ? "📦" : v.type === "FISHING" ? "🎣" : "🚢";
+        const vLabel = v.type === "MILITARY" ? "WARSHIP" : v.type === "TANKER" ? "OIL TANKER" : v.type === "CARGO" ? "CARGO VESSEL" : v.type === "FISHING" ? "FISHING" : "VESSEL";
+        points.push({ lat: v.lat, lng: v.lng, pointAlt: 0.005, color: col, radius: (v.type === "MILITARY" ? 0.25 : 0.18) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${vIcon}</span> ${vLabel}</div><div style="font-size:10px;margin-top:2px">${v.name} <span style="color:#888">(${v.flag})</span></div><div style="color:#888;font-size:8px;margin-top:1px">${v.speed}kn • HDG ${v.heading}° → ${v.destination || "—"}</div></div>` });
       });
     }
 
-    // FLIGHTS — bigger markers
+    // FLIGHTS — type-specific icons and labels
     if (layers.flights && panopticFlights) {
       allFlights.forEach((f: any) => {
-        const isMil = f.military || f.callsign?.match(/^(RCH|EVAC|DUKE|REAC|NAVY|JAKE|RRR)/i);
+        const isMil = f.military || f.callsign?.match(/^(RCH|EVAC|DUKE|REAC|NAVY|JAKE|RRR|FORTE|VADER|IAM)/i);
         if (!layers.militaryFlights && isMil) return;
-        points.push({ lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.05, color: isMil ? "#ef4444" : "#00d4ff", radius: (isMil ? 0.18 : 0.1) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${isMil ? "#ef4444" : "#00d4ff"};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${isMil ? "#ef4444" : "#00d4ff"};font-weight:bold">✈ ${isMil ? "MIL" : "CIV"} ${f.callsign || "UNKNOWN"}</div><div>${f.origin_country || ""} • ${f.velocity ? Math.round(f.velocity * 3.6) + "km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"}</div></div>` });
+        const acType = (f.type || "").toUpperCase();
+        // Determine icon based on aircraft type
+        let icon = isMil ? "🎖" : "✈️";
+        let typeLabel = isMil ? "MILITARY" : "AIRLINER";
+        if (acType.includes("F-15") || acType.includes("F-16") || acType.includes("F-35") || acType.includes("F-22") || acType.includes("SU-") || acType.includes("MIG")) { icon = "🔴"; typeLabel = "FIGHTER"; }
+        else if (acType.includes("C-17") || acType.includes("C-130") || acType.includes("C-5") || acType.includes("AN-")) { icon = "📦"; typeLabel = "TRANSPORT"; }
+        else if (acType.includes("KC-") || acType.includes("TANKER")) { icon = "⛽"; typeLabel = "TANKER"; }
+        else if (acType.includes("P-8") || acType.includes("P-3")) { icon = "🔍"; typeLabel = "MPA/ASW"; }
+        else if (acType.includes("RQ-") || acType.includes("MQ-") || acType.includes("HERON") || acType.includes("HERMES")) { icon = "👁"; typeLabel = "UAV/DRONE"; }
+        else if (acType.includes("E-3") || acType.includes("E-2") || acType.includes("E-8")) { icon = "📡"; typeLabel = "AWACS"; }
+        else if (acType.includes("B7") || acType.includes("B73") || acType.includes("B77") || acType.includes("B78") || acType.includes("B787")) { icon = "✈️"; typeLabel = "BOEING"; }
+        else if (acType.includes("A3") || acType.includes("A32") || acType.includes("A33") || acType.includes("A35") || acType.includes("A38")) { icon = "✈️"; typeLabel = "AIRBUS"; }
+        else if (acType.includes("HELI") || acType.includes("H60") || acType.includes("AH-") || acType.includes("UH-") || acType.includes("CH-")) { icon = "🚁"; typeLabel = "HELICOPTER"; }
+        const col = isMil ? "#ef4444" : "#00d4ff";
+        const hdg = f.heading ? `HDG ${Math.round(f.heading)}°` : "";
+        const route = f.route ? `<div style="color:#aaa;font-size:8px;margin-top:1px">📍 ${f.route}</div>` : "";
+        points.push({ lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.05, color: col, radius: (isMil ? 0.18 : 0.1) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${col}25"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> ${typeLabel} — ${f.callsign || "UNKNOWN"}</div><div style="font-size:9px;margin-top:2px">${acType || "—"} • ${f.airline || f.origin_country || ""}</div><div style="color:#888;font-size:8px;margin-top:1px">${f.velocity ? Math.round(f.velocity * 3.6) + " km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"} • ${hdg}</div>${route}</div>` });
       });
     }
 
@@ -613,11 +664,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // EMULATED OSINT EVENTS — always rendered, timeline filtered
+    // EMULATED OSINT EVENTS — with category-specific icons, timeline filtered
     emulatedEvents.forEach(ev => {
       if (ev.ts > cutoff) return;
       points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.022, color: ev.color, radius: 0.3 * densityMult,
-        label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${ev.color};font-weight:bold">🎯 ${ev.type.toUpperCase()}</div><div>${ev.label}</div><div style="color:#888;font-size:9px">${new Date(ev.ts).toISOString().replace("T"," ").slice(0,19)} UTC</div></div>` });
+        label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${ev.color}20"><div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px;margin-top:1px">${new Date(ev.ts).toISOString().replace("T"," ").slice(0,19)} UTC</div></div>` });
     });
 
     console.log(`[4D] Rendering ${points.length} points on globe`);
@@ -921,7 +972,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
                   className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[8px] font-mono font-bold truncate" style={{ color: ev.color }}>{ev.type.toUpperCase()}</span>
+                    <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
+                      <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
+                    </span>
                     <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
                   </div>
                   <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
