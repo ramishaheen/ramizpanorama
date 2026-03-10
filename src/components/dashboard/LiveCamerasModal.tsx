@@ -948,6 +948,15 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           <span className="text-[8px] text-gray-700">OSINT COMPLIANT • ESC TO CLOSE</span>
         </div>
       </div>
+
+      {/* Camera Details Popup */}
+      {detailsCamera && (
+        <CameraDetailsPopup
+          camera={detailsCamera}
+          onClose={() => setDetailsCamera(null)}
+          onShowOnMap={onShowOnMap}
+        />
+      )}
     </div>,
     document.body
   );
