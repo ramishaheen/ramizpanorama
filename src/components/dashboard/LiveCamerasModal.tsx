@@ -1000,6 +1000,13 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                       <Crosshair className="h-3 w-3" /> MAP
                     </button>
                   )}
+                  <button onClick={() => { analyzeCamera(selectedCamera.id); setAiPanelOpen(true); }}
+                    disabled={!!analyzing}
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-purple-400 font-bold hover:bg-purple-500/10 transition-all"
+                    style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.25)" }}>
+                    {analyzing === selectedCamera.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+                    {analyzing === selectedCamera.id ? "ANALYZING..." : "AI ANALYZE"}
+                  </button>
                   <button className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-amber-400 font-bold hover:bg-amber-500/10 transition-all"
                     style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}>
                     <AlertTriangle className="h-3 w-3" /> REPORT
