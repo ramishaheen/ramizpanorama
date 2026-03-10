@@ -341,6 +341,49 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
       syncMapState();
       mapInstanceRef.current = map;
+
+      // Add glowing pin for Snap Me / Intel event target
+      if (initialEvent) {
+        const pinEl = document.createElement("div");
+        pinEl.innerHTML = `
+          <div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(0,200,255,0.5) 0%,transparent 70%);animation:snapPulse 2s ease-in-out infinite;"></div>
+            <div style="position:absolute;inset:6px;border-radius:50%;background:radial-gradient(circle,rgba(0,200,255,0.35) 0%,transparent 70%);animation:snapPulse 2s ease-in-out infinite 0.5s;"></div>
+            <div style="width:16px;height:16px;border-radius:50%;background:hsl(190,100%,50%);border:2.5px solid white;box-shadow:0 0 12px rgba(0,200,255,0.9),0 0 24px rgba(0,200,255,0.5);position:relative;z-index:2;"></div>
+          </div>
+        `;
+        // Inject keyframes if not already present
+        if (!document.getElementById("snap-pulse-keyframes")) {
+          const style = document.createElement("style");
+          style.id = "snap-pulse-keyframes";
+          style.textContent = \`@keyframes snapPulse { 0%,100% { transform:scale(1);opacity:1; } 50% { transform:scale(1.6);opacity:0; } }\`;
+          document.head.appendChild(style);
+        }
+        const { AdvancedMarkerElement } = google.maps.marker;
+        if (AdvancedMarkerElement) {
+          new AdvancedMarkerElement({
+            map,
+            position: { lat: initialEvent.lat, lng: initialEvent.lng },
+            content: pinEl,
+            title: initialEvent.title || "Snap Me Location",
+          });
+        } else {
+          // Fallback to standard marker
+          new google.maps.Marker({
+            map,
+            position: { lat: initialEvent.lat, lng: initialEvent.lng },
+            title: initialEvent.title || "Snap Me Location",
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              fillColor: "#00c8ff",
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2,
+              scale: 10,
+            },
+          });
+        }
+      }
     };
 
     if ((window as any).google?.maps) {
