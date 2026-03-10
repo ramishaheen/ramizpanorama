@@ -155,6 +155,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
       </header>
       <WarChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
       {showLiveChannels && <LiveChannelsModal onClose={() => setShowLiveChannels(false)} />}
+      {show4DMap && <FourDMap onClose={() => setShow4DMap(false)} rockets={rockets} />}
     </>
   );
 };
