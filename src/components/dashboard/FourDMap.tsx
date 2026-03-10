@@ -682,16 +682,18 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     console.log(`[4D] Rendering ${points.length} points on globe`);
     globe.pointsData(points);
 
-    // SATELLITES — render as visible colored points on globe + 3D objects for labels
+    // SATELLITES — render with 🛰️ icon and orbital info
     if (layers.satellites && panopticSats && allSatellites.length) {
       allSatellites.forEach(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         const isMil = s.category === "Military" || s.category === "Early Warning";
         const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : s.category === "Space Station" ? "#ffffff" : s.category === "Starlink" ? "#888888" : "#666666";
+        const catIcon = isMil ? "🛰️" : s.category === "Earth Observation" ? "🛰️" : s.category === "Navigation" ? "📡" : s.category === "Weather" ? "🌤️" : s.category === "Space Station" ? "🏠" : s.category === "Starlink" ? "⭐" : "🛰️";
+        const period = (1440 / s.meanMotion).toFixed(0);
         points.push({
           lat: s.lat, lng: s.lng, pointAlt: Math.min(s.alt / 6371 * 0.15, 0.8),
           color: satCol, radius: (isISR ? 0.18 : isMil ? 0.14 : 0.08) * densityMult,
-          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}30"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol}">◆</span><span style="color:${satCol};font-weight:bold;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}30"><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px">${catIcon}</span><span style="color:${satCol};font-weight:bold;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">🌍 ${Math.round(s.alt)}km • ${s.category}</div><div style="color:#666;font-size:7px;margin-top:1px">Inc ${s.inclination.toFixed(1)}° • Period ${period}min • Ecc ${s.eccentricity.toFixed(4)}</div></div>`,
         });
       });
 
@@ -699,9 +701,10 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       const satObjects = isrSatellites.map(s => {
         const isMil = s.category === "Military" || s.category === "Early Warning";
         const satCol = isMil ? "#ef4444" : "#00d4ff";
+        const catIcon = isMil ? "🛰️" : "🛰️";
         return {
           lat: s.lat, lng: s.lng, alt: s.alt / 6371 * 0.15,
-          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol};font-size:10px">◆</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px">${catIcon}</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">🌍 ${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
         };
       });
       globe.objectsData(satObjects);
