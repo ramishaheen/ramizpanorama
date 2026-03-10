@@ -419,7 +419,8 @@ function ChannelItem({ cam, isSelected, onClick, onDetails, onDoubleClick }: { c
 
   return (
     <div className={`w-full text-left flex gap-2 p-2 rounded-lg transition-all ${isSelected ? "ring-1 ring-cyan-500/40" : "hover:bg-white/[0.03]"}`}
-      style={{ background: isSelected ? "rgba(6,182,212,0.08)" : "transparent", borderBottom: "1px solid rgba(6,182,212,0.05)" }}>
+      style={{ background: isSelected ? "rgba(6,182,212,0.08)" : "transparent", borderBottom: "1px solid rgba(6,182,212,0.05)" }}
+      onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(); }}>
       {/* Thumbnail - clickable to select */}
       <button onClick={onClick} className="w-16 h-10 rounded overflow-hidden flex-shrink-0 relative" style={{ background: "#111827" }}>
         {thumbUrl ? (
