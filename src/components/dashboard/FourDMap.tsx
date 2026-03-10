@@ -453,26 +453,26 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { lat: 34.0, lng: 43.5, label: "Central Iraq", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 18 },
   ], []);
 
-  // Emulated OSINT events
+  // Emulated OSINT events with category-specific icons
   const emulatedEvents = useMemo(() => [
-    { lat: 33.5, lng: 36.3, type: "Airstrike", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs", severity: "critical" as const },
-    { lat: 32.6, lng: 44.0, type: "IED", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road", severity: "high" as const },
-    { lat: 15.3, lng: 44.2, type: "Drone Strike", color: "#ef4444", ts: Date.now() - 3600000 * 1, label: "UAV strike — Sanaa outskirts", severity: "critical" as const },
-    { lat: 31.5, lng: 34.5, type: "Rocket Barrage", color: "#dc2626", ts: Date.now() - 3600000 * 3, label: "Rocket barrage — Gaza border", severity: "critical" as const },
-    { lat: 36.3, lng: 43.1, type: "Recon Overflight", color: "#00d4ff", ts: Date.now() - 3600000 * 7, label: "ISR overflight — Mosul", severity: "low" as const },
-    { lat: 34.9, lng: 51.3, type: "Centrifuge Activity", color: "#a855f7", ts: Date.now() - 3600000 * 9, label: "Fordow — unusual activity", severity: "high" as const },
-    { lat: 29.2, lng: 50.3, type: "Naval Movement", color: "#22c55e", ts: Date.now() - 3600000 * 4, label: "IRGCN fast boats — Kharg", severity: "medium" as const },
-    { lat: 25.3, lng: 55.3, type: "Cyber Incident", color: "#e879f9", ts: Date.now() - 3600000 * 11, label: "Cyber probe — Dubai infrastructure", severity: "medium" as const },
-    { lat: 33.3, lng: 44.4, type: "Protest", color: "#eab308", ts: Date.now() - 3600000 * 6, label: "Mass gathering — Baghdad", severity: "low" as const },
-    { lat: 37.0, lng: 35.4, type: "Military Buildup", color: "#ef4444", ts: Date.now() - 3600000 * 14, label: "Armor movement — Incirlik", severity: "high" as const },
-    { lat: 30.1, lng: 31.4, type: "Border Incident", color: "#f97316", ts: Date.now() - 3600000 * 16, label: "Sinai border clash", severity: "medium" as const },
-    { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb", severity: "medium" as const },
-    { lat: 35.7, lng: 51.4, type: "SIGINT Spike", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran", severity: "high" as const },
-    { lat: 24.7, lng: 46.7, type: "Air Defense Test", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh", severity: "medium" as const },
-    { lat: 32.1, lng: 34.8, type: "Iron Dome Activation", color: "#ef4444", ts: Date.now() - 3600000 * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
-    { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", color: "#f97316", ts: Date.now() - 3600000 * 3.5, label: "Security alert — Ras Tanura", severity: "high" as const },
-    { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", color: "#dc2626", ts: Date.now() - 3600000 * 1.5, label: "Convoy movement — South Lebanon", severity: "critical" as const },
-    { lat: 36.8, lng: 40.5, type: "Kurdish Clash", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const },
+    { lat: 33.5, lng: 36.3, type: "Airstrike", icon: "💥", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs", severity: "critical" as const },
+    { lat: 32.6, lng: 44.0, type: "IED", icon: "💣", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road", severity: "high" as const },
+    { lat: 15.3, lng: 44.2, type: "Drone Strike", icon: "👁", color: "#ef4444", ts: Date.now() - 3600000 * 1, label: "UAV strike — Sanaa outskirts", severity: "critical" as const },
+    { lat: 31.5, lng: 34.5, type: "Rocket Barrage", icon: "🚀", color: "#dc2626", ts: Date.now() - 3600000 * 3, label: "Rocket barrage — Gaza border", severity: "critical" as const },
+    { lat: 36.3, lng: 43.1, type: "Recon Overflight", icon: "✈️", color: "#00d4ff", ts: Date.now() - 3600000 * 7, label: "ISR overflight — Mosul", severity: "low" as const },
+    { lat: 34.9, lng: 51.3, type: "Centrifuge Activity", icon: "⚛️", color: "#a855f7", ts: Date.now() - 3600000 * 9, label: "Fordow — unusual centrifuge activity", severity: "high" as const },
+    { lat: 29.2, lng: 50.3, type: "Naval Movement", icon: "⚓", color: "#22c55e", ts: Date.now() - 3600000 * 4, label: "IRGCN fast boats — Kharg Island", severity: "medium" as const },
+    { lat: 25.3, lng: 55.3, type: "Cyber Incident", icon: "🖥", color: "#e879f9", ts: Date.now() - 3600000 * 11, label: "Cyber probe — Dubai infrastructure", severity: "medium" as const },
+    { lat: 33.3, lng: 44.4, type: "Protest", icon: "✊", color: "#eab308", ts: Date.now() - 3600000 * 6, label: "Mass gathering — Baghdad", severity: "low" as const },
+    { lat: 37.0, lng: 35.4, type: "Military Buildup", icon: "🪖", color: "#ef4444", ts: Date.now() - 3600000 * 14, label: "Armor movement — Incirlik", severity: "high" as const },
+    { lat: 30.1, lng: 31.4, type: "Border Incident", icon: "🚧", color: "#f97316", ts: Date.now() - 3600000 * 16, label: "Sinai border clash", severity: "medium" as const },
+    { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", icon: "🚢", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb", severity: "medium" as const },
+    { lat: 35.7, lng: 51.4, type: "SIGINT Spike", icon: "📡", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran", severity: "high" as const },
+    { lat: 24.7, lng: 46.7, type: "Air Defense Test", icon: "🛡", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh", severity: "medium" as const },
+    { lat: 32.1, lng: 34.8, type: "Iron Dome Activation", icon: "🛡", color: "#ef4444", ts: Date.now() - 3600000 * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
+    { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", icon: "🛢", color: "#f97316", ts: Date.now() - 3600000 * 3.5, label: "Security alert — Ras Tanura", severity: "high" as const },
+    { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", icon: "🎯", color: "#dc2626", ts: Date.now() - 3600000 * 1.5, label: "Convoy movement — South Lebanon", severity: "critical" as const },
+    { lat: 36.8, lng: 40.5, type: "Kurdish Clash", icon: "⚔️", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const },
   ], []);
 
   // Unified event feed
