@@ -573,6 +573,149 @@ serve(async (req) => {
       });
     }
 
+    // ── IMPORT FROM OPENWEBCAMDB ──
+    if (action === "import_openwebcamdb") {
+      const OWDB_KEY = Deno.env.get("OPENWEBCAMDB_API_KEY");
+      if (!OWDB_KEY) {
+        return new Response(JSON.stringify({ error: "OPENWEBCAMDB_API_KEY not configured" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const targetCountry = body.country || null; // e.g. "united-states", "germany"
+      const perPage = Math.min(body.per_page || 50, 100);
+      const page = body.page || 1;
+
+      // Build query params
+      const params = new URLSearchParams({ per_page: String(perPage), page: String(page) });
+      if (targetCountry) params.set("country", targetCountry);
+
+      const apiResp = await fetch(`https://openwebcamdb.com/api/v1/webcams?${params}`, {
+        headers: { Authorization: `Bearer ${OWDB_KEY}`, Accept: "application/json" },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!apiResp.ok) {
+        const errText = await apiResp.text();
+        console.error("OpenWebcamDB error:", apiResp.status, errText);
+        return new Response(JSON.stringify({ error: `OpenWebcamDB API error: ${apiResp.status}` }), {
+          status: apiResp.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const apiData = await apiResp.json();
+      const webcams = apiData?.data || apiData?.webcams || apiData || [];
+      const webcamList = Array.isArray(webcams) ? webcams : [];
+
+      // Get existing cameras to avoid duplicates
+      const { data: existing } = await supabase.from("cameras").select("name, embed_url, stream_url, original_url");
+      const existingUrls = new Set(
+        (existing || []).flatMap((r: any) => [r.embed_url, r.stream_url, r.original_url].filter(Boolean))
+      );
+      const existingNames = new Set((existing || []).map((r: any) => r.name?.toLowerCase()).filter(Boolean));
+
+      const inserted: any[] = [];
+      const skipped: string[] = [];
+
+      for (const wc of webcamList) {
+        const slug = wc.slug || wc.id;
+        const wcName = wc.title || wc.name || slug || "Unknown Webcam";
+
+        // Skip if name already exists
+        if (existingNames.has(wcName.toLowerCase())) {
+          skipped.push(wcName);
+          continue;
+        }
+
+        // Fetch individual webcam details for stream_url
+        let streamUrl: string | null = null;
+        let thumbnailUrl = wc.thumbnail_url || wc.image_url || wc.preview_url || null;
+
+        if (slug) {
+          try {
+            const detailResp = await fetch(`https://openwebcamdb.com/api/v1/webcams/${slug}`, {
+              headers: { Authorization: `Bearer ${OWDB_KEY}`, Accept: "application/json" },
+              signal: AbortSignal.timeout(8000),
+            });
+            if (detailResp.ok) {
+              const detail = await detailResp.json();
+              const wcDetail = detail?.data || detail;
+              streamUrl = wcDetail?.stream_url || wcDetail?.url || null;
+              if (!thumbnailUrl) thumbnailUrl = wcDetail?.thumbnail_url || wcDetail?.image_url || null;
+            }
+          } catch (e) {
+            console.error(`Failed to fetch detail for ${slug}:`, e);
+          }
+        }
+
+        const primaryUrl = streamUrl || wc.url || wc.stream_url || null;
+        if (!primaryUrl || existingUrls.has(primaryUrl)) {
+          skipped.push(wcName);
+          continue;
+        }
+
+        // Detect source type
+        const detection = await detectSourceType(primaryUrl);
+
+        const lat = Number(wc.latitude || wc.lat) || 0;
+        const lng = Number(wc.longitude || wc.lng || wc.lon) || 0;
+        // Handle country as object {name, iso_code} or string
+        const rawCountry = wc.country;
+        const country = typeof rawCountry === "object" && rawCountry?.name ? rawCountry.name : (wc.country_name || rawCountry || "");
+        // Handle city as object or string
+        const rawCity = wc.city;
+        const city = typeof rawCity === "object" && rawCity?.name ? rawCity.name : (wc.city_name || rawCity || wc.location || "");
+        const category = (typeof wc.category === "object" && wc.category?.name ? wc.category.name : (wc.category || "public")).toLowerCase();
+        const validCats = ["traffic", "tourism", "ports", "weather", "public"];
+
+        const payload: any = {
+          name: wcName,
+          country,
+          city,
+          category: validCats.includes(category) ? category : "public",
+          source_type: detection.source_type === "youtube" ? "embed_page" : (detection.stream_type_detected === "hls" ? "hls" : "embed_page"),
+          source_name: "OpenWebcamDB",
+          embed_url: detection.source_type === "youtube" && detection.youtube_video_id
+            ? `https://www.youtube.com/embed/${detection.youtube_video_id}`
+            : (primaryUrl.includes("youtube") ? primaryUrl : null),
+          stream_url: detection.stream_type_detected === "hls" ? primaryUrl : null,
+          snapshot_url: detection.stream_type_detected === "snapshot" ? primaryUrl : null,
+          thumbnail_url: thumbnailUrl,
+          original_url: primaryUrl,
+          lat,
+          lng,
+          is_active: true,
+          status: "active",
+          youtube_video_id: detection.youtube_video_id,
+          playable_url: detection.playable_url,
+          verification_status: detection.verification_status,
+          stream_type_detected: detection.stream_type_detected,
+          is_verified: ["verified_youtube", "verified_hls", "verified_snapshot", "verified_mjpeg"].includes(detection.verification_status),
+          failure_count: 0,
+          last_checked_at: new Date().toISOString(),
+        };
+
+        const { data: created, error: insertErr } = await supabase.from("cameras").insert(payload).select().single();
+        if (created) {
+          inserted.push(created);
+          existingUrls.add(primaryUrl);
+          existingNames.add(wcName.toLowerCase());
+        } else if (insertErr) {
+          console.error(`Insert error for ${wcName}:`, insertErr.message);
+          skipped.push(wcName);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        source: "OpenWebcamDB",
+        fetched: webcamList.length,
+        inserted: inserted.length,
+        skipped: skipped.length,
+        skipped_names: skipped,
+        cameras: inserted,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ── CRUD ──
     if (action === "create") {
       const camData = body.camera;
