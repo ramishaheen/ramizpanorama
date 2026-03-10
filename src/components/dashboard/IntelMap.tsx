@@ -1722,9 +1722,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     setUp42Features(features);
   }, []);
 
-  // Global CCTV layer
-  const ARAB_COUNTRIES = ["UAE", "United Arab Emirates", "Jordan", "Saudi Arabia", "Qatar", "Oman", "Bahrain", "Kuwait", "Iraq", "Lebanon", "Egypt", "Syria", "Yemen", "Libya", "Tunisia", "Algeria", "Morocco", "Sudan", "Palestine", "Iran"];
-
+  // Global CCTV layer — loads ALL cameras from DB
   const toggleArabCCTV = useCallback(async () => {
     if (showArabCCTV) {
       setShowArabCCTV(false);
@@ -1735,20 +1733,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     setLoadingCCTV(true);
     setShowArabCCTV(true);
     try {
-      // Fetch only online cameras within the Arab World bounding box
       const { data, error } = await supabase.functions.invoke("cameras", {
         method: "POST",
         body: {
           action: "list",
-          status: "online",
           limit: 1000,
-          bounds: { north: 42, south: 10, east: 65, west: -18 },
         },
       });
       if (!error && data?.cameras) {
-        // Filter to only Arab/Middle East countries
-        const filtered = data.cameras.filter((c: any) => ARAB_COUNTRIES.includes(c.country));
-        setArabCameras(filtered);
+        setArabCameras(data.cameras);
       }
     } catch (e) { console.error("CCTV fetch failed:", e); }
     finally { setLoadingCCTV(false); }
