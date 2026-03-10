@@ -466,6 +466,11 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [viewMode, setViewMode] = useState<"map" | "grid">("map");
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+
+  // AI Intelligence Hook
+  const { events, analyzing, lastAnalysis, analyzeCamera, fetchEvents, setLastAnalysis } = useCCTVIntel();
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
