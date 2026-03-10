@@ -990,50 +990,91 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     fetchSatellites();
   }, [fetchSatellites]);
 
-  // Re-propagate positions every 2 seconds for smoother icon motion
+  // Re-propagate positions every 500ms for smooth orbital motion + rAF interpolation
+  const prevPositionsRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const nextPositionsRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const lastPropTimeRef = useRef<number>(performance.now());
+  const interpFrameRef = useRef<number>(0);
+
   useEffect(() => {
     if (rawTLERef.current.length === 0) return;
-    const interval = setInterval(() => {
-      const globe = globeRef.current;
-      if (!globe) return;
+
+    const propagateAll = () => {
       const raws = rawTLERef.current;
       const catFilter = selectedCat;
+
+      // Move current "next" to "prev" for interpolation
+      prevPositionsRef.current = new Map(nextPositionsRef.current);
+      lastPropTimeRef.current = performance.now();
+
+      const newNext = new Map<string, { lat: number; lng: number }>();
       const updated: SatelliteData[] = raws.map((r) => {
         const pos = propagateSatellite(
           r.inclination, r.raan, r.meanAnomaly, r.meanMotion,
           r.eccentricity, r.epochYear, r.epochDay, r.alt
         );
+        const key = r.noradId || r.name;
+        newNext.set(key, { lat: pos.lat, lng: pos.lng });
         return {
-          name: r.name,
-          lat: pos.lat,
-          lng: pos.lng,
-          alt: r.alt,
-          category: r.category,
-          noradId: r.noradId,
-          inclination: r.inclination,
-          meanMotion: r.meanMotion,
-          eccentricity: r.eccentricity,
-          period: r.period,
-          epochYear: r.epochYear,
-          epochDay: r.epochDay,
-          launchYear: r.launchYear,
-          intlDesignator: r.intlDesignator,
-          velocity: r.velocity,
-          raan: r.raan,
-          meanAnomaly: r.meanAnomaly,
-          country: r.country,
-          operator: r.operator,
-          source: r.source,
+          name: r.name, lat: pos.lat, lng: pos.lng, alt: r.alt,
+          category: r.category, noradId: r.noradId, inclination: r.inclination,
+          meanMotion: r.meanMotion, eccentricity: r.eccentricity, period: r.period,
+          epochYear: r.epochYear, epochDay: r.epochDay, launchYear: r.launchYear,
+          intlDesignator: r.intlDesignator, velocity: r.velocity, raan: r.raan,
+          meanAnomaly: r.meanAnomaly, country: r.country, operator: r.operator, source: r.source,
         };
       });
+      nextPositionsRef.current = newNext;
       satsRef.current = updated;
       setLastPropagated(new Date());
-      const filtered = catFilter
-        ? updated.filter((s) => s.category === catFilter)
-        : updated;
-      globe.objectsData(filtered.slice(0, catFilter ? 5000 : 3200));
-    }, 2000);
-    return () => clearInterval(interval);
+
+      const globe = globeRef.current;
+      if (globe) {
+        const filtered = catFilter ? updated.filter((s) => s.category === catFilter) : updated;
+        globe.objectsData(filtered.slice(0, catFilter ? 5000 : 3200));
+      }
+    };
+
+    propagateAll();
+    const interval = setInterval(propagateAll, 500);
+
+    // rAF interpolation between propagation ticks for ultra-smooth motion
+    const PROP_INTERVAL = 500;
+    const interpolate = () => {
+      const globe = globeRef.current;
+      if (!globe) { interpFrameRef.current = requestAnimationFrame(interpolate); return; }
+
+      const t = Math.min((performance.now() - lastPropTimeRef.current) / PROP_INTERVAL, 1);
+      const objectsData = globe.objectsData() as SatelliteData[];
+      if (objectsData.length > 0 && prevPositionsRef.current.size > 0 && t < 1) {
+        const interpolated = objectsData.map((s: SatelliteData) => {
+          const key = s.noradId || s.name;
+          const prev = prevPositionsRef.current.get(key);
+          const next = nextPositionsRef.current.get(key);
+          if (prev && next) {
+            // Linear interpolation
+            let dLng = next.lng - prev.lng;
+            // Handle antimeridian wrap
+            if (dLng > 180) dLng -= 360;
+            if (dLng < -180) dLng += 360;
+            return {
+              ...s,
+              lat: prev.lat + (next.lat - prev.lat) * t,
+              lng: prev.lng + dLng * t,
+            };
+          }
+          return s;
+        });
+        globe.objectsData(interpolated);
+      }
+      interpFrameRef.current = requestAnimationFrame(interpolate);
+    };
+    interpFrameRef.current = requestAnimationFrame(interpolate);
+
+    return () => {
+      clearInterval(interval);
+      if (interpFrameRef.current) cancelAnimationFrame(interpFrameRef.current);
+    };
   }, [satellites.length, selectedCat]);
 
   // Init globe once, then update data/layers in separate effects (prevents WebGL context churn/black screen)

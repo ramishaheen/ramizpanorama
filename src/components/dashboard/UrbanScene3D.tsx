@@ -1834,21 +1834,40 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   }, [fetchFlights]);
 
   // ===== REAL-TIME INTERPOLATION ENGINE — move aircraft smoothly between polls =====
+  // Stores previous heading snapshots for smooth rotation
+  const prevHeadingsRef = useRef<Record<string, number>>({});
+
   useEffect(() => {
     if (!showFlights) return;
     interpolationRef.current = setInterval(() => {
       const snapshot = aircraftSnapshotRef.current;
       if (snapshot.length === 0) return;
       const elapsed = (Date.now() - lastPollTimeRef.current) / 1000; // seconds since last poll
+      const prevHeadings = prevHeadingsRef.current;
+
       const moved = snapshot.map(ac => {
-        const headingRad = ac.heading * Math.PI / 180;
+        // Smooth heading interpolation — lerp toward target heading
+        const prevHdg = prevHeadings[ac.icao24] ?? ac.heading;
+        let hdgDiff = ac.heading - prevHdg;
+        // Shortest angular path
+        if (hdgDiff > 180) hdgDiff -= 360;
+        if (hdgDiff < -180) hdgDiff += 360;
+        const smoothHeading = ((prevHdg + hdgDiff * Math.min(elapsed * 0.5, 1)) + 360) % 360;
+        prevHeadings[ac.icao24] = smoothHeading;
+
+        const headingRad = smoothHeading * Math.PI / 180;
         const speedDegPerSec = ac.velocity / 111320; // m/s to deg/s approx
         const dLat = Math.cos(headingRad) * speedDegPerSec * elapsed;
         const dLng = Math.sin(headingRad) * speedDegPerSec * elapsed / Math.max(Math.cos(ac.lat * Math.PI / 180), 0.01);
-        return { ...ac, lat: ac.lat + dLat, lng: ac.lng + dLng };
+
+        // Altitude interpolation using vertical_rate
+        const altChange = ac.vertical_rate * elapsed; // m/s * s = meters
+        const newAlt = Math.max(0, ac.altitude + altChange);
+
+        return { ...ac, lat: ac.lat + dLat, lng: ac.lng + dLng, altitude: newAlt, heading: smoothHeading };
       });
       setInterpolatedAircraft(moved);
-    }, 200); // update positions every 200ms
+    }, 100); // update every 100ms for ultra-smooth movement
     return () => { if (interpolationRef.current) clearInterval(interpolationRef.current); };
   }, [showFlights]);
 
