@@ -483,7 +483,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     if (t.includes("drone") || t.includes("uav")) return "👁";
     if (t.includes("rocket") || t.includes("missile")) return "🚀";
     if (t.includes("earthquake") || t.includes("seismic")) return "🌍";
-    if (t.includes("fire") || t.includes("thermal")) return "🔥";
+    if (t.includes("fire") || t.includes("thermal") || t.includes("smoke")) return "💨";
     if (t.includes("naval") || t.includes("maritime") || t.includes("vessel")) return "⚓";
     if (t.includes("cyber")) return "🖥";
     if (t.includes("protest") || t.includes("gather")) return "✊";
