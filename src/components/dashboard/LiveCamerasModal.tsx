@@ -8,9 +8,10 @@ import {
   X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle,
   Video, Eye, Sparkles, Globe, Copy, Activity, Radio, Signal,
   Shield, ChevronLeft, ChevronRight, Crosshair, Wifi, WifiOff,
-  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play
+  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play, Info
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CameraDetailsPopup } from "./CameraDetailsPopup";
 
 // ═══════════════ TYPES ═══════════════
 interface CameraData {
