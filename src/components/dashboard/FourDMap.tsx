@@ -641,11 +641,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // EMULATED OSINT EVENTS — always rendered, timeline filtered
+    // EMULATED OSINT EVENTS — with category-specific icons, timeline filtered
     emulatedEvents.forEach(ev => {
       if (ev.ts > cutoff) return;
       points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.022, color: ev.color, radius: 0.3 * densityMult,
-        label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${ev.color};font-weight:bold">🎯 ${ev.type.toUpperCase()}</div><div>${ev.label}</div><div style="color:#888;font-size:9px">${new Date(ev.ts).toISOString().replace("T"," ").slice(0,19)} UTC</div></div>` });
+        label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${ev.color}20"><div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px;margin-top:1px">${new Date(ev.ts).toISOString().replace("T"," ").slice(0,19)} UTC</div></div>` });
     });
 
     console.log(`[4D] Rendering ${points.length} points on globe`);
