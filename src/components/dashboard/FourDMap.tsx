@@ -762,9 +762,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             </div>
           )}
 
-          {/* X button */}
-          <button onClick={onClose} className="absolute top-3 right-3 z-30 w-8 h-8 flex items-center justify-center rounded bg-[hsl(220,20%,8%)/0.9] backdrop-blur border border-[hsl(0,60%,40%)] text-[hsl(0,80%,65%)] hover:bg-[hsl(0,60%,20%)] hover:text-[hsl(0,80%,80%)] transition-all shadow-[0_0_12px_hsl(0,80%,50%/0.2)]">
-            <X className="h-4 w-4" />
+          {/* X close button — always visible, prominent */}
+          <button onClick={onClose} className="absolute top-3 right-3 z-[10002] w-10 h-10 flex items-center justify-center rounded-lg bg-destructive/90 backdrop-blur-md border-2 border-destructive text-destructive-foreground hover:bg-destructive hover:scale-110 transition-all shadow-[0_0_20px_hsl(0,80%,50%/0.4)] font-bold">
+            <X className="h-5 w-5" strokeWidth={3} />
           </button>
 
           {/* Title + HUD */}
