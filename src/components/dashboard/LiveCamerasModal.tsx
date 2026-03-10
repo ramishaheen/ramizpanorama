@@ -8,10 +8,13 @@ import {
   X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle,
   Video, Eye, Sparkles, Globe, Copy, Activity, Radio, Signal,
   Shield, ChevronLeft, ChevronRight, Crosshair, Wifi, WifiOff,
-  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play, Info
+  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play, Info,
+  Brain, Grid3X3, Map as MapIcon, LayoutGrid
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraDetailsPopup } from "./CameraDetailsPopup";
+import { AIAnalysisPanel } from "./AIAnalysisPanel";
+import { useCCTVIntel } from "@/hooks/useCCTVIntel";
 
 // ═══════════════ TYPES ═══════════════
 interface CameraData {
@@ -463,6 +466,11 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [viewMode, setViewMode] = useState<"map" | "grid">("map");
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+
+  // AI Intelligence Hook
+  const { events, analyzing, lastAnalysis, analyzeCamera, fetchEvents, setLastAnalysis } = useCCTVIntel();
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -616,8 +624,27 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </button>
         </div>
 
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-0.5 ml-1 rounded p-0.5" style={{ background: "#111827", border: "1px solid rgba(6,182,212,0.15)" }}>
+          <button onClick={() => setViewMode("map")}
+            className={`p-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${viewMode === "map" ? "text-cyan-300" : "text-gray-600"}`}
+            style={viewMode === "map" ? { background: "rgba(6,182,212,0.2)" } : {}}>
+            <MapIcon className="h-3 w-3" /> MAP
+          </button>
+          <button onClick={() => setViewMode("grid")}
+            className={`p-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${viewMode === "grid" ? "text-cyan-300" : "text-gray-600"}`}
+            style={viewMode === "grid" ? { background: "rgba(6,182,212,0.2)" } : {}}>
+            <Grid3X3 className="h-3 w-3" /> GRID
+          </button>
+        </div>
+
         {/* Actions */}
         <div className="flex items-center gap-1 ml-auto">
+          <button onClick={() => setAiPanelOpen(!aiPanelOpen)}
+            className={`px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${aiPanelOpen ? "text-purple-300" : "text-white hover:text-purple-300"}`}
+            style={{ background: aiPanelOpen ? "rgba(168,85,247,0.2)" : "rgba(168,85,247,0.1)", border: `1px solid rgba(168,85,247,${aiPanelOpen ? '0.5' : '0.3'})` }}>
+            <Brain className="h-3 w-3" /> AI INTEL
+          </button>
           <button onClick={scrapeAggregators} disabled={scraping}
             className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-white hover:text-white transition-all"
             style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
@@ -720,7 +747,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </div>
         )}
 
-        {/* ── CENTER: TACTICAL MAP ── */}
+        {/* ── CENTER: MAP OR GRID VIEW ── */}
         <div className="flex-1 relative">
           {loading && (
             <div className="absolute inset-0 z-[10] flex items-center justify-center" style={{ background: "rgba(8,12,18,0.85)" }}>
@@ -731,89 +758,190 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
             </div>
           )}
 
-          <MapContainer center={[28, 45]} zoom={5} className="w-full h-full" zoomControl={false} attributionControl={false} style={{ background: "#070b10" }}>
-            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" opacity={0.6} />
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png" opacity={0.8} />
-            <MapEventHandler onMoveEnd={() => {}} />
-            <FlyToHandler target={flyTarget} />
-            <MapZoomControls />
+          {viewMode === "map" ? (
+            <MapContainer center={[28, 45]} zoom={5} className="w-full h-full" zoomControl={false} attributionControl={false} style={{ background: "#070b10" }}>
+              <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" opacity={0.6} />
+              <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png" opacity={0.8} />
+              <MapEventHandler onMoveEnd={() => {}} />
+              <FlyToHandler target={flyTarget} />
+              <MapZoomControls />
 
-            {cameras.map(cam => {
-              if (!cam.lat || !cam.lng) return null;
-              const isSelected = selectedCamera?.id === cam.id;
-              const isOnline = cam.status === "active";
-              const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
-              const borderColor = ytId ? "#ef4444" : isOnline ? "#22c55e" : "#ef4444";
-              const glowColor = ytId ? "rgba(239,68,68,0.4)" : isOnline ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.4)";
-              const size = isSelected ? 56 : 44;
+              {cameras.map(cam => {
+                if (!cam.lat || !cam.lng) return null;
+                const isSelected = selectedCamera?.id === cam.id;
+                const isOnline = cam.status === "active";
+                const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
+                const borderColor = ytId ? "#ef4444" : isOnline ? "#22c55e" : "#ef4444";
+                const glowColor = ytId ? "rgba(239,68,68,0.4)" : isOnline ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.4)";
+                const size = isSelected ? 56 : 44;
+                const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url || null;
 
-              const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url || null;
+                // Check if camera has recent AI events
+                const hasEvent = events.some(e => e.camera_id === cam.id);
+                const eventBorder = hasEvent ? "#a855f7" : borderColor;
+                const eventGlow = hasEvent ? "rgba(168,85,247,0.5)" : glowColor;
 
-              const icon = L.divIcon({
-                className: "",
-                html: `<div style="position:relative;width:${size}px;height:${size + 14}px;cursor:pointer;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7));">
-                  ${thumbUrl
-                    ? `<div style="width:${size}px;height:${size * 0.62}px;border-radius:6px 6px 0 0;overflow:hidden;border:2px solid ${isSelected ? '#06b6d4' : borderColor};border-bottom:none;box-shadow:0 0 12px ${glowColor};">
-                        <img src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#111827;font-size:16px;\\'>📹</div>'" />
-                        ${ytId ? '<div style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,0.9);border-radius:3px;padding:0 3px;"><span style="font-size:7px;color:white;font-weight:900;">▶ YT</span></div>' : ''}
+                const icon = L.divIcon({
+                  className: "",
+                  html: `<div style="position:relative;width:${size}px;height:${size + 14}px;cursor:pointer;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7));">
+                    ${thumbUrl
+                      ? `<div style="width:${size}px;height:${size * 0.62}px;border-radius:6px 6px 0 0;overflow:hidden;border:2px solid ${isSelected ? '#06b6d4' : eventBorder};border-bottom:none;box-shadow:0 0 12px ${eventGlow};">
+                          <img src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#111827;font-size:16px;\\'>📹</div>'" />
+                          ${ytId ? '<div style="position:absolute;top:2px;left:2px;background:rgba(239,68,68,0.9);border-radius:3px;padding:0 3px;"><span style="font-size:7px;color:white;font-weight:900;">▶ YT</span></div>' : ''}
+                          ${hasEvent ? '<div style="position:absolute;top:2px;right:2px;background:rgba(168,85,247,0.9);border-radius:3px;padding:0 3px;"><span style="font-size:7px;color:white;font-weight:900;">🧠 AI</span></div>' : ''}
+                        </div>
+                        <div style="width:${size}px;height:16px;border-radius:0 0 6px 6px;background:${isSelected ? 'rgba(6,182,212,0.9)' : 'rgba(10,15,24,0.95)'};border:2px solid ${isSelected ? '#06b6d4' : eventBorder};border-top:none;display:flex;align-items:center;justify-content:center;gap:3px;">
+                          <span style="width:5px;height:5px;border-radius:50%;background:${isOnline ? '#22c55e' : '#ef4444'};${isOnline ? 'animation:pulse 2s infinite;' : ''}"></span>
+                          <span style="font-size:7px;font-weight:800;color:${isSelected ? '#fff' : '#9ca3af'};font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:${size - 20}px;">${cam.city}</span>
+                        </div>`
+                      : `<div style="width:${size}px;height:${size * 0.62 + 16}px;border-radius:6px;background:rgba(10,15,24,0.9);border:2px solid ${isSelected ? '#06b6d4' : eventBorder};box-shadow:0 0 12px ${eventGlow};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+                          <span style="font-size:18px;">📹</span>
+                          <span style="font-size:7px;font-weight:800;color:#9ca3af;font-family:monospace;">${cam.city}</span>
+                        </div>`
+                    }
+                    ${isOnline ? `<div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#22c55e;border:2px solid #070b10;z-index:2;"></div>` : ''}
+                  </div>`,
+                  iconSize: [size, size + 14],
+                  iconAnchor: [size / 2, size + 14],
+                });
+                return (
+                  <Marker key={cam.id} position={[cam.lat, cam.lng]} icon={icon}
+                    eventHandlers={{ click: () => handleCameraClick(cam) }}>
+                    <Tooltip direction="top" offset={[0, -(size + 16)]} className="cctv-tip">
+                      <div style={{ padding: 4 }}>
+                        <div style={{ fontWeight: "bold", fontSize: 11, color: "#06b6d4" }}>{cam.name}</div>
+                        <div style={{ color: "#9ca3af", fontSize: 10 }}>{cam.city}, {cam.country}</div>
+                        <div style={{ fontSize: 10, color: cam.status === 'active' ? '#22c55e' : '#ef4444', marginTop: 2 }}>
+                          {cam.status === "active" ? "● ONLINE" : "● OFFLINE"}
+                          {ytId && " • YouTube"}
+                          {hasEvent && " • 🧠 AI Event"}
+                        </div>
+                        <div style={{ fontSize: 9, color: "#6b7280", marginTop: 1 }}>{cam.source_name} • {cam.category}</div>
                       </div>
-                      <div style="width:${size}px;height:16px;border-radius:0 0 6px 6px;background:${isSelected ? 'rgba(6,182,212,0.9)' : 'rgba(10,15,24,0.95)'};border:2px solid ${isSelected ? '#06b6d4' : borderColor};border-top:none;display:flex;align-items:center;justify-content:center;gap:3px;">
-                        <span style="width:5px;height:5px;border-radius:50%;background:${isOnline ? '#22c55e' : '#ef4444'};${isOnline ? 'animation:pulse 2s infinite;' : ''}"></span>
-                        <span style="font-size:7px;font-weight:800;color:${isSelected ? '#fff' : '#9ca3af'};font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:${size - 20}px;">${cam.city}</span>
-                      </div>`
-                    : `<div style="width:${size}px;height:${size * 0.62 + 16}px;border-radius:6px;background:rgba(10,15,24,0.9);border:2px solid ${isSelected ? '#06b6d4' : borderColor};box-shadow:0 0 12px ${glowColor};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
-                        <span style="font-size:18px;">📹</span>
-                        <span style="font-size:7px;font-weight:800;color:#9ca3af;font-family:monospace;">${cam.city}</span>
-                      </div>`
-                  }
-                  ${isOnline ? `<div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#22c55e;border:2px solid #070b10;z-index:2;"></div>` : ''}
-                </div>`,
-                iconSize: [size, size + 14],
-                iconAnchor: [size / 2, size + 14],
-              });
-              return (
-                <Marker key={cam.id} position={[cam.lat, cam.lng]} icon={icon}
-                  eventHandlers={{ click: () => handleCameraClick(cam) }}>
-                  <Tooltip direction="top" offset={[0, -(size + 16)]} className="cctv-tip">
-                    <div style={{ padding: 4 }}>
-                      <div style={{ fontWeight: "bold", fontSize: 11, color: "#06b6d4" }}>{cam.name}</div>
-                      <div style={{ color: "#9ca3af", fontSize: 10 }}>{cam.city}, {cam.country}</div>
-                      <div style={{ fontSize: 10, color: cam.status === 'active' ? '#22c55e' : '#ef4444', marginTop: 2 }}>
-                        {cam.status === "active" ? "● ONLINE" : "● OFFLINE"}
-                        {ytId && " • YouTube"}
+                    </Tooltip>
+                  </Marker>
+                );
+              })}
+            </MapContainer>
+          ) : (
+            /* ── GRID VIEW ── */
+            <div className="w-full h-full overflow-y-auto cctv-scrollbar p-3" style={{ background: "#070b10" }}>
+              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+                {cameras.map(cam => {
+                  const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
+                  const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url;
+                  const isOnline = cam.status === "active";
+                  const isSelected = selectedCamera?.id === cam.id;
+                  const hasEvent = events.some(e => e.camera_id === cam.id);
+
+                  return (
+                    <div key={cam.id} onClick={() => handleCameraClick(cam)}
+                      className="rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.01]"
+                      style={{
+                        background: "#0d1320",
+                        border: `1px solid ${isSelected ? "rgba(6,182,212,0.5)" : hasEvent ? "rgba(168,85,247,0.3)" : "rgba(6,182,212,0.1)"}`,
+                        boxShadow: isSelected ? "0 0 20px rgba(6,182,212,0.15)" : "none",
+                      }}>
+                      {/* Thumbnail */}
+                      <div className="relative" style={{ paddingBottom: "56.25%", background: "#111827" }}>
+                        {thumbUrl ? (
+                          <img src={thumbUrl} alt={cam.name} className="absolute inset-0 w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center"><Camera className="h-8 w-8 text-gray-700" /></div>
+                        )}
+                        {/* Status dot */}
+                        <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded"
+                          style={{ background: "rgba(0,0,0,0.8)" }}>
+                          <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+                          <span className={`text-[8px] font-bold font-mono ${isOnline ? "text-green-400" : "text-red-400"}`}>
+                            {isOnline ? "LIVE" : "OFF"}
+                          </span>
+                        </div>
+                        {ytId && (
+                          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded" style={{ background: "rgba(239,68,68,0.9)" }}>
+                            <span className="text-[7px] text-white font-bold">▶ YT</span>
+                          </div>
+                        )}
+                        {hasEvent && (
+                          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded" style={{ background: "rgba(168,85,247,0.9)" }}>
+                            <span className="text-[7px] text-white font-bold">🧠 AI</span>
+                          </div>
+                        )}
+                        {/* Play overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                          style={{ background: "rgba(0,0,0,0.4)" }}>
+                          <Play className="h-8 w-8 text-white" />
+                        </div>
                       </div>
-                      <div style={{ fontSize: 9, color: "#6b7280", marginTop: 1 }}>{cam.source_name} • {cam.category}</div>
+                      {/* Info */}
+                      <div className="p-2">
+                        <div className="text-[10px] font-bold text-gray-200 truncate">{cam.name}</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Flag className="h-2.5 w-2.5 text-cyan-400/60" />
+                          <span className="text-[9px] text-cyan-400/80">{cam.country}</span>
+                          <span className="text-[8px] text-gray-600">• {cam.city}</span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-[7px] px-1 rounded font-bold uppercase text-gray-500" style={{ background: "#111827" }}>{cam.category}</span>
+                          {(() => { const b = getVerificationBadge(cam.verification_status); return (
+                            <span className="text-[7px] px-1 rounded font-bold" style={{ color: b.color, background: b.bg }}>{b.label}</span>
+                          ); })()}
+                        </div>
+                      </div>
                     </div>
-                  </Tooltip>
-                </Marker>
-              );
-            })}
-          </MapContainer>
-
-          {/* Legend */}
-          <div className="absolute bottom-3 left-3 z-[5] flex items-center gap-2">
-            <div className="rounded px-3 py-1.5 flex items-center gap-3" style={{ background: "rgba(10,15,24,0.9)", border: "1px solid rgba(6,182,212,0.15)" }}>
-              {[
-                { color: "#22c55e", label: "ONLINE" },
-                { color: "#ef4444", label: "OFFLINE/YT" },
-                { color: "#f59e0b", label: "UNKNOWN" },
-              ].map(l => (
-                <div key={l.label} className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-                  <span className="text-[8px] text-gray-500">{l.label}</span>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Legend (map view only) */}
+          {viewMode === "map" && (
+            <div className="absolute bottom-3 left-3 z-[5] flex items-center gap-2">
+              <div className="rounded px-3 py-1.5 flex items-center gap-3" style={{ background: "rgba(10,15,24,0.9)", border: "1px solid rgba(6,182,212,0.15)" }}>
+                {[
+                  { color: "#22c55e", label: "ONLINE" },
+                  { color: "#ef4444", label: "OFFLINE/YT" },
+                  { color: "#a855f7", label: "AI EVENT" },
+                ].map(l => (
+                  <div key={l.label} className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+                    <span className="text-[8px] text-gray-500">{l.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Feed Count */}
           <div className="absolute top-3 right-3 z-[5]">
             <div className="rounded px-3 py-1.5" style={{ background: "rgba(10,15,24,0.9)", border: "1px solid rgba(6,182,212,0.15)" }}>
               <span className="text-[8px] text-gray-500">FEEDS: </span>
               <span className="text-sm font-bold text-cyan-400">{cameras.length}</span>
+              {events.length > 0 && (
+                <>
+                  <span className="text-[8px] text-gray-600 ml-2">EVENTS: </span>
+                  <span className="text-sm font-bold text-purple-400">{events.length}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        {/* ── AI INTELLIGENCE PANEL ── */}
+        {aiPanelOpen && (
+          <div className="w-64 flex-shrink-0" style={{ borderLeft: "1px solid rgba(168,85,247,0.15)" }}>
+            <AIAnalysisPanel
+              analysis={lastAnalysis}
+              analyzing={analyzing}
+              events={events}
+              onClose={() => setAiPanelOpen(false)}
+              onAnalyze={analyzeCamera}
+              selectedCameraId={selectedCamera?.id}
+            />
+          </div>
+        )}
 
         {/* ── RIGHT PANEL: Camera Detail + Channel List ── */}
         {rightPanelOpen && (
@@ -872,6 +1000,13 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                       <Crosshair className="h-3 w-3" /> MAP
                     </button>
                   )}
+                  <button onClick={() => { analyzeCamera(selectedCamera.id); setAiPanelOpen(true); }}
+                    disabled={!!analyzing}
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-purple-400 font-bold hover:bg-purple-500/10 transition-all"
+                    style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.25)" }}>
+                    {analyzing === selectedCamera.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+                    {analyzing === selectedCamera.id ? "ANALYZING..." : "AI ANALYZE"}
+                  </button>
                   <button className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[8px] text-amber-400 font-bold hover:bg-amber-500/10 transition-all"
                     style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}>
                     <AlertTriangle className="h-3 w-3" /> REPORT
@@ -943,6 +1078,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           <div className="flex items-center gap-1.5"><Activity className="h-3 w-3 text-green-500" /><span className="text-[8px] text-gray-500">SYSTEM OPERATIONAL</span></div>
           <div className="flex items-center gap-1.5"><Signal className="h-3 w-3 text-cyan-400" /><span className="text-[8px] text-gray-500">FEEDS: {stats?.total || cameras.length} • ACTIVE: {stats?.online || 0} • YT: {stats?.youtubeCount || 0}</span></div>
           <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-cyan-400" /><span className="text-[8px] text-gray-500">COUNTRIES: {sortedCountries.length}</span></div>
+          <div className="flex items-center gap-1.5"><Brain className="h-3 w-3 text-purple-400" /><span className="text-[8px] text-gray-500">AI EVENTS: {events.length}</span></div>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[8px] text-gray-700">OSINT COMPLIANT • ESC TO CLOSE</span>

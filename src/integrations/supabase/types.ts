@@ -53,8 +53,60 @@ export type Database = {
         }
         Relationships: []
       }
+      camera_events: {
+        Row: {
+          camera_id: string
+          confidence: number
+          created_at: string
+          detections: Json
+          event_type: string
+          id: string
+          lat: number
+          lng: number
+          severity: string
+          summary: string | null
+          thumbnail_url: string | null
+        }
+        Insert: {
+          camera_id: string
+          confidence?: number
+          created_at?: string
+          detections?: Json
+          event_type?: string
+          id?: string
+          lat?: number
+          lng?: number
+          severity?: string
+          summary?: string | null
+          thumbnail_url?: string | null
+        }
+        Update: {
+          camera_id?: string
+          confidence?: number
+          created_at?: string
+          detections?: Json
+          event_type?: string
+          id?: string
+          lat?: number
+          lng?: number
+          severity?: string
+          summary?: string | null
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "camera_events_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: false
+            referencedRelation: "cameras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cameras: {
         Row: {
+          ai_detection_enabled: boolean
+          ai_event_count: number
           category: Database["public"]["Enums"]["camera_category"]
           city: string
           country: string
@@ -65,6 +117,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_verified: boolean | null
+          last_ai_analysis_at: string | null
           last_checked_at: string | null
           lat: number
           lng: number
@@ -87,6 +140,8 @@ export type Database = {
           youtube_video_id: string | null
         }
         Insert: {
+          ai_detection_enabled?: boolean
+          ai_event_count?: number
           category?: Database["public"]["Enums"]["camera_category"]
           city: string
           country: string
@@ -97,6 +152,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_verified?: boolean | null
+          last_ai_analysis_at?: string | null
           last_checked_at?: string | null
           lat?: number
           lng?: number
@@ -119,6 +175,8 @@ export type Database = {
           youtube_video_id?: string | null
         }
         Update: {
+          ai_detection_enabled?: boolean
+          ai_event_count?: number
           category?: Database["public"]["Enums"]["camera_category"]
           city?: string
           country?: string
@@ -129,6 +187,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_verified?: boolean | null
+          last_ai_analysis_at?: string | null
           last_checked_at?: string | null
           lat?: number
           lng?: number

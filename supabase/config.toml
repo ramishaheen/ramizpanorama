@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.youtube-channels]
 verify_jwt = false
+
+[functions.cctv-ai-analyze]
+verify_jwt = false
