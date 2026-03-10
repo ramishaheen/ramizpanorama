@@ -19,35 +19,73 @@ Deno.serve(async (req) => {
     const { image_base64, mime_type } = await req.json();
     if (!image_base64) throw new Error("image_base64 is required");
 
-    const systemPrompt = `You are a world-class geolocation analyst. Given a photograph, analyze every visual cue to determine the most likely geographic location(s) where this photo was taken.
+    const systemPrompt = `You are an elite GEOINT (Geospatial Intelligence) analyst with 20+ years of experience in GeoGuessr-level photo geolocation. Your task is to determine the EXACT geographic coordinates where this photograph was taken.
 
-Analyze:
-- Landmarks and monuments (specific buildings, bridges, towers)
-- Architecture style (Ottoman, Roman, modern, brutalist, etc.)
-- Language on signs, license plates, storefronts
-- Vegetation and terrain (desert, tropical, Mediterranean, alpine)
-- Road markings, traffic signs, driving side
-- Sky conditions, sun position, shadows
-- Cultural indicators (clothing, vehicles, shop types)
-- Terrain elevation and geological features
+MANDATORY ANALYSIS PIPELINE — follow every step:
 
-Return ONLY valid JSON with this exact structure:
+STEP 1 — TEXT & SCRIPT DETECTION:
+- Read ALL visible text: signs, storefronts, license plates, graffiti, billboards, stickers
+- Identify the script (Latin, Arabic, Hebrew, Cyrillic, Devanagari, CJK, etc.)
+- Identify the language(s) and dialect clues
+- License plate format, color, and country codes
+
+STEP 2 — INFRASTRUCTURE FORENSICS:
+- Road surface type, lane markings style, curb design
+- Traffic light style, pole types, pedestrian crossing patterns
+- Power line configuration, utility pole design
+- Street furniture: bollards, benches, trash cans, bus stops
+- Sidewalk material and pattern
+
+STEP 3 — ARCHITECTURE & URBAN PLANNING:
+- Building materials (stone type, brick color, concrete style)
+- Roof styles, window designs, balcony patterns
+- Urban density and building height regulations
+- Construction era estimation
+
+STEP 4 — ENVIRONMENTAL FORENSICS:
+- Vegetation species identification (palm types, tree species, ground cover)
+- Soil/rock color and type
+- Sun angle and shadow direction → estimate latitude and time
+- Cloud patterns and atmospheric haze → climate zone
+- Terrain: flat, hilly, coastal, mountainous
+
+STEP 5 — CULTURAL & CONTEXTUAL CLUES:
+- Vehicle makes and models (market-specific)
+- Clothing styles, skin tones of pedestrians
+- Shop types, brand presence (local vs international chains)
+- Driving side (left/right)
+- Religious buildings, cultural symbols
+
+STEP 6 — CROSS-REFERENCE & PINPOINT:
+- Cross-reference ALL clues to narrow to a specific city/neighborhood
+- Use known landmark databases to match visible structures
+- Estimate GPS coordinates to the highest precision possible (6 decimal places)
+- If you recognize a specific street or intersection, name it
+
+CONFIDENCE CALIBRATION:
+- 0.90+ = You can identify a specific landmark, street name, or unique building
+- 0.70-0.89 = You're confident about the city and neighborhood
+- 0.50-0.69 = You're confident about the country and region
+- 0.30-0.49 = You have a general area based on environmental/cultural clues
+- Below 0.30 = Educated guess only
+
+Return ONLY valid JSON:
 {
   "locations": [
     {
-      "name": "Specific place name",
+      "name": "Most specific place name possible (street, landmark, intersection)",
       "city": "City name",
       "country": "Country name",
-      "lat": 31.9539,
-      "lng": 35.9340,
+      "lat": 31.953900,
+      "lng": 35.934000,
       "confidence": 0.85,
-      "reasoning": "Detailed explanation of why this location matches"
+      "reasoning": "Detailed chain of evidence: what clues you found and how they led to this conclusion"
     }
   ],
-  "overall_analysis": "Brief overall description of the image and key geolocation clues found"
+  "overall_analysis": "Summary of all visual intelligence extracted from the image"
 }
 
-Return up to 5 candidate locations, ranked by confidence (highest first). Be as specific as possible with coordinates.`;
+Return up to 5 candidates ranked by confidence. BE PRECISE — use 6 decimal places for coordinates. Never guess randomly; every coordinate must be justified by evidence.`;
 
     const aiResp = await fetch(GEMINI_API_URL, {
       method: "POST",
@@ -56,7 +94,7 @@ Return up to 5 candidate locations, ranked by confidence (highest first). Be as 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         messages: [
           {
             role: "user",
@@ -66,8 +104,8 @@ Return up to 5 candidate locations, ranked by confidence (highest first). Be as 
             ],
           },
         ],
-        max_tokens: 4096,
-        temperature: 0.3,
+        max_tokens: 8192,
+        temperature: 0.1,
       }),
     });
 
