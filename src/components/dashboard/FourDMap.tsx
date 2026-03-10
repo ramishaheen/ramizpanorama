@@ -566,12 +566,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // WILDFIRES — fire icon, sized by FRP
+    // WILDFIRES — smoke icon, sized by FRP
     if (layers.wildfires) {
       wildfires.forEach(f => {
         const isIntense = f.frp > 50;
-        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: isIntense ? "#ff2200" : "#ff6600", radius: Math.max(0.25, f.brightness / 250) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${isIntense ? "#ff2200" : "#ff6600"};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px rgba(255,69,0,0.2)"><div style="color:${isIntense ? "#ff2200" : "#ff6600"};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">🔥</span> THERMAL ANOMALY</div><div style="font-size:9px;margin-top:2px">${(f as any).region || "Unknown"} • FRP: ${f.frp}MW</div><div style="color:#888;font-size:8px;margin-top:1px">Confidence: ${f.confidence} • Brightness: ${f.brightness}K</div><div style="color:#666;font-size:8px">FIRMS/VIIRS • ${f.date} ${f.time} UTC</div></div>` });
+        const col = isIntense ? "#ff2200" : "#ff6600";
+        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: col, radius: Math.max(0.25, f.brightness / 250) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px rgba(255,69,0,0.2)"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">💨</span> SMOKE / THERMAL</div><div style="font-size:9px;margin-top:2px">${(f as any).region || "Unknown"} • FRP: ${f.frp}MW</div><div style="color:#888;font-size:8px;margin-top:1px">Confidence: ${f.confidence} • Brightness: ${f.brightness}K</div><div style="color:#666;font-size:8px">FIRMS/VIIRS • ${f.date} ${f.time} UTC</div></div>` });
       });
     }
 
