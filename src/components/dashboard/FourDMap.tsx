@@ -475,31 +475,54 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { lat: 36.8, lng: 40.5, type: "Kurdish Clash", icon: "⚔️", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const },
   ], []);
 
-  // Unified event feed
+  // Unified event feed with icons
+  const getEventIcon = (type: string) => {
+    const t = type.toLowerCase();
+    if (t.includes("airstrike") || t.includes("strike")) return "💥";
+    if (t.includes("ied") || t.includes("bomb") || t.includes("explosion")) return "💣";
+    if (t.includes("drone") || t.includes("uav")) return "👁";
+    if (t.includes("rocket") || t.includes("missile")) return "🚀";
+    if (t.includes("earthquake") || t.includes("seismic")) return "🌍";
+    if (t.includes("fire") || t.includes("thermal")) return "🔥";
+    if (t.includes("naval") || t.includes("maritime") || t.includes("vessel")) return "⚓";
+    if (t.includes("cyber")) return "🖥";
+    if (t.includes("protest") || t.includes("gather")) return "✊";
+    if (t.includes("military") || t.includes("buildup") || t.includes("armor")) return "🪖";
+    if (t.includes("sigint") || t.includes("gps") || t.includes("jam")) return "📡";
+    if (t.includes("nuclear") || t.includes("centrifuge")) return "⚛️";
+    if (t.includes("iron dome") || t.includes("air defense") || t.includes("intercept")) return "🛡";
+    if (t.includes("border")) return "🚧";
+    if (t.includes("oil") || t.includes("tanker")) return "🛢";
+    if (t.includes("hezbollah") || t.includes("convoy") || t.includes("movement")) return "🎯";
+    if (t.includes("battle") || t.includes("clash") || t.includes("skirmish")) return "⚔️";
+    if (t.includes("recon") || t.includes("overflight") || t.includes("isr")) return "✈️";
+    return "📌";
+  };
+
   const unifiedFeed = useMemo(() => {
     const cutoff = timelineTimestamp;
-    const feed: { id: string; ts: number; type: string; label: string; lat: number; lng: number; severity: string; color: string; source: string }[] = [];
-    emulatedEvents.forEach((ev, i) => { if (ev.ts <= cutoff) feed.push({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT" }); });
+    const feed: { id: string; ts: number; type: string; label: string; lat: number; lng: number; severity: string; color: string; source: string; icon: string }[] = [];
+    emulatedEvents.forEach((ev, i) => { if (ev.ts <= cutoff) feed.push({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT", icon: ev.icon }); });
     if (geoFusionData?.events) {
       geoFusionData.events.forEach((ev, i) => {
         const evTs = new Date(ev.timestamp).getTime();
         const sev = ev.severity >= 4 ? "critical" : ev.severity >= 3 ? "high" : ev.severity >= 2 ? "medium" : "low";
         const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
-        feed.push({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION" });
+        feed.push({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION", icon: getEventIcon(ev.event_type) });
       });
     }
     conflictEvents.forEach((ev, i) => {
       const evTs = new Date(ev.event_date).getTime();
       const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
-      feed.push({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED" });
+      feed.push({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED", icon: getEventIcon(ev.event_type) });
     });
     earthquakes.forEach((eq, i) => {
       const eqTs = (eq as any).time || Date.now() - i * 600000;
       const sev = eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 3 ? "medium" : "low";
-      feed.push({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS" });
+      feed.push({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS", icon: "🌍" });
     });
     gpsJammingZones.forEach((z, i) => {
-      if (z.ts <= cutoff) feed.push({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT" });
+      if (z.ts <= cutoff) feed.push({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT", icon: "📡" });
     });
     feed.sort((a, b) => b.ts - a.ts);
     return feed.slice(0, 60);
