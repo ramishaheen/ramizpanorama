@@ -47,6 +47,7 @@ function propagateSatelliteAtMA(inclination: number, raan: number, meanAnomaly: 
   const greenwichOffset = now.getUTCHours() * 15 + now.getUTCMinutes() * 0.25 + now.getUTCSeconds() * (0.25 / 60);
   const ascNode = raan - greenwichOffset;
   const lng = (((ascNode + Math.atan2(Math.cos(incRad) * Math.sin(argLat), Math.cos(argLat)) * (180 / Math.PI)) % 360) + 540) % 360 - 180;
+  return { lat: Math.max(-85, Math.min(85, lat)), lng };
 }
 
 interface SatPoint { name: string; lat: number; lng: number; alt: number; category: string; inclination: number; raan: number; meanAnomaly: number; meanMotion: number; eccentricity: number; epochYear: number; epochDay: number; }
