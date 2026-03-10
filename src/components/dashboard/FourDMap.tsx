@@ -248,6 +248,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const feedRef = useRef<HTMLDivElement>(null);
   const [globeReady, setGlobeReady] = useState(false);
 
+  // ── Google Maps Photorealistic 3D mode (activates when zoomed in close) ──
+  const [mapsApiKey, setMapsApiKey] = useState<string | null>(null);
+  const [streetMode, setStreetMode] = useState(false);
+  const [streetCoords, setStreetCoords] = useState({ lat: 30, lng: 45 });
+  const googleMapContainerRef = useRef<HTMLDivElement>(null);
+  const gMapInstanceRef = useRef<any>(null);
+  const mapsLoadedRef = useRef(false);
+
   const { data: earthquakesRaw } = useEarthquakes();
   const { data: wildfiresRaw } = useWildfires();
   const { data: conflictEvents } = useConflictEvents();
@@ -374,6 +382,75 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       }
     };
   }, []);
+
+  // ── Fetch Google Maps API key ──
+  useEffect(() => {
+    supabase.functions.invoke("google-maps-key").then(({ data }) => {
+      if (data?.apiKey) setMapsApiKey(data.apiKey);
+    }).catch(() => {/* silently ignore — 3D mode unavailable without key */});
+  }, []);
+
+  // ── Load Google Maps JS API + initialize map when key is ready ──
+  useEffect(() => {
+    if (!mapsApiKey || mapsLoadedRef.current) return;
+    const existing = document.getElementById("gm-4d-script");
+    if (existing) { mapsLoadedRef.current = true; return; }
+    const script = document.createElement("script");
+    script.id = "gm-4d-script";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&v=beta&libraries=maps3d`;
+    script.async = true;
+    script.onload = () => { mapsLoadedRef.current = true; };
+    document.head.appendChild(script);
+    return () => { /* script persists intentionally */ };
+  }, [mapsApiKey]);
+
+  // ── Initialize Google Map instance when street mode activates ──
+  useEffect(() => {
+    if (!streetMode || !googleMapContainerRef.current || gMapInstanceRef.current) return;
+    const tryInit = () => {
+      const google = (window as any).google;
+      if (!google?.maps) { setTimeout(tryInit, 200); return; }
+      const map = new google.maps.Map(googleMapContainerRef.current, {
+        center: { lat: streetCoords.lat, lng: streetCoords.lng },
+        zoom: 18,
+        mapTypeId: "satellite",
+        tilt: 67.5,
+        heading: 0,
+        disableDefaultUI: true,
+        gestureHandling: "greedy",
+      });
+      gMapInstanceRef.current = map;
+    };
+    tryInit();
+  }, [streetMode, streetCoords]);
+
+  // ── Sync Google Map center when street coords change ──
+  useEffect(() => {
+    if (!streetMode || !gMapInstanceRef.current) return;
+    const google = (window as any).google;
+    if (!google?.maps) return;
+    gMapInstanceRef.current.setCenter(new google.maps.LatLng(streetCoords.lat, streetCoords.lng));
+  }, [streetCoords, streetMode]);
+
+  // ── Detect close zoom on globe and switch to 3D ground mode ──
+  useEffect(() => {
+    if (!globeReady) return;
+    const globe = globeRef.current;
+    if (!globe) return;
+    const controls = globe.controls() as any;
+    if (!controls) return;
+    const onCameraChange = () => {
+      const pov = globe.pointOfView();
+      if (pov.altitude < 0.12) {
+        setStreetCoords({ lat: pov.lat, lng: pov.lng });
+        setStreetMode(true);
+      } else if (pov.altitude >= 0.14) {
+        setStreetMode(false);
+      }
+    };
+    controls.addEventListener("change", onCameraChange);
+    return () => controls.removeEventListener("change", onCameraChange);
+  }, [globeReady]);
 
   // Update satellite positions every second for visible orbital movement
   useEffect(() => {
@@ -979,6 +1056,28 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span className="text-[11px] font-mono text-primary tracking-widest animate-pulse">INITIALIZING 4D GLOBE...</span>
               </div>
+            </div>
+          )}
+
+          {/* Google Maps Photorealistic 3D Tiles overlay */}
+          {streetMode && (
+            <div className="absolute inset-0 z-30 flex flex-col">
+              <div ref={googleMapContainerRef} className="flex-1 w-full" />
+              {/* HUD badge */}
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-md bg-[hsl(220,20%,7%)/0.92] backdrop-blur border border-primary/50 shadow-[0_0_20px_hsl(190_100%_50%/0.15)]">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-primary uppercase">Photorealistic 3D Mode</span>
+                <span className="text-[8px] font-mono text-muted-foreground">
+                  {streetCoords.lat.toFixed(4)}°, {streetCoords.lng.toFixed(4)}°
+                </span>
+              </div>
+              {/* Return button */}
+              <button
+                onClick={() => setStreetMode(false)}
+                className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 rounded-lg bg-[hsl(220,20%,7%)/0.92] backdrop-blur border border-primary/40 text-primary hover:bg-primary/10 transition-colors shadow-xl text-[10px] font-mono font-bold tracking-widest uppercase"
+              >
+                ← Return to Globe
+              </button>
             </div>
           )}
 
