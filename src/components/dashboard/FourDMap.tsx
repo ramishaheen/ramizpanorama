@@ -147,20 +147,25 @@ const EMULATED_SATELLITES: SatPoint[] = [
 ];
 
 const EMULATED_FLIGHTS = [
-  { callsign: "UAE321", lat: 25.25, lng: 55.36, velocity: 250, baro_altitude: 11000, origin_country: "UAE", military: false },
-  { callsign: "QTR804", lat: 25.27, lng: 51.61, velocity: 240, baro_altitude: 10500, origin_country: "Qatar", military: false },
-  { callsign: "MEA322", lat: 33.82, lng: 35.49, velocity: 220, baro_altitude: 8500, origin_country: "Lebanon", military: false },
-  { callsign: "THY761", lat: 40.98, lng: 29.00, velocity: 260, baro_altitude: 12000, origin_country: "Turkey", military: false },
-  { callsign: "SVA114", lat: 24.75, lng: 46.70, velocity: 230, baro_altitude: 9800, origin_country: "Saudi Arabia", military: false },
-  { callsign: "IRA423", lat: 35.68, lng: 51.31, velocity: 210, baro_altitude: 7000, origin_country: "Iran", military: false },
-  { callsign: "RCH871", lat: 25.05, lng: 51.28, velocity: 280, baro_altitude: 13000, origin_country: "USA", military: true },
-  { callsign: "DUKE41", lat: 32.10, lng: 34.85, velocity: 190, baro_altitude: 6500, origin_country: "Israel", military: true },
-  { callsign: "REAC22", lat: 37.05, lng: 35.50, velocity: 300, baro_altitude: 14000, origin_country: "USA", military: true },
-  { callsign: "NAVY6", lat: 26.50, lng: 56.10, velocity: 170, baro_altitude: 3000, origin_country: "USA", military: true },
-  { callsign: "MSR201", lat: 30.10, lng: 31.30, velocity: 240, baro_altitude: 10000, origin_country: "Egypt", military: false },
-  { callsign: "GFA231", lat: 26.10, lng: 50.60, velocity: 220, baro_altitude: 8800, origin_country: "Bahrain", military: false },
-  { callsign: "KAC155", lat: 29.20, lng: 47.95, velocity: 235, baro_altitude: 9500, origin_country: "Kuwait", military: false },
-  { callsign: "ETD403", lat: 24.45, lng: 54.65, velocity: 250, baro_altitude: 11500, origin_country: "UAE", military: false },
+  // Commercial airliners
+  { callsign: "UAE321", lat: 25.25, lng: 55.36, velocity: 250, baro_altitude: 11000, origin_country: "UAE", military: false, type: "A380", airline: "Emirates", heading: 315, route: "DXB→LHR" },
+  { callsign: "QTR804", lat: 25.27, lng: 51.61, velocity: 240, baro_altitude: 10500, origin_country: "Qatar", military: false, type: "B777", airline: "Qatar Airways", heading: 290, route: "DOH→CDG" },
+  { callsign: "MEA322", lat: 33.82, lng: 35.49, velocity: 220, baro_altitude: 8500, origin_country: "Lebanon", military: false, type: "A321", airline: "MEA", heading: 180, route: "BEY→CAI" },
+  { callsign: "THY761", lat: 40.98, lng: 29.00, velocity: 260, baro_altitude: 12000, origin_country: "Turkey", military: false, type: "B738", airline: "Turkish Airlines", heading: 120, route: "IST→DXB" },
+  { callsign: "SVA114", lat: 24.75, lng: 46.70, velocity: 230, baro_altitude: 9800, origin_country: "Saudi Arabia", military: false, type: "B789", airline: "Saudia", heading: 340, route: "RUH→LHR" },
+  { callsign: "IRA423", lat: 35.68, lng: 51.31, velocity: 210, baro_altitude: 7000, origin_country: "Iran", military: false, type: "A310", airline: "Iran Air", heading: 245, route: "IKA→IST" },
+  { callsign: "MSR201", lat: 30.10, lng: 31.30, velocity: 240, baro_altitude: 10000, origin_country: "Egypt", military: false, type: "B738", airline: "EgyptAir", heading: 45, route: "CAI→AMM" },
+  { callsign: "GFA231", lat: 26.10, lng: 50.60, velocity: 220, baro_altitude: 8800, origin_country: "Bahrain", military: false, type: "A320", airline: "Gulf Air", heading: 200, route: "BAH→MCT" },
+  { callsign: "KAC155", lat: 29.20, lng: 47.95, velocity: 235, baro_altitude: 9500, origin_country: "Kuwait", military: false, type: "B777", airline: "Kuwait Airways", heading: 310, route: "KWI→LHR" },
+  { callsign: "ETD403", lat: 24.45, lng: 54.65, velocity: 250, baro_altitude: 11500, origin_country: "UAE", military: false, type: "A350", airline: "Etihad", heading: 330, route: "AUH→JFK" },
+  // Military — C-17, F-15, P-8, tanker, drone
+  { callsign: "RCH871", lat: 25.05, lng: 51.28, velocity: 280, baro_altitude: 13000, origin_country: "USA", military: true, type: "C-17", airline: "USAF", heading: 270, route: "Al Udeid→Ramstein" },
+  { callsign: "DUKE41", lat: 32.10, lng: 34.85, velocity: 190, baro_altitude: 6500, origin_country: "Israel", military: true, type: "F-15I", airline: "IAF", heading: 30, route: "CAP Patrol" },
+  { callsign: "REAC22", lat: 37.05, lng: 35.50, velocity: 300, baro_altitude: 14000, origin_country: "USA", military: true, type: "KC-135", airline: "USAF", heading: 90, route: "Tanker Track" },
+  { callsign: "NAVY6", lat: 26.50, lng: 56.10, velocity: 170, baro_altitude: 3000, origin_country: "USA", military: true, type: "P-8A", airline: "USN", heading: 180, route: "ASW Patrol — Hormuz" },
+  { callsign: "FORTE12", lat: 34.00, lng: 40.00, velocity: 320, baro_altitude: 18000, origin_country: "USA", military: true, type: "RQ-4", airline: "USAF", heading: 60, route: "ISR — Syria" },
+  { callsign: "VADER01", lat: 33.50, lng: 43.00, velocity: 150, baro_altitude: 5000, origin_country: "USA", military: true, type: "MQ-9", airline: "USAF", heading: 145, route: "ISR — Iraq" },
+  { callsign: "IAM3101", lat: 41.80, lng: 12.50, velocity: 260, baro_altitude: 12000, origin_country: "Italy", military: true, type: "KC-767", airline: "AMI", heading: 100, route: "Tanker Orbit" },
 ];
 
 const EMULATED_VESSELS = [
