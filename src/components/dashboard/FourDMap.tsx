@@ -608,17 +608,26 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     console.log(`[4D] Rendering ${points.length} points on globe`);
     globe.pointsData(points);
 
-    // SATELLITES as 3D objects
+    // SATELLITES — render as visible colored points on globe + 3D objects for labels
     if (layers.satellites && panopticSats && allSatellites.length) {
-      const satObjects = allSatellites.map(s => {
+      allSatellites.forEach(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : "#888888";
+        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : s.category === "Space Station" ? "#ffffff" : s.category === "Starlink" ? "#888888" : "#666666";
+        points.push({
+          lat: s.lat, lng: s.lng, pointAlt: Math.min(s.alt / 6371 * 0.15, 0.8),
+          color: satCol, radius: (isISR ? 0.18 : isMil ? 0.14 : 0.08) * densityMult,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}30"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol}">◆</span><span style="color:${satCol};font-weight:bold;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
+        });
+      });
+
+      // 3D object labels only for ISR satellites
+      const satObjects = isrSatellites.map(s => {
+        const isMil = s.category === "Military" || s.category === "Early Warning";
+        const satCol = isMil ? "#ef4444" : "#00d4ff";
         return {
           lat: s.lat, lng: s.lng, alt: s.alt / 6371 * 0.15,
-          label: isISR
-            ? `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol};font-size:10px">◆</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`
-            : `<div style="font-family:monospace;font-size:10px;background:rgba(10,10,20,0.9);border:1px solid ${satCol};padding:4px 8px;border-radius:3px;color:#f0f0f0"><div style="color:${satCol};font-weight:bold">🛰 ${s.name}</div><div style="color:#888;font-size:8px">${Math.round(s.alt)}km • ${s.category}</div></div>`,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol};font-size:10px">◆</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
         };
       });
       globe.objectsData(satObjects);
