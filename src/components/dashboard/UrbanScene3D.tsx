@@ -356,7 +356,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         if (!document.getElementById("snap-pulse-keyframes")) {
           const style = document.createElement("style");
           style.id = "snap-pulse-keyframes";
-          style.textContent = \`@keyframes snapPulse { 0%,100% { transform:scale(1);opacity:1; } 50% { transform:scale(1.6);opacity:0; } }\`;
+          style.textContent = "@keyframes snapPulse { 0%,100% { transform:scale(1);opacity:1; } 50% { transform:scale(1.6);opacity:0; } }";
           document.head.appendChild(style);
         }
         const { AdvancedMarkerElement } = google.maps.marker;
