@@ -348,7 +348,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
         .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png")
         .backgroundImageUrl("//unpkg.com/three-globe/example/img/night-sky.png")
-        .atmosphereColor("hsl(190, 80%, 40%)")
+        .atmosphereColor("#0040CC")
         .atmosphereAltitude(0.18)
         .showAtmosphere(true)
         .width(globeContainerRef.current.clientWidth)
@@ -983,26 +983,42 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[hsl(220,25%,5%)] flex flex-col" style={{ filter: bloomEnabled ? "brightness(1.05) contrast(1.08)" : undefined }}>
-      {/* Satellite pulse animation */}
-      <style>{`@keyframes satPulse { 0% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; } 100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0; } }`}</style>
-      <div className="fixed inset-0 pointer-events-none z-[10000] opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,210,255,0.1) 2px, rgba(0,210,255,0.1) 4px)" }} />
+    <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: "#04060C", filter: bloomEnabled ? "brightness(1.05) contrast(1.08)" : undefined }}>
+      {/* Satellite pulse animation + Gotham scanlines */}
+      <style>{`
+        @keyframes satPulse { 0% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; } 100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0; } }
+        @keyframes gothamScan { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
+      `}</style>
+      {/* Scanlines overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[10000]" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,100,200,0.04) 3px, rgba(0,100,200,0.04) 4px)" }} />
+      {/* Moving scan line */}
+      <div className="fixed left-0 right-0 h-px pointer-events-none z-[10000]" style={{ background: "linear-gradient(90deg, transparent, rgba(0,120,255,0.15), transparent)", animation: "gothamScan 8s linear infinite" }} />
+      {/* Classification header */}
+      <div className="flex items-center justify-between px-4 py-0.5 flex-shrink-0" style={{ background: "#0A0000", borderBottom: "1px solid #3D0000" }}>
+        <span className="text-[7px] font-mono font-black tracking-[0.35em] uppercase" style={{ color: "#CC0000" }}>TOP SECRET // SI // TK // NOFORN</span>
+        <span className="text-[7px] font-mono tracking-[0.2em]" style={{ color: "#660000" }}>AUTHORIZED USERS ONLY — HANDLE VIA SCI CHANNELS ONLY</span>
+        <span className="text-[7px] font-mono font-black tracking-[0.35em] uppercase" style={{ color: "#CC0000" }}>TOP SECRET // SI // TK // NOFORN</span>
+      </div>
 
       <div className="flex flex-1 min-h-0">
         {/* LEFT PANEL */}
         {!cleanUI && (
-          <div className="w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex flex-col overflow-hidden">
-            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
+          <div className="w-56 flex-shrink-0 flex flex-col overflow-hidden" style={{ background: "#060A12", borderRight: "1px solid #0A2040" }}>
+            <div className="px-3 py-2.5" style={{ borderBottom: "1px solid #0A2040", background: "#08111C" }}>
               <div className="flex items-center gap-2">
-                <div className="relative"><Radar className="h-4 w-4 text-primary" /><div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" /></div>
+                <div className="relative"><Radar className="h-4 w-4" style={{ color: "#0070FF" }} /><div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" /></div>
                 <div>
-                  <div className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">GOTHAM • 4D</div>
-                  <div className="text-[8px] tracking-[0.15em] text-muted-foreground uppercase">Intelligence Fusion</div>
+                  <div className="text-[10px] font-black tracking-[0.25em] uppercase" style={{ color: "#0070FF", fontFamily: "monospace" }}>GOTHAM PLATFORM</div>
+                  <div className="text-[7px] tracking-[0.2em] uppercase" style={{ color: "#2A5080", fontFamily: "monospace" }}>Multi-Int Fusion v4.1</div>
                 </div>
+              </div>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, #0070FF40, transparent)" }} />
+                <span className="text-[6px] font-mono tracking-[0.2em]" style={{ color: "#1A3A60" }}>SYS-4D-{Math.floor(Date.now()/1000).toString(36).toUpperCase()}</span>
               </div>
             </div>
 
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)]">
+            <div className="px-3 py-2" style={{ borderBottom: "1px solid #071828", background: "#050810" }}>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { label: "SAT", value: stats.sats, color: "#00d4ff" },
@@ -1020,14 +1036,17 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
-              <span className="text-[9px] text-muted-foreground font-mono tracking-wider">{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
+            <div className="px-3 py-1.5" style={{ borderBottom: "1px solid #071020" }}>
+              <span className="text-[9px] font-mono tracking-wider" style={{ color: "#1A4070" }}>{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
             </div>
 
             <div className="flex-1 overflow-y-auto py-1">
               {layerConfigs.map(layer => (
                 <button key={layer.id} onClick={() => toggleLayer(layer.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2"
+                  style={{ background: layers[layer.id] ? "rgba(0,112,255,0.08)" : "transparent", borderLeftColor: layers[layer.id] ? "#0070FF" : "transparent" }}
+                  onMouseEnter={e => { if (!layers[layer.id]) (e.currentTarget as HTMLElement).style.background = "rgba(0,80,180,0.05)"; }}
+                  onMouseLeave={e => { if (!layers[layer.id]) (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                   <Checkbox checked={layers[layer.id]} onCheckedChange={() => toggleLayer(layer.id)} className="h-3 w-3 pointer-events-none rounded-sm" />
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
                   <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${layers[layer.id] ? "text-foreground" : "text-muted-foreground"}`}>
@@ -1040,9 +1059,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               ))}
             </div>
 
-            <div className="px-3 py-2 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)]">
-              <div className="text-[7px] font-mono text-muted-foreground tracking-[0.15em] uppercase">WAROS • PALANTIR-CLASS OSINT</div>
-              <div className="text-[7px] font-mono text-primary/40 mt-0.5">{new Date().toISOString().replace("T", " ").slice(0, 19)} UTC</div>
+            <div className="px-3 py-2" style={{ borderTop: "1px solid #071828", background: "#050810" }}>
+              <div className="text-[7px] font-mono tracking-[0.2em] uppercase" style={{ color: "#0050AA" }}>GOTHAM v4.1 // WAROS MULTI-INT</div>
+              <div className="text-[7px] font-mono mt-0.5" style={{ color: "#002A60" }}>{new Date().toISOString().replace("T", " ").slice(0, 19)} UTC</div>
+              <div className="mt-1 h-px" style={{ background: "linear-gradient(90deg, #0070FF30, transparent)" }} />
+              <div className="text-[6px] font-mono mt-0.5 tracking-[0.15em]" style={{ color: "#001A40" }}>// CLASSIFIED // NOT FOR DISTRIBUTION</div>
             </div>
           </div>
         )}
@@ -1051,10 +1072,39 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
           <div ref={globeContainerRef} className="absolute inset-0" />
           {!globeReady && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[hsl(220,25%,5%)] z-10">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-[11px] font-mono text-primary tracking-widest animate-pulse">INITIALIZING 4D GLOBE...</span>
+            <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: "#04060C" }}>
+              <div className="flex flex-col items-center gap-4">
+                {/* Gotham loading ring */}
+                <div className="relative w-16 h-16">
+                  <div className="absolute inset-0 border border-[#0070FF]/30 rounded-full" />
+                  <div className="absolute inset-1 border border-[#0070FF]/20 rounded-full" />
+                  <div className="w-full h-full border-2 border-t-[#0070FF] border-r-[#0070FF]/30 border-b-transparent border-l-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-[#0070FF] rounded-full animate-pulse" />
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <div className="text-[11px] font-mono font-bold tracking-[0.3em] animate-pulse" style={{ color: "#0070FF" }}>GOTHAM INTELLIGENCE PLATFORM</div>
+                  <div className="text-[8px] font-mono tracking-[0.2em]" style={{ color: "#2A4A70" }}>INITIALIZING 4D MULTI-INT FUSION ENGINE...</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tactical reticle overlay (always present over globe) */}
+          {globeReady && !streetMode && (
+            <div className="absolute inset-0 pointer-events-none z-[7] flex items-center justify-center">
+              {/* Corner brackets */}
+              <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2" style={{ borderColor: "#0070FF40" }} />
+              <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2" style={{ borderColor: "#0070FF40" }} />
+              <div className="absolute bottom-20 left-4 w-8 h-8 border-b-2 border-l-2" style={{ borderColor: "#0070FF40" }} />
+              <div className="absolute bottom-20 right-4 w-8 h-8 border-b-2 border-r-2" style={{ borderColor: "#0070FF40" }} />
+              {/* Center reticle */}
+              <div className="relative w-20 h-20 opacity-30">
+                <div className="absolute inset-0 border border-[#0070FF] rounded-full" />
+                <div className="absolute top-1/2 left-0 right-0 h-px" style={{ background: "#0070FF" }} />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px" style={{ background: "#0070FF" }} />
+                <div className="absolute inset-[6px] border border-[#0070FF]/30 rounded-full" />
               </div>
             </div>
           )}
@@ -1121,21 +1171,25 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           {!cleanUI && hudEnabled && (
             <>
               <div className="absolute top-4 left-4 z-10">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(190,60%,18%)]">
-                  <Globe className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-bold font-mono tracking-[0.15em] text-foreground">4D <span className="text-primary">MAP</span></span>
-                  <div className="w-px h-3 bg-[hsl(190,60%,20%)] mx-1" />
-                  <span className="text-[8px] font-mono text-muted-foreground tracking-[0.1em]">MULTI-INT FUSION</span>
-                  <div className="flex items-center gap-1 ml-2"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[8px] font-mono text-success">LIVE</span></div>
+                <div className="flex items-center gap-2 px-3 py-1.5 backdrop-blur" style={{ background: "rgba(4,6,12,0.9)", border: "1px solid #0A2040" }}>
+                  {/* Left accent bar */}
+                  <div className="w-0.5 h-6 mr-1" style={{ background: "linear-gradient(180deg, #0070FF, transparent)" }} />
+                  <Globe className="h-4 w-4" style={{ color: "#0070FF" }} />
+                  <div>
+                    <div className="text-[10px] font-black font-mono tracking-[0.2em]" style={{ color: "#0070FF" }}>GOTHAM INTELLIGENCE PLATFORM</div>
+                    <div className="text-[7px] font-mono tracking-[0.15em]" style={{ color: "#1A3A60" }}>4D MULTI-INT FUSION • UNCLASSIFIED//FOR OFFICIAL USE ONLY</div>
+                  </div>
+                  <div className="w-px h-5 mx-1" style={{ background: "#0A2040" }} />
+                  <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[8px] font-mono text-success tracking-wider">LIVE</span></div>
                 </div>
               </div>
               <div className="absolute top-3 right-14 z-20 flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,15%)]">
+                <div className="flex items-center gap-1.5 px-2 py-1 backdrop-blur" style={{ background: "rgba(4,6,12,0.85)", border: "1px solid #0A1830" }}>
                   <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444] animate-pulse" />
                   <span className="text-[8px] font-mono text-[#ef4444] tracking-wider">REC</span>
-                  <span className="text-[8px] font-mono text-muted-foreground">{new Date().toISOString().slice(11, 19)}</span>
+                  <span className="text-[8px] font-mono" style={{ color: "#2A4060" }}>{new Date().toISOString().slice(11, 19)}</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,15%)]">
+                <div className="flex items-center gap-1.5 px-2 py-1 backdrop-blur" style={{ background: "rgba(4,6,12,0.85)", border: "1px solid #0A1830" }}>
                   <span className="text-[8px] font-mono text-[#00d4ff]">ORB {isrSatellites.length}</span>
                   <span className="text-[7px] text-muted-foreground">|</span>
                   <span className="text-[8px] font-mono text-[#22c55e]">PASS {Math.min(isrSatellites.length, 5)}</span>
@@ -1215,79 +1269,113 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)]">
-              <button onClick={() => setCleanUI(true)} className="w-full px-2 py-1.5 rounded text-[9px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors text-center">CLEAN UI</button>
+            <div className="px-3 py-1.5" style={{ borderBottom: "1px solid #071020" }}>
+              <button onClick={() => setCleanUI(true)} className="w-full px-2 py-1.5 text-[9px] font-mono tracking-wider text-center transition-colors" style={{ border: "1px solid #0A1830", color: "#1A4070" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(0,80,180,0.08)"; (e.currentTarget as HTMLElement).style.color = "#0070FF"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#1A4070"; }}>
+                CLEAN UI [F11]
+              </button>
             </div>
 
-            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
+            <div className="px-3 py-1.5" style={{ borderBottom: "1px solid #071020", background: "#060A12" }}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5"><AlertTriangle className="h-3 w-3 text-[#f97316]" /><span className="text-[9px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
-                <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
+                <div className="flex items-center gap-1.5">
+                  <AlertTriangle className="h-3 w-3" style={{ color: "#0070FF" }} />
+                  <span className="text-[9px] font-black tracking-[0.2em] uppercase font-mono" style={{ color: "#0070FF" }}>EVENT FEED</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1 h-1 rounded-full bg-[#ef4444] animate-pulse" />
+                  <span className="text-[8px] font-mono" style={{ color: "#0070FF" }}>{unifiedFeed.length}</span>
+                </div>
               </div>
             </div>
 
             <div ref={feedRef} className="flex-1 overflow-y-auto">
               {unifiedFeed.map(ev => (
                 <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
-                  className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
+                  className={`w-full text-left px-2 py-1.5 border-b border-l-2 ${getSeverityBorder(ev.severity)} transition-colors`}
+                  style={{ borderBottomColor: "#060E18" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(0,80,180,0.06)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
                   <div className="flex items-center justify-between">
                     <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
                       <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
                     </span>
-                    <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                    <span className="text-[7px] font-mono flex-shrink-0 ml-1" style={{ color: "#1A3050" }}>{ev.source}</span>
                   </div>
-                  <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
-                  <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
+                  <div className="text-[8px] font-mono truncate mt-0.5" style={{ color: "#8AA0B8" }}>{ev.label}</div>
+                  <div className="text-[7px] font-mono mt-0.5" style={{ color: "#2A4060" }}>{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
                 </button>
               ))}
-              {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
+              {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono" style={{ color: "#1A3050" }}>No events in window</div>}
             </div>
           </div>
         )}
       </div>
 
       {cleanUI && (
-        <button onClick={() => setCleanUI(false)} className="fixed bottom-20 right-4 z-[10001] px-3 py-1.5 rounded bg-[hsl(220,20%,7%)/0.8] backdrop-blur border border-[hsl(190,60%,18%)] text-[9px] font-mono text-primary hover:bg-primary/10 transition-colors">RESTORE UI</button>
+        <button onClick={() => setCleanUI(false)} className="fixed bottom-20 right-4 z-[10001] px-3 py-1.5 backdrop-blur text-[9px] font-mono transition-colors" style={{ background: "rgba(4,6,12,0.8)", border: "1px solid #0A2040", color: "#0070FF" }}>RESTORE UI</button>
       )}
 
       {/* BOTTOM TIMELINE */}
       {!cleanUI && (
-        <div className="flex-shrink-0 bg-[hsl(220,20%,6%)] border-t border-[hsl(190,60%,15%)]">
+        <div className="flex-shrink-0" style={{ background: "#060A12", borderTop: "1px solid #0A2040" }}>
+          {/* Timeline bar label */}
+          <div className="flex items-center gap-2 px-3 py-0.5" style={{ borderBottom: "1px solid #071020" }}>
+            <span className="text-[7px] font-mono tracking-[0.25em] uppercase" style={{ color: "#0050AA" }}>TEMPORAL AXIS</span>
+            <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, #0070FF20, transparent)" }} />
+            <span className="text-[7px] font-mono" style={{ color: "#1A3A60" }}>24H WINDOW</span>
+          </div>
+
           <div className="flex items-center gap-2 px-3 py-1.5">
-            <button onClick={() => setPlaying(!playing)} className="flex items-center justify-center h-6 w-6 rounded border border-[hsl(190,60%,20%)] text-primary hover:bg-primary/10 transition-colors">
+            <button onClick={() => setPlaying(!playing)} className="flex items-center justify-center h-6 w-6 transition-colors" style={{ border: "1px solid #0A2040", color: "#0070FF" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(0,112,255,0.1)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
               {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
             </button>
-            <span className="text-[8px] font-mono text-muted-foreground w-28 flex-shrink-0">{timelineLabel}</span>
+            <span className="text-[8px] font-mono w-28 flex-shrink-0" style={{ color: "#2A4060" }}>{timelineLabel}</span>
             <div className="flex-1 relative h-5 flex items-center">
               {timelineDots.map((dot, i) => (
-                <div key={i} className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full z-10 pointer-events-none" style={{ left: `${dot.position}%`, backgroundColor: dot.color }} title={dot.label} />
+                <div key={i} className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 z-10 pointer-events-none" style={{ left: `${dot.position}%`, backgroundColor: dot.color }} title={dot.label} />
               ))}
               <input type="range" min={0} max={100} step={0.1} value={timelineValue} onChange={e => { setTimelineValue(parseFloat(e.target.value)); setPlaying(false); }}
-                className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-[0_0_8px_hsl(190_100%_50%/0.4)] [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20" />
+                className="w-full h-0.5 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-[#0070FF] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,112,255,0.5)] [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20"
+                style={{ background: "linear-gradient(to right, #0070FF " + timelineValue + "%, #071020 " + timelineValue + "%)" }} />
             </div>
-            <span className="text-[8px] font-mono text-primary flex-shrink-0">{timelineValue >= 99.5 ? "LIVE" : `T-${Math.round((100 - timelineValue) * 14.4)}m`}</span>
+            <span className="text-[8px] font-mono flex-shrink-0" style={{ color: "#0070FF" }}>{timelineValue >= 99.5 ? "▶ LIVE" : `T-${Math.round((100 - timelineValue) * 14.4)}m`}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1 border-t border-[hsl(220,15%,10%)]">
-            <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">SPEED:</span>
+          <div className="flex items-center gap-1.5 px-3 py-1" style={{ borderTop: "1px solid #071020" }}>
+            <span className="text-[8px] font-mono tracking-[0.15em]" style={{ color: "#1A3A60" }}>SPEED:</span>
             {speedOptions.map(s => (
-              <button key={s} onClick={() => setSpeed(s)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${speed === s ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{s}</button>
+              <button key={s} onClick={() => setSpeed(s)} className="px-1.5 py-0.5 text-[8px] font-mono transition-colors"
+                style={{ border: `1px solid ${speed === s ? "#0070FF60" : "#071828"}`, background: speed === s ? "rgba(0,112,255,0.1)" : "transparent", color: speed === s ? "#0070FF" : "#1A3A60" }}>{s}</button>
             ))}
-            <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-1" />
-            <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">ORBIT:</span>
+            <div className="w-px h-3 mx-1" style={{ background: "#071828" }} />
+            <span className="text-[8px] font-mono tracking-[0.15em]" style={{ color: "#1A3A60" }}>ORBIT:</span>
             {orbitOptions.map(o => (
-              <button key={o} onClick={() => setOrbitMode(o)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono border transition-colors ${orbitMode === o ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{o}</button>
+              <button key={o} onClick={() => setOrbitMode(o)} className="px-1.5 py-0.5 text-[8px] font-mono transition-colors"
+                style={{ border: `1px solid ${orbitMode === o ? "#0070FF60" : "#071828"}`, background: orbitMode === o ? "rgba(0,112,255,0.1)" : "transparent", color: orbitMode === o ? "#0070FF" : "#1A3A60" }}>{o}</button>
             ))}
             <div className="flex-1" />
-            <span className="text-[8px] font-mono text-muted-foreground">{unifiedFeed.length} EVENTS</span>
+            <div className="flex items-center gap-1">
+              <div className="w-1 h-1 bg-[#ef4444] animate-pulse" />
+              <span className="text-[8px] font-mono" style={{ color: "#2A4060" }}>{unifiedFeed.length} INTEL EVENTS</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 px-3 py-1 border-t border-[hsl(220,15%,10%)] flex-wrap">
+          <div className="flex items-center gap-1 px-3 py-1 flex-wrap" style={{ borderTop: "1px solid #071020" }}>
             {chipLayers.map(chip => (
-              <button key={chip.id} onClick={() => toggleLayer(chip.id)} className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono border transition-colors ${layers[chip.id] ? "border-primary/40 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
+              <button key={chip.id} onClick={() => toggleLayer(chip.id)} className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono transition-colors"
+                style={{ border: `1px solid ${layers[chip.id] ? "#0070FF40" : "#071828"}`, background: layers[chip.id] ? "rgba(0,112,255,0.08)" : "transparent", color: layers[chip.id] ? "#0070FF" : "#1A3A60" }}>
                 {chip.icon} {chip.label}
               </button>
             ))}
+          </div>
+
+          {/* Classification footer */}
+          <div className="flex items-center justify-center px-3 py-0.5" style={{ borderTop: "1px solid #071020", background: "#050810" }}>
+            <span className="text-[6px] font-mono tracking-[0.3em]" style={{ color: "#0A1830" }}>GOTHAM INTELLIGENCE PLATFORM // WAROS MULTI-INT FUSION // {new Date().toISOString().slice(0, 10)} // AUTHORIZED USE ONLY</span>
           </div>
         </div>
       )}
