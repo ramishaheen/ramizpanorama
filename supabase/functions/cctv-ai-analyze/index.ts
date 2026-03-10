@@ -5,14 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) {
-    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_API_KEY) {
+    return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -30,11 +30,9 @@ Deno.serve(async (req) => {
       const { camera_id } = body;
       if (!camera_id) throw new Error("camera_id required");
 
-      // Fetch camera data
       const { data: cam, error: camErr } = await sb.from("cameras").select("*").eq("id", camera_id).single();
       if (camErr || !cam) throw new Error("Camera not found");
 
-      // Get thumbnail URL
       const ytId = cam.youtube_video_id;
       const thumbnailUrl = ytId
         ? `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`
@@ -42,19 +40,22 @@ Deno.serve(async (req) => {
 
       if (!thumbnailUrl) throw new Error("No thumbnail available for analysis");
 
-      // Call AI with image analysis
-      const aiResponse = await fetch(GATEWAY, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content: `You are a CCTV surveillance AI analyst. Analyze camera images and detect:
+      // Fetch the image and convert to base64 for Gemini
+      let imageBase64: string | null = null;
+      let imageMimeType = "image/jpeg";
+      try {
+        const imgResp = await fetch(thumbnailUrl);
+        if (imgResp.ok) {
+          const imgBuffer = await imgResp.arrayBuffer();
+          imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
+          const ct = imgResp.headers.get("content-type");
+          if (ct) imageMimeType = ct.split(";")[0].trim();
+        }
+      } catch (e) {
+        console.error("Failed to fetch thumbnail:", e);
+      }
+
+      const systemPrompt = `You are a CCTV surveillance AI analyst. Analyze camera images and detect:
 - People (count and positions)
 - Vehicles (cars, trucks, motorcycles, buses)
 - Smoke or fire
@@ -76,17 +77,42 @@ Return ONLY valid JSON with this exact structure:
   "overall_severity": "low|medium|high|critical",
   "summary": "One-line summary of scene",
   "event_type": "normal|person_detected|vehicle_detected|crowd_detected|fire_detected|smoke_detected|abnormal_activity|traffic_congestion"
-}`,
-            },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: `Analyze this CCTV camera feed from ${cam.name} in ${cam.city}, ${cam.country}. Detect all objects, people, vehicles, and any security concerns.` },
-                { type: "image_url", image_url: { url: thumbnailUrl } },
-              ],
-            },
-          ],
-        }),
+}`;
+
+      const userText = `Analyze this CCTV camera feed from ${cam.name} in ${cam.city}, ${cam.country}. Detect all objects, people, vehicles, and any security concerns.`;
+
+      // Build Gemini request body
+      const geminiBody: any = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: systemPrompt + "\n\n" + userText },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048,
+        },
+      };
+
+      // Add image if successfully fetched
+      if (imageBase64) {
+        geminiBody.contents[0].parts.push({
+          inlineData: { mimeType: imageMimeType, data: imageBase64 },
+        });
+      } else {
+        // Fallback: use image URL via fileData (Gemini supports this for public URLs)
+        geminiBody.contents[0].parts.push({
+          fileData: { mimeType: "image/jpeg", fileUri: thumbnailUrl },
+        });
+      }
+
+      const aiResponse = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiBody),
       });
 
       if (!aiResponse.ok) {
@@ -95,18 +121,13 @@ Return ONLY valid JSON with this exact structure:
             status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        if (aiResponse.status === 402) {
-          return new Response(JSON.stringify({ error: "Payment required" }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
         const errText = await aiResponse.text();
-        console.error("AI error:", aiResponse.status, errText);
-        throw new Error("AI analysis failed");
+        console.error("Gemini API error:", aiResponse.status, errText);
+        throw new Error(`Gemini analysis failed: ${aiResponse.status}`);
       }
 
       const aiData = await aiResponse.json();
-      const rawContent = aiData.choices?.[0]?.message?.content || "";
+      const rawContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
       // Parse JSON from response
       let analysis;
@@ -123,9 +144,8 @@ Return ONLY valid JSON with this exact structure:
         });
       }
 
-      // Store event in database if noteworthy
+      // Store event if noteworthy
       const isNoteworthy = analysis.event_type !== "normal" || analysis.overall_severity !== "low";
-
       if (isNoteworthy) {
         await sb.from("camera_events").insert({
           camera_id: cam.id,
@@ -140,7 +160,6 @@ Return ONLY valid JSON with this exact structure:
         });
       }
 
-      // Update camera AI metadata
       await sb.from("cameras").update({
         last_ai_analysis_at: new Date().toISOString(),
         ai_event_count: (cam.ai_event_count || 0) + (isNoteworthy ? 1 : 0),
@@ -167,58 +186,15 @@ Return ONLY valid JSON with this exact structure:
       });
     }
 
-    // ── BATCH_ANALYZE: Analyze multiple cameras ──
-    if (action === "batch_analyze") {
-      const { camera_ids, limit = 5 } = body;
-      let camsToAnalyze;
-
-      if (camera_ids?.length) {
-        const { data } = await sb.from("cameras").select("id").in("id", camera_ids.slice(0, limit));
-        camsToAnalyze = data || [];
-      } else {
-        // Pick random active cameras with YouTube thumbnails
-        const { data } = await sb.from("cameras")
-          .select("id")
-          .eq("is_active", true)
-          .not("youtube_video_id", "is", null)
-          .order("last_ai_analysis_at", { ascending: true, nullsFirst: true })
-          .limit(limit);
-        camsToAnalyze = data || [];
-      }
-
-      const results = [];
-      for (const cam of camsToAnalyze) {
-        try {
-          // Recursive call to analyze action
-          const innerReq = new Request(req.url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "analyze", camera_id: cam.id }),
-          });
-          // We can't easily recurse, so just call the analysis inline
-          // For simplicity, just record which cameras were queued
-          results.push({ camera_id: cam.id, status: "queued" });
-        } catch (e) {
-          results.push({ camera_id: cam.id, status: "error", error: e instanceof Error ? e.message : "Unknown" });
-        }
-      }
-
-      return new Response(JSON.stringify({ queued: results.length, results }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // ── STATS: Get event statistics ──
     if (action === "stats") {
       const { data: events } = await sb.from("camera_events").select("event_type, severity, created_at").order("created_at", { ascending: false }).limit(500);
-      
       const byType: Record<string, number> = {};
       const bySeverity: Record<string, number> = {};
       (events || []).forEach(e => {
         byType[e.event_type] = (byType[e.event_type] || 0) + 1;
         bySeverity[e.severity] = (bySeverity[e.severity] || 0) + 1;
       });
-
       return new Response(JSON.stringify({
         total_events: events?.length || 0,
         by_type: byType,
