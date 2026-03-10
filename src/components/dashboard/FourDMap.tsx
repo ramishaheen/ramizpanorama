@@ -329,20 +329,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => { destroyed = true; if (rafRef.current) cancelAnimationFrame(rafRef.current); if (satIntervalRef.current) clearInterval(satIntervalRef.current); };
   }, []);
 
-  // Also propagate emulated satellites for movement when using fallback
+  // Update satellite positions every second for visible orbital movement
   useEffect(() => {
-    if (satellites.length > 0) return; // Real data loaded, skip emulated movement
-    const iv = setInterval(() => {
-      // Force re-render by updating allSatellites via state won't work for emulated,
-      // so we directly mutate EMULATED_SATELLITES positions (they're const but objects are mutable)
-      EMULATED_SATELLITES.forEach(s => {
+    if (satellites.length === 0) return;
+    const updateSats = () => {
+      setSatellites(prev => prev.map(s => {
         const pos = propagateSatellite(s.inclination, s.raan, s.meanAnomaly, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
-        s.lat = pos.lat;
-        s.lng = pos.lng;
-      });
-      // Trigger re-render by toggling a dummy state
-      setGlobeReady(prev => prev);
-    }, 1000);
+        return { ...s, lat: pos.lat, lng: pos.lng };
+      }));
+    };
+    satIntervalRef.current = setInterval(updateSats, 1000);
+    return () => clearInterval(satIntervalRef.current);
+  }, [satellites.length]);
+
+  // For emulated fallback: use a tick counter to force re-propagation
+  const [emulatedTick, setEmulatedTick] = useState(0);
+  useEffect(() => {
+    if (satellites.length > 0) return;
+    const iv = setInterval(() => setEmulatedTick(t => t + 1), 1000);
     return () => clearInterval(iv);
   }, [satellites.length]);
 
