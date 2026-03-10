@@ -344,7 +344,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => clearInterval(satIntervalRef.current);
   }, [satellites.length]);
 
-  // Globe data update effect is placed after timeline/emulated data declarations below
+  
 
   // Stats
   const stats = useMemo(() => ({
