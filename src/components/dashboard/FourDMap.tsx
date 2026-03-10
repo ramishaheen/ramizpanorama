@@ -701,33 +701,61 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     console.log(`[4D] Rendering ${points.length} points on globe`);
     globe.pointsData(points);
 
-    // SATELLITES — render with 🛰️ icon and orbital info
+    // SATELLITES — render as HTML icon elements for visible satellite icons (not dots/lines)
     if (layers.satellites && panopticSats && allSatellites.length) {
-      allSatellites.forEach(s => {
+      const satHtmlElements = allSatellites.slice(0, 200).map(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : s.category === "Space Station" ? "#ffffff" : s.category === "Starlink" ? "#888888" : "#666666";
+        const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : s.category === "Space Station" ? "#ffffff" : s.category === "Starlink" ? "#666" : "#555";
         const catIcon = isMil ? "🛰️" : s.category === "Earth Observation" ? "🛰️" : s.category === "Navigation" ? "📡" : s.category === "Weather" ? "🌤️" : s.category === "Space Station" ? "🏠" : s.category === "Starlink" ? "⭐" : "🛰️";
         const period = (1440 / s.meanMotion).toFixed(0);
-        points.push({
-          lat: s.lat, lng: s.lng, pointAlt: Math.min(s.alt / 6371 * 0.15, 0.8),
-          color: satCol, radius: (isISR ? 0.18 : isMil ? 0.14 : 0.08) * densityMult,
-          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}30"><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px">${catIcon}</span><span style="color:${satCol};font-weight:bold;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">🌍 ${Math.round(s.alt)}km • ${s.category}</div><div style="color:#666;font-size:7px;margin-top:1px">Inc ${s.inclination.toFixed(1)}° • Period ${period}min • Ecc ${s.eccentricity.toFixed(4)}</div></div>`,
-        });
-      });
+        const size = isISR ? 22 : isMil ? 18 : s.category === "Space Station" ? 20 : s.category === "Starlink" ? 8 : 14;
+        const showLabel = isISR || isMil || s.category === "Space Station" || s.category === "Early Warning";
 
-      // 3D object labels only for ISR satellites
-      const satObjects = isrSatellites.map(s => {
-        const isMil = s.category === "Military" || s.category === "Early Warning";
-        const satCol = isMil ? "#ef4444" : "#00d4ff";
-        const catIcon = isMil ? "🛰️" : "🛰️";
         return {
-          lat: s.lat, lng: s.lng, alt: s.alt / 6371 * 0.15,
-          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px">${catIcon}</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">🌍 ${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
+          lat: s.lat,
+          lng: s.lng,
+          alt: Math.min(s.alt / 6371 * 0.15, 0.8),
+          name: s.name,
+          category: s.category,
+          satCol,
+          el: (() => {
+            const wrapper = document.createElement("div");
+            wrapper.style.cssText = `display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;transition:transform 0.3s ease;`;
+            wrapper.onmouseenter = () => { wrapper.style.transform = "scale(1.5)"; wrapper.style.zIndex = "999"; };
+            wrapper.onmouseleave = () => { wrapper.style.transform = "scale(1)"; wrapper.style.zIndex = "auto"; };
+
+            // Icon element
+            const icon = document.createElement("div");
+            icon.style.cssText = `font-size:${size}px;filter:drop-shadow(0 0 ${isISR ? 8 : 4}px ${satCol});line-height:1;text-align:center;`;
+            icon.textContent = catIcon;
+            wrapper.appendChild(icon);
+
+            // Pulse ring for ISR/Military
+            if (isISR || isMil) {
+              const ring = document.createElement("div");
+              ring.style.cssText = `position:absolute;width:${size + 10}px;height:${size + 10}px;border-radius:50%;border:1px solid ${satCol};opacity:0.4;animation:satPulse 2s ease-out infinite;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;`;
+              wrapper.appendChild(ring);
+            }
+
+            // Name label for important sats
+            if (showLabel) {
+              const label = document.createElement("div");
+              label.style.cssText = `font-family:monospace;font-size:7px;color:${satCol};letter-spacing:1px;font-weight:bold;white-space:nowrap;margin-top:1px;text-shadow:0 0 4px rgba(0,0,0,0.9),0 0 8px ${satCol}40;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;`;
+              label.textContent = s.name.length > 12 ? s.name.slice(0, 12) : s.name;
+              wrapper.appendChild(label);
+            }
+
+            // Tooltip on click
+            wrapper.title = `${catIcon} ${s.name}\n${s.category} • ${Math.round(s.alt)}km\nInc ${s.inclination.toFixed(1)}° • Period ${period}min`;
+            return wrapper;
+          })(),
         };
       });
-      globe.objectsData(satObjects);
+      globe.htmlElementsData(satHtmlElements);
+      globe.objectsData([]);
     } else {
+      globe.htmlElementsData([]);
       globe.objectsData([]);
     }
 
