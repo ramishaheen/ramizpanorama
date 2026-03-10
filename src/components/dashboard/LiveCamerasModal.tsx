@@ -8,10 +8,13 @@ import {
   X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle,
   Video, Eye, Sparkles, Globe, Copy, Activity, Radio, Signal,
   Shield, ChevronLeft, ChevronRight, Crosshair, Wifi, WifiOff,
-  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play, Info
+  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play, Info,
+  Brain, Grid3X3, Map as MapIcon, LayoutGrid
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CameraDetailsPopup } from "./CameraDetailsPopup";
+import { AIAnalysisPanel } from "./AIAnalysisPanel";
+import { useCCTVIntel } from "@/hooks/useCCTVIntel";
 
 // ═══════════════ TYPES ═══════════════
 interface CameraData {
