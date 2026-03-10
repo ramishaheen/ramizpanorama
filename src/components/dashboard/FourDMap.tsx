@@ -61,10 +61,8 @@ function parseTLE(name: string, tle1: string, tle2: string): SatPoint | null {
   } catch { return null; }
 }
 
-const TLE_URLS = [
-  "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle",
-  "https://celestrak.org/NORAD/elements/gp.php?GROUP=military&FORMAT=tle",
-];
+// TLE groups to fetch via the proxy
+const TLE_GROUPS = ["active", "military", "resource", "weather", "gnss", "geo", "science", "stations", "last-30-days"];
 
 const ALL_COUNTRY_CODES = ["IR", "IQ", "SY", "IL", "JO", "LB", "SA", "AE", "BH", "KW", "QA", "OM", "YE", "EG", "TR"];
 
