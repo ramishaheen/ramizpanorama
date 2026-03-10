@@ -350,8 +350,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => clearInterval(satIntervalRef.current);
   }, [satellites.length]);
 
-  // For emulated fallback: use a tick counter to force re-propagation
-  const [emulatedTick, setEmulatedTick] = useState(0);
+  // For emulated fallback: tick counter forces re-propagation
   useEffect(() => {
     if (satellites.length > 0) return;
     const iv = setInterval(() => setEmulatedTick(t => t + 1), 1000);
