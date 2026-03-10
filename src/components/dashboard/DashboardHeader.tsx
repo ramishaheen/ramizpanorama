@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube } from "lucide-react";
+import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube, Globe } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
 import { NotificationCenter } from "./NotificationCenter";
 import { LiveChannelsModal } from "./LiveChannelsModal";
+import { FourDMap } from "./FourDMap";
 import warosLogo from "@/assets/waros-logo.png";
 import type { Rocket } from "@/data/mockData";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
@@ -23,6 +24,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
   const [chatOpen, setChatOpen] = useState(false);
   const [showBalloon, setShowBalloon] = useState(true);
   const [showLiveChannels, setShowLiveChannels] = useState(false);
+  const [show4DMap, setShow4DMap] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowBalloon(false), 10000);
@@ -67,8 +69,18 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
                 <div className="relative bg-primary text-primary-foreground text-[9px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
                   Chat with me 💬
                   <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-2 h-2 bg-primary rotate-45" />
-                </div>
-              </div>
+          </div>
+
+          {/* 4D MAP button */}
+          <button
+            onClick={() => setShow4DMap(true)}
+            className="flex items-center gap-1.5 h-7 px-2 rounded-full border border-primary/40 text-primary hover:bg-primary/10 transition-all duration-300"
+            title="Open 4D Intelligence Map"
+          >
+            <Globe className="h-3.5 w-3.5" />
+            <span className="text-[9px] font-mono font-bold tracking-wider">4D MAP</span>
+          </button>
+        </div>
             )}
           </div>
         </div>
@@ -143,6 +155,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
       </header>
       <WarChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
       {showLiveChannels && <LiveChannelsModal onClose={() => setShowLiveChannels(false)} />}
+      {show4DMap && <FourDMap onClose={() => setShow4DMap(false)} rockets={rockets} />}
     </>
   );
 };
