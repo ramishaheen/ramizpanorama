@@ -624,8 +624,27 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           </button>
         </div>
 
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-0.5 ml-1 rounded p-0.5" style={{ background: "#111827", border: "1px solid rgba(6,182,212,0.15)" }}>
+          <button onClick={() => setViewMode("map")}
+            className={`p-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${viewMode === "map" ? "text-cyan-300" : "text-gray-600"}`}
+            style={viewMode === "map" ? { background: "rgba(6,182,212,0.2)" } : {}}>
+            <MapIcon className="h-3 w-3" /> MAP
+          </button>
+          <button onClick={() => setViewMode("grid")}
+            className={`p-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${viewMode === "grid" ? "text-cyan-300" : "text-gray-600"}`}
+            style={viewMode === "grid" ? { background: "rgba(6,182,212,0.2)" } : {}}>
+            <Grid3X3 className="h-3 w-3" /> GRID
+          </button>
+        </div>
+
         {/* Actions */}
         <div className="flex items-center gap-1 ml-auto">
+          <button onClick={() => setAiPanelOpen(!aiPanelOpen)}
+            className={`px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 transition-all ${aiPanelOpen ? "text-purple-300" : "text-white hover:text-purple-300"}`}
+            style={{ background: aiPanelOpen ? "rgba(168,85,247,0.2)" : "rgba(168,85,247,0.1)", border: `1px solid rgba(168,85,247,${aiPanelOpen ? '0.5' : '0.3'})` }}>
+            <Brain className="h-3 w-3" /> AI INTEL
+          </button>
           <button onClick={scrapeAggregators} disabled={scraping}
             className="px-2 py-1 rounded text-[8px] font-bold flex items-center gap-1 text-white hover:text-white transition-all"
             style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.3)" }}>
