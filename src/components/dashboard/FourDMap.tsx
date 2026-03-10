@@ -345,14 +345,18 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   }, [satellites.length]);
 
   // Update globe data
+  // Update globe data — filtered by timeline
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
 
     const points: any[] = [];
+    const cutoff = timelineTimestamp;
 
     if (layers.earthquakes && earthquakes.length) {
       earthquakes.forEach(eq => {
+        const eqTime = eq.time || Date.now();
+        if (eqTime > cutoff) return;
         points.push({
           lat: eq.lat, lng: eq.lng, pointAlt: 0.01,
           color: eq.magnitude >= 5 ? "#ef4444" : eq.magnitude >= 3 ? "#ff6b00" : "#fbbf24",
@@ -477,6 +481,35 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
+    // GPS Jamming zones
+    if (layers.gpsJamming) {
+      gpsJammingZones.forEach(z => {
+        if (z.ts > cutoff) return;
+        const col = z.severity === "critical" ? "#ff00ff" : z.severity === "high" ? "#e879f9" : "#c084fc";
+        points.push({
+          lat: z.lat, lng: z.lng, pointAlt: 0.012, color: col, radius: z.radius,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0">
+            <div style="color:#e879f9;font-weight:bold">📡 GPS JAMMING ZONE</div>
+            <div>${z.label}</div>
+            <div style="color:#888;font-size:9px">Severity: ${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11, 19)} UTC</div>
+          </div>`,
+        });
+      });
+    }
+
+    // Emulated intel events (timeline-filtered)
+    emulatedEvents.forEach(ev => {
+      if (ev.ts > cutoff) return;
+      points.push({
+        lat: ev.lat, lng: ev.lng, pointAlt: 0.018, color: ev.color, radius: 0.2,
+        label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.9);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0">
+          <div style="color:${ev.color};font-weight:bold">🎯 ${ev.type.toUpperCase()}</div>
+          <div>${ev.label}</div>
+          <div style="color:#888;font-size:9px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div>
+        </div>`,
+      });
+    });
+
     globe.pointsData(points);
 
     // Satellites
@@ -495,19 +528,30 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       globe.objectsData([]);
     }
 
-    // Arcs for rockets
+    // Arcs for rockets + OSINT threat corridors
+    const arcs: any[] = [];
     if (layers.rockets && rockets.length) {
-      globe.arcsData(rockets.map(r => ({
-        startLat: r.originLat, startLng: r.originLng,
-        endLat: r.targetLat, endLng: r.targetLng,
-        colors: [
-          r.severity === "critical" ? "rgba(239,68,68,0.9)" : "rgba(255,107,0,0.9)",
-          r.status === "intercepted" ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.6)",
-        ],
-      })));
-    } else {
-      globe.arcsData([]);
+      rockets.forEach(r => {
+        arcs.push({
+          startLat: r.originLat, startLng: r.originLng,
+          endLat: r.targetLat, endLng: r.targetLng,
+          colors: [
+            r.severity === "critical" ? "rgba(239,68,68,0.9)" : "rgba(255,107,0,0.9)",
+            r.status === "intercepted" ? "rgba(34,197,94,0.9)" : "rgba(239,68,68,0.6)",
+          ],
+        });
+      });
     }
+    // OSINT threat corridors
+    if (layers.geoFusion) {
+      arcs.push(
+        { startLat: 35.69, startLng: 51.39, endLat: 33.51, endLng: 36.29, colors: ["rgba(239,68,68,0.5)", "rgba(239,68,68,0.2)"] },
+        { startLat: 15.35, startLng: 44.21, endLat: 12.58, endLng: 43.33, colors: ["rgba(249,115,22,0.5)", "rgba(249,115,22,0.2)"] },
+        { startLat: 26.57, startLng: 56.25, endLat: 25.20, endLng: 55.27, colors: ["rgba(234,179,8,0.4)", "rgba(234,179,8,0.15)"] },
+        { startLat: 33.31, startLng: 44.37, endLat: 36.34, endLng: 43.13, colors: ["rgba(168,85,247,0.4)", "rgba(168,85,247,0.15)"] },
+      );
+    }
+    globe.arcsData(arcs);
 
     // Polygons
     if (layers.borders) {
@@ -515,7 +559,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, flights, airQualityData, geoFusionData, satellites, rockets]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, flights, airQualityData, geoFusionData, satellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents]);
 
   // Stats
   const stats = useMemo(() => ({
