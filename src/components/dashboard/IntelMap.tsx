@@ -1859,11 +1859,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
               ? "bg-primary/20 border-primary/50 shadow-[0_0_12px_hsl(190_100%_50%/0.2)]"
               : "bg-card/90 border-border hover:bg-primary/10 hover:border-primary/50"
           }`}
-          title="Show Arab World CCTV Cameras"
+          title="Show All CCTV Cameras on Map"
         >
           <Camera className={`h-3.5 w-3.5 ${showArabCCTV ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-primary"}`} />
           <span className={`text-[9px] font-mono uppercase ${showArabCCTV ? "text-primary" : "text-muted-foreground"}`}>
-            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ARAB CCTV (${arabCameras.length})` : "ARAB CCTV"}
+            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV"}
           </span>
         </button>
         <button
