@@ -234,15 +234,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     setSearchQuery(""); setSearchFocused(false);
   }, []);
 
-  // Fetch TLEs
+  // Fetch TLEs via proxy — uses { data: { groupName: tleText } } response format
   useEffect(() => {
     async function fetchTLEs() {
       try {
-        const { data: proxyData } = await supabase.functions.invoke("tle-proxy", { body: { urls: TLE_URLS } });
-        if (!proxyData?.results) return;
+        const { data: proxyData } = await supabase.functions.invoke("tle-proxy", { body: { groups: TLE_GROUPS } });
+        if (!proxyData?.data) { console.warn("[4D] No TLE data returned"); return; }
         const allSats: SatPoint[] = [];
-        for (const result of proxyData.results) {
-          const lines = (result.body || "").split("\n").map((l: string) => l.trim()).filter(Boolean);
+        for (const [, tleText] of Object.entries(proxyData.data)) {
+          const lines = (tleText as string).split("\n").map((l: string) => l.trim()).filter(Boolean);
           for (let i = 0; i < lines.length - 2; i += 3) {
             if (lines[i + 1]?.startsWith("1 ") && lines[i + 2]?.startsWith("2 ")) {
               const sat = parseTLE(lines[i], lines[i + 1], lines[i + 2]);
@@ -250,9 +250,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             }
           }
         }
-        const limited = allSats.length > 800 ? allSats.filter((_, i) => i % Math.ceil(allSats.length / 800) === 0) : allSats;
-        if (limited.length > 0) setSatellites(limited);
-      } catch (e) { console.warn("[4D] TLE fetch failed, using emulated satellites"); }
+        // Deduplicate by name, keep first occurrence
+        const seen = new Set<string>();
+        const unique = allSats.filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true; });
+        // Limit to ~1500 for performance
+        const limited = unique.length > 1500 ? unique.filter((_, i) => i % Math.ceil(unique.length / 1500) === 0) : unique;
+        if (limited.length > 0) { setSatellites(limited); console.log(`[4D] Loaded ${limited.length} real satellites from TLE data`); }
+      } catch (e) { console.warn("[4D] TLE fetch failed, using emulated satellites", e); }
     }
     fetchTLEs();
   }, []);
