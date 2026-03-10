@@ -1912,6 +1912,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
       {showUrbanScene && (
         <UrbanScene3D
+          key={urbanScene3DTarget ? `${urbanScene3DTarget.lat}-${urbanScene3DTarget.lng}` : 'default'}
           onClose={() => { setShowUrbanScene(false); setUrbanScene3DTarget(null); }}
           initialCoords={urbanScene3DTarget ? { lat: urbanScene3DTarget.lat, lng: urbanScene3DTarget.lng } : undefined}
           initialEvent={urbanScene3DTarget ? {
