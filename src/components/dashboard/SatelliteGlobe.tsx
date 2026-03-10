@@ -1415,7 +1415,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .ringPropagationSpeed((d: any) => d.propagationSpeed)
           .ringRepeatPeriod(2000)
           // Country polygon layer for click-to-zoom
-          .polygonsData(getCountryGeoJSON(["IR","IQ","SA","AE","JO","IL","SY","LB","KW","QA","BH","OM","YE"]).features)
+          .polygonsData(getCountryGeoJSON(["IR","IQ","SA","AE","JO","IL","SY","LB","KW","QA","BH","OM","YE","EG","TR"]).features)
           .polygonCapColor(() => "rgba(0,220,255,0.08)")
           .polygonSideColor(() => "rgba(0,220,255,0.15)")
           .polygonStrokeColor(() => "rgba(0,220,255,0.4)")
