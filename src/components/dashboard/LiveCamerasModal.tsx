@@ -1063,7 +1063,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                         <span className="text-[8px] text-gray-600 ml-auto">{cams.length} cams</span>
                       </div>
                       {cams.map(c => (
-                        <ChannelItem key={c.id} cam={c} isSelected={false} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} />
+                        <ChannelItem key={c.id} cam={c} isSelected={false} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} onDoubleClick={() => setPopupCamera(c)} />
                       ))}
                     </div>
                   ))}
