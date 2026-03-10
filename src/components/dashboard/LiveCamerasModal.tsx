@@ -411,7 +411,7 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
 }
 
 // ═══════════════ CHANNEL LIST ITEM ═══════════════
-function ChannelItem({ cam, isSelected, onClick, onDetails }: { cam: CameraData; isSelected: boolean; onClick: () => void; onDetails: () => void }) {
+function ChannelItem({ cam, isSelected, onClick, onDetails, onDoubleClick }: { cam: CameraData; isSelected: boolean; onClick: () => void; onDetails: () => void; onDoubleClick?: () => void }) {
   const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
   const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url;
   const badge = getVerificationBadge(cam.verification_status);
@@ -419,7 +419,8 @@ function ChannelItem({ cam, isSelected, onClick, onDetails }: { cam: CameraData;
 
   return (
     <div className={`w-full text-left flex gap-2 p-2 rounded-lg transition-all ${isSelected ? "ring-1 ring-cyan-500/40" : "hover:bg-white/[0.03]"}`}
-      style={{ background: isSelected ? "rgba(6,182,212,0.08)" : "transparent", borderBottom: "1px solid rgba(6,182,212,0.05)" }}>
+      style={{ background: isSelected ? "rgba(6,182,212,0.08)" : "transparent", borderBottom: "1px solid rgba(6,182,212,0.05)" }}
+      onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(); }}>
       {/* Thumbnail - clickable to select */}
       <button onClick={onClick} className="w-16 h-10 rounded overflow-hidden flex-shrink-0 relative" style={{ background: "#111827" }}>
         {thumbUrl ? (
@@ -468,6 +469,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [stats, setStats] = useState<Stats | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [popupCamera, setPopupCamera] = useState<CameraData | null>(null);
 
   // AI Intelligence Hook
   const { events, analyzing, lastAnalysis, analyzeCamera, fetchEvents, setLastAnalysis } = useCCTVIntel();
@@ -1040,7 +1042,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                         <span className="text-[7px] text-gray-600 ml-auto">{cams.length}</span>
                       </div>
                       {cams.map(c => (
-                        <ChannelItem key={c.id} cam={c} isSelected={selectedCamera?.id === c.id} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} />
+                        <ChannelItem key={c.id} cam={c} isSelected={selectedCamera?.id === c.id} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} onDoubleClick={() => setPopupCamera(c)} />
                       ))}
                     </div>
                   ))}
@@ -1061,7 +1063,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                         <span className="text-[8px] text-gray-600 ml-auto">{cams.length} cams</span>
                       </div>
                       {cams.map(c => (
-                        <ChannelItem key={c.id} cam={c} isSelected={false} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} />
+                        <ChannelItem key={c.id} cam={c} isSelected={false} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} onDoubleClick={() => setPopupCamera(c)} />
                       ))}
                     </div>
                   ))}
@@ -1084,6 +1086,40 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           <span className="text-[8px] text-gray-700">OSINT COMPLIANT • ESC TO CLOSE</span>
         </div>
       </div>
+
+      {/* Fullscreen Camera Popup (double-click) */}
+      {popupCamera && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+          onClick={() => setPopupCamera(null)}
+          onKeyDown={(e) => { if (e.key === "Escape") setPopupCamera(null); }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
+          <div
+            className="relative w-[85vw] max-w-[1200px] aspect-video rounded-xl overflow-hidden shadow-2xl"
+            style={{ border: "2px solid rgba(6,182,212,0.3)", boxShadow: "0 0 60px rgba(6,182,212,0.15)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FeedViewer cam={popupCamera} expanded />
+            {/* Header overlay */}
+            <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)" }}>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-mono font-bold text-white">{popupCamera.name}</span>
+                <span className="text-[9px] text-gray-400 font-mono">{popupCamera.city}, {popupCamera.country}</span>
+              </div>
+              <button
+                onClick={() => setPopupCamera(null)}
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Camera Details Popup */}
       {detailsCamera && (
