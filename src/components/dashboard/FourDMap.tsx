@@ -655,13 +655,20 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // GPS JAMMING — big pulsing circles
+    // GPS JAMMING — red tile zones with multiple coverage points
     if (layers.gpsJamming) {
       gpsJammingZones.forEach(z => {
         if (z.ts > cutoff) return;
-        const col = z.severity === "critical" ? "#ff00ff" : z.severity === "high" ? "#e879f9" : "#c084fc";
-        points.push({ lat: z.lat, lng: z.lng, pointAlt: 0.015, color: col, radius: z.radius * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">📡 GPS JAM</div><div>${z.label}</div><div style="color:#888;font-size:9px">${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11,19)} UTC</div></div>` });
+        const col = z.severity === "critical" ? "#ff0033" : z.severity === "high" ? "#cc0022" : "#aa0033";
+        // Render as a cluster of red tile-like points to simulate area coverage
+        const offsets = [
+          [0, 0], [0.15, 0.15], [-0.15, 0.15], [0.15, -0.15], [-0.15, -0.15],
+          [0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25],
+        ];
+        offsets.forEach(([dlat, dlng]) => {
+          points.push({ lat: z.lat + dlat, lng: z.lng + dlng, pointAlt: 0.012, color: col, radius: 0.22 * densityMult,
+            label: dlat === 0 && dlng === 0 ? `<div style="font-family:monospace;font-size:11px;background:rgba(40,0,0,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 15px ${col}40"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">🟥</span> GPS JAMMING ZONE</div><div style="font-size:9px;margin-top:2px">📡 ${z.label}</div><div style="color:#ff6666;font-size:8px;margin-top:1px">${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11,19)} UTC</div><div style="color:#cc4444;font-size:7px;margin-top:1px">⚠ GNSS DENIED — NAV UNRELIABLE</div></div>` : "" });
+        });
       });
     }
 
