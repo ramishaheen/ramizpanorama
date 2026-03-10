@@ -912,13 +912,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           >
             {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </button>
+          <span className="text-[8px] font-mono text-muted-foreground w-28 flex-shrink-0">{timelineLabel}</span>
           <div className="flex-1 relative h-5 flex items-center">
             {timelineDots.map((dot, i) => (
               <div key={i} className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full z-10 pointer-events-none" style={{ left: `${dot.position}%`, backgroundColor: dot.color }} title={dot.label} />
             ))}
-            <input type="range" min={0} max={100} value={timelineValue} onChange={e => setTimelineValue(parseInt(e.target.value))}
+            <input type="range" min={0} max={100} step={0.1} value={timelineValue} onChange={e => { setTimelineValue(parseFloat(e.target.value)); setPlaying(false); }}
               className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-[0_0_8px_hsl(190_100%_50%/0.4)] [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-20" />
           </div>
+          <span className="text-[8px] font-mono text-primary flex-shrink-0">{timelineValue >= 99.5 ? "LIVE" : `T-${Math.round((100 - timelineValue) * 14.4)}m`}</span>
         </div>
 
         {/* Row 2: Speed + Orbit */}
