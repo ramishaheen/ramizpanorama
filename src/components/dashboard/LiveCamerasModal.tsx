@@ -1078,6 +1078,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           <div className="flex items-center gap-1.5"><Activity className="h-3 w-3 text-green-500" /><span className="text-[8px] text-gray-500">SYSTEM OPERATIONAL</span></div>
           <div className="flex items-center gap-1.5"><Signal className="h-3 w-3 text-cyan-400" /><span className="text-[8px] text-gray-500">FEEDS: {stats?.total || cameras.length} • ACTIVE: {stats?.online || 0} • YT: {stats?.youtubeCount || 0}</span></div>
           <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-cyan-400" /><span className="text-[8px] text-gray-500">COUNTRIES: {sortedCountries.length}</span></div>
+          <div className="flex items-center gap-1.5"><Brain className="h-3 w-3 text-purple-400" /><span className="text-[8px] text-gray-500">AI EVENTS: {events.length}</span></div>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[8px] text-gray-700">OSINT COMPLIANT • ESC TO CLOSE</span>
