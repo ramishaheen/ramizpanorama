@@ -1897,6 +1897,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <Radar className={`h-3.5 w-3.5 ${showIranAirspace ? "text-destructive animate-pulse" : "text-destructive/70 group-hover:text-destructive"}`} />
           <span className={`text-[9px] font-mono uppercase ${showIranAirspace ? "text-destructive" : "text-muted-foreground"}`}>IRAN FIR</span>
         </button>
+        <button
+          onClick={() => setShowSnapMe(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+          title="Snap Me — AI Image Geolocation"
+        >
+          <Aperture className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">SNAP ME</span>
+        </button>
       </div>
 
 
