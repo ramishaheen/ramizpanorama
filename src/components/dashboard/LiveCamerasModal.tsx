@@ -1087,6 +1087,40 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
         </div>
       </div>
 
+      {/* Fullscreen Camera Popup (double-click) */}
+      {popupCamera && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+          onClick={() => setPopupCamera(null)}
+          onKeyDown={(e) => { if (e.key === "Escape") setPopupCamera(null); }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
+          <div
+            className="relative w-[85vw] max-w-[1200px] aspect-video rounded-xl overflow-hidden shadow-2xl"
+            style={{ border: "2px solid rgba(6,182,212,0.3)", boxShadow: "0 0 60px rgba(6,182,212,0.15)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FeedViewer cam={popupCamera} expanded />
+            {/* Header overlay */}
+            <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)" }}>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-mono font-bold text-white">{popupCamera.name}</span>
+                <span className="text-[9px] text-gray-400 font-mono">{popupCamera.city}, {popupCamera.country}</span>
+              </div>
+              <button
+                onClick={() => setPopupCamera(null)}
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Camera Details Popup */}
       {detailsCamera && (
         <CameraDetailsPopup
