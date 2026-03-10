@@ -3,7 +3,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const systemPrompt = `You are an elite GEOINT (Geospatial Intelligence) analyst with 20+ years of experience in GeoGuessr-level photo geolocation. Your task is to determine the EXACT geographic coordinates where this photograph was taken.
@@ -74,63 +73,41 @@ Return ONLY valid JSON:
 
 Return up to 5 candidates ranked by confidence. BE PRECISE — use 6 decimal places for coordinates. Never guess randomly; every coordinate must be justified by evidence.`;
 
-function buildBody(image_base64: string, mime_type: string, model: string) {
-  return JSON.stringify({
-    model,
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: systemPrompt },
-          { type: "image_url", image_url: { url: `data:${mime_type || "image/jpeg"};base64,${image_base64}` } },
-        ],
-      },
-    ],
-    max_tokens: 8192,
-    temperature: 0.1,
-  });
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const { image_base64, mime_type } = await req.json();
     if (!image_base64) throw new Error("image_base64 is required");
 
-    let aiResp: Response | null = null;
-    let usedFallback = false;
-
-    // Primary: GEMINI_API_KEY_2
-    const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY_2");
-    if (GEMINI_KEY) {
-      aiResp = await fetch(GEMINI_API_URL, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${GEMINI_KEY}`, "Content-Type": "application/json" },
-        body: buildBody(image_base64, mime_type, "gemini-2.5-pro"),
-      });
-      if (!aiResp.ok) {
-        console.error("Primary Gemini failed:", aiResp.status);
-        aiResp = null; // fall through to fallback
-      }
-    }
-
-    // Fallback: Lovable AI Gateway
-    if (!aiResp) {
-      const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (!LOVABLE_KEY) {
-        return new Response(JSON.stringify({ error: "No AI keys configured" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      usedFallback = true;
-      console.log("Falling back to Lovable AI Gateway");
-      aiResp = await fetch(AI_GATEWAY_URL, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
-        body: buildBody(image_base64, mime_type, "google/gemini-2.5-pro"),
-      });
-    }
+    const aiResp = await fetch(AI_GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: systemPrompt },
+              { type: "image_url", image_url: { url: `data:${mime_type || "image/jpeg"};base64,${image_base64}` } },
+            ],
+          },
+        ],
+        max_tokens: 8192,
+        temperature: 0.1,
+      }),
+    });
 
     if (!aiResp.ok) {
       if (aiResp.status === 429) {
@@ -144,8 +121,8 @@ Deno.serve(async (req) => {
         });
       }
       const errText = await aiResp.text();
-      console.error("AI error:", aiResp.status, errText);
-      throw new Error(`AI failed: ${aiResp.status}`);
+      console.error("AI Gateway error:", aiResp.status, errText);
+      throw new Error(`AI Gateway failed: ${aiResp.status}`);
     }
 
     const aiData = await aiResp.json();
@@ -165,8 +142,6 @@ Deno.serve(async (req) => {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    if (usedFallback) result._fallback = true;
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
