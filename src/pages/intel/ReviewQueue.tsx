@@ -36,10 +36,10 @@ const ReviewQueue = () => {
     await supabase.from("intel_sources").update(updatePayload).eq("id", sourceId);
 
     // Create review record
-    await supabase.from("source_reviews").insert({
+    await supabase.from("source_reviews").insert([{
       source_id: sourceId,
       reviewer_id: user?.id,
-      action,
+      action: action as any,
       checks: {
         publicly_accessible: true,
         lawful_to_display: action === "approved",
@@ -47,7 +47,7 @@ const ReviewQueue = () => {
         has_coordinates: true,
         not_duplicate: true,
       },
-    });
+    }]);
 
     // Audit log
     await supabase.from("audit_logs").insert({
