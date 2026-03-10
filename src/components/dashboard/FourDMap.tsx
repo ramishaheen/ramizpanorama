@@ -343,8 +343,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .width(globeContainerRef.current.clientWidth)
         .height(globeContainerRef.current.clientHeight)
         .pointsData([]).pointLat("lat").pointLng("lng").pointAltitude("pointAlt").pointColor("color").pointRadius("radius").pointLabel("label")
+        .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude("alt").htmlElement("el")
         .objectsData([]).objectLat("lat").objectLng("lng").objectAltitude("alt").objectLabel("label")
-        .arcsData([]).arcStartLat("startLat").arcStartLng("startLng").arcEndLat("endLat").arcEndLng("endLng").arcColor("colors").arcStroke(0.8).arcDashLength(0.4).arcDashGap(0.15).arcDashAnimateTime(1200).arcAltitudeAutoScale(0.35)
+        .arcsData([]).arcStartLat("startLat").arcStartLng("startLng").arcEndLat("endLat").arcEndLng("endLng").arcColor("colors").arcStroke(0.5).arcDashLength(0.6).arcDashGap(0.1).arcDashAnimateTime(2000).arcAltitudeAutoScale(0.25)
         .polygonsData([]).polygonCapColor(() => "rgba(0, 200, 180, 0.06)").polygonSideColor(() => "rgba(0, 200, 180, 0.15)").polygonStrokeColor(() => "rgba(0, 220, 200, 0.4)").polygonAltitude(0.006);
       globe.pointOfView({ lat: 30, lng: 45, altitude: 2.2 });
       const controls = globe.controls() as any;
