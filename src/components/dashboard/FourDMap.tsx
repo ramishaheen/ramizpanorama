@@ -905,62 +905,68 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
         {/* RIGHT PANEL — Attributes + Feed */}
         {!cleanUI && (
-          <div className="w-64 flex-shrink-0 bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden">
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
+          <div className="w-64 flex-shrink-0 bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden" style={{ minWidth: 256 }}>
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
-                <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">ATTRIBUTES</span>
+                <SlidersHorizontal className="h-4 w-4 text-primary" />
+                <span className="text-[11px] font-bold tracking-[0.2em] text-primary uppercase">ATTRIBUTES</span>
+                <div className="ml-auto flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[7px] font-mono text-success">ACTIVE</span></div>
               </div>
             </div>
 
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] space-y-2">
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)] space-y-2.5">
               {[
-                { label: "BLOOM", icon: <Sparkles className="h-3 w-3 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
-                { label: "HUD", icon: <Monitor className="h-3 w-3 text-[#00d4ff]" />, value: hudEnabled, set: setHudEnabled, color: "#00d4ff" },
+                { label: "BLOOM", icon: <Sparkles className="h-3.5 w-3.5 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
+                { label: "HUD OVERLAY", icon: <Monitor className="h-3.5 w-3.5 text-[#00d4ff]" />, value: hudEnabled, set: setHudEnabled, color: "#00d4ff" },
               ].map(ctrl => (
-                <div key={ctrl.label} className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">{ctrl.icon}<span className="text-[9px] font-mono text-foreground tracking-wider">{ctrl.label}</span></div>
-                  <button onClick={() => ctrl.set(!ctrl.value)} className={`w-8 h-4 rounded-full transition-colors ${ctrl.value ? `bg-[${ctrl.color}]` : "bg-[hsl(220,15%,20%)]"}`} style={{ backgroundColor: ctrl.value ? ctrl.color : undefined }}>
-                    <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${ctrl.value ? "translate-x-3.5" : ""}`} />
+                <div key={ctrl.label} className="flex items-center justify-between py-0.5">
+                  <div className="flex items-center gap-2">{ctrl.icon}<span className="text-[10px] font-mono text-foreground tracking-wider font-medium">{ctrl.label}</span></div>
+                  <button onClick={() => ctrl.set(!ctrl.value)} className="w-9 h-5 rounded-full transition-colors relative" style={{ backgroundColor: ctrl.value ? ctrl.color : "hsl(220,15%,20%)" }}>
+                    <div className={`w-3.5 h-3.5 rounded-full bg-foreground transition-transform absolute top-0.5 ${ctrl.value ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </div>
               ))}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-foreground tracking-wider">SHARPEN</span>
-                  <button onClick={() => setSharpenEnabled(!sharpenEnabled)} className="w-8 h-4 rounded-full transition-colors" style={{ backgroundColor: sharpenEnabled ? "hsl(190,80%,50%)" : "hsl(220,15%,20%)" }}>
-                    <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${sharpenEnabled ? "translate-x-3.5" : ""}`} />
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between py-0.5">
+                  <div className="flex items-center gap-2"><Eye className="h-3.5 w-3.5 text-primary" /><span className="text-[10px] font-mono text-foreground tracking-wider font-medium">SHARPEN</span></div>
+                  <button onClick={() => setSharpenEnabled(!sharpenEnabled)} className="w-9 h-5 rounded-full transition-colors relative" style={{ backgroundColor: sharpenEnabled ? "hsl(190,80%,50%)" : "hsl(220,15%,20%)" }}>
+                    <div className={`w-3.5 h-3.5 rounded-full bg-foreground transition-transform absolute top-0.5 ${sharpenEnabled ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </div>
-                {sharpenEnabled && <input type="range" min={0} max={100} value={sharpenValue} onChange={e => setSharpenValue(parseInt(e.target.value))} className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary" />}
+                {sharpenEnabled && (
+                  <div className="pl-6">
+                    <div className="flex items-center justify-between mb-1"><span className="text-[8px] font-mono text-muted-foreground">INTENSITY</span><span className="text-[8px] font-mono text-primary">{sharpenValue}%</span></div>
+                    <input type="range" min={0} max={100} value={sharpenValue} onChange={e => setSharpenValue(parseInt(e.target.value))} className="w-full h-1 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary" />
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)]">
-              <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">LAYOUT</span>
-              <div className="flex gap-1 mt-1">
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)]">
+              <span className="text-[9px] font-mono text-muted-foreground tracking-[0.15em] mb-1.5 block">LAYOUT PRESET</span>
+              <div className="flex gap-1.5">
                 {(["TACTICAL", "STRATEGIC", "MINIMAL"] as const).map(p => (
-                  <button key={p} onClick={() => setLayoutPreset(p)} className={`flex-1 px-1 py-1 rounded text-[8px] font-mono border transition-colors ${layoutPreset === p ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{p}</button>
+                  <button key={p} onClick={() => setLayoutPreset(p)} className={`flex-1 px-1.5 py-1.5 rounded text-[9px] font-mono font-bold border transition-colors ${layoutPreset === p ? "border-primary/50 bg-primary/15 text-primary" : "border-[hsl(220,15%,18%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,25%)]"}`}>{p}</button>
                 ))}
               </div>
             </div>
 
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)]">
-              <div className="flex items-center gap-1.5 mb-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" /><span className="text-[9px] font-mono text-[#22c55e] tracking-[0.15em] font-bold">PANOPTIC</span></div>
-              <div className="space-y-1.5">
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)]">
+              <div className="flex items-center gap-1.5 mb-2"><div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" /><span className="text-[10px] font-mono text-[#22c55e] tracking-[0.15em] font-bold">PANOPTIC CONTROL</span></div>
+              <div className="space-y-2">
                 <div>
-                  <div className="flex items-center justify-between mb-0.5"><span className="text-[8px] font-mono text-muted-foreground">DENSITY</span><span className="text-[8px] font-mono text-primary">{panopticDensity}%</span></div>
-                  <input type="range" min={10} max={100} value={panopticDensity} onChange={e => setPanopticDensity(parseInt(e.target.value))} className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#22c55e]" />
+                  <div className="flex items-center justify-between mb-1"><span className="text-[9px] font-mono text-muted-foreground">DENSITY</span><span className="text-[9px] font-mono text-primary font-bold">{panopticDensity}%</span></div>
+                  <input type="range" min={10} max={100} value={panopticDensity} onChange={e => setPanopticDensity(parseInt(e.target.value))} className="w-full h-1 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#22c55e]" />
                 </div>
                 {[
-                  { label: "Flights", value: panopticFlights, set: setPanopticFlights, icon: <Plane className="h-2.5 w-2.5" /> },
-                  { label: "Satellites", value: panopticSats, set: setPanopticSats, icon: <Satellite className="h-2.5 w-2.5" /> },
-                  { label: "Maritime", value: panopticMaritime, set: setPanopticMaritime, icon: <Ship className="h-2.5 w-2.5" /> },
+                  { label: "Flights", value: panopticFlights, set: setPanopticFlights, icon: <Plane className="h-3 w-3" /> },
+                  { label: "Satellites", value: panopticSats, set: setPanopticSats, icon: <Satellite className="h-3 w-3" /> },
+                  { label: "Maritime", value: panopticMaritime, set: setPanopticMaritime, icon: <Ship className="h-3 w-3" /> },
                 ].map(t => (
-                  <div key={t.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">{t.icon}<span className="text-[8px] font-mono text-muted-foreground">{t.label}</span></div>
-                    <button onClick={() => t.set(!t.value)} className={`w-7 h-3.5 rounded-full transition-colors`} style={{ backgroundColor: t.value ? "#22c55e" : "hsl(220,15%,20%)" }}>
-                      <div className={`w-2.5 h-2.5 rounded-full bg-foreground transition-transform mx-0.5 ${t.value ? "translate-x-3" : ""}`} />
+                  <div key={t.label} className="flex items-center justify-between py-0.5">
+                    <div className="flex items-center gap-1.5">{t.icon}<span className="text-[9px] font-mono text-muted-foreground">{t.label}</span></div>
+                    <button onClick={() => t.set(!t.value)} className="w-8 h-4 rounded-full transition-colors relative" style={{ backgroundColor: t.value ? "#22c55e" : "hsl(220,15%,20%)" }}>
+                      <div className={`w-3 h-3 rounded-full bg-foreground transition-transform absolute top-0.5 ${t.value ? "left-[14px]" : "left-0.5"}`} />
                     </button>
                   </div>
                 ))}
