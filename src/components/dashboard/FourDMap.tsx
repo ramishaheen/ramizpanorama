@@ -483,7 +483,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     if (t.includes("drone") || t.includes("uav")) return "👁";
     if (t.includes("rocket") || t.includes("missile")) return "🚀";
     if (t.includes("earthquake") || t.includes("seismic")) return "🌍";
-    if (t.includes("fire") || t.includes("thermal")) return "🔥";
+    if (t.includes("fire") || t.includes("thermal") || t.includes("smoke")) return "💨";
     if (t.includes("naval") || t.includes("maritime") || t.includes("vessel")) return "⚓";
     if (t.includes("cyber")) return "🖥";
     if (t.includes("protest") || t.includes("gather")) return "✊";
@@ -566,12 +566,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // WILDFIRES — fire icon, sized by FRP
+    // WILDFIRES — smoke icon, sized by FRP
     if (layers.wildfires) {
       wildfires.forEach(f => {
         const isIntense = f.frp > 50;
-        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: isIntense ? "#ff2200" : "#ff6600", radius: Math.max(0.25, f.brightness / 250) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${isIntense ? "#ff2200" : "#ff6600"};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px rgba(255,69,0,0.2)"><div style="color:${isIntense ? "#ff2200" : "#ff6600"};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">🔥</span> THERMAL ANOMALY</div><div style="font-size:9px;margin-top:2px">${(f as any).region || "Unknown"} • FRP: ${f.frp}MW</div><div style="color:#888;font-size:8px;margin-top:1px">Confidence: ${f.confidence} • Brightness: ${f.brightness}K</div><div style="color:#666;font-size:8px">FIRMS/VIIRS • ${f.date} ${f.time} UTC</div></div>` });
+        const col = isIntense ? "#ff2200" : "#ff6600";
+        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: col, radius: Math.max(0.25, f.brightness / 250) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px rgba(255,69,0,0.2)"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">💨</span> SMOKE / THERMAL</div><div style="font-size:9px;margin-top:2px">${(f as any).region || "Unknown"} • FRP: ${f.frp}MW</div><div style="color:#888;font-size:8px;margin-top:1px">Confidence: ${f.confidence} • Brightness: ${f.brightness}K</div><div style="color:#666;font-size:8px">FIRMS/VIIRS • ${f.date} ${f.time} UTC</div></div>` });
       });
     }
 
@@ -654,13 +655,20 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // GPS JAMMING — big pulsing circles
+    // GPS JAMMING — red tile zones with multiple coverage points
     if (layers.gpsJamming) {
       gpsJammingZones.forEach(z => {
         if (z.ts > cutoff) return;
-        const col = z.severity === "critical" ? "#ff00ff" : z.severity === "high" ? "#e879f9" : "#c084fc";
-        points.push({ lat: z.lat, lng: z.lng, pointAlt: 0.015, color: col, radius: z.radius * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:#e879f9;font-weight:bold">📡 GPS JAM</div><div>${z.label}</div><div style="color:#888;font-size:9px">${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11,19)} UTC</div></div>` });
+        const col = z.severity === "critical" ? "#ff0033" : z.severity === "high" ? "#cc0022" : "#aa0033";
+        // Render as a cluster of red tile-like points to simulate area coverage
+        const offsets = [
+          [0, 0], [0.15, 0.15], [-0.15, 0.15], [0.15, -0.15], [-0.15, -0.15],
+          [0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25],
+        ];
+        offsets.forEach(([dlat, dlng]) => {
+          points.push({ lat: z.lat + dlat, lng: z.lng + dlng, pointAlt: 0.012, color: col, radius: 0.22 * densityMult,
+            label: dlat === 0 && dlng === 0 ? `<div style="font-family:monospace;font-size:11px;background:rgba(40,0,0,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 15px ${col}40"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">🟥</span> GPS JAMMING ZONE</div><div style="font-size:9px;margin-top:2px">📡 ${z.label}</div><div style="color:#ff6666;font-size:8px;margin-top:1px">${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11,19)} UTC</div><div style="color:#cc4444;font-size:7px;margin-top:1px">⚠ GNSS DENIED — NAV UNRELIABLE</div></div>` : "" });
+        });
       });
     }
 
@@ -674,16 +682,18 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     console.log(`[4D] Rendering ${points.length} points on globe`);
     globe.pointsData(points);
 
-    // SATELLITES — render as visible colored points on globe + 3D objects for labels
+    // SATELLITES — render with 🛰️ icon and orbital info
     if (layers.satellites && panopticSats && allSatellites.length) {
       allSatellites.forEach(s => {
         const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
         const isMil = s.category === "Military" || s.category === "Early Warning";
         const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : s.category === "Space Station" ? "#ffffff" : s.category === "Starlink" ? "#888888" : "#666666";
+        const catIcon = isMil ? "🛰️" : s.category === "Earth Observation" ? "🛰️" : s.category === "Navigation" ? "📡" : s.category === "Weather" ? "🌤️" : s.category === "Space Station" ? "🏠" : s.category === "Starlink" ? "⭐" : "🛰️";
+        const period = (1440 / s.meanMotion).toFixed(0);
         points.push({
           lat: s.lat, lng: s.lng, pointAlt: Math.min(s.alt / 6371 * 0.15, 0.8),
           color: satCol, radius: (isISR ? 0.18 : isMil ? 0.14 : 0.08) * densityMult,
-          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}30"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol}">◆</span><span style="color:${satCol};font-weight:bold;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 12px ${satCol}30"><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px">${catIcon}</span><span style="color:${satCol};font-weight:bold;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">🌍 ${Math.round(s.alt)}km • ${s.category}</div><div style="color:#666;font-size:7px;margin-top:1px">Inc ${s.inclination.toFixed(1)}° • Period ${period}min • Ecc ${s.eccentricity.toFixed(4)}</div></div>`,
         });
       });
 
@@ -691,9 +701,10 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       const satObjects = isrSatellites.map(s => {
         const isMil = s.category === "Military" || s.category === "Early Warning";
         const satCol = isMil ? "#ef4444" : "#00d4ff";
+        const catIcon = isMil ? "🛰️" : "🛰️";
         return {
           lat: s.lat, lng: s.lng, alt: s.alt / 6371 * 0.15,
-          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="color:${satCol};font-size:10px">◆</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
+          label: `<div style="font-family:monospace;font-size:10px;background:rgba(5,5,15,0.95);border:1px solid ${satCol};padding:5px 8px;border-radius:3px;color:#f0f0f0;box-shadow:0 0 15px ${satCol}40"><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px">${catIcon}</span><span style="color:${satCol};font-weight:bold;font-size:10px;letter-spacing:1px">${s.name}</span></div><div style="color:#888;font-size:8px;margin-top:2px">🌍 ${Math.round(s.alt)}km • ${s.category} • Inc ${s.inclination.toFixed(1)}°</div></div>`,
         };
       });
       globe.objectsData(satObjects);
@@ -894,62 +905,68 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
         {/* RIGHT PANEL — Attributes + Feed */}
         {!cleanUI && (
-          <div className="w-64 flex-shrink-0 bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden">
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
+          <div className="w-64 flex-shrink-0 bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden" style={{ minWidth: 256 }}>
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
-                <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">ATTRIBUTES</span>
+                <SlidersHorizontal className="h-4 w-4 text-primary" />
+                <span className="text-[11px] font-bold tracking-[0.2em] text-primary uppercase">ATTRIBUTES</span>
+                <div className="ml-auto flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[7px] font-mono text-success">ACTIVE</span></div>
               </div>
             </div>
 
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] space-y-2">
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)] space-y-2.5">
               {[
-                { label: "BLOOM", icon: <Sparkles className="h-3 w-3 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
-                { label: "HUD", icon: <Monitor className="h-3 w-3 text-[#00d4ff]" />, value: hudEnabled, set: setHudEnabled, color: "#00d4ff" },
+                { label: "BLOOM", icon: <Sparkles className="h-3.5 w-3.5 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
+                { label: "HUD OVERLAY", icon: <Monitor className="h-3.5 w-3.5 text-[#00d4ff]" />, value: hudEnabled, set: setHudEnabled, color: "#00d4ff" },
               ].map(ctrl => (
-                <div key={ctrl.label} className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">{ctrl.icon}<span className="text-[9px] font-mono text-foreground tracking-wider">{ctrl.label}</span></div>
-                  <button onClick={() => ctrl.set(!ctrl.value)} className={`w-8 h-4 rounded-full transition-colors ${ctrl.value ? `bg-[${ctrl.color}]` : "bg-[hsl(220,15%,20%)]"}`} style={{ backgroundColor: ctrl.value ? ctrl.color : undefined }}>
-                    <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${ctrl.value ? "translate-x-3.5" : ""}`} />
+                <div key={ctrl.label} className="flex items-center justify-between py-0.5">
+                  <div className="flex items-center gap-2">{ctrl.icon}<span className="text-[10px] font-mono text-foreground tracking-wider font-medium">{ctrl.label}</span></div>
+                  <button onClick={() => ctrl.set(!ctrl.value)} className="w-9 h-5 rounded-full transition-colors relative" style={{ backgroundColor: ctrl.value ? ctrl.color : "hsl(220,15%,20%)" }}>
+                    <div className={`w-3.5 h-3.5 rounded-full bg-foreground transition-transform absolute top-0.5 ${ctrl.value ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </div>
               ))}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-foreground tracking-wider">SHARPEN</span>
-                  <button onClick={() => setSharpenEnabled(!sharpenEnabled)} className="w-8 h-4 rounded-full transition-colors" style={{ backgroundColor: sharpenEnabled ? "hsl(190,80%,50%)" : "hsl(220,15%,20%)" }}>
-                    <div className={`w-3 h-3 rounded-full bg-foreground transition-transform mx-0.5 ${sharpenEnabled ? "translate-x-3.5" : ""}`} />
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between py-0.5">
+                  <div className="flex items-center gap-2"><Eye className="h-3.5 w-3.5 text-primary" /><span className="text-[10px] font-mono text-foreground tracking-wider font-medium">SHARPEN</span></div>
+                  <button onClick={() => setSharpenEnabled(!sharpenEnabled)} className="w-9 h-5 rounded-full transition-colors relative" style={{ backgroundColor: sharpenEnabled ? "hsl(190,80%,50%)" : "hsl(220,15%,20%)" }}>
+                    <div className={`w-3.5 h-3.5 rounded-full bg-foreground transition-transform absolute top-0.5 ${sharpenEnabled ? "left-[18px]" : "left-0.5"}`} />
                   </button>
                 </div>
-                {sharpenEnabled && <input type="range" min={0} max={100} value={sharpenValue} onChange={e => setSharpenValue(parseInt(e.target.value))} className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary" />}
+                {sharpenEnabled && (
+                  <div className="pl-6">
+                    <div className="flex items-center justify-between mb-1"><span className="text-[8px] font-mono text-muted-foreground">INTENSITY</span><span className="text-[8px] font-mono text-primary">{sharpenValue}%</span></div>
+                    <input type="range" min={0} max={100} value={sharpenValue} onChange={e => setSharpenValue(parseInt(e.target.value))} className="w-full h-1 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary" />
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)]">
-              <span className="text-[8px] font-mono text-muted-foreground tracking-[0.15em]">LAYOUT</span>
-              <div className="flex gap-1 mt-1">
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)]">
+              <span className="text-[9px] font-mono text-muted-foreground tracking-[0.15em] mb-1.5 block">LAYOUT PRESET</span>
+              <div className="flex gap-1.5">
                 {(["TACTICAL", "STRATEGIC", "MINIMAL"] as const).map(p => (
-                  <button key={p} onClick={() => setLayoutPreset(p)} className={`flex-1 px-1 py-1 rounded text-[8px] font-mono border transition-colors ${layoutPreset === p ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>{p}</button>
+                  <button key={p} onClick={() => setLayoutPreset(p)} className={`flex-1 px-1.5 py-1.5 rounded text-[9px] font-mono font-bold border transition-colors ${layoutPreset === p ? "border-primary/50 bg-primary/15 text-primary" : "border-[hsl(220,15%,18%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,25%)]"}`}>{p}</button>
                 ))}
               </div>
             </div>
 
-            <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)]">
-              <div className="flex items-center gap-1.5 mb-1.5"><div className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" /><span className="text-[9px] font-mono text-[#22c55e] tracking-[0.15em] font-bold">PANOPTIC</span></div>
-              <div className="space-y-1.5">
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)]">
+              <div className="flex items-center gap-1.5 mb-2"><div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" /><span className="text-[10px] font-mono text-[#22c55e] tracking-[0.15em] font-bold">PANOPTIC CONTROL</span></div>
+              <div className="space-y-2">
                 <div>
-                  <div className="flex items-center justify-between mb-0.5"><span className="text-[8px] font-mono text-muted-foreground">DENSITY</span><span className="text-[8px] font-mono text-primary">{panopticDensity}%</span></div>
-                  <input type="range" min={10} max={100} value={panopticDensity} onChange={e => setPanopticDensity(parseInt(e.target.value))} className="w-full h-0.5 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#22c55e]" />
+                  <div className="flex items-center justify-between mb-1"><span className="text-[9px] font-mono text-muted-foreground">DENSITY</span><span className="text-[9px] font-mono text-primary font-bold">{panopticDensity}%</span></div>
+                  <input type="range" min={10} max={100} value={panopticDensity} onChange={e => setPanopticDensity(parseInt(e.target.value))} className="w-full h-1 appearance-none bg-[hsl(190,30%,18%)] rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#22c55e]" />
                 </div>
                 {[
-                  { label: "Flights", value: panopticFlights, set: setPanopticFlights, icon: <Plane className="h-2.5 w-2.5" /> },
-                  { label: "Satellites", value: panopticSats, set: setPanopticSats, icon: <Satellite className="h-2.5 w-2.5" /> },
-                  { label: "Maritime", value: panopticMaritime, set: setPanopticMaritime, icon: <Ship className="h-2.5 w-2.5" /> },
+                  { label: "Flights", value: panopticFlights, set: setPanopticFlights, icon: <Plane className="h-3 w-3" /> },
+                  { label: "Satellites", value: panopticSats, set: setPanopticSats, icon: <Satellite className="h-3 w-3" /> },
+                  { label: "Maritime", value: panopticMaritime, set: setPanopticMaritime, icon: <Ship className="h-3 w-3" /> },
                 ].map(t => (
-                  <div key={t.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">{t.icon}<span className="text-[8px] font-mono text-muted-foreground">{t.label}</span></div>
-                    <button onClick={() => t.set(!t.value)} className={`w-7 h-3.5 rounded-full transition-colors`} style={{ backgroundColor: t.value ? "#22c55e" : "hsl(220,15%,20%)" }}>
-                      <div className={`w-2.5 h-2.5 rounded-full bg-foreground transition-transform mx-0.5 ${t.value ? "translate-x-3" : ""}`} />
+                  <div key={t.label} className="flex items-center justify-between py-0.5">
+                    <div className="flex items-center gap-1.5">{t.icon}<span className="text-[9px] font-mono text-muted-foreground">{t.label}</span></div>
+                    <button onClick={() => t.set(!t.value)} className="w-8 h-4 rounded-full transition-colors relative" style={{ backgroundColor: t.value ? "#22c55e" : "hsl(220,15%,20%)" }}>
+                      <div className={`w-3 h-3 rounded-full bg-foreground transition-transform absolute top-0.5 ${t.value ? "left-[14px]" : "left-0.5"}`} />
                     </button>
                   </div>
                 ))}
