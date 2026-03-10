@@ -1980,6 +1980,35 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         />
       )}
 
+      {showSnapMe && (
+        <SnapMeModal
+          onClose={() => setShowSnapMe(false)}
+          onPinLocation={(lat, lng, name, reasoning) => {
+            setShowSnapMe(false);
+            if (mapRef.current) {
+              if (!mapRef.current.hasLayer(snapMeGroupRef.current)) {
+                snapMeGroupRef.current.addTo(mapRef.current);
+              }
+              mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
+              const icon = L.divIcon({
+                className: "",
+                html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+                  <div style="position:absolute;width:28px;height:28px;border-radius:50%;border:2px solid hsl(190,100%,50%);opacity:0.5;animation:pulse 2s ease-in-out infinite;"></div>
+                  <div style="font-size:16px;filter:drop-shadow(0 0 8px hsl(190,100%,50%));">📸</div>
+                </div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+                popupAnchor: [0, -16],
+              });
+              L.marker([lat, lng], { icon })
+                .addTo(snapMeGroupRef.current)
+                .bindPopup(`<div style="font-family:monospace;font-size:11px;max-width:250px"><b>📸 ${name}</b><br/><span style="color:#888;font-size:10px">${reasoning.slice(0, 150)}…</span></div>`)
+                .openPopup();
+            }
+          }}
+        />
+      )}
+
       <MapLegend />
       <div ref={mapContainerRef} className="h-full w-full rounded-lg" aria-label="Intelligence map" />
     </div>
