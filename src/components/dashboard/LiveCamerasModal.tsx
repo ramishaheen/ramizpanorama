@@ -469,6 +469,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [stats, setStats] = useState<Stats | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [popupCamera, setPopupCamera] = useState<CameraData | null>(null);
 
   // AI Intelligence Hook
   const { events, analyzing, lastAnalysis, analyzeCamera, fetchEvents, setLastAnalysis } = useCCTVIntel();
