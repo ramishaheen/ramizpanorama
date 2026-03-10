@@ -307,7 +307,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => { destroyed = true; if (rafRef.current) cancelAnimationFrame(rafRef.current); if (satIntervalRef.current) clearInterval(satIntervalRef.current); };
   }, []);
 
-  // Update real sat positions periodically (only if we have real TLE data)
+  // Update real sat positions every second for visible movement
   useEffect(() => {
     if (satellites.length === 0) return;
     const updateSats = () => {
@@ -316,7 +316,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         return { ...s, lat: pos.lat, lng: pos.lng };
       }));
     };
-    satIntervalRef.current = setInterval(updateSats, 2000);
+    satIntervalRef.current = setInterval(updateSats, 1000);
     return () => clearInterval(satIntervalRef.current);
   }, [satellites.length]);
 
