@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.cctv-ai-analyze]
 verify_jwt = false
+
+[functions.snap-locate]
+verify_jwt = false

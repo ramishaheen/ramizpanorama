@@ -13,7 +13,8 @@ import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
-import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar } from "lucide-react";
+import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture } from "lucide-react";
+import { SnapMeModal } from "./SnapMeModal";
 import { IranAirspacePanel } from "./IranAirspacePanel";
 import { ResponseMapModal } from "./ResponseMapModal";
 import { CrisisIntelModal } from "./CrisisIntelModal";
@@ -1800,6 +1801,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showResponseMap, setShowResponseMap] = useState(false);
   const [showCrisisIntel, setShowCrisisIntel] = useState(false);
   const [showIranAirspace, setShowIranAirspace] = useState(false);
+  const [showSnapMe, setShowSnapMe] = useState(false);
+  const snapMeGroupRef = useRef<L.LayerGroup>(L.layerGroup());
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
 
   return (
@@ -1894,6 +1897,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <Radar className={`h-3.5 w-3.5 ${showIranAirspace ? "text-destructive animate-pulse" : "text-destructive/70 group-hover:text-destructive"}`} />
           <span className={`text-[9px] font-mono uppercase ${showIranAirspace ? "text-destructive" : "text-muted-foreground"}`}>IRAN FIR</span>
         </button>
+        <button
+          onClick={() => setShowSnapMe(true)}
+          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
+          title="Snap Me — AI Image Geolocation"
+        >
+          <Aperture className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
+          <span className="text-[9px] font-mono text-muted-foreground uppercase">SNAP ME</span>
+        </button>
       </div>
 
 
@@ -1966,6 +1977,35 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           onClose={() => setShowIranAirspace(false)}
           onTrackAircraft={(icao) => setTrackedFlightId(icao)}
           onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 10, { duration: 1.2 })}
+        />
+      )}
+
+      {showSnapMe && (
+        <SnapMeModal
+          onClose={() => setShowSnapMe(false)}
+          onPinLocation={(lat, lng, name, reasoning) => {
+            setShowSnapMe(false);
+            if (mapRef.current) {
+              if (!mapRef.current.hasLayer(snapMeGroupRef.current)) {
+                snapMeGroupRef.current.addTo(mapRef.current);
+              }
+              mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
+              const icon = L.divIcon({
+                className: "",
+                html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+                  <div style="position:absolute;width:28px;height:28px;border-radius:50%;border:2px solid hsl(190,100%,50%);opacity:0.5;animation:pulse 2s ease-in-out infinite;"></div>
+                  <div style="font-size:16px;filter:drop-shadow(0 0 8px hsl(190,100%,50%));">📸</div>
+                </div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+                popupAnchor: [0, -16],
+              });
+              L.marker([lat, lng], { icon })
+                .addTo(snapMeGroupRef.current)
+                .bindPopup(`<div style="font-family:monospace;font-size:11px;max-width:250px"><b>📸 ${name}</b><br/><span style="color:#888;font-size:10px">${reasoning.slice(0, 150)}…</span></div>`)
+                .openPopup();
+            }
+          }}
         />
       )}
 
