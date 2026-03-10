@@ -972,7 +972,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
                   className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[8px] font-mono font-bold truncate" style={{ color: ev.color }}>{ev.type.toUpperCase()}</span>
+                    <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
+                      <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
+                    </span>
                     <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
                   </div>
                   <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
