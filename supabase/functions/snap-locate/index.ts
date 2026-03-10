@@ -3,14 +3,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI_API_KEY) {
-    return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -30,7 +30,6 @@ Analyze:
 - Sky conditions, sun position, shadows
 - Cultural indicators (clothing, vehicles, shop types)
 - Terrain elevation and geological features
-- Any GPS metadata clues in visual elements
 
 Return ONLY valid JSON with this exact structure:
 {
@@ -48,40 +47,50 @@ Return ONLY valid JSON with this exact structure:
   "overall_analysis": "Brief overall description of the image and key geolocation clues found"
 }
 
-Return up to 5 candidate locations, ranked by confidence (highest first). Be as specific as possible with coordinates — try to pinpoint the exact street or viewpoint, not just the city center.`;
+Return up to 5 candidate locations, ranked by confidence (highest first). Be as specific as possible with coordinates.`;
 
-    const geminiBody = {
-      contents: [{
-        role: "user",
-        parts: [
-          { text: systemPrompt },
-          { inlineData: { mimeType: mime_type || "image/jpeg", data: image_base64 } },
-        ],
-      }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
-    };
-
-    const aiResp = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+    const aiResp = await fetch(AI_GATEWAY_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(geminiBody),
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: systemPrompt },
+              { type: "image_url", image_url: { url: `data:${mime_type || "image/jpeg"};base64,${image_base64}` } },
+            ],
+          },
+        ],
+        max_tokens: 4096,
+        temperature: 0.3,
+      }),
     });
 
     if (!aiResp.ok) {
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded, try again later" }), {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again in a moment" }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      if (aiResp.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted, please add funds" }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const errText = await aiResp.text();
-      console.error("Gemini error:", aiResp.status, errText);
-      throw new Error(`Gemini failed: ${aiResp.status}`);
+      console.error("AI Gateway error:", aiResp.status, errText);
+      throw new Error(`AI Gateway failed: ${aiResp.status}`);
     }
 
     const aiData = await aiResp.json();
-    const rawText = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const rawText = aiData.choices?.[0]?.message?.content || "";
 
-    // Strip <think> blocks if present
+    // Strip think blocks
     const cleaned = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
     let result;
