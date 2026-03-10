@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Zap, Rocket, Cpu, Anchor } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
+import { getCountryGeoJSON } from "@/data/countryBorders";
 import militarySatSprite from "@/assets/military-sat-sprite.png";
 
 interface SatelliteData {
@@ -474,6 +475,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const [predictionTrack, setPredictionTrack] = useState<{ lat: number; lng: number }[] | null>(null);
   const [globeStyle, setGlobeStyle] = useState<string>("normal");
   const [selectedCity, setSelectedCity] = useState<CityPreset | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
   // Globe style presets — change texture, atmosphere, lighting
   const GLOBE_STYLES = [
@@ -990,50 +992,91 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     fetchSatellites();
   }, [fetchSatellites]);
 
-  // Re-propagate positions every 2 seconds for smoother icon motion
+  // Re-propagate positions every 500ms for smooth orbital motion + rAF interpolation
+  const prevPositionsRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const nextPositionsRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const lastPropTimeRef = useRef<number>(performance.now());
+  const interpFrameRef = useRef<number>(0);
+
   useEffect(() => {
     if (rawTLERef.current.length === 0) return;
-    const interval = setInterval(() => {
-      const globe = globeRef.current;
-      if (!globe) return;
+
+    const propagateAll = () => {
       const raws = rawTLERef.current;
       const catFilter = selectedCat;
+
+      // Move current "next" to "prev" for interpolation
+      prevPositionsRef.current = new Map(nextPositionsRef.current);
+      lastPropTimeRef.current = performance.now();
+
+      const newNext = new Map<string, { lat: number; lng: number }>();
       const updated: SatelliteData[] = raws.map((r) => {
         const pos = propagateSatellite(
           r.inclination, r.raan, r.meanAnomaly, r.meanMotion,
           r.eccentricity, r.epochYear, r.epochDay, r.alt
         );
+        const key = r.noradId || r.name;
+        newNext.set(key, { lat: pos.lat, lng: pos.lng });
         return {
-          name: r.name,
-          lat: pos.lat,
-          lng: pos.lng,
-          alt: r.alt,
-          category: r.category,
-          noradId: r.noradId,
-          inclination: r.inclination,
-          meanMotion: r.meanMotion,
-          eccentricity: r.eccentricity,
-          period: r.period,
-          epochYear: r.epochYear,
-          epochDay: r.epochDay,
-          launchYear: r.launchYear,
-          intlDesignator: r.intlDesignator,
-          velocity: r.velocity,
-          raan: r.raan,
-          meanAnomaly: r.meanAnomaly,
-          country: r.country,
-          operator: r.operator,
-          source: r.source,
+          name: r.name, lat: pos.lat, lng: pos.lng, alt: r.alt,
+          category: r.category, noradId: r.noradId, inclination: r.inclination,
+          meanMotion: r.meanMotion, eccentricity: r.eccentricity, period: r.period,
+          epochYear: r.epochYear, epochDay: r.epochDay, launchYear: r.launchYear,
+          intlDesignator: r.intlDesignator, velocity: r.velocity, raan: r.raan,
+          meanAnomaly: r.meanAnomaly, country: r.country, operator: r.operator, source: r.source,
         };
       });
+      nextPositionsRef.current = newNext;
       satsRef.current = updated;
       setLastPropagated(new Date());
-      const filtered = catFilter
-        ? updated.filter((s) => s.category === catFilter)
-        : updated;
-      globe.objectsData(filtered.slice(0, catFilter ? 5000 : 3200));
-    }, 2000);
-    return () => clearInterval(interval);
+
+      const globe = globeRef.current;
+      if (globe) {
+        const filtered = catFilter ? updated.filter((s) => s.category === catFilter) : updated;
+        globe.objectsData(filtered.slice(0, catFilter ? 5000 : 3200));
+      }
+    };
+
+    propagateAll();
+    const interval = setInterval(propagateAll, 500);
+
+    // rAF interpolation between propagation ticks for ultra-smooth motion
+    const PROP_INTERVAL = 500;
+    const interpolate = () => {
+      const globe = globeRef.current;
+      if (!globe) { interpFrameRef.current = requestAnimationFrame(interpolate); return; }
+
+      const t = Math.min((performance.now() - lastPropTimeRef.current) / PROP_INTERVAL, 1);
+      const objectsData = globe.objectsData() as SatelliteData[];
+      if (objectsData.length > 0 && prevPositionsRef.current.size > 0 && t < 1) {
+        const interpolated = objectsData.map((s: SatelliteData) => {
+          const key = s.noradId || s.name;
+          const prev = prevPositionsRef.current.get(key);
+          const next = nextPositionsRef.current.get(key);
+          if (prev && next) {
+            // Linear interpolation
+            let dLng = next.lng - prev.lng;
+            // Handle antimeridian wrap
+            if (dLng > 180) dLng -= 360;
+            if (dLng < -180) dLng += 360;
+            return {
+              ...s,
+              lat: prev.lat + (next.lat - prev.lat) * t,
+              lng: prev.lng + dLng * t,
+            };
+          }
+          return s;
+        });
+        globe.objectsData(interpolated);
+      }
+      interpFrameRef.current = requestAnimationFrame(interpolate);
+    };
+    interpFrameRef.current = requestAnimationFrame(interpolate);
+
+    return () => {
+      clearInterval(interval);
+      if (interpFrameRef.current) cancelAnimationFrame(interpFrameRef.current);
+    };
   }, [satellites.length, selectedCat]);
 
   // Init globe once, then update data/layers in separate effects (prevents WebGL context churn/black screen)
@@ -1370,7 +1413,65 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .ringColor(() => (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`)
           .ringMaxRadius((d: any) => d.maxR)
           .ringPropagationSpeed((d: any) => d.propagationSpeed)
-          .ringRepeatPeriod(2000);
+          .ringRepeatPeriod(2000)
+          // Country polygon layer for click-to-zoom
+          .polygonsData(getCountryGeoJSON(["IR","IQ","SA","AE","JO","IL","SY","LB","KW","QA","BH","OM","YE","EG","TR"]).features)
+          .polygonCapColor(() => "rgba(0,220,255,0.08)")
+          .polygonSideColor(() => "rgba(0,220,255,0.15)")
+          .polygonStrokeColor(() => "rgba(0,220,255,0.4)")
+          .polygonAltitude(0.002)
+          .onPolygonClick((polygon: any) => {
+            const code = polygon?.properties?.code;
+            if (!code) return;
+            // Compute center of polygon for zoom
+            const coords = polygon.geometry.coordinates[0]; // [[lng,lat],...]
+            let sumLat = 0, sumLng = 0;
+            coords.forEach(([ln, la]: [number, number]) => { sumLat += la; sumLng += ln; });
+            const centerLat = sumLat / coords.length;
+            const centerLng = sumLng / coords.length;
+
+            setSelectedCountry(code);
+            setSelectedSat(null);
+            setOrbitPath(null);
+
+            // Find satellites within bounding box of the country
+            const lats = coords.map(([, la]: [number, number]) => la);
+            const lngs = coords.map(([ln]: [number, number]) => ln);
+            const minLat = Math.min(...lats) - 5;
+            const maxLat = Math.max(...lats) + 5;
+            const minLng = Math.min(...lngs) - 5;
+            const maxLng = Math.max(...lngs) + 5;
+
+            const nearbySats = satsRef.current.filter(s =>
+              s.lat >= minLat && s.lat <= maxLat && s.lng >= minLng && s.lng <= maxLng
+            );
+
+            const catMap = new Map<string, number>();
+            const nameSet = new Set<string>();
+            nearbySats.forEach(s => {
+              catMap.set(s.category, (catMap.get(s.category) || 0) + 1);
+              nameSet.add(s.noradId || s.name);
+            });
+
+            const breakdown = Array.from(catMap.entries())
+              .map(([category, count]) => ({ category, count, color: CATEGORY_COLORS[category] || "#d4a843" }))
+              .sort((a, b) => b.count - a.count);
+
+            setCountrySats(breakdown);
+            setCountrySatNames(nameSet);
+            countrySatNamesRef.current = nameSet;
+            setActiveCity(code);
+
+            globe.pointOfView({ lat: centerLat, lng: centerLng, altitude: 0.6 }, 1500);
+          })
+          .onPolygonHover((polygon: any) => {
+            const code = polygon?.properties?.code;
+            setHoveredCountry(code || null);
+            // Highlight hovered polygon
+            globe.polygonCapColor((p: any) =>
+              p?.properties?.code === code ? "rgba(0,220,255,0.2)" : "rgba(0,220,255,0.08)"
+            );
+          });
 
         const scene = globe.scene();
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
