@@ -941,12 +941,12 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             </button>
           ))}
           <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-1" />
-          <span className="text-[8px] font-mono text-muted-foreground">3°/s</span>
-          <span className="text-[8px] font-mono text-primary ml-1">Tehran</span>
+          <span className="text-[8px] font-mono text-muted-foreground">{orbitMode === "FLAT" ? "1.5°/s" : orbitMode !== "OFF" ? "2.0°/s" : "—"}</span>
+          <span className="text-[8px] font-mono text-primary ml-1">{orbitMode !== "OFF" ? orbitMode : "MANUAL"}</span>
           <div className="flex-1" />
-          <span className="text-[8px] font-mono text-muted-foreground">250km</span>
-          <span className="text-[8px] font-mono text-muted-foreground ml-2">-45°</span>
-          <span className="text-[8px] font-mono text-muted-foreground ml-2">60° FOV</span>
+          <span className="text-[8px] font-mono text-muted-foreground">{Math.round(timelineValue)}%</span>
+          <span className="text-[8px] font-mono text-muted-foreground ml-2">{emulatedEvents.filter(e => e.ts <= timelineTimestamp).length} EVENTS</span>
+          <span className="text-[8px] font-mono text-muted-foreground ml-2">{gpsJammingZones.filter(z => z.ts <= timelineTimestamp).length} JAM ZONES</span>
         </div>
 
         {/* Row 3: Layer chips */}
