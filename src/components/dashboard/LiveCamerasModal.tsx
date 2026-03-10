@@ -8,9 +8,10 @@ import {
   X, Search, Camera, MapPin, ExternalLink, RefreshCw, AlertTriangle,
   Video, Eye, Sparkles, Globe, Copy, Activity, Radio, Signal,
   Shield, ChevronLeft, ChevronRight, Crosshair, Wifi, WifiOff,
-  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play
+  Layers, Flag, Zap, Youtube, MonitorPlay, ImageIcon, Play, Info
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CameraDetailsPopup } from "./CameraDetailsPopup";
 
 // ═══════════════ TYPES ═══════════════
 interface CameraData {
@@ -407,30 +408,27 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
 }
 
 // ═══════════════ CHANNEL LIST ITEM ═══════════════
-function ChannelItem({ cam, isSelected, onClick }: { cam: CameraData; isSelected: boolean; onClick: () => void }) {
+function ChannelItem({ cam, isSelected, onClick, onDetails }: { cam: CameraData; isSelected: boolean; onClick: () => void; onDetails: () => void }) {
   const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
   const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url;
   const badge = getVerificationBadge(cam.verification_status);
   const isOnline = cam.status === "active";
 
   return (
-    <button onClick={onClick}
-      className={`w-full text-left flex gap-2 p-2 rounded-lg transition-all ${isSelected ? "ring-1 ring-cyan-500/40" : "hover:bg-white/[0.03]"}`}
+    <div className={`w-full text-left flex gap-2 p-2 rounded-lg transition-all ${isSelected ? "ring-1 ring-cyan-500/40" : "hover:bg-white/[0.03]"}`}
       style={{ background: isSelected ? "rgba(6,182,212,0.08)" : "transparent", borderBottom: "1px solid rgba(6,182,212,0.05)" }}>
-      {/* Thumbnail */}
-      <div className="w-16 h-10 rounded overflow-hidden flex-shrink-0 relative" style={{ background: "#111827" }}>
+      {/* Thumbnail - clickable to select */}
+      <button onClick={onClick} className="w-16 h-10 rounded overflow-hidden flex-shrink-0 relative" style={{ background: "#111827" }}>
         {thumbUrl ? (
           <img src={thumbUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
         ) : (
           <div className="w-full h-full flex items-center justify-center"><Camera className="h-4 w-4 text-gray-700" /></div>
         )}
-        {/* Status dot */}
         <span className={`absolute top-0.5 right-0.5 w-2 h-2 rounded-full border border-black/50 ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
-        {/* YouTube icon */}
         {ytId && <Youtube className="absolute bottom-0.5 left-0.5 h-3 w-3 text-red-500 drop-shadow" />}
-      </div>
-      {/* Info */}
-      <div className="flex-1 min-w-0">
+      </button>
+      {/* Info - clickable to select */}
+      <button onClick={onClick} className="flex-1 min-w-0 text-left">
         <div className="text-[9px] font-bold text-gray-200 truncate">{cam.name}</div>
         <div className="flex items-center gap-1 mt-0.5">
           <Flag className="h-2 w-2 text-gray-600" />
@@ -443,8 +441,15 @@ function ChannelItem({ cam, isSelected, onClick }: { cam: CameraData; isSelected
           </span>
           <span className="text-[7px] text-gray-600 uppercase">{cam.category}</span>
         </div>
-      </div>
-    </button>
+      </button>
+      {/* Details button */}
+      <button onClick={(e) => { e.stopPropagation(); onDetails(); }}
+        className="self-center flex-shrink-0 px-2 py-1.5 rounded-lg text-[7px] font-bold tracking-wider transition-all hover:scale-105"
+        style={{ color: "#06b6d4", background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.2)" }}
+        title="View details">
+        <Info className="h-3 w-3" />
+      </button>
+    </div>
   );
 }
 
@@ -454,6 +459,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
   const [loading, setLoading] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState<CameraData | null>(null);
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [detailsCamera, setDetailsCamera] = useState<CameraData | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [flyTarget, setFlyTarget] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -899,7 +905,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                         <span className="text-[7px] text-gray-600 ml-auto">{cams.length}</span>
                       </div>
                       {cams.map(c => (
-                        <ChannelItem key={c.id} cam={c} isSelected={selectedCamera?.id === c.id} onClick={() => handleCameraClick(c)} />
+                        <ChannelItem key={c.id} cam={c} isSelected={selectedCamera?.id === c.id} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} />
                       ))}
                     </div>
                   ))}
@@ -920,7 +926,7 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
                         <span className="text-[8px] text-gray-600 ml-auto">{cams.length} cams</span>
                       </div>
                       {cams.map(c => (
-                        <ChannelItem key={c.id} cam={c} isSelected={false} onClick={() => handleCameraClick(c)} />
+                        <ChannelItem key={c.id} cam={c} isSelected={false} onClick={() => handleCameraClick(c)} onDetails={() => setDetailsCamera(c)} />
                       ))}
                     </div>
                   ))}
@@ -942,6 +948,15 @@ export const LiveCamerasModal = ({ onClose, onShowOnMap }: LiveCamerasModalProps
           <span className="text-[8px] text-gray-700">OSINT COMPLIANT • ESC TO CLOSE</span>
         </div>
       </div>
+
+      {/* Camera Details Popup */}
+      {detailsCamera && (
+        <CameraDetailsPopup
+          camera={detailsCamera}
+          onClose={() => setDetailsCamera(null)}
+          onShowOnMap={onShowOnMap}
+        />
+      )}
     </div>,
     document.body
   );
