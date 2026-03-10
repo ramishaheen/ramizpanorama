@@ -464,7 +464,13 @@ const Index = () => {
 
               {/* Right sidebar - resizable & collapsible */}
               {!rightCollapsed ? (
-                <div className="flex-shrink-0 border-l border-border flex flex-col" style={{ width: rightWidth }}>
+                <div className="flex-shrink-0 border-l border-border flex flex-col relative" style={{ width: rightWidth }}>
+                  {/* Full-height resize edge on left side */}
+                  <div
+                    onMouseDown={handleResizeRight}
+                    className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-10 hover:bg-primary/20 transition-colors"
+                    title="Drag to resize"
+                  />
                   <button
                     onClick={() => setRightCollapsed(true)}
                     className="flex items-center justify-start pl-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
