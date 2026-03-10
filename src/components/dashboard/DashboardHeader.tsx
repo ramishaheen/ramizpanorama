@@ -69,8 +69,18 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
                 <div className="relative bg-primary text-primary-foreground text-[9px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
                   Chat with me 💬
                   <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-2 h-2 bg-primary rotate-45" />
-                </div>
-              </div>
+          </div>
+
+          {/* 4D MAP button */}
+          <button
+            onClick={() => setShow4DMap(true)}
+            className="flex items-center gap-1.5 h-7 px-2 rounded-full border border-primary/40 text-primary hover:bg-primary/10 transition-all duration-300"
+            title="Open 4D Intelligence Map"
+          >
+            <Globe className="h-3.5 w-3.5" />
+            <span className="text-[9px] font-mono font-bold tracking-wider">4D MAP</span>
+          </button>
+        </div>
             )}
           </div>
         </div>
