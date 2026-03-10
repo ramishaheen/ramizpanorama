@@ -17,7 +17,7 @@ const MonitorWall = () => {
     setLoading(true);
     let query = supabase.from("intel_sources").select("*").eq("review_status", "approved").order("reliability_score", { ascending: false }).limit(200);
     if (search) query = query.or(`source_name.ilike.%${search}%,city.ilike.%${search}%,country.ilike.%${search}%`);
-    if (categoryFilter) query = query.eq("category", categoryFilter);
+    if (categoryFilter) query = query.eq("category", categoryFilter as any);
     if (countryFilter) query = query.eq("country", countryFilter);
     const { data } = await query;
     setSources(data || []);

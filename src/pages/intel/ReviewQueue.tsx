@@ -50,12 +50,12 @@ const ReviewQueue = () => {
     }]);
 
     // Audit log
-    await supabase.from("audit_logs").insert({
+    await supabase.from("audit_logs").insert([{
       user_id: user?.id,
       action: `source_${action}`,
       entity_type: "intel_source",
       entity_id: sourceId,
-    });
+    }]);
 
     toast({ title: `Source ${action}`, description: `Review action recorded.` });
     setSelected(null);

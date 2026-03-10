@@ -26,12 +26,12 @@ const Connectors = () => {
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from("intel_connectors").insert({
+    const { error } = await supabase.from("intel_connectors").insert([{
       provider_name: form.provider_name,
-      connector_type: form.connector_type,
+      connector_type: form.connector_type as any,
       endpoint_url: form.endpoint_url || null,
       rate_limit: parseInt(form.rate_limit) || 60,
-    });
+    }]);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Connector added" }); setShowAdd(false); fetch(); }
   };

@@ -105,7 +105,7 @@ const SourceRegistry = () => {
 
     let imported = 0;
     for (const row of rows) {
-      const { error } = await supabase.from("intel_sources").insert({
+      const row_payload: any = {
         source_name: row.source_name || row.name || "Unknown",
         country: row.country || "",
         city: row.city || "",
@@ -116,9 +116,10 @@ const SourceRegistry = () => {
         source_url: row.source_url || row.url || null,
         embed_url: row.embed_url || null,
         provider_name: row.provider_name || row.provider || "",
-        review_status: "pending",
+        review_status: "pending" as const,
         submitted_by: user?.id,
-      });
+      };
+      const { error } = await supabase.from("intel_sources").insert([row_payload]);
       if (!error) imported++;
     }
     toast({ title: "CSV Import", description: `Imported ${imported}/${rows.length} sources into review queue.` });
