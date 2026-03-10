@@ -193,7 +193,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .atmosphereColor("hsl(190, 100%, 50%)")
         .atmosphereAltitude(0.2)
         .showAtmosphere(true)
-        .animateIn(true)
+        .animations(true)
         .width(globeContainerRef.current.clientWidth)
         .height(globeContainerRef.current.clientHeight)
         .pointsData([])
