@@ -1413,7 +1413,65 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
           .ringColor(() => (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`)
           .ringMaxRadius((d: any) => d.maxR)
           .ringPropagationSpeed((d: any) => d.propagationSpeed)
-          .ringRepeatPeriod(2000);
+          .ringRepeatPeriod(2000)
+          // Country polygon layer for click-to-zoom
+          .polygonsData(getCountryGeoJSON(["IR","IQ","SA","AE","JO","IL","SY","LB","KW","QA","BH","OM","YE"]).features)
+          .polygonCapColor(() => "rgba(0,220,255,0.08)")
+          .polygonSideColor(() => "rgba(0,220,255,0.15)")
+          .polygonStrokeColor(() => "rgba(0,220,255,0.4)")
+          .polygonAltitude(0.002)
+          .onPolygonClick((polygon: any) => {
+            const code = polygon?.properties?.code;
+            if (!code) return;
+            // Compute center of polygon for zoom
+            const coords = polygon.geometry.coordinates[0]; // [[lng,lat],...]
+            let sumLat = 0, sumLng = 0;
+            coords.forEach(([ln, la]: [number, number]) => { sumLat += la; sumLng += ln; });
+            const centerLat = sumLat / coords.length;
+            const centerLng = sumLng / coords.length;
+
+            setSelectedCountry(code);
+            setSelectedSat(null);
+            setOrbitPath(null);
+
+            // Find satellites within bounding box of the country
+            const lats = coords.map(([, la]: [number, number]) => la);
+            const lngs = coords.map(([ln]: [number, number]) => ln);
+            const minLat = Math.min(...lats) - 5;
+            const maxLat = Math.max(...lats) + 5;
+            const minLng = Math.min(...lngs) - 5;
+            const maxLng = Math.max(...lngs) + 5;
+
+            const nearbySats = satsRef.current.filter(s =>
+              s.lat >= minLat && s.lat <= maxLat && s.lng >= minLng && s.lng <= maxLng
+            );
+
+            const catMap = new Map<string, number>();
+            const nameSet = new Set<string>();
+            nearbySats.forEach(s => {
+              catMap.set(s.category, (catMap.get(s.category) || 0) + 1);
+              nameSet.add(s.noradId || s.name);
+            });
+
+            const breakdown = Array.from(catMap.entries())
+              .map(([category, count]) => ({ category, count, color: CATEGORY_COLORS[category] || "#d4a843" }))
+              .sort((a, b) => b.count - a.count);
+
+            setCountrySats(breakdown);
+            setCountrySatNames(nameSet);
+            countrySatNamesRef.current = nameSet;
+            setActiveCity(code);
+
+            globe.pointOfView({ lat: centerLat, lng: centerLng, altitude: 0.6 }, 1500);
+          })
+          .onPolygonHover((polygon: any) => {
+            const code = polygon?.properties?.code;
+            setHoveredCountry(code || null);
+            // Highlight hovered polygon
+            globe.polygonCapColor((p: any) =>
+              p?.properties?.code === code ? "rgba(0,220,255,0.2)" : "rgba(0,220,255,0.08)"
+            );
+          });
 
         const scene = globe.scene();
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
