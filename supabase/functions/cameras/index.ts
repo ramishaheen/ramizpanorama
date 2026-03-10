@@ -659,9 +659,13 @@ serve(async (req) => {
 
         const lat = Number(wc.latitude || wc.lat) || 0;
         const lng = Number(wc.longitude || wc.lng || wc.lon) || 0;
-        const country = wc.country_name || wc.country || "";
-        const city = wc.city_name || wc.city || wc.location || "";
-        const category = (wc.category || "public").toLowerCase();
+        // Handle country as object {name, iso_code} or string
+        const rawCountry = wc.country;
+        const country = typeof rawCountry === "object" && rawCountry?.name ? rawCountry.name : (wc.country_name || rawCountry || "");
+        // Handle city as object or string
+        const rawCity = wc.city;
+        const city = typeof rawCity === "object" && rawCity?.name ? rawCity.name : (wc.city_name || rawCity || wc.location || "");
+        const category = (typeof wc.category === "object" && wc.category?.name ? wc.category.name : (wc.category || "public")).toLowerCase();
         const validCats = ["traffic", "tourism", "ports", "weather", "public"];
 
         const payload: any = {
