@@ -845,6 +845,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-[hsl(220,25%,5%)] flex flex-col" style={{ filter: bloomEnabled ? "brightness(1.05) contrast(1.08)" : undefined }}>
+      {/* Satellite pulse animation */}
+      <style>{`@keyframes satPulse { 0% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; } 100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0; } }`}</style>
       <div className="fixed inset-0 pointer-events-none z-[10000] opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,210,255,0.1) 2px, rgba(0,210,255,0.1) 4px)" }} />
 
       <div className="flex flex-1 min-h-0">
