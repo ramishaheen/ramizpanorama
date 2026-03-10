@@ -411,7 +411,7 @@ function FeedViewer({ cam, expanded }: { cam: CameraData; expanded?: boolean }) 
 }
 
 // ═══════════════ CHANNEL LIST ITEM ═══════════════
-function ChannelItem({ cam, isSelected, onClick, onDetails }: { cam: CameraData; isSelected: boolean; onClick: () => void; onDetails: () => void }) {
+function ChannelItem({ cam, isSelected, onClick, onDetails, onDoubleClick }: { cam: CameraData; isSelected: boolean; onClick: () => void; onDetails: () => void; onDoubleClick?: () => void }) {
   const ytId = cam.youtube_video_id || extractYouTubeId(cam.embed_url || "");
   const thumbUrl = ytId ? getYouTubeThumbnail(ytId) : cam.thumbnail_url || cam.snapshot_url;
   const badge = getVerificationBadge(cam.verification_status);
