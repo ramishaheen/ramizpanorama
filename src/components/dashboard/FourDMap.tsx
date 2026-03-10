@@ -570,12 +570,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // MARITIME — bigger markers
+    // MARITIME — type-specific vessel icons
     if (layers.maritime && panopticMaritime) {
       aisVessels.forEach((v: any) => {
-        const col = v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : "#22c55e";
-        points.push({ lat: v.lat, lng: v.lng, pointAlt: 0.005, color: col, radius: 0.2 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">🚢 ${v.type}</div><div>${v.name} (${v.flag})</div><div style="color:#888;font-size:9px">${v.speed}kn → ${v.destination || "—"}</div></div>` });
+        const col = v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : v.type === "FISHING" ? "#22d3ee" : "#22c55e";
+        const vIcon = v.type === "MILITARY" ? "⚓" : v.type === "TANKER" ? "🛢" : v.type === "CARGO" ? "📦" : v.type === "FISHING" ? "🎣" : "🚢";
+        const vLabel = v.type === "MILITARY" ? "WARSHIP" : v.type === "TANKER" ? "OIL TANKER" : v.type === "CARGO" ? "CARGO VESSEL" : v.type === "FISHING" ? "FISHING" : "VESSEL";
+        points.push({ lat: v.lat, lng: v.lng, pointAlt: 0.005, color: col, radius: (v.type === "MILITARY" ? 0.25 : 0.18) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${vIcon}</span> ${vLabel}</div><div style="font-size:10px;margin-top:2px">${v.name} <span style="color:#888">(${v.flag})</span></div><div style="color:#888;font-size:8px;margin-top:1px">${v.speed}kn • HDG ${v.heading}° → ${v.destination || "—"}</div></div>` });
       });
     }
 
