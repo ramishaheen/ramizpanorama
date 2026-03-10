@@ -730,15 +730,39 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         { startLat: 35.69, startLng: 51.39, endLat: 15.35, endLng: 44.21, colors: ["rgba(168,85,247,0.3)", "rgba(168,85,247,0.1)"] },
       );
     }
-    // Satellite scan cone arcs
+    // Satellite orbital track arcs — trace partial orbit paths for top satellites
     if (layers.satellites && panopticSats) {
-      isrSatellites.slice(0, 12).forEach((s, i) => {
+      // Orbital tracks: compute positions ±15° along mean anomaly for visible orbit segments
+      const trackSats = allSatellites.filter(s => {
+        const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
+        return isISR || s.category === "Military" || s.category === "Early Warning" || s.category === "Earth Observation";
+      }).slice(0, 30);
+
+      trackSats.forEach(s => {
         const isMil = s.category === "Military" || s.category === "Early Warning";
-        const col = isMil ? "rgba(239,68,68,0.4)" : "rgba(0,212,255,0.35)";
-        // Deterministic ground footprint based on index
-        const groundLat = s.lat + Math.sin(i * 1.5) * 3;
-        const groundLng = s.lng + Math.cos(i * 1.5) * 3;
-        arcs.push({ startLat: s.lat, startLng: s.lng, endLat: groundLat, endLng: groundLng, colors: [col, "rgba(255,255,255,0.05)"] });
+        const trackCol = isMil ? "rgba(239,68,68,0.35)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.3)" : s.category === "Navigation" ? "rgba(34,197,94,0.25)" : "rgba(168,85,247,0.25)";
+        const trackColFade = isMil ? "rgba(239,68,68,0.08)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.06)" : "rgba(100,100,100,0.06)";
+
+        // Generate 3 arc segments along the orbit: behind, at, ahead
+        const offsets = [-12, -6, 6, 12]; // degrees offset on mean anomaly
+        for (let i = 0; i < offsets.length - 1; i++) {
+          const ma1 = s.meanAnomaly + offsets[i];
+          const ma2 = s.meanAnomaly + offsets[i + 1];
+          const pos1 = propagateSatelliteAtMA(s.inclination, s.raan, ma1, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
+          const pos2 = propagateSatelliteAtMA(s.inclination, s.raan, ma2, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
+          arcs.push({
+            startLat: pos1.lat, startLng: pos1.lng,
+            endLat: pos2.lat, endLng: pos2.lng,
+            colors: [trackCol, trackColFade],
+          });
+        }
+
+        // Scan cone arc from satellite to ground footprint
+        const isISR = KEY_ISR_SATS.some(k => s.name.toUpperCase().includes(k));
+        if (isISR) {
+          const coneCol = isMil ? "rgba(239,68,68,0.4)" : "rgba(0,212,255,0.35)";
+          arcs.push({ startLat: s.lat, startLng: s.lng, endLat: s.lat + Math.sin(s.meanAnomaly * 0.05) * 3, endLng: s.lng + Math.cos(s.meanAnomaly * 0.05) * 3, colors: [coneCol, "rgba(255,255,255,0.05)"] });
+        }
       });
     }
     globe.arcsData(arcs);
