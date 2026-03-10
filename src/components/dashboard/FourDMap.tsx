@@ -530,14 +530,16 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     const points: any[] = [];
     const cutoff = timelineTimestamp;
 
-    // EARTHQUAKES — always visible, larger markers
+    // EARTHQUAKES — seismic wave icon, scaled by magnitude
     if (layers.earthquakes) {
       earthquakes.forEach(eq => {
         const eqTime = (eq as any).time || Date.now();
         if (eqTime > cutoff) return;
         const col = eq.magnitude >= 5 ? "#ef4444" : eq.magnitude >= 3 ? "#ff6b00" : "#fbbf24";
-        points.push({ lat: eq.lat, lng: eq.lng, pointAlt: 0.01, color: col, radius: Math.max(0.25, eq.magnitude * 0.12) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">⚠ SEISMIC M${eq.magnitude}</div><div>${eq.place}</div><div style="color:#888;font-size:9px">${eq.lat.toFixed(2)}°, ${eq.lng.toFixed(2)}° • ${eq.depth}km deep</div></div>` });
+        const sevIcon = eq.magnitude >= 5 ? "🔴" : eq.magnitude >= 3 ? "🟠" : "🟡";
+        const alertStr = (eq as any).alert ? `<div style="color:#ef4444;font-size:8px;margin-top:1px">⚠ ALERT: ${(eq as any).alert.toUpperCase()}</div>` : "";
+        points.push({ lat: eq.lat, lng: eq.lng, pointAlt: 0.01, color: col, radius: Math.max(0.3, eq.magnitude * 0.15) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sevIcon}</span> SEISMIC M${eq.magnitude}</div><div style="font-size:9px;margin-top:2px">📍 ${eq.place}</div><div style="color:#888;font-size:8px;margin-top:1px">${eq.lat.toFixed(2)}°, ${eq.lng.toFixed(2)}° • ${eq.depth}km deep${eq.felt ? ` • Felt: ${eq.felt}` : ""}</div>${alertStr}</div>` });
       });
     }
 
