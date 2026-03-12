@@ -62,7 +62,7 @@ export const HolographicOverlay = ({ alertCount = 0 }: HolographicOverlayProps) 
       </div>
 
       {/* Mini radar (bottom-right) */}
-      <div className="absolute bottom-10 right-10 w-16 h-16 opacity-60">
+      <div className="absolute top-14 left-3 w-14 h-14 opacity-50">
         <svg viewBox="0 0 80 80" className="w-full h-full">
           <circle cx="40" cy="40" r="36" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.4" strokeOpacity="0.12" />
           <circle cx="40" cy="40" r="24" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.4" strokeOpacity="0.08" />
