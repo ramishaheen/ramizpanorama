@@ -343,11 +343,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const historyEvents = useMemo<HistoryEvent[]>(() => {
     const evts: HistoryEvent[] = [];
     earthquakes.data.forEach(eq => {
-      evts.push({ id: `eq-${eq.id}`, label: `M${eq.magnitude.toFixed(1)} ${eq.place || "Earthquake"}`, type: "earthquake", severity: eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 4 ? "medium" : "low", lat: eq.lat, lng: eq.lng, time: eq.time });
+      const mag = eq.magnitude ?? 0;
+      evts.push({ id: `eq-${eq.id}`, label: `M${mag.toFixed(1)} ${eq.place || "Earthquake"}`, type: "earthquake", severity: mag >= 6 ? "critical" : mag >= 5 ? "high" : mag >= 4 ? "medium" : "low", lat: eq.lat, lng: eq.lng, time: eq.time });
     });
     wildfires.data.forEach(f => {
       const t = new Date(`${f.date}T${f.time || "00:00"}Z`).getTime();
-      evts.push({ id: `fire-${f.id}`, label: `Fire ${f.region || "Active"} FRP:${f.frp.toFixed(0)}`, type: "wildfire", severity: f.frp > 100 ? "critical" : f.frp > 50 ? "high" : f.frp > 20 ? "medium" : "low", lat: f.lat, lng: f.lng, time: isNaN(t) ? Date.now() : t });
+      const frp = f.frp ?? 0;
+      evts.push({ id: `fire-${f.id}`, label: `Fire ${f.region || "Active"} FRP:${frp.toFixed(0)}`, type: "wildfire", severity: frp > 100 ? "critical" : frp > 50 ? "high" : frp > 20 ? "medium" : "low", lat: f.lat, lng: f.lng, time: isNaN(t) ? Date.now() : t });
     });
     conflictEvents.data.forEach(c => {
       const t = new Date(c.event_date).getTime();
