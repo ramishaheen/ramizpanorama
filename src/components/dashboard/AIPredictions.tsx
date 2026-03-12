@@ -51,7 +51,12 @@ const riskColor = {
 
 
 export const AIPredictions = () => {
-  const [data, setData] = useState<PredictionData | null>(null);
+  const [data, setData] = useState<PredictionData | null>(() => {
+    try {
+      const cached = localStorage.getItem("waros_ai_predictions_cache");
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { t, isArabic } = useLanguage();
@@ -63,20 +68,24 @@ export const AIPredictions = () => {
       if (error) throw error;
       setData(result);
       setLastUpdated(new Date());
+      try { localStorage.setItem("waros_ai_predictions_cache", JSON.stringify(result)); } catch {}
     } catch (err) {
       console.error("Failed to fetch predictions:", err);
       if (!handleAIError(err, "AI Predictions")) {
-        setData({ error: t("Failed to load predictions", "فشل تحميل التوقعات") });
+        // Only show error if we don't have cached data
+        if (!data) {
+          setData({ error: t("Failed to load predictions", "فشل تحميل التوقعات") });
+        }
       }
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, data]);
 
   useEffect(() => {
-    const initialDelay = setTimeout(fetchPredictions, 10000);
+    fetchPredictions();
     const interval = setInterval(fetchPredictions, 180_000);
-    return () => { clearTimeout(initialDelay); clearInterval(interval); };
+    return () => clearInterval(interval);
   }, [fetchPredictions]);
 
   return (

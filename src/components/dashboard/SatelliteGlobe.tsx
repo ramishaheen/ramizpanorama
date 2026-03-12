@@ -656,6 +656,22 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       if (!resp.ok) {
         const status = resp.status;
         setAiLoading(false);
+        // Check if the response is JSON (error) vs SSE stream
+        const contentType = resp.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          try {
+            const errData = await resp.json();
+            const errMsg = errData.error || (status === 429
+              ? "⚠️ High demand — AI rate limited. Try again shortly."
+              : status === 402
+              ? "⚠️ AI credits exhausted. Refresh later."
+              : "⚠️ Unable to reach AI. Try again later.");
+            setAiMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${errMsg}` }]);
+          } catch {
+            setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Unable to reach AI. Try again later." }]);
+          }
+          return;
+        }
         const errMsg = status === 429
           ? "⚠️ High demand — AI rate limited. Try again shortly."
           : status === 402
@@ -737,6 +753,16 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
       if (!resp.ok) {
         setAiLoading(false);
+        const contentType = resp.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          try {
+            const errData = await resp.json();
+            setAiMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${errData.error || "Error connecting to AI."}` }]);
+          } catch {
+            setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error connecting to AI." }]);
+          }
+          return;
+        }
         const errMsg = resp.status === 429
           ? "⚠️ Rate limited. Try again shortly."
           : resp.status === 402
@@ -886,8 +912,9 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setOrbitColor(CATEGORY_COLORS[sat.category] || "#d4a843");
     }
     if (globeRef.current) {
+      const zoomAlt = sat.alt < 2000 ? 0.6 : sat.alt < 25000 ? 0.9 : 1.2;
       globeRef.current.pointOfView(
-        { lat: sat.lat, lng: sat.lng, altitude: 1.8 },
+        { lat: sat.lat, lng: sat.lng, altitude: zoomAlt },
         1000
       );
     }
@@ -1208,13 +1235,12 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         setLastPropagated(new Date());
       }
 
-      // Update orbit path for selected satellite — deterministic every 20th tick (~10s)
+      // Update orbit path for selected satellite — every 5th tick (~2.5s) for accurate trail
       if (selectedSat && orbitPath) {
         const sel = updated.find(s => s.noradId === selectedSat.noradId || s.name === selectedSat.name);
         if (sel && sel.inclination != null && sel.raan != null && sel.meanAnomaly != null &&
             sel.meanMotion != null && sel.eccentricity != null && sel.epochYear != null && sel.epochDay != null) {
-          // Use a counter-based deterministic check instead of Math.random()
-          orbitRefreshCounter.current = (orbitRefreshCounter.current + 1) % 20;
+          orbitRefreshCounter.current = (orbitRefreshCounter.current + 1) % 5;
           if (orbitRefreshCounter.current === 0) {
             const newPath = computeOrbitPath(sel.inclination, sel.raan, sel.meanAnomaly, sel.meanMotion, sel.eccentricity, sel.epochYear, sel.epochDay, sel.alt, 180);
             setOrbitPath(newPath);
@@ -1477,7 +1503,9 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
-            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: 1.5 }, 1000);
+            // Zoom closer: LEO ~0.6, MEO ~0.9, GEO ~1.2
+            const zoomAlt = s.alt < 2000 ? 0.6 : s.alt < 25000 ? 0.9 : 1.2;
+            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: zoomAlt }, 1000);
           })
           .onObjectHover((d: any) => setHoveredSat(d ? (d as SatelliteData) : null))
           .labelsData([])
@@ -1521,7 +1549,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
-            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: 1.5 }, 1000);
+            const zoomAlt2 = s.alt < 2000 ? 0.6 : s.alt < 25000 ? 0.9 : 1.2;
+            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: zoomAlt2 }, 1000);
           })
           .ringsData(OSINT_MARKERS)
           .ringLat((d: any) => d.lat)
@@ -1797,6 +1826,22 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       globe.pathsData([]);
     }
   }, [orbitPath, selectedSat, orbitColor, predictionTrack, selectedCat, satellites.length]);
+
+  // Camera follow: continuously track selected satellite every 500ms
+  useEffect(() => {
+    if (!selectedSat) return;
+    const interval = setInterval(() => {
+      const globe = globeRef.current;
+      if (!globe) return;
+      const key = selectedSat.noradId || selectedSat.name;
+      const pos = nextPositionsRef.current.get(key);
+      if (pos) {
+        const zoomAlt = selectedSat.alt < 2000 ? 0.6 : selectedSat.alt < 25000 ? 0.9 : 1.2;
+        globe.pointOfView({ lat: pos.lat, lng: pos.lng, altitude: zoomAlt }, 600);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [selectedSat]);
 
   // Resize
   useEffect(() => {
