@@ -456,7 +456,7 @@ interface RawSatTLE {
 
 const SATELLITE_CACHE_KEY = "waros-orbital-cache-v1";
 
-export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
+export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, onTrackFlight, flightSource = "" }: SatelliteGlobeProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeElRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<any>(null);
