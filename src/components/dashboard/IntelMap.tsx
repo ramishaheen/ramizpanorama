@@ -26,6 +26,7 @@ import { ResponseMapModal } from "./ResponseMapModal";
 import { CrisisIntelModal } from "./CrisisIntelModal";
 import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
+import { MapStyleToggle, type MapStyle } from "./MapStyleToggle";
 import { SatelliteGlobe } from "./SatelliteGlobe";
 import { UrbanScene3D } from "./UrbanScene3D";
 
@@ -1862,6 +1863,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
+  const currentMapStyle: MapStyle = activeBase?.id === "google-satellite" ? "satellite" : "dark";
+  const handleMapStyleChange = useCallback((style: MapStyle) => {
+    const baseId = style === "satellite" ? "google-satellite" : "osm-dark";
+    handleBaseChange(baseId);
+  }, [handleBaseChange]);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
   const [showUrbanScene, setShowUrbanScene] = useState(false);
   const [showLiveCameras, setShowLiveCameras] = useState(false);
@@ -1895,6 +1901,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         <MapLegend />
         <MapHistorySlider onTimeFilter={setHistoryFilter} />
+        <MapStyleToggle style={currentMapStyle} onChange={handleMapStyleChange} />
         <MapBookmarks
           currentLat={mapRef.current?.getCenter().lat || 28}
           currentLng={mapRef.current?.getCenter().lng || 48}

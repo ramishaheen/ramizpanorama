@@ -34,12 +34,10 @@ export const MapLegend = () => {
     <div className="relative">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-lg hover:bg-secondary/50 transition-all cursor-pointer"
       >
-        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 border border-primary/20">
-          <Layers className="h-3 w-3 text-primary" />
-        </div>
-        <span className="text-[10px] font-mono font-semibold text-foreground/80 uppercase tracking-wider">Legend</span>
+        <Layers className="h-3 w-3 text-primary" />
+        <span className="text-[9px] font-mono font-semibold text-foreground/80 uppercase tracking-wider">Legend</span>
         {expanded ? (
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         ) : (
