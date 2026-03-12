@@ -498,7 +498,7 @@ const Index = () => {
                       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
                         <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
                           {rightOrder.map((id) => (
-                            <DraggableWidget key={id} id={id}>
+                            <DraggableWidget key={id} id={id} disabled={layoutLocked}>
                               {rightWidgets[id]}
                             </DraggableWidget>
                           ))}
