@@ -61,9 +61,9 @@ const StatusDot = ({ status }: { status?: "normal" | "elevated" | "critical" }) 
   if (!status || status === "normal") return null;
   const dotColor = status === "critical" ? "bg-red-500" : "bg-amber-500";
   return (
-    <span className="relative flex h-2 w-2 flex-shrink-0">
+    <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
       <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${dotColor} opacity-75`} />
-      <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`} />
+      <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${dotColor}`} />
     </span>
   );
 };
