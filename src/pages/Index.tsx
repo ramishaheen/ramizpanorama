@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers, Lock, Unlock } from "lucide-react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
