@@ -31,7 +31,7 @@ export const MapLegend = () => {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="absolute bottom-28 left-3 z-[1000]">
+    <div className="absolute bottom-14 left-3 z-[1000]">
       <button
         onClick={() => setExpanded((v) => !v)}
         className="flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
