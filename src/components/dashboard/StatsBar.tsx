@@ -75,17 +75,17 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
       animate={{ opacity: 1, y: 0 }}
       className={`flex items-center gap-1 px-1.5 py-0.5 bg-card border rounded-md transition-all duration-500 relative ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
     >
-      <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
+      <Icon className={`h-2.5 w-2.5 ${color} ${pulse ? "animate-pulse" : ""}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-0.5">
           {liveContent ? liveContent : (
             <>
-              {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
+              {prefix && <span className={`text-xs font-mono font-bold ${color}`}>{prefix}</span>}
               {value !== undefined && <AnimatedNumber value={value} color={color} />}
             </>
           )}
         </div>
-        <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
+        <div className="text-[8px] text-muted-foreground uppercase tracking-wider leading-none">{label}</div>
       </div>
       <StatusDot status={liveModifier} />
       {tooltip && <Info className="h-2.5 w-2.5 text-muted-foreground/40 flex-shrink-0" />}
