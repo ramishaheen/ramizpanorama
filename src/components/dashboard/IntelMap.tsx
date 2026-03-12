@@ -194,8 +194,7 @@ const createConflictIcon = (eventType: string, severity: string) => {
 };
 
 const popupOptions: L.PopupOptions = {
-  autoPan: true,
-  autoPanPadding: L.point(40, 40),
+  autoPan: false,
   offset: L.point(0, -4),
 };
 
@@ -1331,8 +1330,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           className: "city-landmark-popup",
           maxWidth: 240,
           minWidth: 220,
-          closeButton: true,
-          autoPan: true,
+      closeButton: true,
+          autoPan: false,
         });
       group.addLayer(marker);
     });
@@ -1408,13 +1407,20 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     return () => { if (flightInterpRef.current) { clearInterval(flightInterpRef.current); flightInterpRef.current = null; } };
   }, [layers.flights]);
 
-  // Click-to-track: pan to tracked aircraft on each data update
+  // Click-to-track: pan to tracked aircraft only on significant position change
+  const lastTrackedPos = useRef<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     if (!trackedFlightId || !mapRef.current) return;
     const ac = interpolatedFlights.find(f => f.icao24 === trackedFlightId);
     if (ac) {
-      mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.8 });
+      const prev = lastTrackedPos.current;
+      const moved = !prev || Math.abs(ac.lat - prev.lat) > 0.01 || Math.abs(ac.lng - prev.lng) > 0.01;
+      if (moved) {
+        lastTrackedPos.current = { lat: ac.lat, lng: ac.lng };
+        mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.8 });
+      }
     } else {
+      lastTrackedPos.current = null;
       setTrackedFlightId(null);
     }
   }, [interpolatedFlights, trackedFlightId]);
