@@ -29,8 +29,27 @@ interface SatelliteData {
   source?: string; // which TLE group it came from
 }
 
+interface FlightAircraft {
+  icao24: string;
+  callsign: string;
+  origin_country: string;
+  lat: number;
+  lng: number;
+  altitude: number;
+  velocity: number;
+  heading: number;
+  vertical_rate: number;
+  is_military: boolean;
+  registration?: string;
+  type?: string;
+}
+
 interface SatelliteGlobeProps {
   onClose: () => void;
+  flights?: FlightAircraft[];
+  trackedFlightId?: string | null;
+  onTrackFlight?: (icao: string | null) => void;
+  flightSource?: string;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
