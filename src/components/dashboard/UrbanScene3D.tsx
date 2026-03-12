@@ -1195,47 +1195,118 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   }, [cameras, showCameras, zoomLevel]);
 
   // ===== AI OBJECT DETECTION SIMULATION =====
+  // Persistent tracked objects for stable AI detection
+  const trackedObjectsRef = useRef<{ id: string; label: string; confidence: number; x: number; y: number; w: number; h: number; color: string; vx: number; vy: number; age: number; maxAge: number }[]>([]);
+
   useEffect(() => {
     if (!activeCameraFeed && !streetViewActive && !mapillaryActive) {
       setAiDetections([]);
+      trackedObjectsRef.current = [];
       if (aiDetectionIntervalRef.current) clearInterval(aiDetectionIntervalRef.current);
       return;
     }
     if (!showAIDetection) { setAiDetections([]); return; }
 
-    const objectTypes = [
-      { label: "Vehicle", color: "#22c55e", minW: 8, maxW: 18, minH: 5, maxH: 12 },
-      { label: "Person", color: "#3b82f6", minW: 3, maxW: 7, minH: 6, maxH: 14 },
-      { label: "Truck", color: "#f59e0b", minW: 12, maxW: 22, minH: 6, maxH: 14 },
-      { label: "Bus", color: "#8b5cf6", minW: 14, maxW: 24, minH: 5, maxH: 12 },
-      { label: "Bicycle", color: "#06b6d4", minW: 3, maxW: 6, minH: 4, maxH: 8 },
-      { label: "Military Vehicle", color: "#ef4444", minW: 10, maxW: 20, minH: 6, maxH: 14 },
-      { label: "Building", color: "#64748b", minW: 15, maxW: 30, minH: 20, maxH: 40 },
-      { label: "Drone", color: "#f43f5e", minW: 2, maxW: 5, minH: 2, maxH: 4 },
+    // Street-view context: mostly people, vehicles on road areas (bottom 60%)
+    // Camera context: depends on camera type
+    const isStreetLevel = streetViewActive || mapillaryActive;
+
+    const objectTypes = isStreetLevel ? [
+      { label: "Person", color: "#3b82f6", minW: 2.5, maxW: 5, minH: 8, maxH: 16, weight: 4, yZone: [35, 85], speed: 0.15 },
+      { label: "Vehicle", color: "#22c55e", minW: 7, maxW: 14, minH: 5, maxH: 10, weight: 3, yZone: [50, 90], speed: 0.6 },
+      { label: "Truck", color: "#f59e0b", minW: 10, maxW: 18, minH: 5, maxH: 11, weight: 1, yZone: [55, 90], speed: 0.4 },
+      { label: "Bicycle", color: "#06b6d4", minW: 2, maxW: 4, minH: 4, maxH: 8, weight: 1, yZone: [50, 85], speed: 0.3 },
+      { label: "Bus", color: "#8b5cf6", minW: 12, maxW: 20, minH: 5, maxH: 10, weight: 0.5, yZone: [55, 88], speed: 0.35 },
+    ] : [
+      { label: "Vehicle", color: "#22c55e", minW: 5, maxW: 12, minH: 3, maxH: 8, weight: 4, yZone: [30, 85], speed: 0.4 },
+      { label: "Person", color: "#3b82f6", minW: 1.5, maxW: 3.5, minH: 3, maxH: 7, weight: 3, yZone: [35, 80], speed: 0.1 },
+      { label: "Truck", color: "#f59e0b", minW: 8, maxW: 16, minH: 4, maxH: 10, weight: 2, yZone: [40, 85], speed: 0.3 },
+      { label: "Military Vehicle", color: "#ef4444", minW: 6, maxW: 14, minH: 4, maxH: 10, weight: 0.3, yZone: [40, 80], speed: 0.2 },
     ];
 
-    const generateDetections = () => {
-      const count = Math.floor(Math.random() * 8) + 3;
-      const dets = [];
-      for (let i = 0; i < count; i++) {
-        const type = objectTypes[Math.floor(Math.random() * objectTypes.length)];
-        const w = type.minW + Math.random() * (type.maxW - type.minW);
-        const h = type.minH + Math.random() * (type.maxH - type.minH);
-        dets.push({
-          id: `det-${i}-${Date.now()}`,
-          label: type.label,
-          confidence: 0.65 + Math.random() * 0.33,
-          x: 5 + Math.random() * (85 - w),
-          y: 10 + Math.random() * (80 - h),
-          w, h,
-          color: type.color,
-        });
-      }
-      setAiDetections(dets);
+    // Weighted random pick
+    const totalWeight = objectTypes.reduce((s, t) => s + t.weight, 0);
+    const pickType = () => {
+      let r = Math.random() * totalWeight;
+      for (const t of objectTypes) { r -= t.weight; if (r <= 0) return t; }
+      return objectTypes[0];
     };
 
-    generateDetections();
-    aiDetectionIntervalRef.current = setInterval(generateDetections, 4000);
+    // Seed initial objects
+    if (trackedObjectsRef.current.length === 0) {
+      const initialCount = isStreetLevel ? Math.floor(Math.random() * 4) + 3 : Math.floor(Math.random() * 3) + 2;
+      for (let i = 0; i < initialCount; i++) {
+        const type = pickType();
+        const w = type.minW + Math.random() * (type.maxW - type.minW);
+        const h = type.minH + Math.random() * (type.maxH - type.minH);
+        const yMin = type.yZone[0]; const yMax = type.yZone[1];
+        trackedObjectsRef.current.push({
+          id: `trk-${i}-${Date.now()}`,
+          label: type.label,
+          confidence: 0.78 + Math.random() * 0.19,
+          x: 5 + Math.random() * (90 - w),
+          y: yMin + Math.random() * (yMax - yMin - h),
+          w, h,
+          color: type.color,
+          vx: (Math.random() - 0.5) * type.speed * 2,
+          vy: (Math.random() - 0.5) * type.speed * 0.3,
+          age: 0,
+          maxAge: Math.floor(Math.random() * 15) + 8, // lives 8-22 ticks (~16-44s)
+        });
+      }
+    }
+
+    const updateDetections = () => {
+      const tracked = trackedObjectsRef.current;
+
+      // Age and move existing objects
+      for (const obj of tracked) {
+        obj.age++;
+        // Smooth micro-movement (drift)
+        obj.x += obj.vx + (Math.random() - 0.5) * 0.3;
+        obj.y += obj.vy + (Math.random() - 0.5) * 0.15;
+        // Slight confidence jitter
+        obj.confidence = Math.max(0.6, Math.min(0.98, obj.confidence + (Math.random() - 0.5) * 0.04));
+        // Clamp bounds
+        obj.x = Math.max(1, Math.min(95 - obj.w, obj.x));
+        obj.y = Math.max(5, Math.min(92 - obj.h, obj.y));
+      }
+
+      // Remove expired objects (with some randomness to avoid synchronized removal)
+      trackedObjectsRef.current = tracked.filter(o => o.age < o.maxAge && Math.random() > 0.03);
+
+      // Maybe spawn 0-1 new object
+      const maxObjects = isStreetLevel ? 8 : 6;
+      if (trackedObjectsRef.current.length < maxObjects && Math.random() > 0.4) {
+        const type = pickType();
+        const w = type.minW + Math.random() * (type.maxW - type.minW);
+        const h = type.minH + Math.random() * (type.maxH - type.minH);
+        const yMin = type.yZone[0]; const yMax = type.yZone[1];
+        // Enter from edges for realism
+        const enterFromSide = Math.random() > 0.5;
+        trackedObjectsRef.current.push({
+          id: `trk-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          label: type.label,
+          confidence: 0.72 + Math.random() * 0.25,
+          x: enterFromSide ? (Math.random() > 0.5 ? 1 : 93 - w) : 5 + Math.random() * (85 - w),
+          y: yMin + Math.random() * (yMax - yMin - h),
+          w, h,
+          color: type.color,
+          vx: enterFromSide ? (Math.random() > 0.5 ? 1 : -1) * type.speed : (Math.random() - 0.5) * type.speed,
+          vy: (Math.random() - 0.5) * type.speed * 0.2,
+          age: 0,
+          maxAge: Math.floor(Math.random() * 15) + 8,
+        });
+      }
+
+      setAiDetections(trackedObjectsRef.current.map(o => ({
+        id: o.id, label: o.label, confidence: o.confidence,
+        x: o.x, y: o.y, w: o.w, h: o.h, color: o.color,
+      })));
+    };
+
+    updateDetections();
+    aiDetectionIntervalRef.current = setInterval(updateDetections, 2000);
     return () => { if (aiDetectionIntervalRef.current) clearInterval(aiDetectionIntervalRef.current); };
   }, [activeCameraFeed, streetViewActive, mapillaryActive, showAIDetection]);
 
