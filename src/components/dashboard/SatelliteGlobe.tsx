@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import militarySatSprite from "@/assets/military-sat-sprite.png";
+import { FlightEmulationPanel } from "./FlightEmulationPanel";
 
 interface SatelliteData {
   name: string;
@@ -29,8 +30,27 @@ interface SatelliteData {
   source?: string; // which TLE group it came from
 }
 
+interface FlightAircraft {
+  icao24: string;
+  callsign: string;
+  origin_country: string;
+  lat: number;
+  lng: number;
+  altitude: number;
+  velocity: number;
+  heading: number;
+  vertical_rate: number;
+  is_military: boolean;
+  registration?: string;
+  type?: string;
+}
+
 interface SatelliteGlobeProps {
   onClose: () => void;
+  flights?: FlightAircraft[];
+  trackedFlightId?: string | null;
+  onTrackFlight?: (icao: string | null) => void;
+  flightSource?: string;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -437,7 +457,7 @@ interface RawSatTLE {
 
 const SATELLITE_CACHE_KEY = "waros-orbital-cache-v1";
 
-export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
+export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, onTrackFlight, flightSource = "" }: SatelliteGlobeProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeElRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<any>(null);
@@ -1809,6 +1829,16 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#050a12] flex flex-col overflow-hidden">
+      {/* Flight Emulation Panel */}
+      {flights.length > 0 && onTrackFlight && (
+        <FlightEmulationPanel
+          flights={flights}
+          trackedFlightId={trackedFlightId ?? null}
+          onTrackFlight={onTrackFlight}
+          flightSource={flightSource}
+        />
+      )}
+
       {/* Holographic scanline overlay */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"

@@ -28,7 +28,7 @@ import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
 import { SatelliteGlobe } from "./SatelliteGlobe";
 import { UrbanScene3D } from "./UrbanScene3D";
-import { FlightEmulationPanel } from "./FlightEmulationPanel";
+
 import { ChokepointMonitor, CHOKEPOINTS } from "./ChokepointMonitor";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
@@ -1962,17 +1962,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
 
       {/* 3D overlays */}
-      {/* Flight Emulation Panel — left side */}
-      {layers.flights && interpolatedFlights.length > 0 && (
-        <FlightEmulationPanel
+      {showSatGlobe && (
+        <SatelliteGlobe
+          onClose={handleCloseSatGlobe}
           flights={interpolatedFlights}
           trackedFlightId={trackedFlightId}
           onTrackFlight={setTrackedFlightId}
           flightSource={flightSource}
         />
       )}
-
-      {showSatGlobe && <SatelliteGlobe onClose={handleCloseSatGlobe} />}
       {showUrbanScene && (
         <UrbanScene3D
           key={urbanScene3DTarget ? `${urbanScene3DTarget.lat}-${urbanScene3DTarget.lng}` : 'default'}
