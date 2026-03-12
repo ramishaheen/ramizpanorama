@@ -1194,121 +1194,143 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     });
   }, [cameras, showCameras, zoomLevel]);
 
-  // ===== AI OBJECT DETECTION SIMULATION =====
-  // Persistent tracked objects for stable AI detection
-  const trackedObjectsRef = useRef<{ id: string; label: string; confidence: number; x: number; y: number; w: number; h: number; color: string; vx: number; vy: number; age: number; maxAge: number }[]>([]);
+  // ===== REAL AI OBJECT DETECTION (Gemini Vision) =====
+  const [aiDetectionLoading, setAiDetectionLoading] = useState(false);
+  const [aiSceneSummary, setAiSceneSummary] = useState("");
+  const lastAiCallRef = useRef<number>(0);
+  const aiAbortRef = useRef<AbortController | null>(null);
 
+  const runAiDetection = useCallback(async () => {
+    // Throttle: minimum 8s between calls
+    const now = Date.now();
+    if (now - lastAiCallRef.current < 8000) return;
+    lastAiCallRef.current = now;
+
+    // Get current street view position & orientation
+    const sv = streetViewRef.current;
+    const pov = sv?.getPov?.();
+    const pos = sv?.getPosition?.();
+
+    if (!pos && !activeCameraFeed) return;
+
+    setAiDetectionLoading(true);
+
+    try {
+      if (aiAbortRef.current) aiAbortRef.current.abort();
+      aiAbortRef.current = new AbortController();
+
+      let body: any;
+
+      if (streetViewActive && pos) {
+        // Use coordinates + heading to fetch street view image server-side
+        body = {
+          lat: pos.lat(),
+          lng: pos.lng(),
+          heading: pov?.heading || 0,
+          pitch: pov?.pitch || 0,
+          fov: pov?.zoom ? Math.max(30, 90 / Math.pow(2, pov.zoom - 1)) : 90,
+        };
+      } else if (activeCameraFeed) {
+        // For cameras, use the YouTube thumbnail
+        const ytId = activeCameraFeed.youtube_video_id;
+        const thumbUrl = ytId
+          ? `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`
+          : activeCameraFeed.thumbnail_url || activeCameraFeed.snapshot_url;
+        
+        if (thumbUrl) {
+          try {
+            const imgResp = await fetch(thumbUrl);
+            if (imgResp.ok) {
+              const imgBuffer = await imgResp.arrayBuffer();
+              const base64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
+              body = { image_base64: base64, mime_type: imgResp.headers.get("content-type")?.split(";")[0] || "image/jpeg" };
+            }
+          } catch {
+            // Fallback to coordinate-based
+            body = { lat: activeCameraFeed.lat, lng: activeCameraFeed.lng, heading: 0, pitch: 0, fov: 90 };
+          }
+        } else {
+          body = { lat: activeCameraFeed.lat, lng: activeCameraFeed.lng, heading: 0, pitch: 0, fov: 90 };
+        }
+      } else if (mapillaryActive) {
+        // For Mapillary, use coordinates
+        body = { lat, lng, heading: 0, pitch: 0, fov: 90 };
+      }
+
+      if (!body) { setAiDetectionLoading(false); return; }
+
+      const { data, error } = await supabase.functions.invoke("streetview-detect", { body });
+
+      if (error) {
+        console.error("AI detection error:", error);
+        setAiDetectionLoading(false);
+        return;
+      }
+
+      if (data?.error) {
+        console.warn("AI detection warning:", data.error);
+        // On rate limit / credit errors, keep existing detections
+        setAiDetectionLoading(false);
+        return;
+      }
+
+      if (data?.detections && Array.isArray(data.detections)) {
+        setAiDetections(data.detections);
+        setAiSceneSummary(data.scene_summary || "");
+      }
+    } catch (e: any) {
+      if (e.name !== "AbortError") console.error("AI detection fetch error:", e);
+    } finally {
+      setAiDetectionLoading(false);
+    }
+  }, [streetViewActive, activeCameraFeed, mapillaryActive, lat, lng]);
+
+  // Run AI detection when entering street view or camera feed
   useEffect(() => {
     if (!activeCameraFeed && !streetViewActive && !mapillaryActive) {
       setAiDetections([]);
-      trackedObjectsRef.current = [];
+      setAiSceneSummary("");
       if (aiDetectionIntervalRef.current) clearInterval(aiDetectionIntervalRef.current);
       return;
     }
     if (!showAIDetection) { setAiDetections([]); return; }
 
-    // Street-view context: mostly people, vehicles on road areas (bottom 60%)
-    // Camera context: depends on camera type
-    const isStreetLevel = streetViewActive || mapillaryActive;
+    // Initial detection after a short delay to let view settle
+    const initTimer = setTimeout(() => runAiDetection(), 1500);
 
-    const objectTypes = isStreetLevel ? [
-      { label: "Person", color: "#3b82f6", minW: 2.5, maxW: 5, minH: 8, maxH: 16, weight: 4, yZone: [35, 85], speed: 0.15 },
-      { label: "Vehicle", color: "#22c55e", minW: 7, maxW: 14, minH: 5, maxH: 10, weight: 3, yZone: [50, 90], speed: 0.6 },
-      { label: "Truck", color: "#f59e0b", minW: 10, maxW: 18, minH: 5, maxH: 11, weight: 1, yZone: [55, 90], speed: 0.4 },
-      { label: "Bicycle", color: "#06b6d4", minW: 2, maxW: 4, minH: 4, maxH: 8, weight: 1, yZone: [50, 85], speed: 0.3 },
-      { label: "Bus", color: "#8b5cf6", minW: 12, maxW: 20, minH: 5, maxH: 10, weight: 0.5, yZone: [55, 88], speed: 0.35 },
-    ] : [
-      { label: "Vehicle", color: "#22c55e", minW: 5, maxW: 12, minH: 3, maxH: 8, weight: 4, yZone: [30, 85], speed: 0.4 },
-      { label: "Person", color: "#3b82f6", minW: 1.5, maxW: 3.5, minH: 3, maxH: 7, weight: 3, yZone: [35, 80], speed: 0.1 },
-      { label: "Truck", color: "#f59e0b", minW: 8, maxW: 16, minH: 4, maxH: 10, weight: 2, yZone: [40, 85], speed: 0.3 },
-      { label: "Military Vehicle", color: "#ef4444", minW: 6, maxW: 14, minH: 4, maxH: 10, weight: 0.3, yZone: [40, 80], speed: 0.2 },
-    ];
+    // Re-run every 15 seconds
+    aiDetectionIntervalRef.current = setInterval(() => {
+      if (showAIDetection) runAiDetection();
+    }, 15000);
 
-    // Weighted random pick
-    const totalWeight = objectTypes.reduce((s, t) => s + t.weight, 0);
-    const pickType = () => {
-      let r = Math.random() * totalWeight;
-      for (const t of objectTypes) { r -= t.weight; if (r <= 0) return t; }
-      return objectTypes[0];
+    return () => {
+      clearTimeout(initTimer);
+      if (aiDetectionIntervalRef.current) clearInterval(aiDetectionIntervalRef.current);
+      if (aiAbortRef.current) aiAbortRef.current.abort();
     };
+  }, [activeCameraFeed, streetViewActive, mapillaryActive, showAIDetection, runAiDetection]);
 
-    // Seed initial objects
-    if (trackedObjectsRef.current.length === 0) {
-      const initialCount = isStreetLevel ? Math.floor(Math.random() * 4) + 3 : Math.floor(Math.random() * 3) + 2;
-      for (let i = 0; i < initialCount; i++) {
-        const type = pickType();
-        const w = type.minW + Math.random() * (type.maxW - type.minW);
-        const h = type.minH + Math.random() * (type.maxH - type.minH);
-        const yMin = type.yZone[0]; const yMax = type.yZone[1];
-        trackedObjectsRef.current.push({
-          id: `trk-${i}-${Date.now()}`,
-          label: type.label,
-          confidence: 0.78 + Math.random() * 0.19,
-          x: 5 + Math.random() * (90 - w),
-          y: yMin + Math.random() * (yMax - yMin - h),
-          w, h,
-          color: type.color,
-          vx: (Math.random() - 0.5) * type.speed * 2,
-          vy: (Math.random() - 0.5) * type.speed * 0.3,
-          age: 0,
-          maxAge: Math.floor(Math.random() * 15) + 8, // lives 8-22 ticks (~16-44s)
-        });
+  // Re-run detection when street view POV changes significantly
+  useEffect(() => {
+    if (!streetViewActive || !showAIDetection) return;
+    const sv = streetViewRef.current;
+    if (!sv) return;
+
+    let lastHeading = sv.getPov?.()?.heading || 0;
+    const listener = sv.addListener?.("pov_changed", () => {
+      const pov = sv.getPov?.();
+      if (!pov) return;
+      const headingDiff = Math.abs(pov.heading - lastHeading);
+      if (headingDiff > 45) {
+        lastHeading = pov.heading;
+        runAiDetection();
       }
-    }
+    });
 
-    const updateDetections = () => {
-      const tracked = trackedObjectsRef.current;
-
-      // Age and move existing objects
-      for (const obj of tracked) {
-        obj.age++;
-        // Smooth micro-movement (drift)
-        obj.x += obj.vx + (Math.random() - 0.5) * 0.3;
-        obj.y += obj.vy + (Math.random() - 0.5) * 0.15;
-        // Slight confidence jitter
-        obj.confidence = Math.max(0.6, Math.min(0.98, obj.confidence + (Math.random() - 0.5) * 0.04));
-        // Clamp bounds
-        obj.x = Math.max(1, Math.min(95 - obj.w, obj.x));
-        obj.y = Math.max(5, Math.min(92 - obj.h, obj.y));
-      }
-
-      // Remove expired objects (with some randomness to avoid synchronized removal)
-      trackedObjectsRef.current = tracked.filter(o => o.age < o.maxAge && Math.random() > 0.03);
-
-      // Maybe spawn 0-1 new object
-      const maxObjects = isStreetLevel ? 8 : 6;
-      if (trackedObjectsRef.current.length < maxObjects && Math.random() > 0.4) {
-        const type = pickType();
-        const w = type.minW + Math.random() * (type.maxW - type.minW);
-        const h = type.minH + Math.random() * (type.maxH - type.minH);
-        const yMin = type.yZone[0]; const yMax = type.yZone[1];
-        // Enter from edges for realism
-        const enterFromSide = Math.random() > 0.5;
-        trackedObjectsRef.current.push({
-          id: `trk-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-          label: type.label,
-          confidence: 0.72 + Math.random() * 0.25,
-          x: enterFromSide ? (Math.random() > 0.5 ? 1 : 93 - w) : 5 + Math.random() * (85 - w),
-          y: yMin + Math.random() * (yMax - yMin - h),
-          w, h,
-          color: type.color,
-          vx: enterFromSide ? (Math.random() > 0.5 ? 1 : -1) * type.speed : (Math.random() - 0.5) * type.speed,
-          vy: (Math.random() - 0.5) * type.speed * 0.2,
-          age: 0,
-          maxAge: Math.floor(Math.random() * 15) + 8,
-        });
-      }
-
-      setAiDetections(trackedObjectsRef.current.map(o => ({
-        id: o.id, label: o.label, confidence: o.confidence,
-        x: o.x, y: o.y, w: o.w, h: o.h, color: o.color,
-      })));
+    return () => {
+      if (listener) (window as any).google?.maps?.event?.removeListener?.(listener);
     };
-
-    updateDetections();
-    aiDetectionIntervalRef.current = setInterval(updateDetections, 2000);
-    return () => { if (aiDetectionIntervalRef.current) clearInterval(aiDetectionIntervalRef.current); };
-  }, [activeCameraFeed, streetViewActive, mapillaryActive, showAIDetection]);
+  }, [streetViewActive, showAIDetection, runAiDetection]);
 
   // ===== WALKING EXPERIENCE — track path during Mapillary =====
   useEffect(() => {
@@ -2369,9 +2391,57 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     EXACT
                   </span>
                 )}
+                <button onClick={() => setShowAIDetection(!showAIDetection)} className={`px-1.5 py-0.5 rounded text-[7px] font-mono uppercase border transition-all ${showAIDetection ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400" : "border-border/40 text-muted-foreground"}`}>
+                  🔍 AI
+                </button>
+                {showAIDetection && (
+                  <button onClick={() => runAiDetection()} disabled={aiDetectionLoading} className="px-1.5 py-0.5 rounded text-[7px] font-mono uppercase border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-50 transition-all">
+                    {aiDetectionLoading ? "⏳ Scanning…" : "🔄 Scan"}
+                  </button>
+                )}
                 <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
               </div>
             </div>
+
+            {/* AI Detection overlay on Street View */}
+            {showAIDetection && aiDetections.length > 0 && (
+              <div className="absolute inset-0 pointer-events-none z-[14]">
+                {aiDetections.map((det) => (
+                  <div key={det.id} className="absolute transition-all duration-500"
+                    style={{ left: `${det.x}%`, top: `${det.y}%`, width: `${det.w}%`, height: `${det.h}%` }}>
+                    <div className="w-full h-full border-2 rounded-sm" style={{
+                      borderColor: det.color, boxShadow: `0 0 8px ${det.color}50, inset 0 0 4px ${det.color}20`,
+                    }}>
+                      <div className="absolute -top-px -left-px w-2 h-2 border-t-2 border-l-2 rounded-tl-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -top-px -right-px w-2 h-2 border-t-2 border-r-2 rounded-tr-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -bottom-px -left-px w-2 h-2 border-b-2 border-l-2 rounded-bl-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -bottom-px -right-px w-2 h-2 border-b-2 border-r-2 rounded-br-sm" style={{ borderColor: det.color }} />
+                    </div>
+                    <div className="absolute -top-4 left-0 flex items-center gap-1 px-1 py-0.5 rounded-sm text-[7px] font-mono font-bold whitespace-nowrap"
+                      style={{ background: `${det.color}dd`, color: "#fff" }}>
+                      {det.label} {(det.confidence * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                ))}
+                <div className="absolute top-14 left-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur border border-cyan-500/30">
+                  {aiDetectionLoading ? (
+                    <RefreshCw className="w-2.5 h-2.5 text-cyan-400 animate-spin" />
+                  ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  )}
+                  <span className="text-[8px] font-mono text-cyan-400 font-bold">GEMINI VISION</span>
+                  <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
+                </div>
+                {aiSceneSummary && (
+                  <div className="absolute top-[70px] left-2 max-w-[260px] px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
+                    <span className="text-[7px] font-mono text-muted-foreground/80">{aiSceneSummary}</span>
+                  </div>
+                )}
+                <div className="absolute top-14 right-2 px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
+                  <span className="text-[7px] font-mono text-muted-foreground">MODEL: GEMINI VISION</span>
+                </div>
+              </div>
+            )}
 
             {/* Mini-map overlay showing pin vs panorama position */}
             {streetViewTarget && streetViewPanoPos && (
@@ -2414,10 +2484,19 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   </div>
                 ))}
                 <div className="absolute top-14 left-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur border border-cyan-500/30">
-                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  <span className="text-[8px] font-mono text-cyan-400 font-bold">AI DETECTION</span>
+                  {aiDetectionLoading ? (
+                    <RefreshCw className="w-2.5 h-2.5 text-cyan-400 animate-spin" />
+                  ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  )}
+                  <span className="text-[8px] font-mono text-cyan-400 font-bold">GEMINI VISION</span>
                   <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
                 </div>
+                {aiSceneSummary && (
+                  <div className="absolute top-[70px] left-2 max-w-[260px] px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
+                    <span className="text-[7px] font-mono text-muted-foreground/80">{aiSceneSummary}</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -2583,12 +2662,16 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     ))}
                     {/* AI HUD overlay info */}
                     <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur border border-cyan-500/30">
-                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                      <span className="text-[8px] font-mono text-cyan-400 font-bold">AI DETECTION</span>
+                      {aiDetectionLoading ? (
+                        <RefreshCw className="w-2.5 h-2.5 text-cyan-400 animate-spin" />
+                      ) : (
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                      )}
+                      <span className="text-[8px] font-mono text-cyan-400 font-bold">GEMINI VISION</span>
                       <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
                     </div>
                     <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
-                      <span className="text-[7px] font-mono text-muted-foreground">MODEL: YOLOv8-OSINT</span>
+                      <span className="text-[7px] font-mono text-muted-foreground">MODEL: GEMINI VISION</span>
                     </div>
                   </div>
                 )}

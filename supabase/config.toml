@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.snap-locate]
 verify_jwt = false
+
+[functions.streetview-detect]
+verify_jwt = false
