@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, memo } from "react";
-import { Plane, ChevronDown, ChevronUp, Radio, Filter } from "lucide-react";
+import { Radio, Filter } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FlightAircraft {
