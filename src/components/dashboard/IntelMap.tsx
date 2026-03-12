@@ -339,7 +339,25 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const airQuality = useAirQuality();
   const aisVessels = useAISVessels();
 
-  // FlyTo effect — when a news update is clicked, zoom to its location
+  // Build unified history events for the timeline
+  const historyEvents = useMemo<HistoryEvent[]>(() => {
+    const evts: HistoryEvent[] = [];
+    earthquakes.data.forEach(eq => {
+      evts.push({ id: `eq-${eq.id}`, label: `M${eq.magnitude.toFixed(1)} ${eq.place || "Earthquake"}`, type: "earthquake", severity: eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 4 ? "medium" : "low", lat: eq.lat, lng: eq.lng, time: eq.time });
+    });
+    wildfires.data.forEach(f => {
+      const t = new Date(`${f.date}T${f.time || "00:00"}Z`).getTime();
+      evts.push({ id: `fire-${f.id}`, label: `Fire ${f.region || "Active"} FRP:${f.frp.toFixed(0)}`, type: "wildfire", severity: f.frp > 100 ? "critical" : f.frp > 50 ? "high" : f.frp > 20 ? "medium" : "low", lat: f.lat, lng: f.lng, time: isNaN(t) ? Date.now() : t });
+    });
+    conflictEvents.data.forEach(c => {
+      const t = new Date(c.event_date).getTime();
+      evts.push({ id: `con-${c.id}`, label: `${c.event_type}: ${c.location}`, type: "conflict", severity: c.severity, lat: c.lat, lng: c.lng, time: isNaN(t) ? Date.now() : t });
+    });
+    newsMarkers.forEach(n => {
+      evts.push({ id: `news-${n.id || Math.random()}`, label: n.title || "News", type: "news", severity: (n.severity as any) || "medium", lat: n.lat, lng: n.lng, time: n.timestamp ? new Date(n.timestamp).getTime() : Date.now() });
+    });
+    return evts;
+  }, [earthquakes.data, wildfires.data, conflictEvents.data, newsMarkers]);
   const flyToMarkerRef = useRef<L.Marker | null>(null);
   useEffect(() => {
     if (!flyToTarget || !mapRef.current) return;
