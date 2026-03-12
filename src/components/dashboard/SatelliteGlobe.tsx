@@ -656,6 +656,22 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       if (!resp.ok) {
         const status = resp.status;
         setAiLoading(false);
+        // Check if the response is JSON (error) vs SSE stream
+        const contentType = resp.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          try {
+            const errData = await resp.json();
+            const errMsg = errData.error || (status === 429
+              ? "⚠️ High demand — AI rate limited. Try again shortly."
+              : status === 402
+              ? "⚠️ AI credits exhausted. Refresh later."
+              : "⚠️ Unable to reach AI. Try again later.");
+            setAiMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${errMsg}` }]);
+          } catch {
+            setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Unable to reach AI. Try again later." }]);
+          }
+          return;
+        }
         const errMsg = status === 429
           ? "⚠️ High demand — AI rate limited. Try again shortly."
           : status === 402
