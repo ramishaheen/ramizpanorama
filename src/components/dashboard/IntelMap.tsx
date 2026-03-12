@@ -959,9 +959,9 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.bindPopup(`
         <div style="${popupStyle}">
-          <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${eq.magnitude.toFixed(1)} Earthquake</div>
+          <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${(eq.magnitude ?? 0).toFixed(1)} Earthquake</div>
           <div>${eq.place || "Unknown location"}</div>
-          <div>Depth: ${eq.depth.toFixed(1)} km</div>
+          <div>Depth: ${(eq.depth ?? 0).toFixed(1)} km</div>
           ${eq.tsunami ? '<div style="color:#ef4444;font-weight:700;">⚠ TSUNAMI WARNING</div>' : ""}
           ${eq.felt ? `<div>Felt by: ${eq.felt} reports</div>` : ""}
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(eq.time).toLocaleString()}</div>
@@ -1004,7 +1004,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         <div style="${popupStyle}">
           <div style="color:${intColor};font-weight:700;margin-bottom:4px;">🔥 Active Fire</div>
           <div>Intensity: <span style="color:${intColor};font-weight:600;">${intensity}</span></div>
-          <div>FRP: ${fire.frp.toFixed(1)} MW | Brightness: ${fire.brightness.toFixed(0)}K</div>
+          <div>FRP: ${(fire.frp ?? 0).toFixed(1)} MW | Brightness: ${(fire.brightness ?? 0).toFixed(0)}K</div>
           <div>Confidence: ${fire.confidence}</div>
           ${fire.region ? `<div>Region: ${fire.region}</div>` : ""}
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${fire.date} ${fire.time}</div>
@@ -1384,7 +1384,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.flights || interpolatedFlights.length === 0) return;
 
-    console.log(`[FLIGHTS] Rendering ${interpolatedFlights.length} aircraft on map`, interpolatedFlights.filter(a => a.lat != null && a.lng != null).map(a => `${a.callsign}@${a.lat.toFixed(2)},${a.lng.toFixed(2)}`));
+    console.log(`[FLIGHTS] Rendering ${interpolatedFlights.length} aircraft on map`, interpolatedFlights.filter(a => a.lat != null && a.lng != null).map(a => `${a.callsign}@${(a.lat ?? 0).toFixed(2)},${(a.lng ?? 0).toFixed(2)}`));
 
     interpolatedFlights.forEach((ac) => {
       if (ac.lat == null || ac.lng == null) return;
@@ -1474,11 +1474,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       });
 
       // Hover popup
-      const altFt = Math.round(ac.altitude * 3.281);
-      const speedKts = Math.round(ac.velocity * 1.944);
-      const speedKmhDisplay = Math.round(ac.velocity * 3.6);
-      const vsArrow = ac.vertical_rate > 0.5 ? "↑" : ac.vertical_rate < -0.5 ? "↓" : "→";
-      const vsColor = ac.vertical_rate > 0.5 ? "#22c55e" : ac.vertical_rate < -0.5 ? "#ef4444" : "#888";
+      const alt = ac.altitude ?? 0;
+      const vel = ac.velocity ?? 0;
+      const vr = ac.vertical_rate ?? 0;
+      const hdg = ac.heading ?? 0;
+      const altFt = Math.round(alt * 3.281);
+      const speedKts = Math.round(vel * 1.944);
+      const speedKmhDisplay = Math.round(vel * 3.6);
+      const vsArrow = vr > 0.5 ? "↑" : vr < -0.5 ? "↓" : "→";
+      const vsColor = vr > 0.5 ? "#22c55e" : vr < -0.5 ? "#ef4444" : "#888";
 
       bindHoverPopup(marker, `<div style="${popupStyle}">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
@@ -1495,10 +1499,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         </div>` : ""}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10px;">
           <div>🌍 ${ac.origin_country}</div>
-          <div>📐 HDG ${Math.round(ac.heading)}°</div>
-          <div>📏 ${altFt.toLocaleString()} ft (${Math.round(ac.altitude)}m)</div>
+          <div>📐 HDG ${Math.round(hdg)}°</div>
+          <div>📏 ${altFt.toLocaleString()} ft (${Math.round(alt)}m)</div>
           <div>💨 ${speedKts} kts (${speedKmhDisplay} km/h)</div>
-          <div style="color:${vsColor};">${vsArrow} V/S ${ac.vertical_rate > 0 ? "+" : ""}${ac.vertical_rate.toFixed(1)} m/s</div>
+          <div style="color:${vsColor};">${vsArrow} V/S ${vr > 0 ? "+" : ""}${vr.toFixed(1)} m/s</div>
           <div style="opacity:0.5;">ICAO: ${ac.icao24}</div>
         </div>
         <div style="margin-top:6px;font-size:9px;color:${isTracked ? "#22c55e" : "#666"};">
