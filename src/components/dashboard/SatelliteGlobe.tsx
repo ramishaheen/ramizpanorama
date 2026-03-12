@@ -2427,7 +2427,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       )}
 
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -2851,7 +2851,8 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} mil` : "Flights OFF"}
         </span>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
