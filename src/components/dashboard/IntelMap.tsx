@@ -1330,8 +1330,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           className: "city-landmark-popup",
           maxWidth: 240,
           minWidth: 220,
-          closeButton: true,
-          autoPan: true,
+      closeButton: true,
+          autoPan: false,
         });
       group.addLayer(marker);
     });
