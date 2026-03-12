@@ -624,8 +624,24 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Unable to reach AI. Try again later." }]);
         return;
       }
-      const text = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
-      setAiMessages(prev => [...prev, { role: "assistant", content: text }]);
+      // Handle various response formats from war-chat
+      let text = "";
+      if (typeof data === "string") {
+        text = data;
+      } else if (data?.choices?.[0]?.message?.content) {
+        text = data.choices[0].message.content;
+      } else if (data?.reply) {
+        text = data.reply;
+      } else if (data?.response) {
+        text = data.response;
+      } else if (data?.content) {
+        text = data.content;
+      } else {
+        text = JSON.stringify(data);
+      }
+      // Strip <think> blocks if present
+      text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      setAiMessages(prev => [...prev, { role: "assistant", content: text || "No response received." }]);
     });
   }, []);
 
@@ -644,8 +660,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error connecting to AI." }]);
       return;
     }
-    const reply = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
-    setAiMessages(prev => [...prev, { role: "assistant", content: reply }]);
+    let reply = "";
+    if (typeof data === "string") {
+      reply = data;
+    } else if (data?.choices?.[0]?.message?.content) {
+      reply = data.choices[0].message.content;
+    } else if (data?.reply) {
+      reply = data.reply;
+    } else if (data?.response) {
+      reply = data.response;
+    } else if (data?.content) {
+      reply = data.content;
+    } else {
+      reply = JSON.stringify(data);
+    }
+    reply = reply.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    setAiMessages(prev => [...prev, { role: "assistant", content: reply || "No response received." }]);
   }, [aiInput, aiLoading, aiMessages]);
 
   const runPrediction = useCallback(async (sat: SatelliteData) => {
