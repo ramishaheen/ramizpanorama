@@ -1037,7 +1037,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.addTo(group);
     });
-  }, [earthquakes.data, layers.earthquakes]);
+  }, [earthquakes.data, layers.earthquakes, historyFilter]);
 
   // Render wildfire layer
   useEffect(() => {
