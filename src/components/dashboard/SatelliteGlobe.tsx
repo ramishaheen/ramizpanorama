@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Zap, Rocket, Cpu, Anchor } from "lucide-react";
+import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Zap, Rocket, Cpu, Anchor, Plane } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { getCountryGeoJSON } from "@/data/countryBorders";
@@ -474,6 +474,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [activeCity, setActiveCity] = useState<string | null>(null);
   const [countrySats, setCountrySats] = useState<{ category: string; count: number; color: string }[]>([]);
   const [satTypesExpanded, setSatTypesExpanded] = useState(false);
+  const [flightsPanelExpanded, setFlightsPanelExpanded] = useState(false);
   const [countrySatNames, setCountrySatNames] = useState<Set<string>>(new Set());
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
@@ -1829,15 +1830,6 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#050a12] flex flex-col overflow-hidden">
-      {/* Flight Emulation Panel */}
-      {flights.length > 0 && onTrackFlight && (
-        <FlightEmulationPanel
-          flights={flights}
-          trackedFlightId={trackedFlightId ?? null}
-          onTrackFlight={onTrackFlight}
-          flightSource={flightSource}
-        />
-      )}
 
       {/* Holographic scanline overlay */}
       <div
@@ -1996,6 +1988,31 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               </div>
             )}
           </div>
+
+          {/* FLIGHTS — collapsible, same style as SAT Types */}
+          {flights.length > 0 && onTrackFlight && (
+            <div className="relative" style={{ width: 150 }}>
+              <button
+                onClick={() => setFlightsPanelExpanded(!flightsPanelExpanded)}
+                className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+              >
+                <Plane className="h-3 w-3 text-primary" />
+                <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">Flights</span>
+                <span className="text-[8px] font-mono text-white/50">{flights.length}</span>
+                {flightsPanelExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+              </button>
+              {flightsPanelExpanded && (
+                <div className="absolute bottom-full mb-1 left-0 w-[220px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
+                  <FlightEmulationPanel
+                    flights={flights}
+                    trackedFlightId={trackedFlightId ?? null}
+                    onTrackFlight={onTrackFlight}
+                    flightSource={flightSource}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Style Presets — center */}
           <div className="flex-1 flex justify-center">
