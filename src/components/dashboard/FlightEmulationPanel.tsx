@@ -28,7 +28,6 @@ type FlightFilter = "ALL" | "CIV" | "MIL";
 
 export const FlightEmulationPanel = memo(({ flights, trackedFlightId, onTrackFlight, flightSource }: FlightEmulationPanelProps) => {
   const [filter, setFilter] = useState<FlightFilter>("ALL");
-  const [filter, setFilter] = useState<FlightFilter>("ALL");
 
   const { civCount, milCount, filtered } = useMemo(() => {
     const civ = flights.filter(f => !f.is_military);
