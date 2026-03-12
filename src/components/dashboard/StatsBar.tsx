@@ -80,7 +80,7 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
         <div className="flex items-center gap-0.5">
           {liveContent ? liveContent : (
             <>
-              {prefix && <span className={`text-xs font-mono font-bold ${color}`}>{prefix}</span>}
+              {prefix && <span className={`text-[10px] font-mono font-bold ${color}`}>{prefix}</span>}
               {value !== undefined && <AnimatedNumber value={value} color={color} />}
             </>
           )}
