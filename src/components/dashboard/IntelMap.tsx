@@ -540,7 +540,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       zoom: 5,
       zoomControl: true,
       attributionControl: true,
+      scrollWheelZoom: false,
+      dragging: true,
     });
+
+    // Enable scroll zoom only after clicking on the map
+    map.on('click', () => { map.scrollWheelZoom.enable(); });
+    map.on('mouseout', () => { map.scrollWheelZoom.disable(); });
 
     // Add initial base layer
     const initBase = DEFAULT_IMAGERY_LAYERS.find(l => l.type === "base" && l.enabled)!;
