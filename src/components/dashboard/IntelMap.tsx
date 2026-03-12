@@ -1847,7 +1847,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       />
 
       {/* 3D Mode buttons - minimizable tab above chokepoints */}
-      <div className="absolute bottom-14 left-[140px] z-[1000]" style={{ width: 240 }}>
+      <div className="absolute bottom-14 right-3 z-[1000]" style={{ width: 220 }}>
         <button
           onClick={() => setToolsExpanded(!toolsExpanded)}
           className="w-full flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
