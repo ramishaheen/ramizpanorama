@@ -1936,7 +1936,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2 flex-wrap">
         <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         <MapLegend />
-        <MapHistorySlider onTimeFilter={setHistoryFilter} />
+        <MapHistorySlider
+          onTimeFilter={setHistoryFilter}
+          events={historyEvents}
+          onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
+        />
         <MapStyleToggle style={currentMapStyle} onChange={handleMapStyleChange} />
         <MapBookmarks
           currentLat={mapRef.current?.getCenter().lat || 28}
