@@ -616,32 +616,76 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     const initialQ = `Provide OSINT intelligence analysis on satellite "${sat.name}" (NORAD: ${sat.noradId || "N/A"}, Category: ${sat.category}, Country: ${sat.country || "Unknown"}, Operator: ${sat.operator || "Unknown"}, Alt: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}, Inc: ${sat.inclination?.toFixed(1) || "N/A"}°, Source: ${sat.source || "CelesTrak"}). Include: mission purpose, military/intelligence significance, coverage area over Middle East, operator details, and any known OSINT about this satellite's recent activities or significance in current geopolitical context.`;
     setAiMessages([{ role: "user", content: initialQ }]);
     setAiLoading(true);
-    supabase.functions.invoke("war-chat", {
-      body: { messages: [{ role: "user", content: initialQ }] },
-    }).then(({ data, error }) => {
-      setAiLoading(false);
-      if (error || !data) {
-        setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Unable to reach AI. Try again later." }]);
+
+    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/war-chat`;
+    fetch(chatUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages: [{ role: "user", content: initialQ }] }),
+    }).then(async (resp) => {
+      if (!resp.ok) {
+        const status = resp.status;
+        setAiLoading(false);
+        const errMsg = status === 429
+          ? "⚠️ High demand — AI rate limited. Try again shortly."
+          : status === 402
+          ? "⚠️ AI credits exhausted. Refresh later."
+          : "⚠️ Unable to reach AI. Try again later.";
+        setAiMessages(prev => [...prev, { role: "assistant", content: errMsg }]);
         return;
       }
-      // Handle various response formats from war-chat
-      let text = "";
-      if (typeof data === "string") {
-        text = data;
-      } else if (data?.choices?.[0]?.message?.content) {
-        text = data.choices[0].message.content;
-      } else if (data?.reply) {
-        text = data.reply;
-      } else if (data?.response) {
-        text = data.response;
-      } else if (data?.content) {
-        text = data.content;
-      } else {
-        text = JSON.stringify(data);
+      if (!resp.body) {
+        setAiLoading(false);
+        setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ No response body." }]);
+        return;
       }
-      // Strip <think> blocks if present
-      text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-      setAiMessages(prev => [...prev, { role: "assistant", content: text || "No response received." }]);
+      // Stream SSE
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIdx);
+          buffer = buffer.slice(newlineIdx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              fullText += content;
+              const cleaned = fullText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+              setAiMessages(prev => {
+                const copy = [...prev];
+                if (copy.length > 0 && copy[copy.length - 1].role === "assistant") {
+                  copy[copy.length - 1] = { role: "assistant", content: cleaned || "..." };
+                } else {
+                  copy.push({ role: "assistant", content: cleaned || "..." });
+                }
+                return copy;
+              });
+            }
+          } catch { /* partial chunk */ }
+        }
+      }
+      setAiLoading(false);
+      if (!fullText) {
+        setAiMessages(prev => [...prev, { role: "assistant", content: "No response received." }]);
+      }
+    }).catch(() => {
+      setAiLoading(false);
+      setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Connection failed. Try again." }]);
     });
   }, []);
 
@@ -652,30 +696,79 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     setAiMessages(newMsgs);
     setAiInput("");
     setAiLoading(true);
-    const { data, error } = await supabase.functions.invoke("war-chat", {
-      body: { messages: newMsgs },
-    });
-    setAiLoading(false);
-    if (error || !data) {
-      setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error connecting to AI." }]);
-      return;
+
+    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/war-chat`;
+    try {
+      const resp = await fetch(chatUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: newMsgs }),
+      });
+
+      if (!resp.ok) {
+        setAiLoading(false);
+        const errMsg = resp.status === 429
+          ? "⚠️ Rate limited. Try again shortly."
+          : resp.status === 402
+          ? "⚠️ AI credits exhausted."
+          : "⚠️ Error connecting to AI.";
+        setAiMessages(prev => [...prev, { role: "assistant", content: errMsg }]);
+        return;
+      }
+
+      if (!resp.body) {
+        setAiLoading(false);
+        setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ No response." }]);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIdx);
+          buffer = buffer.slice(newlineIdx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              fullText += content;
+              const cleaned = fullText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+              setAiMessages(prev => {
+                const copy = [...prev];
+                if (copy.length > 0 && copy[copy.length - 1].role === "assistant") {
+                  copy[copy.length - 1] = { role: "assistant", content: cleaned || "..." };
+                } else {
+                  copy.push({ role: "assistant", content: cleaned || "..." });
+                }
+                return copy;
+              });
+            }
+          } catch { /* partial chunk */ }
+        }
+      }
+      setAiLoading(false);
+      if (!fullText) {
+        setAiMessages(prev => [...prev, { role: "assistant", content: "No response received." }]);
+      }
+    } catch {
+      setAiLoading(false);
+      setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Connection failed." }]);
     }
-    let reply = "";
-    if (typeof data === "string") {
-      reply = data;
-    } else if (data?.choices?.[0]?.message?.content) {
-      reply = data.choices[0].message.content;
-    } else if (data?.reply) {
-      reply = data.reply;
-    } else if (data?.response) {
-      reply = data.response;
-    } else if (data?.content) {
-      reply = data.content;
-    } else {
-      reply = JSON.stringify(data);
-    }
-    reply = reply.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-    setAiMessages(prev => [...prev, { role: "assistant", content: reply || "No response received." }]);
   }, [aiInput, aiLoading, aiMessages]);
 
   const runPrediction = useCallback(async (sat: SatelliteData) => {
