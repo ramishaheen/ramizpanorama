@@ -1848,6 +1848,135 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     return () => clearInterval(interval);
   }, [selectedSat]);
 
+  // Render AIS vessels on the globe as HTML elements with heading indicators + movement emulation
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const VESSEL_COLORS: Record<string, string> = {
+      CARGO: "#3b82f6", TANKER: "#f97316", MILITARY: "#ef4444", FISHING: "#22c55e", UNKNOWN: "#9ca3af",
+    };
+    const VESSEL_ICONS: Record<string, string> = {
+      CARGO: "🚢", TANKER: "⛽", MILITARY: "⚓", FISHING: "🎣", UNKNOWN: "🔹",
+    };
+
+    const visibleVessels = aisVessels.data.filter(v => vesselTypeVisible[v.type]);
+
+    // Store positions for interpolation
+    const newPositions = new Map<string, { lat: number; lng: number }>();
+    visibleVessels.forEach(v => newPositions.set(v.mmsi, { lat: v.lat, lng: v.lng }));
+
+    // Merge vessels with OSINT markers + cities for htmlElementsData
+    const osintAndCities = [
+      ...OSINT_MARKERS,
+      ...CITY_PRESETS.map(c => ({ lat: c.lat, lng: c.lng, label: c.name, type: "city", severity: "info", info: `${c.landmark} — ${c.country}`, cityData: c })),
+    ];
+
+    const vesselElements = visibleVessels.map(v => ({
+      lat: v.lat,
+      lng: v.lng,
+      label: v.name,
+      type: "vessel",
+      vesselType: v.type,
+      heading: v.heading,
+      speed: v.speed,
+      flag: v.flag,
+      destination: v.destination,
+      mmsi: v.mmsi,
+      color: VESSEL_COLORS[v.type] || VESSEL_COLORS.UNKNOWN,
+      icon: VESSEL_ICONS[v.type] || VESSEL_ICONS.UNKNOWN,
+    }));
+
+    globe.htmlElementsData([...osintAndCities, ...vesselElements]);
+
+    // Re-set the html element factory to handle vessels
+    globe.htmlElement((d: any) => {
+      const el = document.createElement("div");
+
+      if (d.type === "vessel") {
+        const color = d.color;
+        const headingRad = (d.heading || 0) * Math.PI / 180;
+        el.style.cssText = `
+          cursor:pointer;font-family:monospace;font-size:7px;font-weight:700;
+          white-space:nowrap;display:flex;align-items:center;gap:2px;
+          transition:all 0.3s ease;pointer-events:auto;
+        `;
+        // Holographic vessel marker
+        el.innerHTML = `
+          <div style="position:relative;display:flex;align-items:center;gap:3px;">
+            <div style="
+              width:10px;height:10px;border-radius:50%;
+              background:${color};
+              box-shadow:0 0 8px ${color}88, 0 0 16px ${color}44, inset 0 0 4px rgba(255,255,255,0.3);
+              border:1px solid ${color}cc;
+              animation:vesselPulse 2s ease-in-out infinite;
+            "></div>
+            <div style="
+              position:absolute;left:5px;top:5px;
+              width:12px;height:2px;
+              background:linear-gradient(90deg, ${color}cc, ${color}00);
+              transform-origin:0 50%;
+              transform:rotate(${d.heading - 90}deg);
+              box-shadow:0 0 4px ${color}66;
+            "></div>
+            <span style="
+              color:${color};font-size:7px;font-weight:bold;
+              text-shadow:0 0 6px ${color}66, 0 0 2px rgba(0,0,0,0.9);
+              padding:1px 3px;border-radius:2px;
+              background:rgba(0,0,0,0.6);
+              border-left:2px solid ${color}88;
+              margin-left:8px;
+            ">${d.label || d.mmsi}</span>
+            <span style="color:${color}88;font-size:6px;">${d.speed?.toFixed(1) || 0}kn</span>
+          </div>
+        `;
+        el.addEventListener("click", () => {
+          const g = globeRef.current;
+          if (g) g.pointOfView({ lat: d.lat, lng: d.lng, altitude: 0.3 }, 800);
+        });
+        return el;
+      }
+
+      if (d.type === "city") {
+        el.style.cssText =
+          "cursor:pointer;font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);padding:2px 5px;border-radius:4px;display:flex;align-items:center;gap:3px;transition:all 0.2s;";
+        el.style.color = "#00dcff";
+        el.style.backgroundColor = "rgba(0,20,40,0.7)";
+        el.style.border = "1px solid rgba(0,220,255,0.3)";
+        el.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 6px #00dcff;"></span> ${d.label}`;
+        el.addEventListener("mouseenter", () => {
+          el.style.backgroundColor = "rgba(0,220,255,0.2)";
+          el.style.borderColor = "rgba(0,220,255,0.6)";
+          el.style.transform = "scale(1.15)";
+        });
+        el.addEventListener("mouseleave", () => {
+          el.style.backgroundColor = "rgba(0,20,40,0.7)";
+          el.style.borderColor = "rgba(0,220,255,0.3)";
+          el.style.transform = "scale(1)";
+        });
+        el.addEventListener("click", () => {
+          window.dispatchEvent(new CustomEvent("globe-city-click", { detail: d.cityData }));
+        });
+        return el;
+      }
+
+      // OSINT markers
+      el.style.cssText =
+        "pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;";
+      const colors: Record<string, string> = {
+        conflict: "#ef4444", military: "#fb923c", naval: "#38bdf8", radar: "#a855f7",
+      };
+      const c = colors[d.type] || "#fb923c";
+      el.style.color = c;
+      el.style.backgroundColor = "rgba(0,0,0,0.5)";
+      el.style.borderLeft = `2px solid ${c}`;
+      el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
+      return el;
+    });
+
+    prevVesselPosRef.current = newPositions;
+  }, [aisVessels.data, vesselTypeVisible]);
+
   // Resize
   useEffect(() => {
     const handleResize = () => {
