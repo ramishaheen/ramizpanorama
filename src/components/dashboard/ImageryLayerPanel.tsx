@@ -347,7 +347,7 @@ export const ImageryLayerPanel = ({ layers, onToggle, onOpacityChange, onBaseCha
   const activeOverlays = overlayLayers.filter(l => l.enabled);
 
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000]">
+    <div className="absolute top-3 right-3 z-[1000]">
       {/* Compact bar */}
       <div className="flex items-center gap-1 bg-card/90 backdrop-blur-sm border border-border rounded-md p-1">
         <Layers className="h-3.5 w-3.5 text-primary ml-1" />
