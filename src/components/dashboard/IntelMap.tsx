@@ -18,7 +18,7 @@ import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
 import { MapBookmarks } from "./MapBookmarks";
-import { MapHistorySlider } from "./MapHistorySlider";
+import { MapHistorySlider, type HistoryEvent } from "./MapHistorySlider";
 import { useMapSync } from "@/hooks/useMapSync";
 import { SnapMeModal } from "./SnapMeModal";
 import { IranAirspacePanel } from "./IranAirspacePanel";
