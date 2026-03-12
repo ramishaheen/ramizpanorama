@@ -88,7 +88,7 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
         <div className="text-[7px] text-muted-foreground uppercase tracking-wider leading-none">{label}</div>
       </div>
       <StatusDot status={liveModifier} />
-      {tooltip && <Info className="h-2.5 w-2.5 text-muted-foreground/40 flex-shrink-0" />}
+      {tooltip && <Info className="h-2 w-2 text-muted-foreground/40 flex-shrink-0" />}
     </motion.div>
   );
 

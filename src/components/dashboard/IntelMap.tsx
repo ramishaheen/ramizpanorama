@@ -540,7 +540,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       zoom: 5,
       zoomControl: true,
       attributionControl: true,
+      scrollWheelZoom: true,
+      dragging: true,
     });
+
+    // Disable keyboard panning to prevent accidental movement
+    map.keyboard.disable();
 
     // Add initial base layer
     const initBase = DEFAULT_IMAGERY_LAYERS.find(l => l.type === "base" && l.enabled)!;
