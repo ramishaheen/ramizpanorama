@@ -16,7 +16,8 @@ import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
-import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
+import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture, ChevronDown, ChevronUp, Smartphone, Crosshair } from "lucide-react";
+import { ScoutingModal } from "./ScoutingModal";
 import { MapBookmarks } from "./MapBookmarks";
 import { MapHistorySlider, type HistoryEvent } from "./MapHistorySlider";
 import { useMapSync } from "@/hooks/useMapSync";
@@ -1913,6 +1914,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showCrisisIntel, setShowCrisisIntel] = useState(false);
   const [showIranAirspace, setShowIranAirspace] = useState(false);
   const [showSnapMe, setShowSnapMe] = useState(false);
+  const [showScouting, setShowScouting] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const snapMeGroupRef = useRef<L.LayerGroup>(L.layerGroup());
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
@@ -1987,6 +1989,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
                   { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL" },
                   { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", active: showIranAirspace },
                   { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME" },
+                  { onClick: () => setShowScouting(true), Icon: Crosshair, label: "SCOUTING" },
                 ].map(({ onClick, Icon, label, active, disabled }, i) => (
                   <button
                     key={label + i}
@@ -2088,6 +2091,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           onTrackAircraft={(icao) => setTrackedFlightId(icao)}
           onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 10, { duration: 1.2 })}
         />
+      )}
+
+      {showScouting && (
+        <ScoutingModal onClose={() => setShowScouting(false)} />
       )}
 
       {showSnapMe && (
