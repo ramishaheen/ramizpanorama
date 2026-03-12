@@ -753,6 +753,16 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
       if (!resp.ok) {
         setAiLoading(false);
+        const contentType = resp.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          try {
+            const errData = await resp.json();
+            setAiMessages(prev => [...prev, { role: "assistant", content: `⚠️ ${errData.error || "Error connecting to AI."}` }]);
+          } catch {
+            setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error connecting to AI." }]);
+          }
+          return;
+        }
         const errMsg = resp.status === 429
           ? "⚠️ Rate limited. Try again shortly."
           : resp.status === 402
