@@ -1801,6 +1801,22 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     }
   }, [orbitPath, selectedSat, orbitColor, predictionTrack, selectedCat, satellites.length]);
 
+  // Camera follow: continuously track selected satellite every 500ms
+  useEffect(() => {
+    if (!selectedSat) return;
+    const interval = setInterval(() => {
+      const globe = globeRef.current;
+      if (!globe) return;
+      const key = selectedSat.noradId || selectedSat.name;
+      const pos = nextPositionsRef.current.get(key);
+      if (pos) {
+        const zoomAlt = selectedSat.alt < 2000 ? 0.6 : selectedSat.alt < 25000 ? 0.9 : 1.2;
+        globe.pointOfView({ lat: pos.lat, lng: pos.lng, altitude: zoomAlt }, 600);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [selectedSat]);
+
   // Resize
   useEffect(() => {
     const handleResize = () => {
