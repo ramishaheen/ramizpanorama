@@ -338,6 +338,12 @@
   backdrop-filter: blur(12px);
 }
 
+/* Vessel pulse animation for globe markers */
+@keyframes vesselPulse {
+  0%, 100% { box-shadow: 0 0 4px currentColor, 0 0 8px currentColor; transform: scale(1); }
+  50% { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; transform: scale(1.2); }
+}
+
 /* ===== Flight Tracking Styles ===== */
 @keyframes flightPulse {
   0%, 100% { transform: scale(1); opacity: 0.4; }

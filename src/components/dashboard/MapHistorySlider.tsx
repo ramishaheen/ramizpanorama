@@ -36,11 +36,15 @@ const severityColor: Record<string, string> = {
   critical: "bg-destructive",
 };
 
+const PLAYBACK_SPEEDS = [1, 2, 5] as const;
+const SPEED_MS: Record<number, number> = { 1: 200, 2: 100, 5: 40 };
+
 export const MapHistorySlider = ({ onTimeFilter, events = [], onFlyTo }: MapHistorySliderProps) => {
   const [expanded, setExpanded] = useState(false);
   const [showFeed, setShowFeed] = useState(false);
   const [value, setValue] = useState(100); // 0=24h ago, 100=now
   const [playing, setPlaying] = useState(false);
+  const [playSpeed, setPlaySpeed] = useState<number>(1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hoursAgo = ((100 - value) / 100) * 24;
@@ -57,12 +61,12 @@ export const MapHistorySlider = ({ onTimeFilter, events = [], onFlyTo }: MapHist
           if (prev >= 100) { setPlaying(false); return 100; }
           return Math.min(100, prev + 0.5);
         });
-      }, 200);
+      }, SPEED_MS[playSpeed] || 200);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [playing]);
+  }, [playing, playSpeed]);
 
   // Auto-show feed when playback starts
   useEffect(() => {
@@ -164,6 +168,22 @@ export const MapHistorySlider = ({ onTimeFilter, events = [], onFlyTo }: MapHist
         <span className={`text-[9px] font-mono font-bold w-12 text-right ${value >= 99.5 ? "text-green-500" : "text-primary"}`}>
           {timeLabel}
         </span>
+        {/* Speed controls */}
+        <div className="flex items-center gap-0.5 border-l border-border/30 pl-1">
+          {PLAYBACK_SPEEDS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setPlaySpeed(s)}
+              className={`px-1 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${
+                playSpeed === s
+                  ? "bg-primary/20 text-primary border border-primary/40"
+                  : "text-muted-foreground/50 hover:text-foreground border border-transparent"
+              }`}
+            >
+              {s}×
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => setShowFeed(!showFeed)}
           className={`p-0.5 rounded transition-all ${showFeed ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
