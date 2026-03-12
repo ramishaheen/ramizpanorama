@@ -1132,6 +1132,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     };
 
     airQuality.data.forEach((s) => {
+      if (s.lat == null || s.lng == null) return;
       const color = aqiColors[s.aqi_level] || "#888";
       const aqiVal = s.aqi ?? 0;
       const icon = L.divIcon({
@@ -1172,6 +1173,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     };
 
     aisVessels.data.forEach((v) => {
+      if (v.lat == null || v.lng == null) return;
       const color = aisTypeColors[v.type] || "#888";
       const icon = L.divIcon({
         className: "ais-vessel-icon",
@@ -1382,9 +1384,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.flights || interpolatedFlights.length === 0) return;
 
-    console.log(`[FLIGHTS] Rendering ${interpolatedFlights.length} aircraft on map`, interpolatedFlights.map(a => `${a.callsign}@${a.lat.toFixed(2)},${a.lng.toFixed(2)}`));
+    console.log(`[FLIGHTS] Rendering ${interpolatedFlights.length} aircraft on map`, interpolatedFlights.filter(a => a.lat != null && a.lng != null).map(a => `${a.callsign}@${a.lat.toFixed(2)},${a.lng.toFixed(2)}`));
 
     interpolatedFlights.forEach((ac) => {
+      if (ac.lat == null || ac.lng == null) return;
       const isMil = ac.is_military;
       const color = isMil ? "#ef4444" : "#22d3ee";
       const trailColor = isMil ? "#ef444480" : "#22d3ee40";
