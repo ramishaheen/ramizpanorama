@@ -25,12 +25,12 @@ interface CountryCostRowProps {
 
 const TrendBadge = ({ trend }: { trend?: "rising" | "falling" | "stable" }) => {
   if (!trend || trend === "stable") {
-    return <Minus className="h-3 w-3 text-muted-foreground" />;
+    return <Minus className="h-2 w-2 text-muted-foreground" />;
   }
   if (trend === "rising") {
-    return <TrendingUp className="h-3 w-3 text-critical" />;
+    return <TrendingUp className="h-2 w-2 text-critical" />;
   }
-  return <TrendingDown className="h-3 w-3 text-success" />;
+  return <TrendingDown className="h-2 w-2 text-success" />;
 };
 
 export const CountryCostRow = ({ countries, timestamp, scenarioMultiplier }: CountryCostRowProps) => {
