@@ -2093,6 +2093,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         />
       )}
 
+      {showScouting && (
+        <ScoutingModal onClose={() => setShowScouting(false)} />
+      )}
+
       {showSnapMe && (
         <SnapMeModal
           onClose={() => setShowSnapMe(false)}
