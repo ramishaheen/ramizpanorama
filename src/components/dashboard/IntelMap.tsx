@@ -959,9 +959,9 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.bindPopup(`
         <div style="${popupStyle}">
-          <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${eq.magnitude.toFixed(1)} Earthquake</div>
+          <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${(eq.magnitude ?? 0).toFixed(1)} Earthquake</div>
           <div>${eq.place || "Unknown location"}</div>
-          <div>Depth: ${eq.depth.toFixed(1)} km</div>
+          <div>Depth: ${(eq.depth ?? 0).toFixed(1)} km</div>
           ${eq.tsunami ? '<div style="color:#ef4444;font-weight:700;">⚠ TSUNAMI WARNING</div>' : ""}
           ${eq.felt ? `<div>Felt by: ${eq.felt} reports</div>` : ""}
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(eq.time).toLocaleString()}</div>
