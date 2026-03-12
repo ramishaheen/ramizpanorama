@@ -618,8 +618,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     // Track map bounds for UP42 search
     const updateBounds = () => {
-      const b = map.getBounds();
-      setMapBounds({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+      try {
+        const b = map.getBounds();
+        setMapBounds({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+      } catch { /* map pane may be detached */ }
     };
     map.on("moveend", updateBounds);
     updateBounds();
