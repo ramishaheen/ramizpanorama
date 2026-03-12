@@ -1944,7 +1944,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     };
   }, []);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[99999] bg-black flex flex-col">
       {/* Header */}
       <div className="flex flex-col bg-card/90 backdrop-blur border-b border-border z-20">
