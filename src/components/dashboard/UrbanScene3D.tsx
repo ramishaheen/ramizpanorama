@@ -1944,7 +1944,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   }, []);
 
   return (
-    <div className="absolute inset-0 z-[2000] bg-black flex flex-col">
+    <div className="fixed inset-0 z-[9000] bg-black flex flex-col">
       {/* Header */}
       <div className="flex flex-col bg-card/90 backdrop-blur border-b border-border z-20">
         {/* Top row: Title + close/refresh */}
