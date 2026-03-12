@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider, useLanguage } from "@/hooks/useLanguage";
 import { AuthProvider } from "@/hooks/useAuth";
+import { MapSyncProvider } from "@/hooks/useMapSync";
 import { SplashScreen } from "@/components/SplashScreen";
 import Index from "./pages/Index";
 import Install from "./pages/Install";
