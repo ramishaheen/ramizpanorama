@@ -1845,40 +1845,64 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
       />
 
-      {/* 3D Mode buttons */}
-      <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1">
-        {[
-          { onClick: () => setShowSatGlobe(true), Icon: Satellite, label: "ORBITAL INTEL", color: "primary", active: false },
-          { onClick: () => setShowUrbanScene(true), Icon: Building2, label: "URBAN 3D", color: "primary", active: false },
-          { onClick: () => setShowLiveCameras(true), Icon: Camera, label: "CCTV", color: "primary", active: false },
-          { onClick: toggleArabCCTV, Icon: Camera, label: loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV", color: "primary", active: showArabCCTV, disabled: loadingCCTV },
-          { onClick: () => setShowResponseMap(true), Icon: ShieldAlert, label: "RESPONSE MAP", color: "emerald", active: false },
-          { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL", color: "amber", active: false },
-          { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", color: "destructive", active: showIranAirspace },
-          { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME", color: "primary", active: false },
-        ].map(({ onClick, Icon, label, color, active, disabled }, i) => (
-          <button
-            key={label + i}
-            onClick={onClick}
-            disabled={disabled}
-            className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 border transition-all group cursor-pointer backdrop-blur-xl shadow-[0_2px_12px_-2px_hsl(220_20%_5%/0.5)] ${
-              active
-                ? `bg-${color === "destructive" ? "destructive" : "primary"}/15 border-${color === "destructive" ? "destructive" : "primary"}/40`
-                : "bg-card/90 border-border/50 hover:bg-secondary/50 hover:border-border"
-            }`}
-            title={label}
-          >
-            <Icon className={`h-3.5 w-3.5 transition-colors ${
-              active
-                ? `text-${color === "destructive" ? "destructive" : "primary"} animate-pulse`
-                : `text-muted-foreground/70 group-hover:text-${color === "destructive" ? "destructive" : color === "emerald" ? "emerald-400" : color === "amber" ? "amber-400" : "primary"}`
-            }`} />
-            <span className={`text-[8px] font-mono uppercase tracking-wider font-semibold ${
-              active ? `text-${color === "destructive" ? "destructive" : "primary"}` : "text-muted-foreground/70 group-hover:text-foreground/80"
-            }`}>{label}</span>
-          </button>
-        ))}
-      </div>
+      {/* 3D Mode buttons - minimizable tab above chokepoints */}
+      {(() => {
+        const [toolsExpanded, setToolsExpanded] = React.useState(false);
+        const toolButtons = [
+          { onClick: () => setShowSatGlobe(true), Icon: Satellite, label: "ORBITAL INTEL" },
+          { onClick: () => setShowUrbanScene(true), Icon: Building2, label: "URBAN 3D" },
+          { onClick: () => setShowLiveCameras(true), Icon: Camera, label: "CCTV" },
+          { onClick: toggleArabCCTV, Icon: Camera, label: loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV", active: showArabCCTV, disabled: loadingCCTV },
+          { onClick: () => setShowResponseMap(true), Icon: ShieldAlert, label: "RESPONSE MAP" },
+          { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL" },
+          { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", active: showIranAirspace },
+          { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME" },
+        ];
+        return (
+          <div className="absolute bottom-14 left-[140px] z-[1000]" style={{ width: 240 }}>
+            <button
+              onClick={() => setToolsExpanded(!toolsExpanded)}
+              className="w-full flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
+            >
+              <div className="flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 border border-primary/20">
+                <Satellite className="h-3 w-3 text-primary" />
+              </div>
+              <span className="text-[10px] font-mono text-foreground/80 uppercase tracking-wider flex-1 text-left font-semibold">
+                Intel Tools
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[8px] font-mono text-muted-foreground">{toolButtons.length}</span>
+                {toolsExpanded ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                )}
+              </div>
+            </button>
+            {toolsExpanded && (
+              <div className="mb-1 rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] overflow-hidden">
+                <div className="divide-y divide-border/30">
+                  {toolButtons.map(({ onClick, Icon, label, active, disabled }, i) => (
+                    <button
+                      key={label + i}
+                      onClick={onClick}
+                      disabled={disabled}
+                      className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/30 transition-all cursor-pointer text-left ${
+                        active ? "bg-primary/10" : ""
+                      }`}
+                    >
+                      <Icon className={`h-3 w-3 ${active ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
+                      <span className={`text-[9px] font-mono uppercase tracking-wider font-semibold ${
+                        active ? "text-primary" : "text-foreground/70"
+                      }`}>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
 
       {/* 3D overlays */}
