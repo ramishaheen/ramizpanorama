@@ -31,7 +31,7 @@ export const MapLegend = () => {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="absolute bottom-14 left-3 z-[1000]">
+    <div className="relative">
       <button
         onClick={() => setExpanded((v) => !v)}
         className="flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
@@ -54,7 +54,7 @@ export const MapLegend = () => {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden mt-1 rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] w-[230px]"
+            className="absolute bottom-full mb-1 left-0 overflow-hidden rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] w-[230px]"
           >
             <div className="p-3">
               <div className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-[0.15em] mb-2 font-semibold">
