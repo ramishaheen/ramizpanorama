@@ -1642,7 +1642,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   ).padStart(2, "0")}Z`;
 
   return (
-    <div className="absolute inset-0 z-[2000] bg-[#050a12] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[9000] bg-[#050a12] flex flex-col overflow-hidden">
       {/* Holographic scanline overlay */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
