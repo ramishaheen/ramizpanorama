@@ -28,6 +28,7 @@ import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
 import { SatelliteGlobe } from "./SatelliteGlobe";
 import { UrbanScene3D } from "./UrbanScene3D";
+import { FlightEmulationPanel } from "./FlightEmulationPanel";
 import { ChokepointMonitor, CHOKEPOINTS } from "./ChokepointMonitor";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
