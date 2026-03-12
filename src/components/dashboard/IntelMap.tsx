@@ -1474,11 +1474,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       });
 
       // Hover popup
-      const altFt = Math.round(ac.altitude * 3.281);
-      const speedKts = Math.round(ac.velocity * 1.944);
-      const speedKmhDisplay = Math.round(ac.velocity * 3.6);
-      const vsArrow = ac.vertical_rate > 0.5 ? "↑" : ac.vertical_rate < -0.5 ? "↓" : "→";
-      const vsColor = ac.vertical_rate > 0.5 ? "#22c55e" : ac.vertical_rate < -0.5 ? "#ef4444" : "#888";
+      const alt = ac.altitude ?? 0;
+      const vel = ac.velocity ?? 0;
+      const vr = ac.vertical_rate ?? 0;
+      const hdg = ac.heading ?? 0;
+      const altFt = Math.round(alt * 3.281);
+      const speedKts = Math.round(vel * 1.944);
+      const speedKmhDisplay = Math.round(vel * 3.6);
+      const vsArrow = vr > 0.5 ? "↑" : vr < -0.5 ? "↓" : "→";
+      const vsColor = vr > 0.5 ? "#22c55e" : vr < -0.5 ? "#ef4444" : "#888";
 
       bindHoverPopup(marker, `<div style="${popupStyle}">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
@@ -1495,10 +1499,10 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         </div>` : ""}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:10px;">
           <div>🌍 ${ac.origin_country}</div>
-          <div>📐 HDG ${Math.round(ac.heading)}°</div>
-          <div>📏 ${altFt.toLocaleString()} ft (${Math.round(ac.altitude)}m)</div>
+          <div>📐 HDG ${Math.round(hdg)}°</div>
+          <div>📏 ${altFt.toLocaleString()} ft (${Math.round(alt)}m)</div>
           <div>💨 ${speedKts} kts (${speedKmhDisplay} km/h)</div>
-          <div style="color:${vsColor};">${vsArrow} V/S ${ac.vertical_rate > 0 ? "+" : ""}${ac.vertical_rate.toFixed(1)} m/s</div>
+          <div style="color:${vsColor};">${vsArrow} V/S ${vr > 0 ? "+" : ""}${vr.toFixed(1)} m/s</div>
           <div style="opacity:0.5;">ICAO: ${ac.icao24}</div>
         </div>
         <div style="margin-top:6px;font-size:9px;color:${isTracked ? "#22c55e" : "#666"};">
