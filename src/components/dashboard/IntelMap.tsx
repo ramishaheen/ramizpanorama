@@ -1863,9 +1863,9 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const totalAlerts = geoAlerts.length + airspaceAlerts.filter(a => a.active).length;
 
   const activeBase = imageryLayers.find(l => l.type === "base" && l.enabled);
-  const currentMapStyle: MapStyle = activeBase?.id === "satellite" ? "satellite" : "dark";
+  const currentMapStyle: MapStyle = activeBase?.id === "google-satellite" ? "satellite" : "dark";
   const handleMapStyleChange = useCallback((style: MapStyle) => {
-    const baseId = style === "satellite" ? "satellite" : "dark-matter";
+    const baseId = style === "satellite" ? "google-satellite" : "osm-dark";
     handleBaseChange(baseId);
   }, [handleBaseChange]);
   const [showSatGlobe, setShowSatGlobe] = useState(false);
