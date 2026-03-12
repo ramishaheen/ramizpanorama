@@ -479,7 +479,12 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [flightsPanelExpanded, setFlightsPanelExpanded] = useState(false);
   const [vesselsPanelExpanded, setVesselsPanelExpanded] = useState(false);
   const [vesselFilter, setVesselFilter] = useState<string>("ALL");
+  const [vesselTypeVisible, setVesselTypeVisible] = useState<Record<string, boolean>>({
+    CARGO: true, TANKER: true, MILITARY: true, FISHING: true, UNKNOWN: false,
+  });
   const aisVessels = useAISVessels();
+  const prevVesselPosRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
+  const vesselInterpRef = useRef<number>(0);
   const [countrySatNames, setCountrySatNames] = useState<Set<string>>(new Set());
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
