@@ -566,6 +566,15 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
+    // Force Leaflet to recalculate container size after flex layout settles
+    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 500);
+
+    // Also watch for container resize
+    const resizeObs = new ResizeObserver(() => map.invalidateSize());
+    resizeObs.observe(mapContainerRef.current!);
+
+
     // Track map bounds for UP42 search
     const updateBounds = () => {
       const b = map.getBounds();
