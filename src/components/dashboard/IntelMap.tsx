@@ -1846,82 +1846,38 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       />
 
       {/* 3D Mode buttons */}
-      <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1.5">
-        <button
-            onClick={() => setShowSatGlobe(true)}
-            className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
-            title="Open Orbital Intelligence Globe"
+      <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1">
+        {[
+          { onClick: () => setShowSatGlobe(true), Icon: Satellite, label: "ORBITAL INTEL", color: "primary", active: false },
+          { onClick: () => setShowUrbanScene(true), Icon: Building2, label: "URBAN 3D", color: "primary", active: false },
+          { onClick: () => setShowLiveCameras(true), Icon: Camera, label: "CCTV", color: "primary", active: false },
+          { onClick: toggleArabCCTV, Icon: Camera, label: loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV", color: "primary", active: showArabCCTV, disabled: loadingCCTV },
+          { onClick: () => setShowResponseMap(true), Icon: ShieldAlert, label: "RESPONSE MAP", color: "emerald", active: false },
+          { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL", color: "amber", active: false },
+          { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", color: "destructive", active: showIranAirspace },
+          { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME", color: "primary", active: false },
+        ].map(({ onClick, Icon, label, color, active, disabled }, i) => (
+          <button
+            key={label + i}
+            onClick={onClick}
+            disabled={disabled}
+            className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 border transition-all group cursor-pointer backdrop-blur-xl shadow-[0_2px_12px_-2px_hsl(220_20%_5%/0.5)] ${
+              active
+                ? `bg-${color === "destructive" ? "destructive" : "primary"}/15 border-${color === "destructive" ? "destructive" : "primary"}/40`
+                : "bg-card/90 border-border/50 hover:bg-secondary/50 hover:border-border"
+            }`}
+            title={label}
           >
-            <Satellite className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
-            <span className="text-[9px] font-mono text-muted-foreground uppercase">ORBITAL INTEL</span>
+            <Icon className={`h-3.5 w-3.5 transition-colors ${
+              active
+                ? `text-${color === "destructive" ? "destructive" : "primary"} animate-pulse`
+                : `text-muted-foreground/70 group-hover:text-${color === "destructive" ? "destructive" : color === "emerald" ? "emerald-400" : color === "amber" ? "amber-400" : "primary"}`
+            }`} />
+            <span className={`text-[8px] font-mono uppercase tracking-wider font-semibold ${
+              active ? `text-${color === "destructive" ? "destructive" : "primary"}` : "text-muted-foreground/70 group-hover:text-foreground/80"
+            }`}>{label}</span>
           </button>
-        <button
-          onClick={() => setShowUrbanScene(true)}
-          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
-          title="Open Google 3D View"
-        >
-          <Building2 className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
-          <span className="text-[9px] font-mono text-muted-foreground uppercase">URBAN 3D</span>
-        </button>
-        <button
-          onClick={() => setShowLiveCameras(true)}
-          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
-          title="Open Live Cameras"
-        >
-          <Camera className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
-          <span className="text-[9px] font-mono text-muted-foreground uppercase">CCTV</span>
-        </button>
-        <button
-          onClick={toggleArabCCTV}
-          disabled={loadingCCTV}
-          className={`flex items-center gap-1.5 backdrop-blur border rounded-md px-2 py-1 shadow-lg transition-all group cursor-pointer ${
-            showArabCCTV
-              ? "bg-primary/20 border-primary/50 shadow-[0_0_12px_hsl(190_100%_50%/0.2)]"
-              : "bg-card/90 border-border hover:bg-primary/10 hover:border-primary/50"
-          }`}
-          title="Show All CCTV Cameras on Map"
-        >
-          <Camera className={`h-3.5 w-3.5 ${showArabCCTV ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-primary"}`} />
-          <span className={`text-[9px] font-mono uppercase ${showArabCCTV ? "text-primary" : "text-muted-foreground"}`}>
-            {loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV"}
-          </span>
-        </button>
-        <button
-          onClick={() => setShowResponseMap(true)}
-          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
-          title="Crisis Awareness — Response Map"
-        >
-          <ShieldAlert className="h-3.5 w-3.5 text-emerald-400 group-hover:animate-pulse" />
-          <span className="text-[9px] font-mono text-muted-foreground uppercase">RESPONSE MAP</span>
-        </button>
-        <button
-          onClick={() => setShowCrisisIntel(true)}
-          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-amber-500/50 transition-all group cursor-pointer"
-          title="Crisis Intelligence — Anomaly Detection"
-        >
-          <Brain className="h-3.5 w-3.5 text-amber-400 group-hover:animate-pulse" />
-          <span className="text-[9px] font-mono text-muted-foreground uppercase">CRISIS INTEL</span>
-        </button>
-        <button
-          onClick={() => setShowIranAirspace(!showIranAirspace)}
-          className={`flex items-center gap-1.5 backdrop-blur border rounded-md px-2 py-1 shadow-lg transition-all group cursor-pointer ${
-            showIranAirspace
-              ? "bg-destructive/20 border-destructive/50 shadow-[0_0_12px_hsl(0_100%_50%/0.2)]"
-              : "bg-card/90 border-border hover:bg-destructive/10 hover:border-destructive/50"
-          }`}
-          title="Iran Airspace Monitor — FIR Tehran"
-        >
-          <Radar className={`h-3.5 w-3.5 ${showIranAirspace ? "text-destructive animate-pulse" : "text-destructive/70 group-hover:text-destructive"}`} />
-          <span className={`text-[9px] font-mono uppercase ${showIranAirspace ? "text-destructive" : "text-muted-foreground"}`}>IRAN FIR</span>
-        </button>
-        <button
-          onClick={() => setShowSnapMe(true)}
-          className="flex items-center gap-1.5 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1 shadow-lg hover:bg-primary/10 hover:border-primary/50 transition-all group cursor-pointer"
-          title="Snap Me — AI Image Geolocation"
-        >
-          <Aperture className="h-3.5 w-3.5 text-primary group-hover:animate-pulse" />
-          <span className="text-[9px] font-mono text-muted-foreground uppercase">SNAP ME</span>
-        </button>
+        ))}
       </div>
 
 
