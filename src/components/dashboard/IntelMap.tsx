@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import "leaflet.markercluster";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, Rocket } from "@/data/mockData";
 import type { LayerState } from "./LayerControls";
 import type { WarUpdate } from "@/hooks/useWarUpdates";
@@ -13,7 +16,10 @@ import { MapToolbar, type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
-import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture, ChevronDown, ChevronUp } from "lucide-react";
+import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
+import { MapBookmarks } from "./MapBookmarks";
+import { MapHistorySlider } from "./MapHistorySlider";
+import { useMapSync } from "@/hooks/useMapSync";
 import { SnapMeModal } from "./SnapMeModal";
 import { IranAirspacePanel } from "./IranAirspacePanel";
 import { ResponseMapModal } from "./ResponseMapModal";
@@ -276,6 +282,35 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showArabCCTV, setShowArabCCTV] = useState(false);
   const [arabCameras, setArabCameras] = useState<any[]>([]);
   const [loadingCCTV, setLoadingCCTV] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState<number | null>(null);
+  const { selectEvent } = useMapSync();
+
+  // Cluster group styling options
+  const clusterOptions = useMemo(() => ({
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    iconCreateFunction: (cluster: any) => {
+      const count = cluster.getChildCount();
+      const size = count < 10 ? "small" : count < 50 ? "medium" : "large";
+      const sizeMap = { small: 30, medium: 40, large: 50 };
+      const colorMap = { small: "hsl(190, 100%, 50%)", medium: "hsl(40, 100%, 50%)", large: "hsl(0, 80%, 55%)" };
+      return L.divIcon({
+        html: `<div style="
+          width:${sizeMap[size]}px;height:${sizeMap[size]}px;
+          display:flex;align-items:center;justify-content:center;
+          border-radius:50%;
+          background:${colorMap[size]};
+          color:#000;font-size:11px;font-weight:700;font-family:monospace;
+          box-shadow:0 0 12px ${colorMap[size]}, 0 2px 8px rgba(0,0,0,0.5);
+          border:2px solid rgba(255,255,255,0.3);
+        ">${count}</div>`,
+        className: "marker-cluster-custom",
+        iconSize: L.point(sizeMap[size], sizeMap[size]),
+      });
+    },
+  }), []);
 
   // Flight tracking state
   interface FlightAircraft {
@@ -555,19 +590,19 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     bordersGroupRef.current = L.layerGroup().addTo(map);
     overlayGroupRef.current = L.layerGroup().addTo(map);
-    earthquakeGroupRef.current = L.layerGroup().addTo(map);
-    wildfireGroupRef.current = L.layerGroup().addTo(map);
-    conflictGroupRef.current = L.layerGroup().addTo(map);
+    earthquakeGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
+    wildfireGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
+    conflictGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
     up42GroupRef.current = L.layerGroup().addTo(map);
     fusionGroupRef.current = L.layerGroup().addTo(map);
-    cctvGroupRef.current = L.layerGroup().addTo(map);
+    cctvGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
     newsGroupRef.current = L.layerGroup().addTo(map);
     telegramGroupRef.current = L.layerGroup().addTo(map);
     flightGroupRef.current = L.layerGroup().addTo(map);
     chokeGroupRef.current = L.layerGroup().addTo(map);
     nuclearGroupRef.current = L.layerGroup().addTo(map);
-    airQualityGroupRef.current = L.layerGroup().addTo(map);
-    aisGroupRef.current = L.layerGroup().addTo(map);
+    airQualityGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
+    aisGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
     cityGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -1846,9 +1881,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onCancelItem={handleCancelItem}
       />
       {/* Unified bottom bar */}
-      <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2">
+      <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2 flex-wrap">
         <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         <MapLegend />
+        <MapHistorySlider onTimeFilter={setHistoryFilter} />
+        <MapBookmarks
+          currentLat={mapRef.current?.getCenter().lat || 28}
+          currentLng={mapRef.current?.getCenter().lng || 48}
+          currentZoom={mapRef.current?.getZoom() || 5}
+          currentLayers={layers as unknown as Record<string, boolean>}
+          onGoTo={(lat, lng, zoom) => mapRef.current?.flyTo([lat, lng], zoom, { duration: 1.5 })}
+        />
         <div className="flex-1 flex justify-center">
           <TotalLaunchesWidget rockets={rockets} />
         </div>
