@@ -2436,10 +2436,19 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   </div>
                 ))}
                 <div className="absolute top-14 left-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur border border-cyan-500/30">
-                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  <span className="text-[8px] font-mono text-cyan-400 font-bold">AI DETECTION</span>
+                  {aiDetectionLoading ? (
+                    <RefreshCw className="w-2.5 h-2.5 text-cyan-400 animate-spin" />
+                  ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  )}
+                  <span className="text-[8px] font-mono text-cyan-400 font-bold">GEMINI VISION</span>
                   <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
                 </div>
+                {aiSceneSummary && (
+                  <div className="absolute top-[70px] left-2 max-w-[260px] px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
+                    <span className="text-[7px] font-mono text-muted-foreground/80">{aiSceneSummary}</span>
+                  </div>
+                )}
               </div>
             )}
 
