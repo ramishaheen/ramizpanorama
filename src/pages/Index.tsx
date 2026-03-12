@@ -532,11 +532,6 @@ const Index = () => {
                           ))}
                         </SortableContext>
                       </DndContext>
-                      <div className="p-2 space-y-2">
-                        <LayerControls layers={layers} onToggle={toggleLayer} />
-                        <TimelineSlider events={timeline} />
-                        <CyberSecurityAlerts />
-                      </div>
                     </div>
                   </div>
                 </div>
