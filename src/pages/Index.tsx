@@ -233,7 +233,6 @@ const Index = () => {
   };
 
   const rightWidgets: Record<string, ReactNode> = {
-    cyber: <CyberSecurityAlerts />,
     notifications: (
       <div className="min-h-0 flex flex-col">
         <NotificationPanel alerts={geoAlerts} />
@@ -248,6 +247,21 @@ const Index = () => {
           onRefresh={warUpdates.refresh}
           onFlyTo={(lat, lng, headline) => setFlyToTarget({ lat, lng, label: headline })}
         />
+      </div>
+    ),
+    layers: (
+      <div className="p-2">
+        <LayerControls layers={layers} onToggle={toggleLayer} />
+      </div>
+    ),
+    timeline: (
+      <div className="p-2">
+        <TimelineSlider events={timeline} />
+      </div>
+    ),
+    cyber: (
+      <div className="p-2">
+        <CyberSecurityAlerts />
       </div>
     ),
   };
