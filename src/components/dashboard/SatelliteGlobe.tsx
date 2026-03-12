@@ -886,8 +886,9 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setOrbitColor(CATEGORY_COLORS[sat.category] || "#d4a843");
     }
     if (globeRef.current) {
+      const zoomAlt = sat.alt < 2000 ? 0.6 : sat.alt < 25000 ? 0.9 : 1.2;
       globeRef.current.pointOfView(
-        { lat: sat.lat, lng: sat.lng, altitude: 1.8 },
+        { lat: sat.lat, lng: sat.lng, altitude: zoomAlt },
         1000
       );
     }
