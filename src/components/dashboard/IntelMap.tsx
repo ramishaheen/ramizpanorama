@@ -1914,6 +1914,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showCrisisIntel, setShowCrisisIntel] = useState(false);
   const [showIranAirspace, setShowIranAirspace] = useState(false);
   const [showSnapMe, setShowSnapMe] = useState(false);
+  const [showScouting, setShowScouting] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const snapMeGroupRef = useRef<L.LayerGroup>(L.layerGroup());
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
