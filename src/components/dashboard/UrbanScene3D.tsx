@@ -2391,9 +2391,57 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     EXACT
                   </span>
                 )}
+                <button onClick={() => setShowAIDetection(!showAIDetection)} className={`px-1.5 py-0.5 rounded text-[7px] font-mono uppercase border transition-all ${showAIDetection ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-400" : "border-border/40 text-muted-foreground"}`}>
+                  🔍 AI
+                </button>
+                {showAIDetection && (
+                  <button onClick={() => runAiDetection()} disabled={aiDetectionLoading} className="px-1.5 py-0.5 rounded text-[7px] font-mono uppercase border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-50 transition-all">
+                    {aiDetectionLoading ? "⏳ Scanning…" : "🔄 Scan"}
+                  </button>
+                )}
                 <button onClick={() => setStreetViewActive(false)} className="ml-2 px-2 py-0.5 rounded text-[8px] font-mono font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-all">EXIT</button>
               </div>
             </div>
+
+            {/* AI Detection overlay on Street View */}
+            {showAIDetection && aiDetections.length > 0 && (
+              <div className="absolute inset-0 pointer-events-none z-[14]">
+                {aiDetections.map((det) => (
+                  <div key={det.id} className="absolute transition-all duration-500"
+                    style={{ left: `${det.x}%`, top: `${det.y}%`, width: `${det.w}%`, height: `${det.h}%` }}>
+                    <div className="w-full h-full border-2 rounded-sm" style={{
+                      borderColor: det.color, boxShadow: `0 0 8px ${det.color}50, inset 0 0 4px ${det.color}20`,
+                    }}>
+                      <div className="absolute -top-px -left-px w-2 h-2 border-t-2 border-l-2 rounded-tl-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -top-px -right-px w-2 h-2 border-t-2 border-r-2 rounded-tr-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -bottom-px -left-px w-2 h-2 border-b-2 border-l-2 rounded-bl-sm" style={{ borderColor: det.color }} />
+                      <div className="absolute -bottom-px -right-px w-2 h-2 border-b-2 border-r-2 rounded-br-sm" style={{ borderColor: det.color }} />
+                    </div>
+                    <div className="absolute -top-4 left-0 flex items-center gap-1 px-1 py-0.5 rounded-sm text-[7px] font-mono font-bold whitespace-nowrap"
+                      style={{ background: `${det.color}dd`, color: "#fff" }}>
+                      {det.label} {(det.confidence * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                ))}
+                <div className="absolute top-14 left-2 flex items-center gap-1.5 px-2 py-1 rounded bg-black/70 backdrop-blur border border-cyan-500/30">
+                  {aiDetectionLoading ? (
+                    <RefreshCw className="w-2.5 h-2.5 text-cyan-400 animate-spin" />
+                  ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  )}
+                  <span className="text-[8px] font-mono text-cyan-400 font-bold">GEMINI VISION</span>
+                  <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
+                </div>
+                {aiSceneSummary && (
+                  <div className="absolute top-[70px] left-2 max-w-[260px] px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
+                    <span className="text-[7px] font-mono text-muted-foreground/80">{aiSceneSummary}</span>
+                  </div>
+                )}
+                <div className="absolute top-14 right-2 px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
+                  <span className="text-[7px] font-mono text-muted-foreground">MODEL: GEMINI VISION</span>
+                </div>
+              </div>
+            )}
 
             {/* Mini-map overlay showing pin vs panorama position */}
             {streetViewTarget && streetViewPanoPos && (
