@@ -53,27 +53,24 @@ export const FlightEmulationPanel = memo(({ flights, trackedFlightId, onTrackFli
   return (
     <div className="w-full pointer-events-auto">
       <div className="overflow-hidden">
-        {/* Header */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/30 transition-all cursor-pointer"
-        >
-          <div className="relative flex items-center justify-center w-5 h-5">
-            <Plane className="h-3.5 w-3.5 text-primary" />
-            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        {/* Stats row */}
+        <div className="px-3 py-1.5 flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            <span className="text-[9px] font-mono text-cyan-400 font-bold tabular-nums">CIV {civCount}</span>
           </div>
-          <span className="text-[9px] font-mono text-foreground/80 uppercase tracking-wider flex-1 text-left font-bold">
-            FLIGHT EMULATION
-          </span>
-          <span className="text-[10px] font-mono font-bold text-primary tabular-nums">
-            {flights.length}
-          </span>
-          {collapsed ? (
-            <ChevronDown className="h-3 w-3 text-muted-foreground" />
-          ) : (
-            <ChevronUp className="h-3 w-3 text-muted-foreground" />
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            <span className="text-[9px] font-mono text-red-500 font-bold tabular-nums">MIL {milCount}</span>
+          </div>
+          <div className="flex-1" />
+          {flightSource && (
+            <div className="flex items-center gap-1">
+              <Radio className="h-2.5 w-2.5 text-green-500 animate-pulse" />
+              <span className="text-[8px] font-mono text-muted-foreground uppercase">{flightSource}</span>
+            </div>
           )}
-        </button>
+        </div>
 
         {!collapsed && (
           <>
