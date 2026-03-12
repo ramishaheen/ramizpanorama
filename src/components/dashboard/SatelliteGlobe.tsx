@@ -1209,13 +1209,12 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         setLastPropagated(new Date());
       }
 
-      // Update orbit path for selected satellite — deterministic every 20th tick (~10s)
+      // Update orbit path for selected satellite — every 5th tick (~2.5s) for accurate trail
       if (selectedSat && orbitPath) {
         const sel = updated.find(s => s.noradId === selectedSat.noradId || s.name === selectedSat.name);
         if (sel && sel.inclination != null && sel.raan != null && sel.meanAnomaly != null &&
             sel.meanMotion != null && sel.eccentricity != null && sel.epochYear != null && sel.epochDay != null) {
-          // Use a counter-based deterministic check instead of Math.random()
-          orbitRefreshCounter.current = (orbitRefreshCounter.current + 1) % 20;
+          orbitRefreshCounter.current = (orbitRefreshCounter.current + 1) % 5;
           if (orbitRefreshCounter.current === 0) {
             const newPath = computeOrbitPath(sel.inclination, sel.raan, sel.meanAnomaly, sel.meanMotion, sel.eccentricity, sel.epochYear, sel.epochDay, sel.alt, 180);
             setOrbitPath(newPath);
