@@ -54,7 +54,7 @@ export const UP42Panel = ({ onFeaturesChange, mapBounds }: UP42PanelProps) => {
   };
 
   return (
-    <div className="absolute bottom-3 left-3 z-[1000]">
+    <div className="relative">
       {/* Toggle button */}
       <button
         onClick={() => setExpanded(!expanded)}
