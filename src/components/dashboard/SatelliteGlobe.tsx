@@ -468,6 +468,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
   const pulseFrameRef = useRef<number>(0);
   const countrySatNamesRef = useRef<Set<string>>(new Set());
   const satsRef = useRef<SatelliteData[]>([]);
+  const orbitRefreshCounter = useRef<number>(0);
   const [countryBadges, setCountryBadges] = useState<Record<string, { total: number; breakdown: { category: string; count: number; color: string }[] }>>({});
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const [predicting, setPredicting] = useState(false);

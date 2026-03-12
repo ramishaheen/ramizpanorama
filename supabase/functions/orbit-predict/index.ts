@@ -139,11 +139,17 @@ serve(async (req) => {
       const positions = predictFuturePositions(params, hoursAhead || 12, 5);
       const passes = findPasses(params, targetLat || 31.5, targetLng || 34.8, radiusKm || 1500, hoursAhead || 48);
 
-      // Call AI for deep analysis
+      // Call AI for deep analysis — with robust error handling
       const apiKey = Deno.env.get("GEMINI_API_KEY");
-      if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+      let aiAnalysis = "";
+      let aiStatus = "ok";
+      let aiError = "";
 
-      const aiPrompt = `You are an expert orbital mechanics and satellite intelligence analyst. Analyze this satellite and its predicted orbital data.
+      if (!apiKey) {
+        aiStatus = "unavailable";
+        aiError = "API key not configured";
+      } else {
+        const aiPrompt = `You are an expert orbital mechanics and satellite intelligence analyst. Analyze this satellite and its predicted orbital data.
 
 SATELLITE: ${satellite.name}
 NORAD ID: ${satellite.noradId || "N/A"}
@@ -172,31 +178,58 @@ Provide a structured analysis:
 
 Be precise with times and positions. Use UTC.`;
 
-      const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gemini-2.5-flash",
-          messages: [
-            { role: "system", content: "You are a satellite orbital mechanics and OSINT intelligence expert. Provide precise, technical analysis." },
-            { role: "user", content: aiPrompt },
-          ],
-        }),
-      });
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30000);
 
-      let aiAnalysis = "";
-      if (aiResp.ok) {
-        const aiData = await aiResp.json();
-        aiAnalysis = aiData.choices?.[0]?.message?.content || "";
+          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "gemini-2.5-flash",
+              messages: [
+                { role: "system", content: "You are a satellite orbital mechanics and OSINT intelligence expert. Provide precise, technical analysis." },
+                { role: "user", content: aiPrompt },
+              ],
+            }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeout);
+
+          if (aiResp.status === 429) {
+            aiStatus = "rate_limited";
+            aiError = "Rate limit exceeded";
+          } else if (aiResp.status === 402) {
+            aiStatus = "rate_limited";
+            aiError = "AI credits exhausted";
+          } else if (!aiResp.ok) {
+            aiStatus = "unavailable";
+            aiError = `AI gateway error ${aiResp.status}`;
+          } else {
+            const aiData = await aiResp.json();
+            aiAnalysis = aiData.choices?.[0]?.message?.content || "";
+            if (!aiAnalysis) {
+              aiStatus = "unavailable";
+              aiError = "Empty AI response";
+            }
+          }
+        } catch (aiErr) {
+          aiStatus = "unavailable";
+          aiError = aiErr instanceof Error ? aiErr.message : "AI call failed";
+          console.error("AI analysis error:", aiErr);
+        }
       }
 
       result = {
         positions,
         passes,
         ai_analysis: aiAnalysis,
+        ai_status: aiStatus,
+        ai_error: aiError,
         satellite_name: satellite.name,
         target: { lat: targetLat || 31.5, lng: targetLng || 34.8, name: "Middle East" },
         generated_at: new Date().toISOString(),
