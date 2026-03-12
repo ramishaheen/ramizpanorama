@@ -51,8 +51,8 @@ export const FlightEmulationPanel = memo(({ flights, trackedFlightId, onTrackFli
   if (flights.length === 0) return null;
 
   return (
-    <div className="absolute top-3 left-3 z-[1000] w-56 pointer-events-auto hidden md:block">
-      <div className="rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] overflow-hidden">
+    <div className="w-full pointer-events-auto">
+      <div className="overflow-hidden">
         {/* Header */}
         <button
           onClick={() => setCollapsed(!collapsed)}
