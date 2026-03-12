@@ -94,7 +94,7 @@ interface ChokepointMonitorProps {
 }
 
 export const ChokepointMonitor = ({ vessels, onFlyTo }: ChokepointMonitorProps) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
