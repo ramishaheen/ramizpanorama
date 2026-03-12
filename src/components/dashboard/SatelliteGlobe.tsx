@@ -275,24 +275,27 @@ function getOrbitType(alt: number, inc?: number, ecc?: number): string {
   return "Other";
 }
 
-// Compute full orbital path (one revolution) as array of {lat, lng}
+// Compute full orbital path (one full revolution) as array of {lat, lng}
 function computeOrbitPath(
   inclination: number, raan: number, meanAnomaly: number,
   meanMotion: number, eccentricity: number, epochYear: number,
-  epochDay: number, alt: number, steps = 120
+  epochDay: number, alt: number, steps = 180
 ): { lat: number; lng: number }[] {
   const periodDays = 1 / meanMotion; // one revolution in days
   const points: { lat: number; lng: number }[] = [];
   const now = new Date();
-  const startOfYear = new Date(epochYear, 0, 1);
-  const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+
+  // Compute elapsed days from epoch to now using proper date math
+  const epochDate = new Date(epochYear, 0, 1);
+  epochDate.setTime(epochDate.getTime() + (epochDay - 1) * 86400000);
+  const elapsedToNow = (now.getTime() - epochDate.getTime()) / 86400000;
 
   for (let i = 0; i <= steps; i++) {
     const fraction = i / steps;
-    const dayOffset = -periodDays * 0.5 + fraction * periodDays; // half rev behind, half ahead
-    const day = currentDayOfYear + dayOffset;
-    const elapsedDays = day - epochDay;
-    const totalRevs = elapsedDays * meanMotion;
+    // Show trail: 30% behind current position, 70% ahead
+    const dayOffset = -periodDays * 0.3 + fraction * periodDays;
+    const totalElapsed = elapsedToNow + dayOffset;
+    const totalRevs = totalElapsed * meanMotion;
     const currentMA = (((meanAnomaly + totalRevs * 360) % 360) + 360) % 360;
     const E = currentMA + (eccentricity * 180) / Math.PI * Math.sin((currentMA * Math.PI) / 180);
     const nu = E;
@@ -621,8 +624,24 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Unable to reach AI. Try again later." }]);
         return;
       }
-      const text = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
-      setAiMessages(prev => [...prev, { role: "assistant", content: text }]);
+      // Handle various response formats from war-chat
+      let text = "";
+      if (typeof data === "string") {
+        text = data;
+      } else if (data?.choices?.[0]?.message?.content) {
+        text = data.choices[0].message.content;
+      } else if (data?.reply) {
+        text = data.reply;
+      } else if (data?.response) {
+        text = data.response;
+      } else if (data?.content) {
+        text = data.content;
+      } else {
+        text = JSON.stringify(data);
+      }
+      // Strip <think> blocks if present
+      text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      setAiMessages(prev => [...prev, { role: "assistant", content: text || "No response received." }]);
     });
   }, []);
 
@@ -641,8 +660,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Error connecting to AI." }]);
       return;
     }
-    const reply = typeof data === "string" ? data : data?.choices?.[0]?.message?.content || JSON.stringify(data);
-    setAiMessages(prev => [...prev, { role: "assistant", content: reply }]);
+    let reply = "";
+    if (typeof data === "string") {
+      reply = data;
+    } else if (data?.choices?.[0]?.message?.content) {
+      reply = data.choices[0].message.content;
+    } else if (data?.reply) {
+      reply = data.reply;
+    } else if (data?.response) {
+      reply = data.response;
+    } else if (data?.content) {
+      reply = data.content;
+    } else {
+      reply = JSON.stringify(data);
+    }
+    reply = reply.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    setAiMessages(prev => [...prev, { role: "assistant", content: reply || "No response received." }]);
   }, [aiInput, aiLoading, aiMessages]);
 
   const runPrediction = useCallback(async (sat: SatelliteData) => {
@@ -712,6 +745,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     setShowSearch(false);
     setSearchQuery("");
     setSearchResults([]);
+    setPredictionData(null);
+    setPredictionTrack(null);
+    // Compute orbit path for selected satellite
+    if (
+      sat.inclination != null && sat.raan != null && sat.meanAnomaly != null &&
+      sat.meanMotion != null && sat.eccentricity != null &&
+      sat.epochYear != null && sat.epochDay != null
+    ) {
+      const path = computeOrbitPath(
+        sat.inclination, sat.raan, sat.meanAnomaly,
+        sat.meanMotion, sat.eccentricity, sat.epochYear,
+        sat.epochDay, sat.alt, 180
+      );
+      setOrbitPath(path);
+      setOrbitColor(CATEGORY_COLORS[sat.category] || "#d4a843");
+    }
     if (globeRef.current) {
       globeRef.current.pointOfView(
         { lat: sat.lat, lng: sat.lng, altitude: 1.8 },
@@ -1031,6 +1080,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       nextPositionsRef.current = newNext;
       satsRef.current = updated;
       setLastPropagated(new Date());
+
+      // Update orbit path for selected satellite to keep trail aligned
+      if (selectedSat && orbitPath) {
+        const sel = updated.find(s => s.noradId === selectedSat.noradId || s.name === selectedSat.name);
+        if (sel && sel.inclination != null && sel.raan != null && sel.meanAnomaly != null &&
+            sel.meanMotion != null && sel.eccentricity != null && sel.epochYear != null && sel.epochDay != null) {
+          // Recompute orbit path every ~10 seconds (every 20th propagation tick)
+          if (Math.random() < 0.05) {
+            const newPath = computeOrbitPath(sel.inclination, sel.raan, sel.meanAnomaly, sel.meanMotion, sel.eccentricity, sel.epochYear, sel.epochDay, sel.alt, 180);
+            setOrbitPath(newPath);
+            // Update selectedSat position
+            setSelectedSat(prev => prev ? { ...prev, lat: sel.lat, lng: sel.lng } : null);
+          }
+        }
+      }
 
       const globe = globeRef.current;
       if (globe) {
