@@ -1173,6 +1173,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     };
 
     aisVessels.data.forEach((v) => {
+      if (v.lat == null || v.lng == null) return;
       const color = aisTypeColors[v.type] || "#888";
       const icon = L.divIcon({
         className: "ais-vessel-icon",
