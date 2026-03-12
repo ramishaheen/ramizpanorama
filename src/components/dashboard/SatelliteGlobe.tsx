@@ -1176,18 +1176,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       });
       nextPositionsRef.current = newNext;
       satsRef.current = updated;
-      setLastPropagated(new Date());
+      // Throttle UI update: only every 5th tick (~2.5s)
+      if (Math.random() < 0.2) {
+        setLastPropagated(new Date());
+      }
 
-      // Update orbit path for selected satellite to keep trail aligned
+      // Update orbit path for selected satellite — deterministic every 20th tick (~10s)
       if (selectedSat && orbitPath) {
         const sel = updated.find(s => s.noradId === selectedSat.noradId || s.name === selectedSat.name);
         if (sel && sel.inclination != null && sel.raan != null && sel.meanAnomaly != null &&
             sel.meanMotion != null && sel.eccentricity != null && sel.epochYear != null && sel.epochDay != null) {
-          // Recompute orbit path every ~10 seconds (every 20th propagation tick)
-          if (Math.random() < 0.05) {
+          // Use a counter-based deterministic check instead of Math.random()
+          orbitRefreshCounter.current = (orbitRefreshCounter.current + 1) % 20;
+          if (orbitRefreshCounter.current === 0) {
             const newPath = computeOrbitPath(sel.inclination, sel.raan, sel.meanAnomaly, sel.meanMotion, sel.eccentricity, sel.epochYear, sel.epochDay, sel.alt, 180);
             setOrbitPath(newPath);
-            // Update selectedSat position
             setSelectedSat(prev => prev ? { ...prev, lat: sel.lat, lng: sel.lng } : null);
           }
         }
