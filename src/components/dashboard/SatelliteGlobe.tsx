@@ -275,24 +275,27 @@ function getOrbitType(alt: number, inc?: number, ecc?: number): string {
   return "Other";
 }
 
-// Compute full orbital path (one revolution) as array of {lat, lng}
+// Compute full orbital path (one full revolution) as array of {lat, lng}
 function computeOrbitPath(
   inclination: number, raan: number, meanAnomaly: number,
   meanMotion: number, eccentricity: number, epochYear: number,
-  epochDay: number, alt: number, steps = 120
+  epochDay: number, alt: number, steps = 180
 ): { lat: number; lng: number }[] {
   const periodDays = 1 / meanMotion; // one revolution in days
   const points: { lat: number; lng: number }[] = [];
   const now = new Date();
-  const startOfYear = new Date(epochYear, 0, 1);
-  const currentDayOfYear = (now.getTime() - startOfYear.getTime()) / 86400000;
+
+  // Compute elapsed days from epoch to now using proper date math
+  const epochDate = new Date(epochYear, 0, 1);
+  epochDate.setTime(epochDate.getTime() + (epochDay - 1) * 86400000);
+  const elapsedToNow = (now.getTime() - epochDate.getTime()) / 86400000;
 
   for (let i = 0; i <= steps; i++) {
     const fraction = i / steps;
-    const dayOffset = -periodDays * 0.5 + fraction * periodDays; // half rev behind, half ahead
-    const day = currentDayOfYear + dayOffset;
-    const elapsedDays = day - epochDay;
-    const totalRevs = elapsedDays * meanMotion;
+    // Show trail: 30% behind current position, 70% ahead
+    const dayOffset = -periodDays * 0.3 + fraction * periodDays;
+    const totalElapsed = elapsedToNow + dayOffset;
+    const totalRevs = totalElapsed * meanMotion;
     const currentMA = (((meanAnomaly + totalRevs * 360) % 360) + 360) % 360;
     const E = currentMA + (eccentricity * 180) / Math.PI * Math.sin((currentMA * Math.PI) / 180);
     const nu = E;
