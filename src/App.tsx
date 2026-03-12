@@ -63,7 +63,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <AuthProvider>
-        <AppContent />
+        <MapSyncProvider>
+          <AppContent />
+        </MapSyncProvider>
       </AuthProvider>
     </LanguageProvider>
   </QueryClientProvider>
