@@ -1881,9 +1881,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onCancelItem={handleCancelItem}
       />
       {/* Unified bottom bar */}
-      <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2">
+      <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2 flex-wrap">
         <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         <MapLegend />
+        <MapHistorySlider onTimeFilter={setHistoryFilter} />
+        <MapBookmarks
+          currentLat={mapRef.current?.getCenter().lat || 28}
+          currentLng={mapRef.current?.getCenter().lng || 48}
+          currentZoom={mapRef.current?.getZoom() || 5}
+          currentLayers={layers as unknown as Record<string, boolean>}
+          onGoTo={(lat, lng, zoom) => mapRef.current?.flyTo([lat, lng], zoom, { duration: 1.5 })}
+        />
         <div className="flex-1 flex justify-center">
           <TotalLaunchesWidget rockets={rockets} />
         </div>
