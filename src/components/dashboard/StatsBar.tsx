@@ -48,7 +48,7 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
 
   return (
     <motion.div
-      className={`text-sm font-mono font-bold ${color} transition-colors duration-300`}
+      className={`text-xs font-mono font-bold ${color} transition-colors duration-300`}
       animate={flash ? { scale: [1, 1.2, 1] } : {}}
       transition={{ duration: 0.4 }}
     >
