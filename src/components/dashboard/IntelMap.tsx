@@ -1126,7 +1126,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.addTo(group);
     });
-  }, [conflictEvents.data, layers.conflicts]);
+  }, [conflictEvents.data, layers.conflicts, historyFilter]);
 
   // ===== NUCLEAR / RADIATION MONITORING LAYER =====
   useEffect(() => {
