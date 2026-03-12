@@ -1988,6 +1988,31 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             )}
           </div>
 
+          {/* FLIGHTS — collapsible, same style as SAT Types */}
+          {flights.length > 0 && onTrackFlight && (
+            <div className="relative" style={{ width: 150 }}>
+              <button
+                onClick={() => setFlightsPanelExpanded(!flightsPanelExpanded)}
+                className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+              >
+                <Plane className="h-3 w-3 text-primary" />
+                <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">Flights</span>
+                <span className="text-[8px] font-mono text-white/50">{flights.length}</span>
+                {flightsPanelExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+              </button>
+              {flightsPanelExpanded && (
+                <div className="absolute bottom-full mb-1 left-0 w-[220px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
+                  <FlightEmulationPanel
+                    flights={flights}
+                    trackedFlightId={trackedFlightId ?? null}
+                    onTrackFlight={onTrackFlight}
+                    flightSource={flightSource}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Style Presets — center */}
           <div className="flex-1 flex justify-center">
             <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-xl px-2 py-1.5">
