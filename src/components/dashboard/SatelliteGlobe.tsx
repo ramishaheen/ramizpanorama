@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, RefreshCw, Satellite, Search, Tag, Tags, ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCw, RotateCcw, Shield, Eye, Radio, Navigation, Cloud, Globe, HelpCircle, Bot, Send, Loader2, Crosshair, Clock, MapPin, Zap, Rocket, Cpu, Anchor } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -1641,7 +1642,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     now.getUTCSeconds()
   ).padStart(2, "0")}Z`;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#050a12] flex flex-col overflow-hidden">
       {/* Holographic scanline overlay */}
       <div
@@ -2426,7 +2427,8 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       )}
 
-    </div>
+    </div>,
+    document.body
   );
 };
 
