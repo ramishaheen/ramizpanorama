@@ -1096,7 +1096,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.conflicts || conflictEvents.data.length === 0) return;
 
-    conflictEvents.data.forEach((event) => {
+    const filtered = historyFilter
+      ? conflictEvents.data.filter(c => {
+          const t = new Date(c.event_date).getTime();
+          return !isNaN(t) && t >= historyFilter;
+        })
+      : conflictEvents.data;
+
+    filtered.forEach((event) => {
       const color = conflictTypeColors[event.event_type] || "#ef4444";
 
       const marker = L.marker([event.lat, event.lng], {
