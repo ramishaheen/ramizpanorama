@@ -1047,7 +1047,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.wildfires || wildfires.data.length === 0) return;
 
-    wildfires.data.forEach((fire) => {
+    const filtered = historyFilter
+      ? wildfires.data.filter(f => {
+          const t = new Date(`${f.date}T${f.time || "00:00"}Z`).getTime();
+          return !isNaN(t) && t >= historyFilter;
+        })
+      : wildfires.data;
+
+    filtered.forEach((fire) => {
       // Heat glow for intense fires
       if (fire.frp > 50) {
         L.circleMarker([fire.lat, fire.lng], {
