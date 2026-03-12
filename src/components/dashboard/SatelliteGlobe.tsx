@@ -2212,27 +2212,38 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             {vesselsPanelExpanded && (
               <div className="absolute bottom-full mb-1 left-0 w-[240px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
                 <div className="w-full pointer-events-auto">
-                  {/* Vessel type breakdown */}
-                  <div className="px-3 py-1.5 flex items-center gap-3 flex-wrap">
-                    {(() => {
-                      const types = ["CARGO", "TANKER", "FISHING", "MILITARY", "UNKNOWN"];
-                      const typeColors: Record<string, string> = { CARGO: "bg-blue-400", TANKER: "bg-orange-400", FISHING: "bg-green-400", MILITARY: "bg-red-500", UNKNOWN: "bg-gray-400" };
-                      const typeTextColors: Record<string, string> = { CARGO: "text-blue-400", TANKER: "text-orange-400", FISHING: "text-green-400", MILITARY: "text-red-500", UNKNOWN: "text-gray-400" };
-                      return types.map(t => {
-                        const count = aisVessels.data.filter(v => v.type === t).length;
-                        if (count === 0 && vesselFilter !== t) return null;
-                        return (
-                          <div key={t} className="flex items-center gap-1">
-                            <div className={`w-1.5 h-1.5 rounded-full ${typeColors[t]}`} />
-                            <span className={`text-[9px] font-mono ${typeTextColors[t]} font-bold tabular-nums`}>{t.slice(0,3)} {count}</span>
+                  {/* Vessel type checkboxes */}
+                  <div className="px-3 py-2 space-y-1 border-b border-white/10">
+                    <div className="text-[7px] font-mono text-white/40 uppercase tracking-widest mb-1">Globe Visibility</div>
+                    {(["CARGO", "TANKER", "MILITARY", "FISHING", "UNKNOWN"] as const).map(t => {
+                      const typeColors: Record<string, string> = { CARGO: "#3b82f6", TANKER: "#f97316", MILITARY: "#ef4444", FISHING: "#22c55e", UNKNOWN: "#9ca3af" };
+                      const count = aisVessels.data.filter(v => v.type === t).length;
+                      return (
+                        <label key={t} className="flex items-center gap-2 cursor-pointer group">
+                          <div
+                            onClick={() => setVesselTypeVisible(prev => ({ ...prev, [t]: !prev[t] }))}
+                            className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-all cursor-pointer ${
+                              vesselTypeVisible[t]
+                                ? "border-white/50"
+                                : "border-white/20 bg-transparent"
+                            }`}
+                            style={vesselTypeVisible[t] ? { backgroundColor: typeColors[t], borderColor: typeColors[t] } : {}}
+                          >
+                            {vesselTypeVisible[t] && <span className="text-[8px] text-white font-bold">✓</span>}
                           </div>
-                        );
-                      });
-                    })()}
+                          <div
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: typeColors[t], boxShadow: `0 0 6px ${typeColors[t]}66` }}
+                          />
+                          <span className="text-[9px] font-mono text-white/80 font-semibold flex-1">{t}</span>
+                          <span className="text-[8px] font-mono text-white/40 tabular-nums">{count}</span>
+                        </label>
+                      );
+                    })}
                   </div>
 
-                  {/* Filter chips */}
-                  <div className="px-3 py-1 border-t border-white/10 flex items-center gap-1 flex-wrap">
+                  {/* Filter chips for list */}
+                  <div className="px-3 py-1 flex items-center gap-1 flex-wrap">
                     {["ALL", "CARGO", "TANKER", "MILITARY", "FISHING"].map((f) => (
                       <button
                         key={f}
@@ -2268,12 +2279,14 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                               key={v.mmsi}
                               onClick={() => {
                                 const globe = globeRef.current;
-                                if (globe) globe.pointOfView({ lat: v.lat, lng: v.lng, altitude: 0.5 }, 800);
+                                if (globe) globe.pointOfView({ lat: v.lat, lng: v.lng, altitude: 0.3 }, 800);
                               }}
                               className="w-full px-3 py-1.5 text-left hover:bg-white/5 transition-all cursor-pointer"
                             >
                               <div className="flex items-center gap-2">
-                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeColor[v.type] || "bg-gray-400"}`} />
+                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeColor[v.type] || "bg-gray-400"}`}
+                                  style={{ boxShadow: `0 0 4px ${typeColor[v.type]?.replace('bg-', '') || ''}` }}
+                                />
                                 <span className="text-[9px] font-mono font-bold text-white/80 truncate flex-1">
                                   {v.name}
                                 </span>
@@ -2286,10 +2299,10 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                                   {v.speed.toFixed(1)}kn
                                 </span>
                                 <span className="text-[8px] font-mono text-white/40 tabular-nums">
-                                  {Math.round(v.heading)}°
+                                  HDG {Math.round(v.heading)}°
                                 </span>
                                 <span className="text-[7px] font-mono text-white/25 truncate">
-                                  {v.type}
+                                  {v.destination || v.type}
                                 </span>
                               </div>
                             </button>
@@ -2303,7 +2316,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                   {aisVessels.source && (
                     <div className="px-3 py-1 border-t border-white/10 flex items-center gap-1">
                       <Radio className="h-2.5 w-2.5 text-green-500 animate-pulse" />
-                      <span className="text-[8px] font-mono text-white/30 uppercase">{aisVessels.source}</span>
+                      <span className="text-[8px] font-mono text-white/30 uppercase">LIVE AIS • {aisVessels.source}</span>
                     </div>
                   )}
                 </div>

@@ -23,13 +23,16 @@ const typeBorder: Record<string, string> = {
   diplomatic: "border-muted-foreground/40",
 };
 
+const SPEEDS = [1, 2, 5] as const;
+const SPEED_INTERVALS: Record<number, number> = { 1: 1500, 2: 750, 5: 300 };
+
 export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) => {
   const [currentIndex, setCurrentIndex] = useState(events.length - 1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState<number>(1);
   const { t, isArabic } = useLanguage();
   const playRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-play logic
   useEffect(() => {
     if (playRef.current) {
       clearInterval(playRef.current);
@@ -46,12 +49,12 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
           onTimeChange?.(new Date(events[next].timestamp));
           return next;
         });
-      }, 1500);
+      }, SPEED_INTERVALS[speed] || 1500);
     }
     return () => {
       if (playRef.current) clearInterval(playRef.current);
     };
-  }, [isPlaying, events, onTimeChange]);
+  }, [isPlaying, events, onTimeChange, speed]);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const idx = parseInt(e.target.value);
@@ -86,6 +89,22 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
           >
             <SkipForward className="h-3 w-3" />
           </button>
+          {/* Speed controls */}
+          <div className="flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
+            {SPEEDS.map((s) => (
+              <button
+                key={s}
+                onClick={() => setSpeed(s)}
+                className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${
+                  speed === s
+                    ? "bg-primary/20 text-primary border border-primary/40"
+                    : "text-muted-foreground/60 hover:text-foreground hover:bg-secondary/50 border border-transparent"
+                }`}
+              >
+                {s}×
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

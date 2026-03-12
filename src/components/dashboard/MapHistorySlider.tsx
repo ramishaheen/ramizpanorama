@@ -168,6 +168,22 @@ export const MapHistorySlider = ({ onTimeFilter, events = [], onFlyTo }: MapHist
         <span className={`text-[9px] font-mono font-bold w-12 text-right ${value >= 99.5 ? "text-green-500" : "text-primary"}`}>
           {timeLabel}
         </span>
+        {/* Speed controls */}
+        <div className="flex items-center gap-0.5 border-l border-border/30 pl-1">
+          {PLAYBACK_SPEEDS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setPlaySpeed(s)}
+              className={`px-1 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${
+                playSpeed === s
+                  ? "bg-primary/20 text-primary border border-primary/40"
+                  : "text-muted-foreground/50 hover:text-foreground border border-transparent"
+              }`}
+            >
+              {s}×
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => setShowFeed(!showFeed)}
           className={`p-0.5 rounded transition-all ${showFeed ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"}`}
