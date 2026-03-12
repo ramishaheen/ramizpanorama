@@ -43,9 +43,9 @@ export const CountryCostRow = ({ countries, timestamp, scenarioMultiplier }: Cou
     const totalB = c.total_cost_billions * scenarioMultiplier;
     const flag = flagEmoji(c.code);
     return (
-      <span key={`${c.code}-${suffix}-${i}`} className="inline-flex items-center gap-1.5 mx-5 whitespace-nowrap">
-        <span className="text-sm">{flag}</span>
-        <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase">{c.country}</span>
+      <span key={`${c.code}-${suffix}-${i}`} className="inline-flex items-center gap-1 mx-3 whitespace-nowrap">
+        <span className="text-[10px]">{flag}</span>
+        <span className="text-[8px] font-mono font-semibold text-muted-foreground uppercase">{c.country}</span>
         <LiveCostCounter
           dailyCostMillions={dailyM}
           startTimestamp={timestamp}

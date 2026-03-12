@@ -14,12 +14,12 @@ const scenarioConfig: { key: Scenario; label: string; color: string }[] = [
 ];
 
 export const ScenarioToggle = ({ active, onChange }: ScenarioToggleProps) => (
-  <div className="inline-flex items-center gap-0.5 bg-muted/50 rounded-md p-0.5 border border-border/50">
+  <div className="inline-flex items-center gap-px bg-muted/50 rounded p-px border border-border/50">
     {scenarioConfig.map(({ key, label, color }) => (
       <button
         key={key}
         onClick={() => onChange(key)}
-        className={`relative px-2 py-0.5 text-[9px] font-mono font-semibold uppercase tracking-wider rounded transition-colors ${
+        className={`relative px-1.5 py-px text-[7px] font-mono font-semibold uppercase tracking-wider rounded transition-colors ${
           active === key ? "text-foreground" : "text-muted-foreground hover:text-foreground/70"
         }`}
       >
@@ -30,8 +30,8 @@ export const ScenarioToggle = ({ active, onChange }: ScenarioToggleProps) => (
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         )}
-        <span className="relative flex items-center gap-1">
-          <span className={`inline-block h-1.5 w-1.5 rounded-full ${active === key ? color : "bg-muted-foreground/30"}`} />
+        <span className="relative flex items-center gap-0.5">
+          <span className={`inline-block h-1 w-1 rounded-full ${active === key ? color : "bg-muted-foreground/30"}`} />
           {label}
         </span>
       </button>
