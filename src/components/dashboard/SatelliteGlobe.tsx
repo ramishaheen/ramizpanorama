@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import militarySatSprite from "@/assets/military-sat-sprite.png";
 import { FlightEmulationPanel } from "./FlightEmulationPanel";
+import { useAISVessels, type AISVessel } from "@/hooks/useAISVessels";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SatelliteData {
   name: string;
@@ -475,6 +477,9 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [countrySats, setCountrySats] = useState<{ category: string; count: number; color: string }[]>([]);
   const [satTypesExpanded, setSatTypesExpanded] = useState(false);
   const [flightsPanelExpanded, setFlightsPanelExpanded] = useState(false);
+  const [vesselsPanelExpanded, setVesselsPanelExpanded] = useState(false);
+  const [vesselFilter, setVesselFilter] = useState<string>("ALL");
+  const aisVessels = useAISVessels();
   const [countrySatNames, setCountrySatNames] = useState<Set<string>>(new Set());
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
@@ -2014,7 +2019,120 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             </div>
           )}
 
-          {/* Style Presets — center */}
+          {/* VESSELS — collapsible, same style as Flights */}
+          <div className="relative" style={{ width: 150 }}>
+            <button
+              onClick={() => setVesselsPanelExpanded(!vesselsPanelExpanded)}
+              className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+            >
+              <Anchor className="h-3 w-3 text-cyan-400" />
+              <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">Vessels</span>
+              <span className="text-[8px] font-mono text-white/50">{aisVessels.data.length}</span>
+              {vesselsPanelExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+            </button>
+            {vesselsPanelExpanded && (
+              <div className="absolute bottom-full mb-1 left-0 w-[240px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
+                <div className="w-full pointer-events-auto">
+                  {/* Vessel type breakdown */}
+                  <div className="px-3 py-1.5 flex items-center gap-3 flex-wrap">
+                    {(() => {
+                      const types = ["CARGO", "TANKER", "FISHING", "MILITARY", "UNKNOWN"];
+                      const typeColors: Record<string, string> = { CARGO: "bg-blue-400", TANKER: "bg-orange-400", FISHING: "bg-green-400", MILITARY: "bg-red-500", UNKNOWN: "bg-gray-400" };
+                      const typeTextColors: Record<string, string> = { CARGO: "text-blue-400", TANKER: "text-orange-400", FISHING: "text-green-400", MILITARY: "text-red-500", UNKNOWN: "text-gray-400" };
+                      return types.map(t => {
+                        const count = aisVessels.data.filter(v => v.type === t).length;
+                        if (count === 0 && vesselFilter !== t) return null;
+                        return (
+                          <div key={t} className="flex items-center gap-1">
+                            <div className={`w-1.5 h-1.5 rounded-full ${typeColors[t]}`} />
+                            <span className={`text-[9px] font-mono ${typeTextColors[t]} font-bold tabular-nums`}>{t.slice(0,3)} {count}</span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Filter chips */}
+                  <div className="px-3 py-1 border-t border-white/10 flex items-center gap-1 flex-wrap">
+                    {["ALL", "CARGO", "TANKER", "MILITARY", "FISHING"].map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setVesselFilter(f)}
+                        className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                          vesselFilter === f
+                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
+                            : "bg-white/5 text-white/40 border border-transparent hover:bg-white/10"
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Vessel list */}
+                  <ScrollArea className="h-48 border-t border-white/10">
+                    <div className="divide-y divide-white/5">
+                      {(() => {
+                        const filtered = vesselFilter === "ALL" ? aisVessels.data : aisVessels.data.filter(v => v.type === vesselFilter);
+                        const sorted = [...filtered].sort((a, b) => b.speed - a.speed).slice(0, 50);
+                        if (sorted.length === 0) return (
+                          <div className="px-3 py-4 text-center">
+                            <span className="text-[9px] font-mono text-white/40">
+                              {aisVessels.loading ? "Loading vessels…" : "No vessels in range"}
+                            </span>
+                          </div>
+                        );
+                        return sorted.map((v) => {
+                          const typeColor: Record<string, string> = { CARGO: "bg-blue-400", TANKER: "bg-orange-400", FISHING: "bg-green-400", MILITARY: "bg-red-500", UNKNOWN: "bg-gray-400" };
+                          return (
+                            <button
+                              key={v.mmsi}
+                              onClick={() => {
+                                const globe = globeRef.current;
+                                if (globe) globe.pointOfView({ lat: v.lat, lng: v.lng, altitude: 0.5 }, 800);
+                              }}
+                              className="w-full px-3 py-1.5 text-left hover:bg-white/5 transition-all cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeColor[v.type] || "bg-gray-400"}`} />
+                                <span className="text-[9px] font-mono font-bold text-white/80 truncate flex-1">
+                                  {v.name}
+                                </span>
+                                {v.flag && (
+                                  <span className="text-[7px] font-mono text-white/30">{v.flag}</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5 pl-3.5">
+                                <span className="text-[8px] font-mono text-white/40 tabular-nums">
+                                  {v.speed.toFixed(1)}kn
+                                </span>
+                                <span className="text-[8px] font-mono text-white/40 tabular-nums">
+                                  {Math.round(v.heading)}°
+                                </span>
+                                <span className="text-[7px] font-mono text-white/25 truncate">
+                                  {v.type}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </ScrollArea>
+
+                  {/* Source indicator */}
+                  {aisVessels.source && (
+                    <div className="px-3 py-1 border-t border-white/10 flex items-center gap-1">
+                      <Radio className="h-2.5 w-2.5 text-green-500 animate-pulse" />
+                      <span className="text-[8px] font-mono text-white/30 uppercase">{aisVessels.source}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+
           <div className="flex-1 flex justify-center">
             <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-xl px-2 py-1.5">
               {GLOBE_STYLES.map((style) => (
