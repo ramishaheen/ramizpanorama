@@ -2562,34 +2562,6 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       )}
 
-      {/* Bottom city presets — scrollable */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2002] pointer-events-auto max-w-[95vw]">
-        <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-          {CITY_PRESETS.map((city) => {
-            const badge = countryBadges[city.name];
-            const overhead = badge?.total || 0;
-            return (
-              <button
-                key={city.name}
-                onClick={() => flyToCity(city)}
-                className={`relative flex-shrink-0 px-2.5 py-1.5 rounded-md text-[10px] font-semibold tracking-wide transition-all whitespace-nowrap ${
-                  activeCity === city.name
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_8px_rgba(0,200,255,0.15)]"
-                    : "text-white/80 hover:text-white hover:bg-white/10 border border-transparent"
-                }`}
-                title={`${city.landmark} — ${city.country}`}
-              >
-                {city.name}
-                {overhead > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[7px] font-bold leading-none px-0.5 animate-pulse">
-                    {overhead}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 };
