@@ -73,7 +73,7 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-1.5 px-2 py-1 bg-card border rounded-md transition-all duration-500 relative ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
+      className={`flex items-center gap-1 px-1.5 py-0.5 bg-card border rounded-md transition-all duration-500 relative ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
     >
       <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
       <div className="flex-1 min-w-0">
