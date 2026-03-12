@@ -48,7 +48,7 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
 
   return (
     <motion.div
-      className={`text-sm font-mono font-bold ${color} transition-colors duration-300`}
+      className={`text-xs font-mono font-bold ${color} transition-colors duration-300`}
       animate={flash ? { scale: [1, 1.2, 1] } : {}}
       transition={{ duration: 0.4 }}
     >
@@ -73,19 +73,19 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-1.5 px-2 py-1 bg-card border rounded-md transition-all duration-500 relative ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
+      className={`flex items-center gap-1 px-1.5 py-0.5 bg-card border rounded-md transition-all duration-500 relative ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
     >
-      <Icon className={`h-3 w-3 ${color} ${pulse ? "animate-pulse" : ""}`} />
+      <Icon className={`h-2.5 w-2.5 ${color} ${pulse ? "animate-pulse" : ""}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-0.5">
           {liveContent ? liveContent : (
             <>
-              {prefix && <span className={`text-sm font-mono font-bold ${color}`}>{prefix}</span>}
+              {prefix && <span className={`text-xs font-mono font-bold ${color}`}>{prefix}</span>}
               {value !== undefined && <AnimatedNumber value={value} color={color} />}
             </>
           )}
         </div>
-        <div className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</div>
+        <div className="text-[8px] text-muted-foreground uppercase tracking-wider leading-none">{label}</div>
       </div>
       <StatusDot status={liveModifier} />
       {tooltip && <Info className="h-2.5 w-2.5 text-muted-foreground/40 flex-shrink-0" />}
@@ -222,11 +222,11 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`grid grid-cols-3 sm:grid-cols-7 gap-1.5 px-2 sm:px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`grid grid-cols-3 sm:grid-cols-7 gap-1 px-2 sm:px-3 py-0.5 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <div className="flex items-center justify-center px-1">
           <div className="text-center">
-            <div className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">TODAY</div>
-            <div className="text-[8px] font-mono text-muted-foreground">{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+            <div className="text-[9px] font-mono font-bold text-primary uppercase tracking-widest leading-none">TODAY</div>
+            <div className="text-[7px] font-mono text-muted-foreground leading-none mt-0.5">{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
           </div>
         </div>
         <StatCard icon={Plane} label={t(tr["stat.airspace"].en, tr["stat.airspace"].ar)} value={airspaceCount} color="text-primary" pulse={dataFresh} />
@@ -261,11 +261,11 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
       {/* War cost cards - LIVE TICKING */}
       {warCosts.data && !warCosts.error && (
         <div className="border-t border-border/50 bg-card/30">
-          <div className="flex items-center justify-between px-3 py-0.5">
-            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">War Cost Estimate</span>
+          <div className="flex items-center justify-between px-3 py-0">
+            <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">War Cost Estimate</span>
             <ScenarioToggle active={scenario} onChange={setScenario} />
           </div>
-          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 px-2 sm:px-3 py-1 transition-shadow duration-500`}>
+          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 px-2 sm:px-3 py-0.5 transition-shadow duration-500`}>
             <StatCard
               icon={DollarSign}
               label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}
