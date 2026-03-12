@@ -28,6 +28,7 @@ import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
 import { SatelliteGlobe } from "./SatelliteGlobe";
 import { UrbanScene3D } from "./UrbanScene3D";
+import { FlightEmulationPanel } from "./FlightEmulationPanel";
 import { ChokepointMonitor, CHOKEPOINTS } from "./ChokepointMonitor";
 import { useEarthquakes, type Earthquake } from "@/hooks/useEarthquakes";
 import { useWildfires, type Wildfire } from "@/hooks/useWildfires";
@@ -1871,6 +1872,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const snapMeGroupRef = useRef<L.LayerGroup>(L.layerGroup());
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
+  const handleCloseSatGlobe = useCallback(() => setShowSatGlobe(false), []);
 
   return (
     <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
@@ -1960,7 +1962,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
 
       {/* 3D overlays */}
-      {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
+      {/* Flight Emulation Panel — left side */}
+      {layers.flights && interpolatedFlights.length > 0 && (
+        <FlightEmulationPanel
+          flights={interpolatedFlights}
+          trackedFlightId={trackedFlightId}
+          onTrackFlight={setTrackedFlightId}
+          flightSource={flightSource}
+        />
+      )}
+
+      {showSatGlobe && <SatelliteGlobe onClose={handleCloseSatGlobe} />}
       {showUrbanScene && (
         <UrbanScene3D
           key={urbanScene3DTarget ? `${urbanScene3DTarget.lat}-${urbanScene3DTarget.lng}` : 'default'}
