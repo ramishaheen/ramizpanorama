@@ -1747,43 +1747,140 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         </div>
       </div>
 
-      {/* Category filters - compact vertical sidebar */}
-      <div className="absolute bottom-14 left-3 z-[2002] pointer-events-auto max-h-[calc(100vh-180px)] overflow-y-auto scrollbar-none">
-        <div className="flex flex-col gap-0.5 bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-2 py-2 w-[140px]">
-          <div className="text-[8px] font-mono uppercase tracking-widest text-center mb-0.5" style={{ color: "rgba(0,255,200,0.4)" }}>SAT TYPES</div>
-          <button
-            onClick={() => setSelectedCat(null)}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
-              !selectedCat ? "bg-white text-black shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-white flex-shrink-0" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
-            <span className="truncate">ALL</span>
-            <span className="ml-auto text-[8px] opacity-70">{satellites.length}</span>
-          </button>
-          {categories.map(([cat, color]) => {
-            const count = satellites.filter((s) => s.category === cat).length;
-            const isDisabled = count === 0;
+      {/* UNIFIED BOTTOM BAR */}
+      <div className="absolute bottom-3 left-3 right-3 z-[2002] pointer-events-auto space-y-1.5">
+        {/* Row 1: SAT TYPES + Style Presets + Nav Controls */}
+        <div className="flex items-end gap-2">
+          {/* SAT TYPES — collapsible */}
+          <div className="relative" style={{ width: 150 }}>
+            <button
+              onClick={() => setSatTypesExpanded(!satTypesExpanded)}
+              className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+            >
+              <Satellite className="h-3 w-3 text-primary" />
+              <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">SAT Types</span>
+              <span className="text-[8px] font-mono text-white/50">{satellites.length}</span>
+              {satTypesExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+            </button>
+            {satTypesExpanded && (
+              <div className="absolute bottom-full mb-1 left-0 w-[160px] max-h-[50vh] overflow-y-auto rounded-lg bg-black/90 backdrop-blur-md border border-white/15 px-2 py-2 space-y-0.5">
+                <button
+                  onClick={() => setSelectedCat(null)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
+                    !selectedCat ? "bg-white text-black shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-white flex-shrink-0" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
+                  <span className="truncate">ALL</span>
+                  <span className="ml-auto text-[8px] opacity-70">{satellites.length}</span>
+                </button>
+                {categories.map(([cat, color]) => {
+                  const count = satellites.filter((s) => s.category === cat).length;
+                  const isDisabled = count === 0;
+                  return (
+                    <button
+                      key={cat}
+                      disabled={isDisabled}
+                      onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
+                        selectedCat === cat
+                          ? "bg-white text-black shadow-md"
+                          : isDisabled
+                            ? "text-white/20 cursor-not-allowed"
+                            : "text-white/70 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <span className="truncate">{cat}</span>
+                      <span className="ml-auto text-[8px] opacity-70">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-            return (
+          {/* Style Presets — center */}
+          <div className="flex-1 flex justify-center">
+            <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-xl px-2 py-1.5">
+              {GLOBE_STYLES.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => applyGlobeStyle(style.id)}
+                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg transition-all ${
+                    globeStyle === style.id
+                      ? "bg-cyan-500/20 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,200,255,0.2)]"
+                      : "hover:bg-white/10 border border-transparent"
+                  }`}
+                  title={style.desc}
+                >
+                  <span className="text-sm">{style.icon}</span>
+                  <span className={`text-[8px] font-mono tracking-wide ${
+                    globeStyle === style.id ? "text-cyan-300 font-bold" : "text-white/70"
+                  }`}>{style.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Nav & Zoom controls — right */}
+          <div className="flex items-center gap-1">
+            <div className="flex gap-0.5 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
               <button
-                key={cat}
-                disabled={isDisabled}
-                onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
-                  selectedCat === cat
-                    ? "bg-white text-black shadow-md"
-                    : isDisabled
-                      ? "text-white/20 cursor-not-allowed"
-                      : "text-white/70 hover:text-white hover:bg-white/10"
-                }`}
+                onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, altitude: Math.max(pov.altitude * 0.75, 0.3) }, 400); }}
+                className="w-7 h-7 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+                title="Zoom In"
               >
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                <span className="truncate">{cat}</span>
-                <span className="ml-auto text-[8px] opacity-70">{count}</span>
+                <ZoomIn className="h-3.5 w-3.5" />
               </button>
-            );
-          })}
+              <button
+                onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, altitude: Math.min(pov.altitude * 1.35, 6) }, 400); }}
+                className="w-7 h-7 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+                title="Zoom Out"
+              >
+                <ZoomOut className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
+              <div className="grid grid-cols-3 gap-0.5">
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Rotate Left"><RotateCcw className="h-3 w-3" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.min(pov.lat + 15, 85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Move Up"><ChevronUp className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Rotate Right"><RotateCw className="h-3 w-3" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Pan Left"><ChevronLeft className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.max(pov.lat - 15, -85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Move Down"><ChevronDown className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Pan Right"><ChevronRight className="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: City presets */}
+        <div className="flex justify-center">
+          <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1 overflow-x-auto scrollbar-hide max-w-[90vw]" style={{ scrollbarWidth: "none" }}>
+            {CITY_PRESETS.map((city) => {
+              const badge = countryBadges[city.name];
+              const overhead = badge?.total || 0;
+              return (
+                <button
+                  key={city.name}
+                  onClick={() => flyToCity(city)}
+                  className={`relative flex-shrink-0 px-2 py-1 rounded-md text-[9px] font-semibold tracking-wide transition-all whitespace-nowrap ${
+                    activeCity === city.name
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_8px_rgba(0,200,255,0.15)]"
+                      : "text-white/80 hover:text-white hover:bg-white/10 border border-transparent"
+                  }`}
+                  title={`${city.landmark} — ${city.country}`}
+                >
+                  {city.name}
+                  {overhead > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[7px] font-bold leading-none px-0.5 animate-pulse">
+                      {overhead}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
