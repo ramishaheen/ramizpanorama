@@ -142,7 +142,7 @@ export const TotalLaunchesWidget = ({ rockets }: TotalLaunchesWidgetProps) => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[900] flex flex-col rounded-xl border border-destructive/30 bg-card/90 backdrop-blur-xl overflow-hidden"
+      className="relative flex flex-col rounded-xl border border-destructive/30 bg-card/90 backdrop-blur-xl overflow-hidden"
       style={{
         boxShadow: "0 4px 32px -4px hsl(0 80% 55% / 0.15), 0 0 0 1px hsl(0 80% 55% / 0.05)",
         width: expanded ? 420 : "auto",
