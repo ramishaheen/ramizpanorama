@@ -194,8 +194,7 @@ const createConflictIcon = (eventType: string, severity: string) => {
 };
 
 const popupOptions: L.PopupOptions = {
-  autoPan: true,
-  autoPanPadding: L.point(40, 40),
+  autoPan: false,
   offset: L.point(0, -4),
 };
 
