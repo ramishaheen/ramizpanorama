@@ -1081,6 +1081,21 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
       satsRef.current = updated;
       setLastPropagated(new Date());
 
+      // Update orbit path for selected satellite to keep trail aligned
+      if (selectedSat && orbitPath) {
+        const sel = updated.find(s => s.noradId === selectedSat.noradId || s.name === selectedSat.name);
+        if (sel && sel.inclination != null && sel.raan != null && sel.meanAnomaly != null &&
+            sel.meanMotion != null && sel.eccentricity != null && sel.epochYear != null && sel.epochDay != null) {
+          // Recompute orbit path every ~10 seconds (every 20th propagation tick)
+          if (Math.random() < 0.05) {
+            const newPath = computeOrbitPath(sel.inclination, sel.raan, sel.meanAnomaly, sel.meanMotion, sel.eccentricity, sel.epochYear, sel.epochDay, sel.alt, 180);
+            setOrbitPath(newPath);
+            // Update selectedSat position
+            setSelectedSat(prev => prev ? { ...prev, lat: sel.lat, lng: sel.lng } : null);
+          }
+        }
+      }
+
       const globe = globeRef.current;
       if (globe) {
         const filtered = catFilter ? updated.filter((s) => s.category === catFilter) : updated;
