@@ -995,7 +995,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.earthquakes || earthquakes.data.length === 0) return;
 
-    earthquakes.data.forEach((eq) => {
+    const filtered = historyFilter
+      ? earthquakes.data.filter(eq => eq.time >= historyFilter)
+      : earthquakes.data;
+
+    filtered.forEach((eq) => {
       const color = getQuakeColor(eq.magnitude);
       const radius = getQuakeRadius(eq.magnitude);
 
