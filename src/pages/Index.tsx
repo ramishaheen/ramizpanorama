@@ -141,6 +141,7 @@ const Index = () => {
   const [rightWidth, setRightWidth] = useState(initialLayout.rightWidth);
   const [rightCollapsed, setRightCollapsed] = useState(initialLayout.rightCollapsed);
   const [mobileTab, setMobileTab] = useState<MobileTab>("map");
+  const [layoutLocked, setLayoutLocked] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Persist layout changes
