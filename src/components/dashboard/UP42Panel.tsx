@@ -76,7 +76,7 @@ export const UP42Panel = ({ onFeaturesChange, mapBounds }: UP42PanelProps) => {
 
       {/* Expanded panel */}
       {expanded && (
-        <div className="mt-1 bg-card/95 backdrop-blur-sm border border-border rounded-md p-3 min-w-[280px] max-w-[320px] shadow-xl">
+        <div className="absolute bottom-full mb-1 left-0 bg-card/95 backdrop-blur-sm border border-border rounded-md p-3 min-w-[280px] max-w-[320px] shadow-xl">
           <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center justify-between">
             <span>UP42 Satellite Catalog</span>
             {features.length > 0 && (

@@ -143,7 +143,7 @@ export const ChokepointMonitor = ({ vessels, onFlyTo }: ChokepointMonitorProps) 
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden mt-1 rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)]"
+            className="absolute bottom-full mb-1 left-0 w-full overflow-hidden rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)]"
           >
             <div className="divide-y divide-border/30">
               {chokepointData.map((cp) => {
