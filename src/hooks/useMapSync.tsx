@@ -83,8 +83,17 @@ export function MapSyncProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const NOOP_CONTEXT: MapSyncContextValue = {
+  selectedEvent: null,
+  selectEvent: () => {},
+  bookmarks: [],
+  addBookmark: () => {},
+  removeBookmark: () => {},
+  highlightedCoords: null,
+  setHighlightedCoords: () => {},
+};
+
 export function useMapSync() {
   const ctx = useContext(MapSyncContext);
-  if (!ctx) throw new Error("useMapSync must be used within MapSyncProvider");
-  return ctx;
+  return ctx ?? NOOP_CONTEXT;
 }
