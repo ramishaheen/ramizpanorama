@@ -1384,7 +1384,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.flights || interpolatedFlights.length === 0) return;
 
-    console.log(`[FLIGHTS] Rendering ${interpolatedFlights.length} aircraft on map`, interpolatedFlights.map(a => `${a.callsign}@${a.lat.toFixed(2)},${a.lng.toFixed(2)}`));
+    console.log(`[FLIGHTS] Rendering ${interpolatedFlights.length} aircraft on map`, interpolatedFlights.filter(a => a.lat != null && a.lng != null).map(a => `${a.callsign}@${a.lat.toFixed(2)},${a.lng.toFixed(2)}`));
 
     interpolatedFlights.forEach((ac) => {
       const isMil = ac.is_military;
