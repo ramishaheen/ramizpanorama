@@ -64,7 +64,7 @@ export const CountryCostRow = ({ countries, timestamp, scenarioMultiplier }: Cou
   const doubled = [...items, ...items];
 
   return (
-    <div className="relative overflow-hidden border-t border-border/30 bg-card/20 py-1">
+    <div className="relative overflow-hidden border-t border-border/30 bg-card/20 py-px">
       <div className="marquee-track flex">
         <div className="marquee-content flex animate-marquee">
           {doubled.map((c, i) => renderItem(c, i, "a"))}
