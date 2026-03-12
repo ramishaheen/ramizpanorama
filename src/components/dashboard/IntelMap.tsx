@@ -584,6 +584,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     updateBounds();
 
     return () => {
+      resizeObs.disconnect();
       overlayGroupRef.current?.clearLayers();
       bordersGroupRef.current?.clearLayers();
       earthquakeGroupRef.current?.clearLayers();
