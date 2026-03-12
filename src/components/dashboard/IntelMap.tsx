@@ -1086,7 +1086,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.addTo(group);
     });
-  }, [wildfires.data, layers.wildfires]);
+  }, [wildfires.data, layers.wildfires, historyFilter]);
 
   // Render conflict events layer
   useEffect(() => {
