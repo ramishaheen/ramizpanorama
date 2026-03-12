@@ -486,13 +486,27 @@ const Index = () => {
                     className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-10 hover:bg-primary/20 transition-colors"
                     title="Drag to resize"
                   />
-                  <button
-                    onClick={() => setRightCollapsed(true)}
-                    className="flex items-center justify-start pl-2 py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                    title="Collapse sidebar"
-                  >
-                    <PanelRightClose className="h-4 w-4 text-muted-foreground" />
-                  </button>
+                  <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+                    <button
+                      onClick={() => setLayoutLocked(l => !l)}
+                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+                        layoutLocked
+                          ? "text-warning bg-warning/10 border border-warning/30"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      }`}
+                      title={layoutLocked ? "Unlock widget reordering" : "Lock widget positions"}
+                    >
+                      {layoutLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                      {layoutLocked ? "Locked" : "Unlocked"}
+                    </button>
+                    <button
+                      onClick={() => setRightCollapsed(true)}
+                      className="p-0.5 rounded hover:bg-secondary/50 transition-colors"
+                      title="Collapse sidebar"
+                    >
+                      <PanelRightClose className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
                   <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
                     <div className="direction-ltr">
                       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>

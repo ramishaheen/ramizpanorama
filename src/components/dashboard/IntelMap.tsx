@@ -26,6 +26,7 @@ import { ResponseMapModal } from "./ResponseMapModal";
 import { CrisisIntelModal } from "./CrisisIntelModal";
 import { LiveCamerasModal } from "./LiveCamerasModal";
 import { MapLegend } from "./MapLegend";
+import { MapStyleToggle, type MapStyle } from "./MapStyleToggle";
 import { SatelliteGlobe } from "./SatelliteGlobe";
 import { UrbanScene3D } from "./UrbanScene3D";
 
