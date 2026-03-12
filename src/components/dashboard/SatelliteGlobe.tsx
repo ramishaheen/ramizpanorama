@@ -715,6 +715,22 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     setShowSearch(false);
     setSearchQuery("");
     setSearchResults([]);
+    setPredictionData(null);
+    setPredictionTrack(null);
+    // Compute orbit path for selected satellite
+    if (
+      sat.inclination != null && sat.raan != null && sat.meanAnomaly != null &&
+      sat.meanMotion != null && sat.eccentricity != null &&
+      sat.epochYear != null && sat.epochDay != null
+    ) {
+      const path = computeOrbitPath(
+        sat.inclination, sat.raan, sat.meanAnomaly,
+        sat.meanMotion, sat.eccentricity, sat.epochYear,
+        sat.epochDay, sat.alt, 180
+      );
+      setOrbitPath(path);
+      setOrbitColor(CATEGORY_COLORS[sat.category] || "#d4a843");
+    }
     if (globeRef.current) {
       globeRef.current.pointOfView(
         { lat: sat.lat, lng: sat.lng, altitude: 1.8 },
