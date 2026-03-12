@@ -1961,7 +1961,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
 
       {/* 3D overlays */}
-      {showSatGlobe && <SatelliteGlobe onClose={() => setShowSatGlobe(false)} />}
+      {/* Flight Emulation Panel — left side */}
+      {layers.flights && interpolatedFlights.length > 0 && (
+        <FlightEmulationPanel
+          flights={interpolatedFlights}
+          trackedFlightId={trackedFlightId}
+          onTrackFlight={setTrackedFlightId}
+          flightSource={flightSource}
+        />
+      )}
+
+      {showSatGlobe && <SatelliteGlobe onClose={handleCloseSatGlobe} />}
       {showUrbanScene && (
         <UrbanScene3D
           key={urbanScene3DTarget ? `${urbanScene3DTarget.lat}-${urbanScene3DTarget.lng}` : 'default'}
