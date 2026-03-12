@@ -47,7 +47,7 @@ import {
 
 const STORAGE_KEY = "waros-layout";
 const DEFAULT_LEFT_ORDER = ["rockets", "risk", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
-const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates"];
+const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "layers", "timeline", "cyber"];
 
 interface LayoutState {
   leftOrder: string[];
@@ -233,7 +233,6 @@ const Index = () => {
   };
 
   const rightWidgets: Record<string, ReactNode> = {
-    cyber: <CyberSecurityAlerts />,
     notifications: (
       <div className="min-h-0 flex flex-col">
         <NotificationPanel alerts={geoAlerts} />
@@ -248,6 +247,21 @@ const Index = () => {
           onRefresh={warUpdates.refresh}
           onFlyTo={(lat, lng, headline) => setFlyToTarget({ lat, lng, label: headline })}
         />
+      </div>
+    ),
+    layers: (
+      <div className="p-2">
+        <LayerControls layers={layers} onToggle={toggleLayer} />
+      </div>
+    ),
+    timeline: (
+      <div className="p-2">
+        <TimelineSlider events={timeline} />
+      </div>
+    ),
+    cyber: (
+      <div className="p-2">
+        <CyberSecurityAlerts />
       </div>
     ),
   };
@@ -518,11 +532,6 @@ const Index = () => {
                           ))}
                         </SortableContext>
                       </DndContext>
-                      <div className="p-2 space-y-2">
-                        <LayerControls layers={layers} onToggle={toggleLayer} />
-                        <TimelineSlider events={timeline} />
-                        <CyberSecurityAlerts />
-                      </div>
                     </div>
                   </div>
                 </div>
