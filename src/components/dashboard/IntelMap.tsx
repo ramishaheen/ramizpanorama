@@ -1956,6 +1956,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           vessels={vessels}
           onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
         />
+        <TotalLaunchesWidget rockets={rockets} />
         {/* Intel Tools */}
         <div className="relative" style={{ width: 200 }}>
           <button
