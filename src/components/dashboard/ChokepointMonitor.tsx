@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Ship, AlertTriangle, Activity, Anchor } from "lucide-react";
+import { Ship, AlertTriangle, Activity, Anchor, ChevronDown, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { MaritimeVessel } from "@/data/mockData";
 
 interface Chokepoint {
@@ -96,7 +97,6 @@ export const ChokepointMonitor = ({ vessels, onFlyTo }: ChokepointMonitorProps) 
   const [expanded, setExpanded] = useState(true);
   const [tick, setTick] = useState(0);
 
-  // Pulse every 10s to simulate live updates
   useEffect(() => {
     const iv = setInterval(() => setTick((t) => t + 1), 10000);
     return () => clearInterval(iv);
@@ -115,84 +115,109 @@ export const ChokepointMonitor = ({ vessels, onFlyTo }: ChokepointMonitorProps) 
   });
 
   return (
-    <div className="absolute bottom-28 right-3 z-[1000] w-[220px]">
+    <div className="absolute bottom-28 right-3 z-[1000]" style={{ width: 240 }}>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 bg-card/95 backdrop-blur border border-border rounded-t-md px-2.5 py-1.5 shadow-lg hover:bg-secondary/60 transition-all cursor-pointer"
+        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
       >
-        <Anchor className="h-3.5 w-3.5 text-primary" />
-        <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider flex-1 text-left">
-          CHOKEPOINT MONITOR
+        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 border border-primary/20">
+          <Anchor className="h-3 w-3 text-primary" />
+        </div>
+        <span className="text-[10px] font-mono text-foreground/80 uppercase tracking-wider flex-1 text-left font-semibold">
+          Chokepoints
         </span>
-        <Activity className="h-3 w-3 text-primary animate-pulse" />
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-2.5 w-2.5 text-primary animate-pulse" />
+          {expanded ? (
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          )}
+        </div>
       </button>
 
-      {expanded && (
-        <div className="bg-card/95 backdrop-blur border border-t-0 border-border rounded-b-md shadow-lg">
-          {chokepointData.map((cp) => {
-            const color = threatColors[cp.threatLevel];
-            return (
-              <button
-                key={cp.id}
-                onClick={() => onFlyTo?.(cp.lat, cp.lng)}
-                className="w-full px-2.5 py-2 border-b border-border/50 last:border-b-0 hover:bg-secondary/40 transition-all cursor-pointer text-left"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-mono font-bold text-foreground">
-                    {cp.shortName}
-                  </span>
-                  <span
-                    className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded"
-                    style={{
-                      color,
-                      background: `${color}15`,
-                      border: `1px solid ${color}40`,
-                      animation: cp.threatLevel === "critical" ? "pulse 1s ease-in-out infinite" : undefined,
-                    }}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden mt-1 rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)]"
+          >
+            <div className="divide-y divide-border/30">
+              {chokepointData.map((cp) => {
+                const color = threatColors[cp.threatLevel];
+                return (
+                  <button
+                    key={cp.id}
+                    onClick={() => onFlyTo?.(cp.lat, cp.lng)}
+                    className="w-full px-3 py-2.5 hover:bg-secondary/30 transition-all cursor-pointer text-left group"
                   >
-                    {threatLabels[cp.threatLevel]}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="flex items-center gap-1">
-                    <Ship className="h-2.5 w-2.5 text-muted-foreground" />
-                    <span className="text-[9px] font-mono text-foreground">{cp.total}</span>
-                  </div>
-                  {cp.militaryCount > 0 && (
-                    <div className="flex items-center gap-1">
-                      <AlertTriangle className="h-2.5 w-2.5" style={{ color: "hsl(var(--critical))" }} />
-                      <span className="text-[9px] font-mono" style={{ color: "hsl(var(--critical))" }}>
-                        {cp.militaryCount} MIL
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold text-foreground tracking-wide">
+                          ⚓ {cp.shortName}
+                        </span>
+                      </div>
+                      <span
+                        className="text-[7px] font-mono font-bold px-2 py-0.5 rounded-full tracking-wider"
+                        style={{
+                          color,
+                          background: `${color}12`,
+                          border: `1px solid ${color}30`,
+                          animation: cp.threatLevel === "critical" ? "pulse 1s ease-in-out infinite" : undefined,
+                        }}
+                      >
+                        {threatLabels[cp.threatLevel]}
                       </span>
                     </div>
-                  )}
-                  {cp.tankerCount > 0 && (
-                    <span className="text-[9px] font-mono" style={{ color: "hsl(var(--warning))" }}>
-                      {cp.tankerCount}T
-                    </span>
-                  )}
-                  {cp.cargoCount > 0 && (
-                    <span className="text-[9px] font-mono text-primary">
-                      {cp.cargoCount}C
-                    </span>
-                  )}
-                </div>
 
-                <div className="text-[7px] font-mono text-muted-foreground leading-tight">
-                  {cp.criticalNote}
-                </div>
-              </button>
-            );
-          })}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 bg-secondary/40 rounded px-1.5 py-0.5">
+                        <Ship className="h-2.5 w-2.5 text-muted-foreground" />
+                        <span className="text-[10px] font-mono text-foreground font-semibold">{cp.total}</span>
+                      </div>
+                      {cp.militaryCount > 0 && (
+                        <div className="flex items-center gap-1 bg-destructive/10 rounded px-1.5 py-0.5">
+                          <AlertTriangle className="h-2.5 w-2.5 text-destructive" />
+                          <span className="text-[9px] font-mono text-destructive font-semibold">
+                            {cp.militaryCount} MIL
+                          </span>
+                        </div>
+                      )}
+                      {cp.tankerCount > 0 && (
+                        <span className="text-[9px] font-mono text-warning/80 bg-warning/10 rounded px-1.5 py-0.5">
+                          {cp.tankerCount}T
+                        </span>
+                      )}
+                      {cp.cargoCount > 0 && (
+                        <span className="text-[9px] font-mono text-primary/80 bg-primary/10 rounded px-1.5 py-0.5">
+                          {cp.cargoCount}C
+                        </span>
+                      )}
+                    </div>
 
-          <div className="px-2.5 py-1 text-center">
-            <span className="text-[7px] font-mono text-muted-foreground">
-              LIVE • {new Date().toLocaleTimeString()}
-            </span>
-          </div>
-        </div>
-      )}
+                    <div className="text-[7px] font-mono text-muted-foreground/60 mt-1.5 leading-tight group-hover:text-muted-foreground/80 transition-colors">
+                      {cp.criticalNote}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="px-3 py-1.5 border-t border-border/30 flex items-center justify-center gap-2">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary" />
+              </span>
+              <span className="text-[7px] font-mono text-muted-foreground/50 tracking-wider">
+                LIVE • {new Date().toLocaleTimeString()}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
