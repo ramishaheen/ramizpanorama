@@ -803,14 +803,18 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
         },
       });
       if (error) throw error;
-      setPredictionData(data);
-      // Show predicted track on globe
-      if (data?.positions) {
-        setPredictionTrack(data.positions.map((p: any) => ({ lat: p.lat, lng: p.lng })));
+      // Always show positions/passes even if AI analysis unavailable
+      const result = data || {};
+      if (result.ai_status === "unavailable" || result.ai_status === "rate_limited") {
+        result.ai_analysis = result.ai_analysis || `⚠️ AI narrative analysis is temporarily unavailable (${result.ai_error || "rate limited"}). Orbital mechanics data (passes & track) is shown below.`;
+      }
+      setPredictionData(result);
+      if (result?.positions) {
+        setPredictionTrack(result.positions.map((p: any) => ({ lat: p.lat, lng: p.lng })));
       }
     } catch (err) {
       console.error("Prediction failed:", err);
-      setPredictionData({ ai_analysis: "⚠️ Prediction failed. Try again." });
+      setPredictionData({ ai_analysis: "⚠️ Prediction request failed. Try again." });
     } finally {
       setPredicting(false);
     }
