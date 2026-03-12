@@ -1901,6 +1901,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         <MapLegend />
         <MapHistorySlider onTimeFilter={setHistoryFilter} />
+        <MapStyleToggle style={currentMapStyle} onChange={handleMapStyleChange} />
         <MapBookmarks
           currentLat={mapRef.current?.getCenter().lat || 28}
           currentLng={mapRef.current?.getCenter().lng || 48}
