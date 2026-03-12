@@ -474,6 +474,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [activeCity, setActiveCity] = useState<string | null>(null);
   const [countrySats, setCountrySats] = useState<{ category: string; count: number; color: string }[]>([]);
   const [satTypesExpanded, setSatTypesExpanded] = useState(false);
+  const [flightsPanelExpanded, setFlightsPanelExpanded] = useState(false);
   const [countrySatNames, setCountrySatNames] = useState<Set<string>>(new Set());
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
