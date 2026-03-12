@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import militarySatSprite from "@/assets/military-sat-sprite.png";
+import { FlightEmulationPanel } from "./FlightEmulationPanel";
 
 interface SatelliteData {
   name: string;
