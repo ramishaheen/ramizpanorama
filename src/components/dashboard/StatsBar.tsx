@@ -261,11 +261,11 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
       {/* War cost cards - LIVE TICKING */}
       {warCosts.data && !warCosts.error && (
         <div className="border-t border-border/50 bg-card/30">
-          <div className="flex items-center justify-between px-3 py-0">
-            <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">War Cost Estimate</span>
+          <div className="flex items-center justify-between px-2 py-0">
+            <span className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider leading-none">War Cost Estimate</span>
             <ScenarioToggle active={scenario} onChange={setScenario} />
           </div>
-          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 px-2 sm:px-3 py-0.5 transition-shadow duration-500`}>
+          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-0.5 px-1.5 sm:px-2 py-px transition-shadow duration-500`}>
             <StatCard
               icon={DollarSign}
               label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}

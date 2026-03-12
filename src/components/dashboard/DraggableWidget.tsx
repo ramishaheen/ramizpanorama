@@ -21,7 +21,8 @@ export const DraggableWidget = ({ id, children }: DraggableWidgetProps) => {
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.45 : 1,
+    zIndex: isDragging ? 50 : "auto",
     position: "relative" as const,
   };
 
@@ -30,12 +31,12 @@ export const DraggableWidget = ({ id, children }: DraggableWidgetProps) => {
       <div
         {...attributes}
         {...listeners}
-        className="absolute -left-1 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-0.5 px-1 py-2 rounded-md cursor-grab active:cursor-grabbing bg-primary/15 border border-primary/30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-primary/25 hover:scale-110 shadow-sm"
+        className="absolute -left-0.5 top-1 z-20 flex flex-col items-center gap-px px-0.5 py-1 rounded cursor-grab active:cursor-grabbing bg-primary/10 border border-primary/20 opacity-40 group-hover:opacity-100 transition-all duration-150 hover:bg-primary/25 shadow-sm"
         title="Drag to reorder"
       >
-        <GripVertical className="h-4 w-4 text-primary" />
+        <GripVertical className="h-3 w-3 text-primary/70" />
       </div>
-      <div className="group-hover:ring-1 group-hover:ring-primary/20 rounded-lg transition-all duration-200">
+      <div className={`rounded-lg transition-all duration-150 ${isDragging ? "ring-1 ring-primary/40 shadow-lg" : "group-hover:ring-1 group-hover:ring-primary/15"}`}>
         {children}
       </div>
     </div>

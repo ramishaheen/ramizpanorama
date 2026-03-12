@@ -71,11 +71,11 @@ export const LiveCostCounter = ({
 
   return (
     <motion.div
-      className={`text-sm font-mono font-bold ${color} tabular-nums`}
+      className={`text-[10px] font-mono font-bold ${color} tabular-nums leading-none`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {prefix}{formatted}{suffix && <span className="text-[9px] opacity-70 ml-0.5">{suffix}</span>}
+      {prefix}{formatted}{suffix && <span className="text-[7px] opacity-70 ml-0.5">{suffix}</span>}
     </motion.div>
   );
 };
