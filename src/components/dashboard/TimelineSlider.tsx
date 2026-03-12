@@ -27,6 +27,31 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
   const [currentIndex, setCurrentIndex] = useState(events.length - 1);
   const [isPlaying, setIsPlaying] = useState(false);
   const { t, isArabic } = useLanguage();
+  const playRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Auto-play logic
+  useEffect(() => {
+    if (playRef.current) {
+      clearInterval(playRef.current);
+      playRef.current = null;
+    }
+    if (isPlaying && events.length > 0) {
+      playRef.current = setInterval(() => {
+        setCurrentIndex((prev) => {
+          const next = prev + 1;
+          if (next >= events.length) {
+            setIsPlaying(false);
+            return prev;
+          }
+          onTimeChange?.(new Date(events[next].timestamp));
+          return next;
+        });
+      }, 1500);
+    }
+    return () => {
+      if (playRef.current) clearInterval(playRef.current);
+    };
+  }, [isPlaying, events, onTimeChange]);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const idx = parseInt(e.target.value);

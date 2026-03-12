@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import militarySatSprite from "@/assets/military-sat-sprite.png";
 import { FlightEmulationPanel } from "./FlightEmulationPanel";
+import { useAISVessels, type AISVessel } from "@/hooks/useAISVessels";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SatelliteData {
   name: string;
