@@ -18,7 +18,7 @@ import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
 import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture, ChevronDown, ChevronUp, Smartphone } from "lucide-react";
 import { MapBookmarks } from "./MapBookmarks";
-import { MapHistorySlider } from "./MapHistorySlider";
+import { MapHistorySlider, type HistoryEvent } from "./MapHistorySlider";
 import { useMapSync } from "@/hooks/useMapSync";
 import { SnapMeModal } from "./SnapMeModal";
 import { IranAirspacePanel } from "./IranAirspacePanel";
@@ -339,7 +339,25 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const airQuality = useAirQuality();
   const aisVessels = useAISVessels();
 
-  // FlyTo effect — when a news update is clicked, zoom to its location
+  // Build unified history events for the timeline
+  const historyEvents = useMemo<HistoryEvent[]>(() => {
+    const evts: HistoryEvent[] = [];
+    earthquakes.data.forEach(eq => {
+      evts.push({ id: `eq-${eq.id}`, label: `M${eq.magnitude.toFixed(1)} ${eq.place || "Earthquake"}`, type: "earthquake", severity: eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 4 ? "medium" : "low", lat: eq.lat, lng: eq.lng, time: eq.time });
+    });
+    wildfires.data.forEach(f => {
+      const t = new Date(`${f.date}T${f.time || "00:00"}Z`).getTime();
+      evts.push({ id: `fire-${f.id}`, label: `Fire ${f.region || "Active"} FRP:${f.frp.toFixed(0)}`, type: "wildfire", severity: f.frp > 100 ? "critical" : f.frp > 50 ? "high" : f.frp > 20 ? "medium" : "low", lat: f.lat, lng: f.lng, time: isNaN(t) ? Date.now() : t });
+    });
+    conflictEvents.data.forEach(c => {
+      const t = new Date(c.event_date).getTime();
+      evts.push({ id: `con-${c.id}`, label: `${c.event_type}: ${c.location}`, type: "conflict", severity: c.severity, lat: c.lat, lng: c.lng, time: isNaN(t) ? Date.now() : t });
+    });
+    newsMarkers.forEach((n, i) => {
+      evts.push({ id: `news-${n.id || i}`, label: n.headline || "News", type: "news", severity: n.severity || "medium", lat: n.lat || 0, lng: n.lng || 0, time: n.timestamp ? new Date(n.timestamp).getTime() : Date.now() });
+    });
+    return evts;
+  }, [earthquakes.data, wildfires.data, conflictEvents.data, newsMarkers]);
   const flyToMarkerRef = useRef<L.Marker | null>(null);
   useEffect(() => {
     if (!flyToTarget || !mapRef.current) return;
@@ -977,7 +995,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.earthquakes || earthquakes.data.length === 0) return;
 
-    earthquakes.data.forEach((eq) => {
+    const filtered = historyFilter
+      ? earthquakes.data.filter(eq => eq.time >= historyFilter)
+      : earthquakes.data;
+
+    filtered.forEach((eq) => {
       const color = getQuakeColor(eq.magnitude);
       const radius = getQuakeRadius(eq.magnitude);
 
@@ -1015,7 +1037,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.addTo(group);
     });
-  }, [earthquakes.data, layers.earthquakes]);
+  }, [earthquakes.data, layers.earthquakes, historyFilter]);
 
   // Render wildfire layer
   useEffect(() => {
@@ -1025,7 +1047,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.wildfires || wildfires.data.length === 0) return;
 
-    wildfires.data.forEach((fire) => {
+    const filtered = historyFilter
+      ? wildfires.data.filter(f => {
+          const t = new Date(`${f.date}T${f.time || "00:00"}Z`).getTime();
+          return !isNaN(t) && t >= historyFilter;
+        })
+      : wildfires.data;
+
+    filtered.forEach((fire) => {
       // Heat glow for intense fires
       if (fire.frp > 50) {
         L.circleMarker([fire.lat, fire.lng], {
@@ -1057,7 +1086,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.addTo(group);
     });
-  }, [wildfires.data, layers.wildfires]);
+  }, [wildfires.data, layers.wildfires, historyFilter]);
 
   // Render conflict events layer
   useEffect(() => {
@@ -1067,7 +1096,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
     if (!layers.conflicts || conflictEvents.data.length === 0) return;
 
-    conflictEvents.data.forEach((event) => {
+    const filtered = historyFilter
+      ? conflictEvents.data.filter(c => {
+          const t = new Date(c.event_date).getTime();
+          return !isNaN(t) && t >= historyFilter;
+        })
+      : conflictEvents.data;
+
+    filtered.forEach((event) => {
       const color = conflictTypeColors[event.event_type] || "#ef4444";
 
       const marker = L.marker([event.lat, event.lng], {
@@ -1090,7 +1126,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       marker.addTo(group);
     });
-  }, [conflictEvents.data, layers.conflicts]);
+  }, [conflictEvents.data, layers.conflicts, historyFilter]);
 
   // ===== NUCLEAR / RADIATION MONITORING LAYER =====
   useEffect(() => {
@@ -1900,7 +1936,11 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2 flex-wrap">
         <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         <MapLegend />
-        <MapHistorySlider onTimeFilter={setHistoryFilter} />
+        <MapHistorySlider
+          onTimeFilter={setHistoryFilter}
+          events={historyEvents}
+          onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
+        />
         <MapStyleToggle style={currentMapStyle} onChange={handleMapStyleChange} />
         <MapBookmarks
           currentLat={mapRef.current?.getCenter().lat || 28}
