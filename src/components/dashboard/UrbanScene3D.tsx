@@ -2610,7 +2610,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                       <span className="text-[7px] font-mono text-muted-foreground">{aiDetections.length} objects</span>
                     </div>
                     <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/70 backdrop-blur border border-border/30">
-                      <span className="text-[7px] font-mono text-muted-foreground">MODEL: YOLOv8-OSINT</span>
+                      <span className="text-[7px] font-mono text-muted-foreground">MODEL: GEMINI VISION</span>
                     </div>
                   </div>
                 )}
