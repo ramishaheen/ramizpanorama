@@ -1642,7 +1642,7 @@ export const SatelliteGlobe = ({ onClose }: SatelliteGlobeProps) => {
     now.getUTCSeconds()
   ).padStart(2, "0")}Z`;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#050a12] flex flex-col overflow-hidden">
       {/* Holographic scanline overlay */}
       <div
