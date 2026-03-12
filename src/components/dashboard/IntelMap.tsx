@@ -1989,6 +1989,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
                   { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL" },
                   { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", active: showIranAirspace },
                   { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME" },
+                  { onClick: () => setShowScouting(true), Icon: Crosshair, label: "SCOUTING" },
                 ].map(({ onClick, Icon, label, active, disabled }, i) => (
                   <button
                     key={label + i}
