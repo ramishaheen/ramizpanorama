@@ -353,8 +353,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const t = new Date(c.event_date).getTime();
       evts.push({ id: `con-${c.id}`, label: `${c.event_type}: ${c.location}`, type: "conflict", severity: c.severity, lat: c.lat, lng: c.lng, time: isNaN(t) ? Date.now() : t });
     });
-    newsMarkers.forEach(n => {
-      evts.push({ id: `news-${n.id || Math.random()}`, label: n.title || "News", type: "news", severity: (n.severity as any) || "medium", lat: n.lat, lng: n.lng, time: n.timestamp ? new Date(n.timestamp).getTime() : Date.now() });
+    newsMarkers.forEach((n, i) => {
+      evts.push({ id: `news-${n.id || i}`, label: n.headline || "News", type: "news", severity: n.severity || "medium", lat: n.lat || 0, lng: n.lng || 0, time: n.timestamp ? new Date(n.timestamp).getTime() : Date.now() });
     });
     return evts;
   }, [earthquakes.data, wildfires.data, conflictEvents.data, newsMarkers]);
