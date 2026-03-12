@@ -1839,64 +1839,66 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         onConfirmItem={handleConfirmItem}
         onCancelItem={handleCancelItem}
       />
-      <TotalLaunchesWidget rockets={rockets} />
-      <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
-      <ChokepointMonitor
-        vessels={vessels}
-        onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
-      />
-
-      {/* 3D Mode buttons - minimizable tab above chokepoints */}
-      <div className="absolute bottom-14 right-3 z-[1000]" style={{ width: 220 }}>
-        <button
-          onClick={() => setToolsExpanded(!toolsExpanded)}
-          className="w-full flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
-        >
-          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 border border-primary/20">
-            <Satellite className="h-3 w-3 text-primary" />
-          </div>
-          <span className="text-[10px] font-mono text-foreground/80 uppercase tracking-wider flex-1 text-left font-semibold">
-            Intel Tools
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[8px] font-mono text-muted-foreground">8</span>
+      {/* Unified bottom bar */}
+      <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2">
+        <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
+        <MapLegend />
+        <div className="flex-1 flex justify-center">
+          <TotalLaunchesWidget rockets={rockets} />
+        </div>
+        <ChokepointMonitor
+          vessels={vessels}
+          onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
+        />
+        {/* Intel Tools */}
+        <div className="relative" style={{ width: 200 }}>
+          <button
+            onClick={() => setToolsExpanded(!toolsExpanded)}
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-center w-5 h-5 rounded-md bg-primary/10 border border-primary/20">
+              <Satellite className="h-3 w-3 text-primary" />
+            </div>
+            <span className="text-[9px] font-mono text-foreground/80 uppercase tracking-wider flex-1 text-left font-semibold">
+              Intel Tools
+            </span>
             {toolsExpanded ? (
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             ) : (
               <ChevronUp className="h-3 w-3 text-muted-foreground" />
             )}
-          </div>
-        </button>
-        {toolsExpanded && (
-          <div className="mb-1 rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] overflow-hidden">
-            <div className="divide-y divide-border/30">
-              {[
-                { onClick: () => setShowSatGlobe(true), Icon: Satellite, label: "ORBITAL INTEL" },
-                { onClick: () => setShowUrbanScene(true), Icon: Building2, label: "URBAN 3D" },
-                { onClick: () => setShowLiveCameras(true), Icon: Camera, label: "CCTV" },
-                { onClick: toggleArabCCTV, Icon: Camera, label: loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV", active: showArabCCTV, disabled: loadingCCTV },
-                { onClick: () => setShowResponseMap(true), Icon: ShieldAlert, label: "RESPONSE MAP" },
-                { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL" },
-                { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", active: showIranAirspace },
-                { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME" },
-              ].map(({ onClick, Icon, label, active, disabled }, i) => (
-                <button
-                  key={label + i}
-                  onClick={onClick}
-                  disabled={disabled}
-                  className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary/30 transition-all cursor-pointer text-left ${
-                    active ? "bg-primary/10" : ""
-                  }`}
-                >
-                  <Icon className={`h-3 w-3 ${active ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
-                  <span className={`text-[9px] font-mono uppercase tracking-wider font-semibold ${
-                    active ? "text-primary" : "text-foreground/70"
-                  }`}>{label}</span>
-                </button>
-              ))}
+          </button>
+          {toolsExpanded && (
+            <div className="absolute bottom-full mb-1 w-full rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] overflow-hidden">
+              <div className="divide-y divide-border/30">
+                {[
+                  { onClick: () => setShowSatGlobe(true), Icon: Satellite, label: "ORBITAL INTEL" },
+                  { onClick: () => setShowUrbanScene(true), Icon: Building2, label: "URBAN 3D" },
+                  { onClick: () => setShowLiveCameras(true), Icon: Camera, label: "CCTV" },
+                  { onClick: toggleArabCCTV, Icon: Camera, label: loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV", active: showArabCCTV, disabled: loadingCCTV },
+                  { onClick: () => setShowResponseMap(true), Icon: ShieldAlert, label: "RESPONSE MAP" },
+                  { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL" },
+                  { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", active: showIranAirspace },
+                  { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME" },
+                ].map(({ onClick, Icon, label, active, disabled }, i) => (
+                  <button
+                    key={label + i}
+                    onClick={onClick}
+                    disabled={disabled}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary/30 transition-all cursor-pointer text-left ${
+                      active ? "bg-primary/10" : ""
+                    }`}
+                  >
+                    <Icon className={`h-3 w-3 ${active ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
+                    <span className={`text-[9px] font-mono uppercase tracking-wider font-semibold ${
+                      active ? "text-primary" : "text-foreground/70"
+                    }`}>{label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
 
