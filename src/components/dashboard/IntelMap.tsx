@@ -1004,7 +1004,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         <div style="${popupStyle}">
           <div style="color:${intColor};font-weight:700;margin-bottom:4px;">🔥 Active Fire</div>
           <div>Intensity: <span style="color:${intColor};font-weight:600;">${intensity}</span></div>
-          <div>FRP: ${fire.frp.toFixed(1)} MW | Brightness: ${fire.brightness.toFixed(0)}K</div>
+          <div>FRP: ${(fire.frp ?? 0).toFixed(1)} MW | Brightness: ${(fire.brightness ?? 0).toFixed(0)}K</div>
           <div>Confidence: ${fire.confidence}</div>
           ${fire.region ? `<div>Region: ${fire.region}</div>` : ""}
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${fire.date} ${fire.time}</div>
