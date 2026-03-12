@@ -282,6 +282,35 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showArabCCTV, setShowArabCCTV] = useState(false);
   const [arabCameras, setArabCameras] = useState<any[]>([]);
   const [loadingCCTV, setLoadingCCTV] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState<number | null>(null);
+  const { selectEvent } = useMapSync();
+
+  // Cluster group styling options
+  const clusterOptions = useMemo(() => ({
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    iconCreateFunction: (cluster: any) => {
+      const count = cluster.getChildCount();
+      const size = count < 10 ? "small" : count < 50 ? "medium" : "large";
+      const sizeMap = { small: 30, medium: 40, large: 50 };
+      const colorMap = { small: "hsl(190, 100%, 50%)", medium: "hsl(40, 100%, 50%)", large: "hsl(0, 80%, 55%)" };
+      return L.divIcon({
+        html: `<div style="
+          width:${sizeMap[size]}px;height:${sizeMap[size]}px;
+          display:flex;align-items:center;justify-content:center;
+          border-radius:50%;
+          background:${colorMap[size]};
+          color:#000;font-size:11px;font-weight:700;font-family:monospace;
+          box-shadow:0 0 12px ${colorMap[size]}, 0 2px 8px rgba(0,0,0,0.5);
+          border:2px solid rgba(255,255,255,0.3);
+        ">${count}</div>`,
+        className: "marker-cluster-custom",
+        iconSize: L.point(sizeMap[size], sizeMap[size]),
+      });
+    },
+  }), []);
 
   // Flight tracking state
   interface FlightAircraft {
