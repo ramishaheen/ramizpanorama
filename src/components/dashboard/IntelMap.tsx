@@ -1951,13 +1951,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           currentLayers={layers as unknown as Record<string, boolean>}
           onGoTo={(lat, lng, zoom) => mapRef.current?.flyTo([lat, lng], zoom, { duration: 1.5 })}
         />
-        <div className="flex-1 flex justify-center">
-          <TotalLaunchesWidget rockets={rockets} />
-        </div>
+        <div className="flex-1" />
         <ChokepointMonitor
           vessels={vessels}
           onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
         />
+        <TotalLaunchesWidget rockets={rockets} />
         {/* Intel Tools */}
         <div className="relative" style={{ width: 200 }}>
           <button
