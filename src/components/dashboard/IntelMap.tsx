@@ -1132,6 +1132,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     };
 
     airQuality.data.forEach((s) => {
+      if (s.lat == null || s.lng == null) return;
       const color = aqiColors[s.aqi_level] || "#888";
       const aqiVal = s.aqi ?? 0;
       const icon = L.divIcon({
