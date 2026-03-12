@@ -1829,6 +1829,16 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#050a12] flex flex-col overflow-hidden">
+      {/* Flight Emulation Panel */}
+      {flights.length > 0 && onTrackFlight && (
+        <FlightEmulationPanel
+          flights={flights}
+          trackedFlightId={trackedFlightId ?? null}
+          onTrackFlight={onTrackFlight}
+          flightSource={flightSource}
+        />
+      )}
+
       {/* Holographic scanline overlay */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
