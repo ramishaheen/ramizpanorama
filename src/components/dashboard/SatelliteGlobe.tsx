@@ -1477,7 +1477,9 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
-            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: 1.5 }, 1000);
+            // Zoom closer: LEO ~0.6, MEO ~0.9, GEO ~1.2
+            const zoomAlt = s.alt < 2000 ? 0.6 : s.alt < 25000 ? 0.9 : 1.2;
+            globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: zoomAlt }, 1000);
           })
           .onObjectHover((d: any) => setHoveredSat(d ? (d as SatelliteData) : null))
           .labelsData([])
