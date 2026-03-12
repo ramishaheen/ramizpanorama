@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_detections: {
+        Row: {
+          created_at: string
+          detections: Json
+          heading: number | null
+          id: string
+          lat: number
+          lng: number
+          object_count: number | null
+          scene_summary: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detections?: Json
+          heading?: number | null
+          id?: string
+          lat: number
+          lng: number
+          object_count?: number | null
+          scene_summary?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detections?: Json
+          heading?: number | null
+          id?: string
+          lat?: number
+          lng?: number
+          object_count?: number | null
+          scene_summary?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       airspace_alerts: {
         Row: {
           active: boolean
