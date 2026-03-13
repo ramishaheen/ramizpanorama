@@ -63,21 +63,28 @@ interface GothamBtnProps {
   onClick: () => void;
   disabled?: boolean;
   badge?: string | number;
+  tooltip?: string;
 }
 
-const GothamBtn = ({ label, icon, active, onClick, disabled, badge }: GothamBtnProps) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`gotham-cmd-btn ${active ? "gotham-cmd-btn-active" : ""}`}
-    title={label}
-  >
-    {icon}
-    <span>{label}</span>
-    {badge != null && (
-      <span className="gotham-cmd-badge">{badge}</span>
-    )}
-  </button>
+const GothamBtn = ({ label, icon, active, onClick, disabled, badge, tooltip }: GothamBtnProps) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`gotham-cmd-btn ${active ? "gotham-cmd-btn-active" : ""}`}
+      >
+        {icon}
+        <span>{label}</span>
+        {badge != null && (
+          <span className="gotham-cmd-badge">{badge}</span>
+        )}
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side="top" className="text-[10px] font-mono max-w-[200px]">
+      {tooltip || label}
+    </TooltipContent>
+  </Tooltip>
 );
 
 interface MapCommandBarProps {
