@@ -240,7 +240,7 @@ export const MapCommandBar = ({
 
       {/* Components visibility toggle panel */}
       {componentsExpanded && (
-        <div className="gotham-expanded-panel absolute bottom-full right-[60px] mb-0 w-[220px] z-[1002]">
+        <div className="gotham-expanded-panel absolute bottom-full right-[60px] mb-1.5 w-[220px] z-[1002]">
           <div className="flex items-center justify-between px-3 py-2 border-b border-primary/20">
             <span className="text-[9px] font-mono font-bold text-primary uppercase tracking-wider">COMPONENTS</span>
             <button
