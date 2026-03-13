@@ -5,6 +5,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { IntelMap } from "@/components/dashboard/IntelMap";
+import { LiveDataFeedIndicator } from "@/components/dashboard/LiveDataFeedIndicator";
 import { RiskScoreGauge } from "@/components/dashboard/RiskScoreGauge";
 import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
 import { TimelineSlider } from "@/components/dashboard/TimelineSlider";
@@ -109,7 +110,7 @@ type MobileTab = typeof MOBILE_TABS[number]["id"];
 
 // Component entry
 const Index = () => {
-  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts } = useLiveDashboard();
+  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt } = useLiveDashboard();
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
   const telegramIntel = useTelegramIntel();
@@ -329,6 +330,11 @@ const Index = () => {
                   telegramMarkers={telegramIntel.markers}
                   fusionEvents={geoFusion.data?.events}
                 />
+                <LiveDataFeedIndicator
+                  lastPollAt={lastPollAt}
+                  activeSources={Object.values(layers).filter(Boolean).length}
+                  dataFresh={dataFresh}
+                />
               </div>
             </div>
           )}
@@ -497,6 +503,11 @@ const Index = () => {
                   fusionEvents={geoFusion.data?.events}
                   componentVisibility={componentVisibility}
                   onToggleComponent={toggleComponent}
+                />
+                <LiveDataFeedIndicator
+                  lastPollAt={lastPollAt}
+                  activeSources={Object.values(layers).filter(Boolean).length}
+                  dataFresh={dataFresh}
                 />
               </div>
 
