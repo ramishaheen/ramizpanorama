@@ -826,6 +826,17 @@
   background: hsl(var(--primary) / 0.1);
 }
 
+/* ===== CYBER IMMUNITY — Gotham Scan Line ===== */
+@keyframes cyber-scan-sweep {
+  0% { transform: translateY(-40px); }
+  100% { transform: translateY(450px); }
+}
+
+.cyber-scan-line {
+  animation: cyber-scan-sweep 4s linear infinite;
+  pointer-events: none;
+}
+
 /* Wind direction arrow markers */
 .wind-arrow-marker {
   background: transparent !important;
