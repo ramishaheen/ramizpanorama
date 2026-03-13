@@ -5,6 +5,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { IntelMap } from "@/components/dashboard/IntelMap";
+import { LiveDataFeedIndicator } from "@/components/dashboard/LiveDataFeedIndicator";
 import { RiskScoreGauge } from "@/components/dashboard/RiskScoreGauge";
 import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
 import { TimelineSlider } from "@/components/dashboard/TimelineSlider";
