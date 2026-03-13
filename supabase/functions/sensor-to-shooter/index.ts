@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -76,7 +75,7 @@ interface MatchResult {
   cost_estimate_usd: number;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -85,6 +84,73 @@ serve(async (req) => {
 
     const { action } = body;
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // ============================================
+    // ACTION: recommend — quick single-shooter match for kill chain initiation
+    // ============================================
+    if (action === "recommend") {
+      const { target_id } = body;
+      if (!target_id) throw new Error("target_id required");
+
+      const { data: target, error: tErr } = await supabase
+        .from("target_tracks").select("*").eq("id", target_id).single();
+      if (tErr || !target) throw new Error("Target not found");
+
+      const { data: shooters } = await supabase
+        .from("shooter_assets")
+        .select("*")
+        .in("current_tasking", ["idle", "combat"])
+        .eq("command_link_status", "active");
+
+      if (!shooters?.length) {
+        return new Response(JSON.stringify({ recommendation: null, reason: "No available shooters" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const targetWeapons = WEAPON_TARGET_MATRIX[target.classification] || Object.values(WEAPON_TARGET_MATRIX).flat();
+      let bestMatch: { shooter: any; weapon: string; dist: number; pk: number } | null = null;
+
+      for (const shooter of shooters) {
+        const dist = haversine(shooter.lat, shooter.lng, target.lat, target.lng);
+        const assetWeapons = ASSET_WEAPONS[shooter.asset_type] || [];
+        const matching = assetWeapons.filter((w: string) => targetWeapons.includes(w));
+        if (matching.length === 0) continue;
+
+        const weapon = matching.reduce((best: string, w: string) => {
+          const r = WEAPON_RANGE_KM[w] || 0;
+          const br = WEAPON_RANGE_KM[best] || 0;
+          return r >= dist && r < br ? w : (br < dist && r >= dist ? w : best);
+        }, matching[0]);
+
+        const weaponRange = WEAPON_RANGE_KM[weapon] || 50;
+        const distFactor = Math.max(0, 1 - (dist / (weaponRange * 3)));
+        const matchScore = matching.length / Math.max(targetWeapons.length, 1);
+        const fuelFactor = shooter.fuel_remaining_pct / 100;
+        const pk = Math.min(0.98, distFactor * 0.5 + matchScore * 0.3 + fuelFactor * 0.2);
+
+        if (!bestMatch || pk > bestMatch.pk || (pk === bestMatch.pk && dist < bestMatch.dist)) {
+          bestMatch = { shooter, weapon, dist, pk };
+        }
+      }
+
+      if (!bestMatch) {
+        return new Response(JSON.stringify({ recommendation: null, reason: "No weapon match" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        recommendation: {
+          recommended_weapon: bestMatch.weapon,
+          callsign: bestMatch.shooter.callsign,
+          asset_type: bestMatch.shooter.asset_type,
+          distance_km: Math.round(bestMatch.dist * 10) / 10,
+          probability_of_kill: Math.round(bestMatch.pk * 100) / 100,
+          cost_estimate_usd: WEAPON_COST_USD[bestMatch.weapon] || 0,
+        },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // ============================================
     // ACTION: match_shooters
@@ -287,7 +353,6 @@ Be concise and military-professional.`,
       const { lat, lng } = body;
       if (lat == null || lng == null) throw new Error("lat and lng required");
 
-      // Find nearest idle ISR asset (drone preferred)
       const { data: assets } = await supabase
         .from("shooter_assets")
         .select("*")
@@ -394,7 +459,7 @@ Be concise and military-professional.`,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action. Use: match_shooters, commit_strike, discard_strike, slew_sensor, dark_vessel_detect" }), {
+    return new Response(JSON.stringify({ error: "Unknown action. Use: recommend, match_shooters, commit_strike, discard_strike, slew_sensor, dark_vessel_detect" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

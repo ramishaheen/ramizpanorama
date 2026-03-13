@@ -94,14 +94,20 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
       let weapon = "TBD";
       let platform = "TBD";
       try {
-        const { data: s2sData } = await supabase.functions.invoke("sensor-to-shooter", {
+        const { data: s2sData, error: s2sErr } = await supabase.functions.invoke("sensor-to-shooter", {
           body: { action: "recommend", target_id: target.id },
         });
-        if (s2sData?.recommendation) {
+        if (s2sErr) {
+          console.error("S2S recommend error:", s2sErr);
+          toast.warning("⚠ S2S engine unavailable — using defaults");
+        } else if (s2sData?.recommendation) {
           weapon = s2sData.recommendation.recommended_weapon || weapon;
           platform = s2sData.recommendation.callsign || platform;
         }
-      } catch { /* proceed without S2S */ }
+      } catch (e) {
+        console.error("S2S invoke failed:", e);
+        toast.warning("⚠ S2S engine unavailable — using defaults");
+      }
 
       await supabase.from("kill_chain_tasks").insert({
         target_track_id: target.id,
@@ -388,10 +394,10 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
                         <span className="text-[6px] font-mono text-muted-foreground tracking-wider">CREATED</span>
                         <div className="text-[8px] font-mono text-foreground">{new Date(task.created_at).toISOString().slice(0, 16).replace("T", " ")}</div>
                       </div>
-                      {task.target?.confidence && (
+                      {task.target?.confidence != null && (
                         <div>
                           <span className="text-[6px] font-mono text-muted-foreground tracking-wider">CONFIDENCE</span>
-                          <div className="text-[8px] font-mono text-foreground">{task.target.confidence}%</div>
+                          <div className="text-[8px] font-mono text-foreground">{task.target.confidence < 1 ? (task.target.confidence * 100).toFixed(0) : task.target.confidence}%</div>
                         </div>
                       )}
                     </div>

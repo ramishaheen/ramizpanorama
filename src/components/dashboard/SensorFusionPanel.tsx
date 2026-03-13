@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { Satellite, Camera, Radio, Globe, Radar, Wifi, WifiOff, RefreshCw, Zap, Activity, Cpu, ChevronDown, ChevronRight, AlertTriangle, Signal } from "lucide-react";
 import { useSensorFeeds, type SensorFeed } from "@/hooks/useSensorFeeds";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const FEED_ICONS: Record<string, React.ReactNode> = {
   satellite: <Satellite className="h-3 w-3" />,
@@ -49,6 +51,23 @@ interface SensorFusionPanelProps {
 export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate }: SensorFusionPanelProps) => {
   const { feeds, summary, loading, fetchFeeds, feedsByCategory } = useSensorFeeds();
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [pulsing, setPulsing] = useState(false);
+
+  const handlePulse = async () => {
+    setPulsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sensor-ingest", {
+        body: { action: "pulse" },
+      });
+      if (error) throw error;
+      toast.success(`⚡ Pulsed ${data?.pulsed || 0} sensor feeds`);
+      fetchFeeds();
+    } catch {
+      toast.error("Pulse failed");
+    } finally {
+      setPulsing(false);
+    }
+  };
   const cats = feedsByCategory();
 
   const catOrder = ["satellite", "drone", "cctv", "sigint", "osint", "ground", "iot"];
@@ -101,6 +120,10 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
             <span className="text-[8px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">SENSOR FUSION</span>
           </div>
           <div className="flex items-center gap-1">
+            <button onClick={handlePulse} disabled={pulsing} className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="Pulse all active feeds">
+              <Activity className={`h-2.5 w-2.5 ${pulsing ? "animate-pulse" : ""}`} />
+              PULSE
+            </button>
             <button onClick={fetchFeeds} className="p-1 rounded hover:bg-primary/10 transition-colors" title="Refresh">
               <RefreshCw className={`h-3 w-3 text-primary ${loading ? "animate-spin" : ""}`} />
             </button>
