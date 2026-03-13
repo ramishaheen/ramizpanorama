@@ -5,7 +5,7 @@ import {
   ShieldAlert, Brain, Radar, Aperture, Crosshair, ChevronUp, ChevronDown,
   LayoutGrid
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ImageryLayer } from "./ImageryLayerPanel";
 import type { MapToolMode } from "./MapToolbar";
 
