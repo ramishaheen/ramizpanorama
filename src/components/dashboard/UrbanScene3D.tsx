@@ -2045,6 +2045,11 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   useEffect(() => {
     if (!showFlights) return;
+    // In lite mode, skip smooth interpolation — just use raw snapshots for performance
+    if (liteMode) {
+      setInterpolatedAircraft(aircraftSnapshotRef.current);
+      return;
+    }
     interpolationRef.current = setInterval(() => {
       const snapshot = aircraftSnapshotRef.current;
       if (snapshot.length === 0) return;
@@ -2075,7 +2080,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       setInterpolatedAircraft(moved);
     }, 100); // update every 100ms for ultra-smooth movement
     return () => { if (interpolationRef.current) clearInterval(interpolationRef.current); };
-  }, [showFlights]);
+  }, [showFlights, liteMode]);
 
   // Auto-pan to tracked aircraft
   useEffect(() => {
