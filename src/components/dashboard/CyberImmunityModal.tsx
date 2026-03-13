@@ -1210,7 +1210,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
 
             {/* Live stats HUD overlay (when no threat selected) */}
             {!selectedThreat && filtered.length > 0 && (
-              <div className="absolute top-3 right-3 bg-card/80 backdrop-blur border border-border rounded-lg p-2.5 space-y-2 w-44">
+              <div className="absolute top-3 right-3 bg-card/80 backdrop-blur border border-border rounded-lg p-2.5 space-y-2 w-44" style={{ zIndex: 1000 }}>
                 <div className="flex items-center justify-between">
                   <span className="text-[8px] font-mono text-muted-foreground uppercase">Active Incidents</span>
                   <span className="text-sm font-black text-primary tabular-nums">{filtered.length}</span>
