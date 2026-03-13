@@ -1973,6 +1973,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       mmsi: v.mmsi,
       color: VESSEL_COLORS[v.type] || VESSEL_COLORS.UNKNOWN,
       icon: VESSEL_ICONS[v.type] || VESSEL_ICONS.UNKNOWN,
+      seaRegion: getSeaRegionName(v.lat, v.lng),
     }));
 
     globe.htmlElementsData([...osintAndCities, ...vesselElements]);
