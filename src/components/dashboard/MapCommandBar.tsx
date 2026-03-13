@@ -13,14 +13,12 @@ interface CommandSectionProps {
 }
 
 const CommandSection = ({ label, children }: CommandSectionProps) => (
-  <div className="flex flex-col justify-center gap-1.5 px-3 py-2 min-w-0">
-    <div className="flex items-center gap-1.5">
-      <div className="w-[3px] h-3 bg-primary rounded-[1px]" />
-      <span className="text-[8px] font-mono font-bold uppercase tracking-[0.18em] text-primary/80 whitespace-nowrap select-none">
-        {label}
-      </span>
-    </div>
-    <div className="flex flex-wrap items-center gap-[5px]">
+  <div className="flex items-center gap-[3px] px-1.5 min-w-0">
+    <span className="text-[6px] font-mono font-bold uppercase tracking-[0.15em] text-primary/50 whitespace-nowrap select-none writing-mode-vertical hidden sm:block"
+      style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', lineHeight: 1 }}>
+      {label}
+    </span>
+    <div className="flex flex-wrap items-center gap-[3px]">
       {children}
     </div>
   </div>
@@ -110,22 +108,22 @@ export const MapCommandBar = ({
   const activeOverlays = overlayLayers.filter(l => l.enabled);
 
   const toolButtons: { mode: MapToolMode; icon: React.ReactNode; label: string }[] = [
-    { mode: "marker", icon: <MapPin className="w-3.5 h-3.5" />, label: "PIN" },
-    { mode: "danger", icon: <AlertTriangle className="w-3.5 h-3.5" />, label: "DANGER" },
-    { mode: "intel", icon: <FileText className="w-3.5 h-3.5" />, label: "INTEL" },
-    { mode: "troop", icon: <Shield className="w-3.5 h-3.5" />, label: "TROOP" },
+    { mode: "marker", icon: <MapPin className="w-3 h-3" />, label: "PIN" },
+    { mode: "danger", icon: <AlertTriangle className="w-3 h-3" />, label: "DANGER" },
+    { mode: "intel", icon: <FileText className="w-3 h-3" />, label: "INTEL" },
+    { mode: "troop", icon: <Shield className="w-3 h-3" />, label: "TROOP" },
   ];
 
   const intelTools = [
-    { onClick: onOpenOrbital, icon: <Satellite className="w-3.5 h-3.5" />, label: "ORBITAL" },
-    { onClick: onOpenUrban3D, icon: <Building2 className="w-3.5 h-3.5" />, label: "URBAN 3D" },
-    { onClick: onOpenCCTV, icon: <Camera className="w-3.5 h-3.5" />, label: "CCTV" },
-    { onClick: onToggleAllCCTV, icon: <Camera className="w-3.5 h-3.5" />, label: loadingCCTV ? "LOADING..." : "ALL CCTV", active: allCCTVActive, badge: allCCTVActive ? allCCTVCount : undefined },
-    { onClick: onOpenResponseMap, icon: <ShieldAlert className="w-3.5 h-3.5" />, label: "RESPONSE" },
-    { onClick: onOpenCrisisIntel, icon: <Brain className="w-3.5 h-3.5" />, label: "CRISIS" },
-    { onClick: onToggleIranFIR, icon: <Radar className="w-3.5 h-3.5" />, label: "IRAN FIR", active: iranFIRActive },
-    { onClick: onOpenSnapMe, icon: <Aperture className="w-3.5 h-3.5" />, label: "SNAP ME" },
-    { onClick: onOpenScouting, icon: <Crosshair className="w-3.5 h-3.5" />, label: "SCOUTING" },
+    { onClick: onOpenOrbital, icon: <Satellite className="w-3 h-3" />, label: "ORBITAL" },
+    { onClick: onOpenUrban3D, icon: <Building2 className="w-3 h-3" />, label: "URBAN 3D" },
+    { onClick: onOpenCCTV, icon: <Camera className="w-3 h-3" />, label: "CCTV" },
+    { onClick: onToggleAllCCTV, icon: <Camera className="w-3 h-3" />, label: loadingCCTV ? "..." : "ALL CCTV", active: allCCTVActive, badge: allCCTVActive ? allCCTVCount : undefined },
+    { onClick: onOpenResponseMap, icon: <ShieldAlert className="w-3 h-3" />, label: "RESPONSE" },
+    { onClick: onOpenCrisisIntel, icon: <Brain className="w-3 h-3" />, label: "CRISIS" },
+    { onClick: onToggleIranFIR, icon: <Radar className="w-3 h-3" />, label: "IRAN FIR", active: iranFIRActive },
+    { onClick: onOpenSnapMe, icon: <Aperture className="w-3 h-3" />, label: "SNAP ME" },
+    { onClick: onOpenScouting, icon: <Crosshair className="w-3 h-3" />, label: "SCOUTING" },
   ];
 
   return (
@@ -195,9 +193,9 @@ export const MapCommandBar = ({
       )}
 
       {/* Main command strip */}
-      <div className="flex items-stretch overflow-x-auto gotham-cmd-strip">
+      <div className="flex items-center overflow-x-auto gotham-cmd-strip py-1">
         {/* ▎IMAGERY */}
-        <CommandSection label="IMAGERY">
+        <CommandSection label="IMG">
           {baseLayers.slice(0, 5).map(layer => (
             <GothamBtn
               key={layer.id}
@@ -207,8 +205,8 @@ export const MapCommandBar = ({
             />
           ))}
           <GothamBtn
-            label={`LAYERS`}
-            icon={<Layers className="w-3.5 h-3.5" />}
+            label="LYR"
+            icon={<Layers className="w-3 h-3" />}
             active={activeOverlays.length > 0 || overlayExpanded}
             badge={activeOverlays.length > 0 ? activeOverlays.length : undefined}
             onClick={() => setOverlayExpanded(!overlayExpanded)}
@@ -218,7 +216,7 @@ export const MapCommandBar = ({
         <div className="gotham-section-divider" />
 
         {/* ▎MAP TOOLS */}
-        <CommandSection label="MAP TOOLS">
+        <CommandSection label="TOOLS">
           {toolButtons.map(t => (
             <GothamBtn
               key={t.mode}
@@ -233,18 +231,18 @@ export const MapCommandBar = ({
         <div className="gotham-section-divider" />
 
         {/* ▎ANALYSIS */}
-        <CommandSection label="ANALYSIS">
-          <GothamBtn label="UP42" icon={<Search className="w-3.5 h-3.5" />} active={up42Open} onClick={onToggleUP42} />
-          <GothamBtn label="LEGEND" icon={<Eye className="w-3.5 h-3.5" />} active={legendOpen} onClick={onToggleLegend} />
-          <GothamBtn label="HISTORY" icon={<Clock className="w-3.5 h-3.5" />} active={historyOpen} onClick={onToggleHistory} />
+        <CommandSection label="DATA">
+          <GothamBtn label="UP42" icon={<Search className="w-3 h-3" />} active={up42Open} onClick={onToggleUP42} />
+          <GothamBtn label="LEGEND" icon={<Eye className="w-3 h-3" />} active={legendOpen} onClick={onToggleLegend} />
+          <GothamBtn label="HIST" icon={<Clock className="w-3 h-3" />} active={historyOpen} onClick={onToggleHistory} />
           <GothamBtn
-            label={currentMapStyle === "satellite" ? "SAT" : "DARK"}
-            icon={currentMapStyle === "satellite" ? <Satellite className="w-3.5 h-3.5" /> : <Map className="w-3.5 h-3.5" />}
+            label={currentMapStyle === "satellite" ? "SAT" : "DRK"}
+            icon={currentMapStyle === "satellite" ? <Satellite className="w-3 h-3" /> : <Map className="w-3 h-3" />}
             onClick={() => onMapStyleChange(currentMapStyle === "satellite" ? "dark" : "satellite")}
           />
-          <GothamBtn label="MARKS" icon={<Bookmark className="w-3.5 h-3.5" />} active={bookmarksOpen} onClick={onToggleBookmarks} />
-          <GothamBtn label="CHOKE" icon={<Ship className="w-3.5 h-3.5" />} active={chokepointsOpen} onClick={onToggleChokepoints} />
-          <GothamBtn label="LAUNCHES" icon={<Rocket className="w-3.5 h-3.5" />} active={launchesOpen} onClick={onToggleLaunches} />
+          <GothamBtn label="BKM" icon={<Bookmark className="w-3 h-3" />} active={bookmarksOpen} onClick={onToggleBookmarks} />
+          <GothamBtn label="CHOKE" icon={<Ship className="w-3 h-3" />} active={chokepointsOpen} onClick={onToggleChokepoints} />
+          <GothamBtn label="LAUNCH" icon={<Rocket className="w-3 h-3" />} active={launchesOpen} onClick={onToggleLaunches} />
         </CommandSection>
 
         <div className="gotham-section-divider" />
@@ -255,8 +253,8 @@ export const MapCommandBar = ({
             <GothamBtn key={i} label={t.label} icon={t.icon} active={t.active} onClick={t.onClick} badge={t.badge} />
           ))}
           <GothamBtn
-            label={intelExpanded ? "LESS" : "MORE"}
-            icon={intelExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            label={intelExpanded ? "−" : "+"}
+            icon={intelExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
             active={intelExpanded}
             onClick={() => setIntelExpanded(!intelExpanded)}
           />
