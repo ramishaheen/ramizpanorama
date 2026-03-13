@@ -540,6 +540,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 200px;
   border: 1px solid hsl(190 60% 18% / 0.5);
   background: hsl(220 25% 7% / 0.92);
   backdrop-filter: blur(8px);
