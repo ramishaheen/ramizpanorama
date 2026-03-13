@@ -45,6 +45,8 @@ import { useGooglePlaces, getPOIColor, getPOIIcon, type GooglePlace } from "@/ho
 import { useGoogleGeocode } from "@/hooks/useGoogleGeocode";
 import { useGoogleDirections } from "@/hooks/useGoogleDirections";
 
+import type { ComponentVisibility } from "./MapCommandBar";
+
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
   vessels: MaritimeVessel[];
@@ -57,6 +59,8 @@ interface IntelMapProps {
   newsMarkers?: WarUpdate[];
   telegramMarkers?: TelegramMarker[];
   fusionEvents?: FusionEvent[];
+  componentVisibility?: ComponentVisibility;
+  onToggleComponent?: (key: keyof ComponentVisibility) => void;
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
