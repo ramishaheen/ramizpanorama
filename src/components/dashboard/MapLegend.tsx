@@ -76,7 +76,7 @@ export const MapLegend = ({ layers, onToggleLayer }: MapLegendProps) => {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-full mb-1 left-0 overflow-hidden rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] w-[230px] max-h-[60vh] overflow-y-auto"
+            className="absolute bottom-full mb-1 left-0 z-[9999] rounded-lg border border-border/60 bg-card/95 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] w-[230px] max-h-[60vh] overflow-y-auto"
           >
             <div className="p-3">
               <div className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-[0.15em] mb-2 font-semibold">
