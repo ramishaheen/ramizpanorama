@@ -20,8 +20,6 @@ import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
 import { TargetingWorkbench } from "./TargetingWorkbench";
-import { lazy, Suspense } from "react";
-const UrbanScene3D = lazy(() => import("./UrbanScene3D").then(m => ({ default: m.UrbanScene3D })));
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 import { useSensorToShooter } from "@/hooks/useSensorToShooter";
 import { toast } from "sonner";
@@ -1004,12 +1002,12 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     switch (sev) { case "critical": return "border-l-[#dc2626]"; case "high": return "border-l-[#f97316]"; case "medium": return "border-l-[#eab308]"; default: return "border-l-[#00d4ff]"; }
   };
 
-  const [urban3DTarget, setUrban3DTarget] = useState<{lat: number; lng: number} | null>(null);
-
   const handleFeedClick = useCallback((lat: number, lng: number) => {
     const globe = globeRef.current;
-    if (globe) globe.pointOfView({ lat, lng, altitude: 1.0 }, 1200);
-    setTimeout(() => setUrban3DTarget({ lat, lng }), 1300);
+    if (globe) {
+      // Smooth two-stage zoom: first approach, then close-up
+      globe.pointOfView({ lat, lng, altitude: 0.15 }, 1800);
+    }
   }, []);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -1171,23 +1169,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               onLocate={handleFeedClick}
               onCommitStrike={commitStrike}
             />
-          )}
-          {/* 3D Realistic View overlay triggered by feed clicks */}
-          {urban3DTarget && (
-            <Suspense fallback={null}>
-              <UrbanScene3D
-                key={`${urban3DTarget.lat}-${urban3DTarget.lng}`}
-                onClose={() => setUrban3DTarget(null)}
-                initialCoords={{ lat: urban3DTarget.lat, lng: urban3DTarget.lng }}
-                initialEvent={{
-                  title: "FEED TARGET",
-                  lat: urban3DTarget.lat,
-                  lng: urban3DTarget.lng,
-                  severity: "high",
-                  source: "GOTHAM 4D",
-                }}
-              />
-            </Suspense>
           )}
         </div>
 
