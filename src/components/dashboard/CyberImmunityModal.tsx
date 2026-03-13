@@ -19,6 +19,9 @@ import { APTIntelPanel } from "@/components/dashboard/cyber/APTIntelPanel";
 import { IncidentTimeline } from "@/components/dashboard/cyber/IncidentTimeline";
 import { IntelEnginesPanel } from "@/components/dashboard/cyber/IntelEnginesPanel";
 import { CyberAlertBanner } from "@/components/dashboard/cyber/CyberAlertBanner";
+import { useIOCLookup, type IOCResult } from "@/hooks/useIOCLookup";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 interface CyberImmunityModalProps {
   onClose: () => void;
