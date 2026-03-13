@@ -15,6 +15,9 @@ import type { Rocket as RocketType } from "@/data/mockData";
 import { C2TargetingPanel } from "./C2TargetingPanel";
 import { KillChainPanel } from "./KillChainPanel";
 import { C2ChatTab } from "./C2ChatTab";
+import { SensorFusionPanel } from "./SensorFusionPanel";
+import { OntologyPanel } from "./OntologyPanel";
+import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 
 
 interface FourDMapProps { onClose: () => void; rockets?: RocketType[]; }
