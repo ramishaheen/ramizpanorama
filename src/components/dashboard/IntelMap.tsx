@@ -1556,7 +1556,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           if (!last || Math.abs(last.lat - ac.lat) > 0.001 || Math.abs(last.lng - ac.lng) > 0.001) {
             trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
           }
-          history[ac.icao24] = trail.filter(p => now - p.ts < 600000).slice(-20);
+          const maxTrail = trackedFlightId === ac.icao24 ? 40 : 20;
+          history[ac.icao24] = trail.filter(p => now - p.ts < 600000).slice(-maxTrail);
           prevPos[ac.icao24] = { lat: ac.lat, lng: ac.lng };
         });
         const activeIds = new Set(newAircraft.map(a => a.icao24));
