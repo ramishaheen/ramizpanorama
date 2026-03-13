@@ -92,7 +92,7 @@ STRICT RULES:
 
 Each entry MUST have ALL these fields:
 - id: unique string like "cy-live-001"  
-- date: ISO date (YYYY-MM-DD), use today (${new Date().toISOString().split('T')[0]}) or very recent dates
+- date: ISO date (YYYY-MM-DD). IMPORTANT: Distribute dates across the last 28 days (4 weeks) from today (${new Date().toISOString().split('T')[0]}). Use a realistic distribution with more incidents in recent days but ensure coverage across all 4 weeks. Example spread: ~30% from week 1 (oldest), ~25% from week 2, ~25% from week 3, ~20% from week 4 (most recent/today).
 - attacker: name with unit/group in parentheses, e.g. "Iran (APT33/Elfin)"
 - attackerCountry: full country name, e.g. "Iran"
 - attackerFlag: emoji flag
