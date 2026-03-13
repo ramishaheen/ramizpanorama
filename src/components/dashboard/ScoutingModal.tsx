@@ -1,6 +1,21 @@
 import { useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Crosshair, Shield } from "lucide-react";
+import { X, Shield, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
@@ -27,17 +42,39 @@ interface ScoutingModalProps {
   onClose: () => void;
 }
 
-/* ── Tile wrapper ─────────────────────────────────────── */
-function ScoutingTile({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+/* ── Sortable Tile wrapper ───────────────────────────── */
+function SortableTile({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
   return (
-    <div className={`scouting-tile ${className}`}>
+    <div ref={setNodeRef} style={style} className="scouting-tile">
       <div className="scouting-section-label">
+        <button
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-3 h-3" />
+        </button>
         <span>{label}</span>
       </div>
       <div className="flex-1 overflow-y-auto scouting-tile-body">
         {children}
       </div>
-      {/* scanline overlay per tile */}
       <div className="absolute inset-0 pointer-events-none scanline opacity-30" />
     </div>
   );
@@ -53,6 +90,13 @@ function UtcClock() {
   return <span className="text-primary font-mono text-[10px] tabular-nums">{time}Z</span>;
 }
 
+/* ── Tile definitions ─────────────────────────────────── */
+const DEFAULT_ORDER = [
+  "threat", "escalation", "sigint", "economic",
+  "geofusion", "notifications", "cyberops", "aiintel",
+  "citizen", "sector", "social",
+];
+
 /* ── Main modal ───────────────────────────────────────── */
 export function ScoutingModal({ onClose }: ScoutingModalProps) {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, rockets, dataFresh, dailyCounts } = useLiveDashboard();
@@ -60,6 +104,23 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
   const warUpdates = useWarUpdates();
   const telegramIntel = useTelegramIntel();
   const geoFusion = useGeoFusion();
+
+  const [tileOrder, setTileOrder] = useState(DEFAULT_ORDER);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setTileOrder((prev) => {
+        const oldIndex = prev.indexOf(active.id as string);
+        const newIndex = prev.indexOf(over.id as string);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
@@ -74,9 +135,97 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
     };
   }, [handleKeyDown]);
 
+  const tileContent: Record<string, { label: string; node: React.ReactNode }> = {
+    threat: {
+      label: "THREAT ASSESSMENT",
+      node: (
+        <div className="space-y-2">
+          <RiskScoreGauge score={riskScore} />
+          <RocketEntryPanel rockets={rockets} />
+        </div>
+      ),
+    },
+    escalation: {
+      label: "ESCALATION MATRIX",
+      node: (
+        <div className="space-y-2">
+          <WarEscalationEngine />
+          <WarUpdatesPanel
+            data={warUpdates.data}
+            loading={warUpdates.loading}
+            error={warUpdates.error}
+            onRefresh={warUpdates.refresh}
+          />
+        </div>
+      ),
+    },
+    sigint: {
+      label: "SIGINT / OSINT",
+      node: (
+        <div className="space-y-2">
+          <TelegramFeed />
+          <LiveNewsFeed />
+        </div>
+      ),
+    },
+    economic: {
+      label: "ECONOMIC WARFARE",
+      node: <CommodityTracker riskScore={riskScore.overall} />,
+    },
+    geofusion: {
+      label: "GEO-FUSION",
+      node: (
+        <div className="space-y-2">
+          <CountryStatusPanel
+            data={geoFusion.data}
+            loading={geoFusion.loading}
+            error={geoFusion.error}
+            onRefresh={geoFusion.refresh}
+          />
+          <WeatherTrafficPanel />
+        </div>
+      ),
+    },
+    notifications: {
+      label: "NOTIFICATIONS",
+      node: <NotificationPanel alerts={geoAlerts} />,
+    },
+    cyberops: {
+      label: "CYBER OPS",
+      node: <CyberSecurityAlerts />,
+    },
+    aiintel: {
+      label: "AI INTEL",
+      node: (
+        <div className="space-y-2">
+          <AIPredictions />
+          <SectorPredictions />
+        </div>
+      ),
+    },
+    citizen: {
+      label: "CITIZEN SECURITY",
+      node: (
+        <CitizenSecurity
+          data={citizenSecurity.data}
+          loading={citizenSecurity.loading}
+          error={citizenSecurity.error}
+          onRefresh={citizenSecurity.refresh}
+        />
+      ),
+    },
+    sector: {
+      label: "SECTOR PREDICTIONS",
+      node: <SectorPredictions />,
+    },
+    social: {
+      label: "SOCIAL MEDIA HARVESTING",
+      node: <SocialSentimentBox />,
+    },
+  };
+
   return createPortal(
     <div className="scouting-overlay">
-      {/* Background grid + scanline */}
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
       <div className="absolute inset-0 scanline opacity-20 pointer-events-none" />
 
@@ -100,7 +249,6 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
         </div>
       </header>
 
-      {/* ── Classification banner ────────────────────── */}
       <div className="classification-banner">
         UNCLASSIFIED // FOR OFFICIAL USE ONLY
       </div>
@@ -122,94 +270,23 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
         />
       </div>
 
-      {/* ── MAIN GRID ────────────────────────────────── */}
+      {/* ── SORTABLE GRID ────────────────────────────── */}
       <div className="scouting-grid-container">
-
-        {/* Row 1 — 4 columns */}
-        <div className="scouting-grid-row">
-          <ScoutingTile label="THREAT ASSESSMENT">
-            <div className="space-y-2">
-              <RiskScoreGauge score={riskScore} />
-              <RocketEntryPanel rockets={rockets} />
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={tileOrder} strategy={rectSortingStrategy}>
+            <div className="scouting-sortable-grid">
+              {tileOrder.map((id) => {
+                const tile = tileContent[id];
+                if (!tile) return null;
+                return (
+                  <SortableTile key={id} id={id} label={tile.label}>
+                    {tile.node}
+                  </SortableTile>
+                );
+              })}
             </div>
-          </ScoutingTile>
-
-          <ScoutingTile label="ESCALATION MATRIX">
-            <div className="space-y-2">
-              <WarEscalationEngine />
-              <WarUpdatesPanel
-                data={warUpdates.data}
-                loading={warUpdates.loading}
-                error={warUpdates.error}
-                onRefresh={warUpdates.refresh}
-              />
-            </div>
-          </ScoutingTile>
-
-          <ScoutingTile label="SIGINT / OSINT">
-            <div className="space-y-2">
-              <TelegramFeed />
-              <LiveNewsFeed />
-            </div>
-          </ScoutingTile>
-
-          <ScoutingTile label="ECONOMIC WARFARE">
-            <div className="space-y-2">
-              <CommodityTracker riskScore={riskScore.overall} />
-            </div>
-          </ScoutingTile>
-        </div>
-
-        {/* Row 2 — 4 columns */}
-        <div className="scouting-grid-row">
-          <ScoutingTile label="GEO-FUSION">
-            <div className="space-y-2">
-              <CountryStatusPanel
-                data={geoFusion.data}
-                loading={geoFusion.loading}
-                error={geoFusion.error}
-                onRefresh={geoFusion.refresh}
-              />
-              <WeatherTrafficPanel />
-            </div>
-          </ScoutingTile>
-
-          <ScoutingTile label="NOTIFICATIONS">
-            <NotificationPanel alerts={geoAlerts} />
-          </ScoutingTile>
-
-          <ScoutingTile label="CYBER OPS">
-            <CyberSecurityAlerts />
-          </ScoutingTile>
-
-          <ScoutingTile label="AI INTEL">
-            <div className="space-y-2">
-              <AIPredictions />
-              <SectorPredictions />
-            </div>
-          </ScoutingTile>
-        </div>
-
-        {/* Row 3 — Civil indicators, full-width 3-col sub-grid */}
-        <div className="scouting-civil-row">
-          <div className="scouting-section-label mb-0" style={{ gridColumn: "1 / -1" }}>
-            <span>CIVIL INDICATORS</span>
-          </div>
-          <ScoutingTile label="CITIZEN SECURITY" className="scouting-civil-tile">
-            <CitizenSecurity
-              data={citizenSecurity.data}
-              loading={citizenSecurity.loading}
-              error={citizenSecurity.error}
-              onRefresh={citizenSecurity.refresh}
-            />
-          </ScoutingTile>
-          <ScoutingTile label="SECTOR PREDICTIONS" className="scouting-civil-tile">
-            <SectorPredictions />
-          </ScoutingTile>
-          <ScoutingTile label="SOCIAL MEDIA HARVESTING" className="scouting-civil-tile">
-            <SocialSentimentBox />
-          </ScoutingTile>
-        </div>
+          </SortableContext>
+        </DndContext>
       </div>
     </div>,
     document.body
