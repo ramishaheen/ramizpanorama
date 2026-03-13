@@ -259,6 +259,10 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
+  const [forceUnits, setForceUnits] = useState<any[]>([]);
+  const [targetTracks, setTargetTracks] = useState<any[]>([]);
+  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL">("FEED");
+
 
   // Fetch Google POIs for the focused region
   useEffect(() => {
