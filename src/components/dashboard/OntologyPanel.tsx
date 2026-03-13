@@ -55,7 +55,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
     : [];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
