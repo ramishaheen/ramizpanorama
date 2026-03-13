@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  X, RefreshCw, Shield, ShieldAlert, Search, Filter,
-  Activity, Globe, AlertTriangle, Zap, Eye, Network,
-  TrendingUp, Target, Bug, Radio, ChevronRight, ExternalLink
+  X, RefreshCw, ShieldAlert, Search,
+  Activity, Globe, AlertTriangle, Zap, Network,
+  Target, Bug, Radio, ChevronRight, ExternalLink,
+  Play, Pause, SkipBack, SkipForward, Clock, Copy, Check
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,8 +23,27 @@ const COUNTRY_COORDS: Record<string, [number, number]> = {
   Iraq: [44, 33], Yemen: [48, 15], Pakistan: [69, 30],
   India: [78, 21], Ukraine: [32, 49], Germany: [10, 51],
   UK: [-2, 54], France: [2, 47], "Multiple": [10, 20],
-  Unknown: [0, 10],
+  Unknown: [0, 10], Japan: [138, 36], "South Korea": [127, 36],
+  Egypt: [30, 27], Jordan: [36, 31], Bahrain: [50.5, 26],
+  Kuwait: [47.5, 29.3], Oman: [57, 21], Libya: [17, 27],
+  Tunisia: [9, 34], Algeria: [3, 28], Morocco: [-5, 32],
+  Sudan: [30, 15], Ethiopia: [40, 9], Kenya: [38, 0],
+  Nigeria: [8, 10], "South Africa": [25, -30], Brazil: [-51, -14],
+  Canada: [-106, 56], Mexico: [-102, 23], Australia: [133, -25],
 };
+
+/* deterministic fallback for unknown countries */
+function hashCountryCoords(name: string): [number, number] {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+  const lon = ((h & 0xFFFF) / 0xFFFF) * 300 - 150;
+  const lat = (((h >> 16) & 0xFFFF) / 0xFFFF) * 120 - 60;
+  return [lon, lat];
+}
+
+function getCountryCoords(name: string): [number, number] {
+  return COUNTRY_COORDS[name] || hashCountryCoords(name);
+}
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "hsl(0 90% 55%)",
@@ -40,6 +60,9 @@ const SEVERITY_BG: Record<string, string> = {
 };
 
 const COUNTRY_FILTERS = ["All", "Israel", "Iran", "USA", "Russia", "China", "Saudi Arabia", "UAE", "Turkey", "Syria"];
+const SPEEDS = [1, 2, 5] as const;
+const SPEED_INTERVALS: Record<number, number> = { 1: 1500, 2: 750, 5: 300 };
+const EXPECTED_SOURCES = ["CISA KEV", "AlienVault OTX", "abuse.ch URLhaus", "NIST NVD", "CERT-FR"];
 
 function lonLatToSvg(lon: number, lat: number, w: number, h: number): [number, number] {
   return [(lon + 180) / 360 * w, (90 - lat) / 180 * h];
@@ -52,7 +75,7 @@ function arcPath(x1: number, y1: number, x2: number, y2: number): string {
 }
 
 /* ── Threat Map (SVG equirectangular) ── */
-function ThreatMap({ threats, onSelect }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void }) {
+function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void; selectedId?: string }) {
   const W = 900, H = 450;
 
   const nodes = useMemo(() => {
@@ -60,7 +83,7 @@ function ThreatMap({ threats, onSelect }: { threats: CyberThreat[]; onSelect: (t
     threats.forEach((t) => {
       for (const c of [t.attackerCountry || t.attacker, t.targetCountry || t.target]) {
         const key = c || "Unknown";
-        const coords = COUNTRY_COORDS[key] || [Math.random() * 60 - 30, Math.random() * 40];
+        const coords = getCountryCoords(key);
         const [x, y] = lonLatToSvg(coords[0], coords[1], W, H);
         const existing = map.get(key);
         if (existing) {
@@ -78,33 +101,31 @@ function ThreatMap({ threats, onSelect }: { threats: CyberThreat[]; onSelect: (t
     return threats.slice(0, 30).map((t, i) => {
       const ac = t.attackerCountry || t.attacker || "Unknown";
       const tc = t.targetCountry || t.target || "Unknown";
-      const a = COUNTRY_COORDS[ac] || [0, 10];
-      const b = COUNTRY_COORDS[tc] || [10, 20];
+      const a = getCountryCoords(ac);
+      const b = getCountryCoords(tc);
       const [x1, y1] = lonLatToSvg(a[0], a[1], W, H);
       const [x2, y2] = lonLatToSvg(b[0], b[1], W, H);
-      return { id: t.id, d: arcPath(x1, y1, x2, y2), color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium, threat: t, i };
+      const isSelected = t.id === selectedId;
+      return { id: t.id, d: arcPath(x1, y1, x2, y2), color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium, threat: t, i, isSelected };
     });
-  }, [threats]);
+  }, [threats, selectedId]);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" style={{ background: "hsl(var(--background))" }}>
-      {/* grid */}
       {Array.from({ length: 7 }, (_, i) => (
         <line key={`h${i}`} x1={0} y1={i * (H / 6)} x2={W} y2={i * (H / 6)} stroke="hsl(var(--border))" strokeWidth={0.5} opacity={0.3} />
       ))}
       {Array.from({ length: 13 }, (_, i) => (
         <line key={`v${i}`} x1={i * (W / 12)} y1={0} x2={i * (W / 12)} y2={H} stroke="hsl(var(--border))" strokeWidth={0.5} opacity={0.3} />
       ))}
-      {/* arcs */}
       {arcs.map((a) => (
         <g key={a.id} onClick={() => onSelect(a.threat)} className="cursor-pointer">
-          <path d={a.d} fill="none" stroke={a.color} strokeWidth={1.5} opacity={0.5} />
-          <path d={a.d} fill="none" stroke={a.color} strokeWidth={1.5} strokeDasharray="6,4" opacity={0.9}>
+          <path d={a.d} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} opacity={a.isSelected ? 0.9 : 0.5} />
+          <path d={a.d} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} strokeDasharray="6,4" opacity={0.9}>
             <animate attributeName="stroke-dashoffset" from="0" to="-20" dur={`${1.5 + a.i * 0.1}s`} repeatCount="indefinite" />
           </path>
         </g>
       ))}
-      {/* nodes */}
       {nodes.map((n) => (
         <g key={n.country}>
           <circle cx={n.x} cy={n.y} r={Math.min(4 + n.count * 1.5, 18)} fill={SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium} opacity={0.25}>
@@ -121,11 +142,9 @@ function ThreatMap({ threats, onSelect }: { threats: CyberThreat[]; onSelect: (t
 /* ── Relationship Graph ── */
 function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
   const W = 900, H = 450, CX = W / 2, CY = H / 2;
-
   const { nodes, links } = useMemo(() => {
     const nodeMap = new Map<string, { id: string; type: string; count: number }>();
     const linkArr: { source: string; target: string; severity: string }[] = [];
-
     threats.slice(0, 25).forEach((t) => {
       const aKey = `actor:${t.attacker}`;
       const tKey = `target:${t.target}`;
@@ -136,7 +155,6 @@ function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
       linkArr.push({ source: aKey, target: tKey, severity: t.severity });
       linkArr.push({ source: aKey, target: typeKey, severity: t.severity });
     });
-
     const nodesArr = Array.from(nodeMap.values());
     const angleStep = (2 * Math.PI) / nodesArr.length;
     const positioned = nodesArr.map((n, i) => {
@@ -144,7 +162,6 @@ function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
       const r = Math.min(CX, CY) * radiusMult;
       return { ...n, x: CX + r * Math.cos(i * angleStep - Math.PI / 2), y: CY + r * Math.sin(i * angleStep - Math.PI / 2) };
     });
-
     return { nodes: positioned, links: linkArr };
   }, [threats]);
 
@@ -173,7 +190,6 @@ function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
           </text>
         </g>
       ))}
-      {/* legend */}
       {[{ label: "Threat Actor", color: typeColors.actor, y: 20 }, { label: "Target", color: typeColors.target, y: 34 }, { label: "Attack Type", color: typeColors.type, y: 48 }].map((l) => (
         <g key={l.label}>
           <circle cx={16} cy={l.y} r={5} fill={l.color} opacity={0.7} />
@@ -181,6 +197,127 @@ function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
         </g>
       ))}
     </svg>
+  );
+}
+
+/* ── Sparkline (last 24h attack frequency) ── */
+function AttackSparkline({ threats }: { threats: CyberThreat[] }) {
+  const bars = useMemo(() => {
+    const now = Date.now();
+    const buckets = new Array(24).fill(0);
+    threats.forEach((t) => {
+      const dt = new Date(t.date).getTime();
+      const hoursAgo = Math.floor((now - dt) / 3600000);
+      if (hoursAgo >= 0 && hoursAgo < 24) buckets[23 - hoursAgo]++;
+    });
+    const max = Math.max(...buckets, 1);
+    return buckets.map((v) => v / max);
+  }, [threats]);
+
+  return (
+    <svg viewBox="0 0 96 24" className="w-full h-6">
+      {bars.map((v, i) => (
+        <rect key={i} x={i * 4} y={24 - v * 22} width={3} height={v * 22} rx={0.5} fill="hsl(var(--primary))" opacity={0.6 + v * 0.4} />
+      ))}
+    </svg>
+  );
+}
+
+/* ── Rich Threat Detail Card ── */
+function ThreatDetailCard({ threat, onClose }: { threat: CyberThreat; onClose: () => void }) {
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+
+  const copyIOC = (ioc: string, idx: number) => {
+    navigator.clipboard.writeText(ioc);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 1500);
+  };
+
+  return (
+    <div className="absolute inset-4 bg-card/98 backdrop-blur-lg border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden" style={{ zIndex: 10 }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background/50">
+        <div className="flex items-center gap-3">
+          <span className={`text-[9px] px-2 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[threat.severity]}`}>{threat.severity}</span>
+          <span className="text-xs font-bold">{threat.attackerFlag} {threat.attacker}</span>
+          <ChevronRight className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs font-bold">{threat.targetFlag} {threat.target}</span>
+        </div>
+        <button onClick={onClose} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-4">
+          {/* Attacker / Target profiles */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded border border-destructive/20 bg-destructive/5">
+              <div className="text-[9px] font-mono text-destructive uppercase tracking-wider mb-1.5">Attacker Profile</div>
+              <div className="text-sm font-bold">{threat.attackerFlag} {threat.attacker}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{threat.attackerCountry || "Unknown origin"}</div>
+            </div>
+            <div className="p-3 rounded border border-primary/20 bg-primary/5">
+              <div className="text-[9px] font-mono text-primary uppercase tracking-wider mb-1.5">Target Profile</div>
+              <div className="text-sm font-bold">{threat.targetFlag} {threat.target}</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{threat.targetCountry || "Unknown target"}</div>
+            </div>
+          </div>
+
+          {/* Attack details */}
+          <div className="p-3 rounded border border-border bg-background/50">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Attack Vector</div>
+            <div className="flex flex-wrap gap-2 mb-2">
+              <span className="text-[9px] px-2 py-0.5 rounded bg-muted/50 border border-border font-mono">{threat.type}</span>
+              <span className="text-[9px] px-2 py-0.5 rounded bg-muted/50 border border-border font-mono">{threat.date}</span>
+              {threat.cve && (
+                <a href={`https://nvd.nist.gov/vuln/detail/${threat.cve}`} target="_blank" rel="noopener noreferrer"
+                  className="text-[9px] px-2 py-0.5 rounded bg-destructive/10 border border-destructive/20 font-mono text-destructive hover:bg-destructive/20 transition-colors flex items-center gap-1">
+                  {threat.cve} <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              )}
+            </div>
+            <p className="text-[11px] text-foreground leading-relaxed">{threat.details}</p>
+          </div>
+
+          {/* IOCs */}
+          <div className="p-3 rounded border border-border bg-background/50">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+              <Bug className="h-3 w-3" /> Indicators of Compromise
+            </div>
+            {threat.iocs && threat.iocs.length > 0 ? (
+              <div className="space-y-1">
+                {threat.iocs.map((ioc, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 p-1.5 rounded bg-muted/30 border border-border group">
+                    <span className="text-[9px] font-mono text-foreground truncate">{ioc}</span>
+                    <button onClick={() => copyIOC(ioc, i)} className="p-0.5 rounded hover:bg-muted/50 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      {copiedIdx === i ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[9px] text-muted-foreground italic p-2 rounded bg-muted/20 border border-border">No IOCs available for this incident</div>
+            )}
+          </div>
+
+          {/* Source */}
+          <div className="p-3 rounded border border-border bg-background/50">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Source Intelligence</div>
+            {threat.source ? (
+              <a href={threat.source} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] text-primary hover:underline flex items-center gap-1.5">
+                <Globe className="h-3 w-3" />
+                {threat.sourceName || threat.source}
+                <ExternalLink className="h-2.5 w-2.5" />
+              </a>
+            ) : (
+              <div className="text-[9px] text-muted-foreground italic">No source link available — derived from OSINT analysis</div>
+            )}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
@@ -193,8 +330,54 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const [centerView, setCenterView] = useState<"map" | "graph">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
 
+  /* ── Timeline state ── */
+  const [timelinePos, setTimelinePos] = useState(100); // 0-100, 100 = now (LIVE)
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState<number>(1);
+  const playRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const feedRef = useRef<HTMLDivElement>(null);
+
+  const isLive = timelinePos >= 99;
+
+  /* ── Timeline playback ── */
+  useEffect(() => {
+    if (playRef.current) { clearInterval(playRef.current); playRef.current = null; }
+    if (isPlaying) {
+      playRef.current = setInterval(() => {
+        setTimelinePos((prev) => {
+          const next = prev + 0.5;
+          if (next >= 100) { setIsPlaying(false); return 100; }
+          return next;
+        });
+      }, SPEED_INTERVALS[speed] || 1500);
+    }
+    return () => { if (playRef.current) clearInterval(playRef.current); };
+  }, [isPlaying, speed]);
+
+  /* auto-scroll feed when live */
+  useEffect(() => {
+    if (isLive && feedRef.current) {
+      feedRef.current.scrollTop = 0;
+    }
+  }, [isLive, threats]);
+
+  /* ── Timeline-based filtering ── */
+  const timelineFiltered = useMemo(() => {
+    if (isLive) return threats;
+    // Map 0-100 to 24h window
+    const now = Date.now();
+    const windowMs = 24 * 60 * 60 * 1000;
+    const cutoffTime = now - windowMs + (timelinePos / 100) * windowMs;
+    return threats.filter((t) => {
+      const tTime = new Date(t.date).getTime();
+      // If date has no time, treat as within range if date <= cutoff date
+      if (isNaN(tTime)) return true;
+      return tTime <= cutoffTime;
+    });
+  }, [threats, timelinePos, isLive]);
+
   const filtered = useMemo(() => {
-    let r = threats;
+    let r = timelineFiltered;
     if (countryFilter !== "All") r = r.filter((t) => t.attackerCountry === countryFilter || t.targetCountry === countryFilter || t.attacker.includes(countryFilter) || t.target.includes(countryFilter));
     if (severityFilter !== "all") r = r.filter((t) => t.severity === severityFilter);
     if (search) {
@@ -202,7 +385,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       r = r.filter((t) => t.attacker.toLowerCase().includes(q) || t.target.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.details.toLowerCase().includes(q) || (t.cve && t.cve.toLowerCase().includes(q)) || (t.iocs && t.iocs.some((i) => i.toLowerCase().includes(q))));
     }
     return r;
-  }, [threats, countryFilter, severityFilter, search]);
+  }, [timelineFiltered, countryFilter, severityFilter, search]);
 
   /* stats */
   const stats = useMemo(() => {
@@ -248,6 +431,21 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
 
   const handleSelect = useCallback((t: CyberThreat) => setSelectedThreat(t), []);
 
+  /* ── Timeline time label ── */
+  const timelineLabel = useMemo(() => {
+    if (isLive) return "NOW";
+    const now = Date.now();
+    const windowMs = 24 * 60 * 60 * 1000;
+    const ts = now - windowMs + (timelinePos / 100) * windowMs;
+    return new Date(ts).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }) + " UTC";
+  }, [timelinePos, isLive]);
+
+  const hoursAgoLabel = useMemo(() => {
+    if (isLive) return "";
+    const hoursAgo = ((100 - timelinePos) / 100) * 24;
+    return `${hoursAgo.toFixed(1)}h ago`;
+  }, [timelinePos, isLive]);
+
   return createPortal(
     <div className="fixed inset-0 bg-background text-foreground flex flex-col" style={{ zIndex: 99999 }}>
       {/* ── TOP BAR ── */}
@@ -256,8 +454,20 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <ShieldAlert className="h-5 w-5 text-primary" />
           <h1 className="text-sm font-bold tracking-wider">CYBER <span className="text-primary">IMMUNITY</span></h1>
           <span className="text-[9px] font-mono text-muted-foreground">OSINT OPERATIONS CENTER</span>
+          {/* Live / Replay badge */}
+          {isLive ? (
+            <span className="flex items-center gap-1 text-[9px] font-mono font-bold text-destructive px-2 py-0.5 rounded bg-destructive/10 border border-destructive/30">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+              LIVE
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[9px] font-mono font-bold text-yellow-400 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30">
+              <Clock className="h-3 w-3" />
+              REPLAY · {hoursAgoLabel}
+            </span>
+          )}
           {sources.length > 0 && (
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex items-center gap-1 ml-2 max-sm:hidden">
               {sources.map((s) => (
                 <span key={s} className="text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-mono">{s}</span>
               ))}
@@ -265,7 +475,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {lastUpdated && <span className="text-[9px] font-mono text-muted-foreground">Updated: {new Date(lastUpdated).toLocaleTimeString()}</span>}
+          {lastUpdated && <span className="text-[9px] font-mono text-muted-foreground max-sm:hidden">Updated: {new Date(lastUpdated).toLocaleTimeString()}</span>}
           <button onClick={refresh} className="p-1.5 rounded border border-border hover:border-primary/50 hover:text-primary transition-colors" title="Refresh">
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -298,10 +508,9 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       {/* ── MAIN CONTENT ── */}
       <div className="flex flex-1 min-h-0">
         {/* LEFT PANEL */}
-        <div className="w-[272px] border-r border-border bg-card/30 flex flex-col">
+        <div className="w-[272px] border-r border-border bg-card/30 flex flex-col max-md:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
-              {/* IOC search */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">IOC / Threat Search</label>
                 <div className="relative">
@@ -310,7 +519,6 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
 
-              {/* Country filter */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Country Filter</label>
                 <div className="flex flex-wrap gap-1">
@@ -322,7 +530,6 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
 
-              {/* Severity filter */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Severity</label>
                 <div className="flex gap-1">
@@ -334,7 +541,6 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
 
-              {/* Stats */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Intelligence Summary</label>
                 <div className="space-y-1 text-[10px]">
@@ -343,7 +549,6 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
 
-              {/* Attack Types */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Attack Types</label>
                 <div className="space-y-1">
@@ -356,20 +561,20 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                       <span className="text-foreground font-mono w-4 text-right">{count}</span>
                     </div>
                   ))}
+                  {stats.topTypes.length === 0 && <span className="text-[9px] text-muted-foreground italic">No attack data yet</span>}
                 </div>
               </div>
 
-              {/* Sources */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Active Sources</label>
                 <div className="space-y-1">
-                  {sources.map((s) => (
+                  {(sources.length > 0 ? sources : EXPECTED_SOURCES).map((s) => (
                     <div key={s} className="flex items-center gap-2 text-[9px]">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-muted-foreground">{s}</span>
+                      <span className={`h-1.5 w-1.5 rounded-full ${sources.includes(s) ? "bg-green-500 animate-pulse" : "bg-muted-foreground/30"}`} />
+                      <span className={sources.includes(s) ? "text-muted-foreground" : "text-muted-foreground/50"}>{s}</span>
+                      {!sources.includes(s) && <span className="text-[7px] text-muted-foreground/40 italic">pending</span>}
                     </div>
                   ))}
-                  {sources.length === 0 && <span className="text-[9px] text-muted-foreground">Loading sources...</span>}
                 </div>
               </div>
             </div>
@@ -378,64 +583,80 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
 
         {/* CENTER PANEL */}
         <div className="flex-1 flex flex-col min-w-0 relative">
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 relative">
             {loading && threats.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <div className="text-center space-y-2">
-                  <ShieldAlert className="h-8 w-8 text-primary animate-pulse mx-auto" />
-                  <p className="text-[11px] text-muted-foreground font-mono">INITIALIZING THREAT INTELLIGENCE...</p>
+                <div className="text-center space-y-3 max-w-xs">
+                  <ShieldAlert className="h-10 w-10 text-primary animate-pulse mx-auto" />
+                  <p className="text-xs text-muted-foreground font-mono">INITIALIZING THREAT INTELLIGENCE...</p>
+                  <p className="text-[9px] text-muted-foreground/60">Awaiting data from OSINT feeds</p>
+                  <div className="space-y-1 mt-2">
+                    {EXPECTED_SOURCES.map((s) => (
+                      <div key={s} className="flex items-center gap-2 text-[8px] text-muted-foreground/40">
+                        <span className="h-1 w-1 rounded-full bg-muted-foreground/30 animate-pulse" />
+                        {s}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : threats.length === 0 && !loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center space-y-3 max-w-sm">
+                  <Activity className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+                  <p className="text-xs text-muted-foreground font-mono">AWAITING INTELLIGENCE DATA</p>
+                  <p className="text-[9px] text-muted-foreground/60">OSINT feeds initializing — data will populate automatically</p>
+                  <div className="grid grid-cols-2 gap-1 mt-3">
+                    {EXPECTED_SOURCES.map((s) => (
+                      <div key={s} className="text-[8px] px-2 py-1 rounded border border-border bg-muted/20 text-muted-foreground/50">{s}</div>
+                    ))}
+                  </div>
+                  <button onClick={refresh} className="mt-2 text-[9px] px-3 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors font-mono">
+                    RETRY FETCH
+                  </button>
                 </div>
               </div>
             ) : centerView === "map" ? (
-              <ThreatMap threats={filtered} onSelect={handleSelect} />
+              <ThreatMap threats={filtered} onSelect={handleSelect} selectedId={selectedThreat?.id} />
             ) : (
               <RelationshipGraph threats={filtered} />
             )}
+
+            {/* Live stats HUD overlay (when no threat selected) */}
+            {!selectedThreat && filtered.length > 0 && (
+              <div className="absolute top-3 right-3 bg-card/80 backdrop-blur border border-border rounded-lg p-2.5 space-y-2 w-44">
+                <div className="flex items-center justify-between">
+                  <span className="text-[8px] font-mono text-muted-foreground uppercase">Active Incidents</span>
+                  <span className="text-sm font-black text-primary tabular-nums">{filtered.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[8px] font-mono text-muted-foreground uppercase">Last Event</span>
+                  <span className="text-[9px] font-mono text-foreground">{filtered[0]?.date || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-mono text-muted-foreground uppercase block mb-0.5">24h Frequency</span>
+                  <AttackSparkline threats={threats} />
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Detail overlay */}
+          {/* Rich detail overlay */}
           {selectedThreat && (
-            <div className="absolute bottom-0 left-0 right-0 bg-card/95 backdrop-blur border-t border-border p-3 max-h-[40%] overflow-auto">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono uppercase ${SEVERITY_BG[selectedThreat.severity]}`}>{selectedThreat.severity}</span>
-                  <span className="text-[11px] font-bold">{selectedThreat.attackerFlag} {selectedThreat.attacker} → {selectedThreat.targetFlag} {selectedThreat.target}</span>
-                </div>
-                <button onClick={() => setSelectedThreat(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
-              </div>
-              <p className="text-[10px] text-muted-foreground mb-1">{selectedThreat.type} · {selectedThreat.date}</p>
-              <p className="text-[10px] mb-2">{selectedThreat.details}</p>
-              <div className="flex gap-3 text-[9px]">
-                {selectedThreat.cve && <span className="text-primary font-mono">{selectedThreat.cve}</span>}
-                {selectedThreat.source && (
-                  <a href={selectedThreat.source} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                    {selectedThreat.sourceName || "Source"} <ExternalLink className="h-2.5 w-2.5" />
-                  </a>
-                )}
-              </div>
-              {selectedThreat.iocs && selectedThreat.iocs.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {selectedThreat.iocs.map((ioc, i) => (
-                    <span key={i} className="text-[8px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-mono border border-border">{ioc}</span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ThreatDetailCard threat={selectedThreat} onClose={() => setSelectedThreat(null)} />
           )}
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="w-[272px] border-l border-border bg-card/30 flex flex-col">
+        <div className="w-[272px] border-l border-border bg-card/30 flex flex-col max-lg:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
-              {/* AI Threat Score */}
               <div className="text-center p-3 rounded border border-border bg-background/50">
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider block mb-2">AI Threat Assessment</label>
                 <div className={`text-2xl font-black ${threatLevelColor[stats.threatLevel]}`}>{stats.threatLevel}</div>
                 <div className="text-[9px] text-muted-foreground mt-1">Global Cyber Threat Level</div>
               </div>
 
-              {/* Severity Breakdown */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Severity Breakdown</label>
                 <div className="space-y-1">
@@ -451,7 +672,6 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
 
-              {/* Anomaly Detection */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> Anomaly Detection
@@ -465,7 +685,6 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
 
-              {/* Top Actors */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Top Threat Actors</label>
                 <div className="space-y-1">
@@ -479,10 +698,18 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                       <span className="font-mono w-4 text-right text-destructive">{count}</span>
                     </div>
                   ))}
+                  {stats.topActors.length === 0 && <span className="text-[9px] text-muted-foreground italic">No actor data yet</span>}
                 </div>
               </div>
 
-              {/* Recent IOCs */}
+              {/* 24h attack frequency chart */}
+              <div>
+                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Activity className="h-3 w-3" /> 24h Attack Frequency
+                </label>
+                <AttackSparkline threats={threats} />
+              </div>
+
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                   <Bug className="h-3 w-3" /> Recent IOCs
@@ -491,7 +718,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                   {stats.allIocs.length > 0 ? stats.allIocs.map((ioc, i) => (
                     <div key={i} className="text-[8px] font-mono text-muted-foreground truncate">{ioc}</div>
                   )) : (
-                    <span className="text-[9px] text-muted-foreground">No IOCs available</span>
+                    <span className="text-[9px] text-muted-foreground italic">No IOCs available</span>
                   )}
                 </div>
               </div>
@@ -500,21 +727,71 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
         </div>
       </div>
 
+      {/* ── TIMELINE SLIDER ── */}
+      <div className="px-4 py-1.5 border-t border-border bg-card/60 flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <button onClick={() => setTimelinePos(Math.max(0, timelinePos - 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+            <SkipBack className="h-3 w-3" />
+          </button>
+          <button onClick={() => { setIsPlaying(!isPlaying); if (timelinePos >= 100) setTimelinePos(0); }} className="p-1 rounded hover:bg-secondary transition-colors text-primary">
+            {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+          </button>
+          <button onClick={() => setTimelinePos(Math.min(100, timelinePos + 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+            <SkipForward className="h-3 w-3" />
+          </button>
+          <div className="flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
+            {SPEEDS.map((s) => (
+              <button key={s} onClick={() => setSpeed(s)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${speed === s ? "bg-primary/20 text-primary border border-primary/40" : "text-muted-foreground/60 hover:text-foreground hover:bg-secondary/50 border border-transparent"}`}>
+                {s}×
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <span className="text-[9px] font-mono text-muted-foreground w-12">-24h</span>
+
+        <div className="flex-1 relative">
+          <input
+            type="range" min={0} max={100} step={0.5} value={timelinePos}
+            onChange={(e) => { setTimelinePos(parseFloat(e.target.value)); setIsPlaying(false); }}
+            className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+          />
+          {/* Hour ticks */}
+          <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
+            {Array.from({ length: 13 }, (_, i) => (
+              <span key={i} className="text-[7px] font-mono text-muted-foreground/40">
+                {i % 3 === 0 ? `${i * 2}h` : "·"}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <span className={`text-[10px] font-mono font-bold w-16 text-right ${isLive ? "text-destructive" : "text-primary"}`}>
+          {timelineLabel}
+        </span>
+
+        <button onClick={() => { setTimelinePos(100); setIsPlaying(false); }} className={`text-[8px] px-2 py-0.5 rounded border font-mono font-bold transition-all ${isLive ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/40"}`}>
+          LIVE
+        </button>
+      </div>
+
       {/* ── BOTTOM PANEL — Event Feed ── */}
-      <div className="h-[176px] border-t border-border bg-card/30 flex flex-col">
+      <div className="h-[140px] border-t border-border bg-card/30 flex flex-col">
         <div className="flex items-center justify-between px-3 py-1 border-b border-border">
           <div className="flex items-center gap-2">
-            <Radio className="h-3 w-3 text-destructive animate-pulse" />
-            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Live Operations Feed</span>
+            <Radio className={`h-3 w-3 ${isLive ? "text-destructive animate-pulse" : "text-yellow-400"}`} />
+            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
+              {isLive ? "Live Operations Feed" : `Replay Feed · ${hoursAgoLabel}`}
+            </span>
           </div>
           <span className="text-[9px] font-mono text-muted-foreground">{filtered.length} events</span>
         </div>
         <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
+          <div className="p-2 space-y-1" ref={feedRef}>
             {filtered.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/30 cursor-pointer transition-colors text-[9px] group"
+                className={`flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/30 cursor-pointer transition-colors text-[9px] group ${selectedThreat?.id === t.id ? "bg-primary/10 border border-primary/20" : ""}`}
                 onClick={() => setSelectedThreat(t)}
               >
                 <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: SEVERITY_COLORS[t.severity] }} />
@@ -529,7 +806,9 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
               </div>
             ))}
             {filtered.length === 0 && !loading && (
-              <div className="text-center text-[10px] text-muted-foreground py-4">No threats match current filters</div>
+              <div className="text-center text-[10px] text-muted-foreground py-4">
+                {threats.length > 0 ? "No threats match current filters" : "Awaiting intelligence data — OSINT feeds initializing"}
+              </div>
             )}
           </div>
         </ScrollArea>
