@@ -18,7 +18,10 @@ import { C2ChatTab } from "./C2ChatTab";
 import { SensorFusionPanel } from "./SensorFusionPanel";
 import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
+import { TargetingWorkbench } from "./TargetingWorkbench";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
+import { useSensorToShooter } from "@/hooks/useSensorToShooter";
+import { toast } from "sonner";
 
 
 interface FourDMapProps { onClose: () => void; rockets?: RocketType[]; }
@@ -269,6 +272,21 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [shooterAssets, setShooterAssets] = useState<any[]>([]);
   const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S">("FEED");
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
+  const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
+  const { commitStrike } = useSensorToShooter();
+
+  const handleSlewSensor = useCallback(async (lat: number, lng: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sensor-to-shooter", {
+        body: { action: "slew_sensor", lat, lng },
+      });
+      if (!error && data?.success) {
+        toast.success(`📡 SLEWED ${data.slewed_asset.callsign} → ${lat.toFixed(2)}°, ${lng.toFixed(2)}° • ETA: ${data.slewed_asset.eta_min}min`);
+      } else {
+        toast.error(data?.error || "Slew failed");
+      }
+    } catch { toast.error("Slew sensor failed"); }
+  }, []);
 
 
   // Fetch Google POIs for the focused region
@@ -399,7 +417,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .showAtmosphere(true)
         .width(globeContainerRef.current.clientWidth)
         .height(globeContainerRef.current.clientHeight)
-        .pointsData([]).pointLat("lat").pointLng("lng").pointAltitude("pointAlt").pointColor("color").pointRadius("radius").pointLabel("label")
+        .pointsData([]).pointLat("lat").pointLng("lng").pointAltitude("pointAlt").pointColor("color").pointRadius("radius").pointLabel("label").onPointClick((point: any) => {
+          if (point?.targetTrackId) setWorkbenchTargetId(point.targetTrackId);
+        })
         .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude("alt").htmlElement("el")
         .objectsData([]).objectLat("lat").objectLng("lng").objectAltitude("alt").objectLabel("label")
         .arcsData([]).arcStartLat("startLat").arcStartLng("startLng").arcEndLat("endLat").arcEndLng("endLng").arcColor("colors").arcStroke(0.5).arcDashLength(0.6).arcDashGap(0.1).arcDashAnimateTime(2000).arcAltitudeAutoScale(0.25)
@@ -911,6 +931,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         const cIcon = t.classification === "tank" ? "🪖" : t.classification === "sam_site" ? "🎯" : t.classification === "missile_launcher" ? "🚀" : t.classification === "radar" ? "📡" : t.classification === "artillery" ? "💥" : t.classification === "command_post" ? "🏛" : "⚠️";
         points.push({
           lat: t.lat, lng: t.lng, pointAlt: 0.035, color: pCol, radius: (t.priority === "critical" ? 0.4 : 0.3) * densityMult,
+          targetTrackId: t.id,
           label: `<div style="font-family:monospace;font-size:11px;background:rgba(15,5,5,0.96);border:1px solid ${pCol};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${pCol}40"><div style="color:${pCol};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> TARGET ${t.track_id}</div><div style="font-size:10px;margin-top:2px">${t.classification.toUpperCase().replace("_"," ")} — ${(t.confidence*100).toFixed(0)}%</div><div style="color:#888;font-size:8px;margin-top:1px">${t.priority.toUpperCase()} PRIORITY • ${t.source_sensor.toUpperCase()} • ${t.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${t.ai_assessment || ""}</div></div>`,
         });
       });
@@ -1125,6 +1146,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </>
           )}
+          {/* Targeting Workbench — bottom docked panel */}
+          {workbenchTargetId && (
+            <TargetingWorkbench
+              targetId={workbenchTargetId}
+              onClose={() => setWorkbenchTargetId(null)}
+              onLocate={handleFeedClick}
+              onCommitStrike={commitStrike}
+            />
+          )}
         </div>
 
         {/* RIGHT PANEL — Attributes + Feed */}
@@ -1225,17 +1255,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   </div>
                   <div ref={feedRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
                     {unifiedFeed.map(ev => (
-                      <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
-                        className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
-                            <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
-                          </span>
-                          <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                      <div key={ev.id} className={`border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
+                        <button onClick={() => handleFeedClick(ev.lat, ev.lng)} className="w-full text-left px-2 py-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
+                              <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
+                            </span>
+                            <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                          </div>
+                          <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
+                          <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
+                        </button>
+                        <div className="px-2 pb-1">
+                          <button onClick={() => handleSlewSensor(ev.lat, ev.lng)}
+                            className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#06b6d4]/30 text-[#06b6d4] hover:bg-[#06b6d4]/10 transition-colors">
+                            📡 SLEW
+                          </button>
                         </div>
-                        <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
-                        <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
-                      </button>
+                      </div>
                     ))}
                     {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
                   </div>
