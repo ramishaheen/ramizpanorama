@@ -1388,11 +1388,11 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   return createPortal(
     <div className="fixed inset-0 bg-background text-foreground flex flex-col" style={{ zIndex: 99999 }}>
       {/* ── TOP BAR ── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/90 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <ShieldAlert className="h-5 w-5 text-primary" />
-          <h1 className="text-sm font-bold tracking-wider">CYBER <span className="text-primary">IMMUNITY</span></h1>
-          <span className="text-[9px] font-mono text-muted-foreground">OSINT OPERATIONS CENTER</span>
+      <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 border-b border-border bg-card/90 backdrop-blur">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+          <ShieldAlert className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+          <h1 className="text-xs sm:text-sm font-bold tracking-wider flex-shrink-0">CYBER <span className="text-primary">IMMUNITY</span></h1>
+          <span className="text-[9px] font-mono text-muted-foreground hidden sm:inline">OSINT OPERATIONS CENTER</span>
           {/* Live / Replay badge */}
           {isLive ? (
             <span className="flex items-center gap-1 text-[9px] font-mono font-bold text-destructive px-2 py-0.5 rounded bg-destructive/10 border border-destructive/30">
