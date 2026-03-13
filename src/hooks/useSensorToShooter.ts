@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface ShooterAsset {
   id: string;
@@ -63,6 +64,8 @@ export function useSensorToShooter() {
   const [loading, setLoading] = useState(true);
   const [matching, setMatching] = useState(false);
   const [darkVesselResult, setDarkVesselResult] = useState<any>(null);
+  const [newTargetId, setNewTargetId] = useState<string | null>(null);
+  const [alertCount, setAlertCount] = useState(0);
 
   const fetchShooters = useCallback(async () => {
     const { data } = await supabase.from("shooter_assets").select("*").order("callsign");
@@ -97,7 +100,31 @@ export function useSensorToShooter() {
     const ch2 = supabase.channel("s2s_shooters_rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "shooter_assets" }, () => fetchShooters())
       .subscribe();
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
+    // Realtime target_tracks — push notification for high-confidence detections
+    const ch3 = supabase.channel("s2s_targets_rt")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "target_tracks" }, (payload: any) => {
+        const newTarget = payload.new;
+        if (newTarget && newTarget.confidence > 0.9) {
+          setAlertCount(prev => prev + 1);
+          setNewTargetId(newTarget.id);
+          toast.error(
+            `⚠ HIGH-CONF TARGET: ${newTarget.classification?.toUpperCase().replace("_", " ")} — ${(newTarget.confidence * 100).toFixed(0)}% at ${newTarget.lat?.toFixed(3)}°, ${newTarget.lng?.toFixed(3)}°`,
+            {
+              duration: 8000,
+              action: {
+                label: "VIEW",
+                onClick: () => setNewTargetId(newTarget.id),
+              },
+            }
+          );
+        }
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch1);
+      supabase.removeChannel(ch2);
+      supabase.removeChannel(ch3);
+    };
   }, [fetchAll, fetchRecommendations, fetchShooters]);
 
   const matchShooters = useCallback(async (targetTrackId: string) => {
@@ -150,6 +177,9 @@ export function useSensorToShooter() {
     }
   }, [fetchRecommendations]);
 
+  const clearNewTarget = useCallback(() => setNewTargetId(null), []);
+  const clearAlertCount = useCallback(() => setAlertCount(0), []);
+
   const pendingCount = recommendations.filter(r => r.decision === "pending").length;
   const committedCount = recommendations.filter(r => r.decision === "committed").length;
   const idleShooters = shooters.filter(s => s.current_tasking === "idle").length;
@@ -164,10 +194,14 @@ export function useSensorToShooter() {
     pendingCount,
     committedCount,
     idleShooters,
+    newTargetId,
+    alertCount,
     fetchAll,
     matchShooters,
     commitStrike,
     discardStrike,
     detectDarkVessel,
+    clearNewTarget,
+    clearAlertCount,
   };
 }

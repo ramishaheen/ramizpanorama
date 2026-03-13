@@ -93,8 +93,6 @@ export const ConfirmSlider = ({ onConfirm, label = "SLIDE TO ENGAGE", disabled =
         <div
           className="absolute top-0.5 bottom-0.5 w-9 rounded flex items-center justify-center"
           style={{
-            left: `calc(${pct}% * (1 - 36px / 100%))`,
-            transform: `translateX(${pct * (trackRef.current ? (trackRef.current.clientWidth - 36) / 100 : 0)}px)`,
             left: 0,
             transform: `translateX(${progress * ((trackRef.current?.clientWidth || 200) - 36)}px)`,
             background: dragging ? "hsl(0,70%,45%)" : "hsl(0,60%,35%)",
