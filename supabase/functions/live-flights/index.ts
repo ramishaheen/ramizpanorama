@@ -1,4 +1,4 @@
-// live-flights edge function
+// live-flights edge function — multi-source ADS-B aggregator
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
