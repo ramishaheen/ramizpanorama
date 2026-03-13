@@ -285,6 +285,7 @@ export const MapCommandBar = ({
               label={layer.shortName}
               active={layer.enabled}
               onClick={() => onBaseChange(layer.id)}
+              tooltip={`Switch to ${layer.name} base map`}
             />
           ))}
           <GothamBtn
@@ -293,6 +294,7 @@ export const MapCommandBar = ({
             active={activeOverlays.length > 0 || overlayExpanded}
             badge={activeOverlays.length > 0 ? activeOverlays.length : undefined}
             onClick={() => setOverlayExpanded(!overlayExpanded)}
+            tooltip="Toggle imagery overlay layers panel"
           />
         </CommandSection>
 
