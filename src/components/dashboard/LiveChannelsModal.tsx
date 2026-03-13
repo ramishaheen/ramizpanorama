@@ -204,6 +204,7 @@ export function LiveChannelsModal({ onClose }: Props) {
           width: "min(95vw, 900px)", maxHeight: "90vh",
           background: "hsl(var(--card))", border: "1px solid hsl(var(--border))",
           borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column",
+          margin: "0 auto",
         }}
       >
         {/* Header */}
