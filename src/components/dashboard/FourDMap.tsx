@@ -1106,7 +1106,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
         {/* RIGHT PANEL — Attributes + Feed */}
         {!cleanUI && (
-          <div className="hidden md:flex w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex-col overflow-hidden pointer-events-auto" style={{ minWidth: 256 }}>
+          <div className="hidden md:flex w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex-col min-h-0 overflow-hidden pointer-events-auto" style={{ minWidth: 256 }}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-primary" />
@@ -1115,7 +1115,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="overflow-y-auto scrollbar-thin flex-shrink min-h-0">
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)] space-y-2.5">
               {[
                 { label: "BLOOM", icon: <Sparkles className="h-3.5 w-3.5 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
@@ -1200,7 +1200,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                       <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
                     </div>
                   </div>
-                  <div ref={feedRef} className="flex-1 overflow-y-auto">
+                  <div ref={feedRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
                     {unifiedFeed.map(ev => (
                       <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
                         className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
