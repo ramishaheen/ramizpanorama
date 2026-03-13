@@ -11,7 +11,7 @@ import {
   Layers, Github
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
-import { useDarkWebIntel, type ActorDossier, type DarkWebEntry, type TorAnalysis } from "@/hooks/useDarkWebIntel";
+import { useDarkWebIntel, type ActorDossier, type DarkWebEntry, type TorAnalysis, type IndicatorExtraction, type ThreatCorrelation, type ForumPost, type RansomwareLeak, type AlertRule, type DashboardStats, type TemporalTrend } from "@/hooks/useDarkWebIntel";
 import CyberThreatMapLeaflet from "@/components/dashboard/cyber/CyberThreatMapLeaflet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
