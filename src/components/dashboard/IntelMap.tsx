@@ -2193,17 +2193,17 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
       {/* Expanded sub-panels that pop up above command bar */}
       {cmdUp42Open && (
-        <div className="absolute bottom-[36px] left-3 z-[1001]">
+        <div className="absolute bottom-[42px] left-3 z-[1001]">
           <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         </div>
       )}
       {cmdLegendOpen && (
-        <div className="absolute bottom-[36px] left-3 z-[1001]">
+        <div className="absolute bottom-[42px] left-3 z-[1001]">
           <MapLegend layers={layers} onToggleLayer={onToggleLayer} />
         </div>
       )}
       {cmdHistoryOpen && (
-        <div className="absolute bottom-[36px] left-3 z-[1001]">
+        <div className="absolute bottom-[42px] left-3 z-[1001]">
           <MapHistorySlider
             onTimeFilter={setHistoryFilter}
             events={historyEvents}
@@ -2212,7 +2212,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         </div>
       )}
       {cmdBookmarksOpen && (
-        <div className="absolute bottom-[36px] left-3 z-[1001]">
+        <div className="absolute bottom-[42px] left-3 z-[1001]">
           <MapBookmarks
             currentLat={mapRef.current?.getCenter().lat || 28}
             currentLng={mapRef.current?.getCenter().lng || 48}
@@ -2223,7 +2223,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         </div>
       )}
       {cmdChokepointsOpen && (
-        <div className="absolute bottom-[36px] right-3 z-[1001]">
+        <div className="absolute bottom-[42px] right-3 z-[1001]">
           <ChokepointMonitor
             vessels={vessels}
             onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
@@ -2231,7 +2231,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         </div>
       )}
       {cmdLaunchesOpen && (
-        <div className="absolute bottom-[36px] right-3 z-[1001]">
+        <div className="absolute bottom-[42px] right-3 z-[1001]">
           <TotalLaunchesWidget rockets={rockets} />
         </div>
       )}
