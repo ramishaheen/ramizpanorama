@@ -186,6 +186,46 @@ const EMPTY_STATE: DarkWebState = {
   loading: false, error: null,
 };
 
+  /** Merge indicator extraction data — append unique items */
+  const mergeIndicators = (existing: IndicatorExtraction | null, incoming: IndicatorExtraction): IndicatorExtraction => {
+    if (!existing) return incoming;
+    const dedup = <T>(a: T[], b: T[]): T[] => {
+      const key = (item: T) => {
+        const o = item as Record<string, unknown>;
+        return String(o.value ?? o.id ?? o.name ?? o.port ?? o.cve ?? o.address ?? JSON.stringify(item));
+      };
+      const seen = new Set(a.map(key));
+      return [...a, ...b.filter(item => !seen.has(key(item)))];
+    };
+    return {
+      network: {
+        ips: dedup(existing.network.ips, incoming.network.ips),
+        domains: dedup(existing.network.domains, incoming.network.domains),
+        urls: dedup(existing.network.urls, incoming.network.urls),
+        asns: dedup(existing.network.asns, incoming.network.asns),
+        ports: dedup(existing.network.ports, incoming.network.ports),
+      },
+      vulnerability: {
+        cves: dedup(existing.vulnerability.cves, incoming.vulnerability.cves),
+        exploits: dedup(existing.vulnerability.exploits, incoming.vulnerability.exploits),
+        patches: dedup(existing.vulnerability.patches, incoming.vulnerability.patches),
+      },
+      malware: {
+        hashes: dedup(existing.malware.hashes, incoming.malware.hashes),
+        families: dedup(existing.malware.families, incoming.malware.families),
+        c2Servers: dedup(existing.malware.c2Servers, incoming.malware.c2Servers),
+      },
+      actors: {
+        aptGroups: dedup(existing.actors.aptGroups, incoming.actors.aptGroups),
+        ransomwareGangs: dedup(existing.actors.ransomwareGangs, incoming.actors.ransomwareGangs),
+        hacktivistGroups: dedup(existing.actors.hacktivistGroups, incoming.actors.hacktivistGroups),
+      },
+      financial: {
+        cryptoWallets: dedup(existing.financial.cryptoWallets, incoming.financial.cryptoWallets),
+      },
+    };
+  };
+
 export function useDarkWebIntel(threats: CyberThreat[]) {
   const [darkWeb, setDarkWeb] = useState<DarkWebState>(EMPTY_STATE);
   const [dossier, setDossier] = useState<DossierState>({ dossier: null, loading: false, error: null });
@@ -201,18 +241,38 @@ export function useDarkWebIntel(threats: CyberThreat[]) {
         body: { threatContext: context },
       });
       if (error) throw new Error(error.message);
-      setDarkWeb({
-        entries: data?.entries || [],
-        torAnalysis: data?.torAnalysis || null,
-        indicatorExtraction: data?.indicatorExtraction || null,
-        threatCorrelation: data?.threatCorrelation || [],
-        forumAnalysis: data?.forumAnalysis || [],
-        ransomwareLeaks: data?.ransomwareLeaks || [],
-        alertRules: data?.alertRules || [],
-        dashboardStats: data?.dashboardStats || null,
-        temporalTrends: data?.temporalTrends || [],
-        loading: false,
-        error: null,
+
+      // Merge new data with existing, deduplicating by id
+      setDarkWeb(prev => {
+        const mergeById = <T extends { id: string }>(existing: T[], incoming: T[]): T[] => {
+          const map = new Map<string, T>();
+          existing.forEach(item => map.set(item.id, item));
+          incoming.forEach(item => map.set(item.id, item));
+          return Array.from(map.values());
+        };
+
+        const newEntries = data?.entries || [];
+        const newCorrelation = data?.threatCorrelation || [];
+        const newForum = data?.forumAnalysis || [];
+        const newLeaks = data?.ransomwareLeaks || [];
+        const newAlerts = data?.alertRules || [];
+        const newTrends = data?.temporalTrends || [];
+
+        return {
+          entries: mergeById(prev.entries, newEntries),
+          torAnalysis: data?.torAnalysis || prev.torAnalysis,
+          indicatorExtraction: data?.indicatorExtraction
+            ? mergeIndicators(prev.indicatorExtraction, data.indicatorExtraction)
+            : prev.indicatorExtraction,
+          threatCorrelation: mergeById(prev.threatCorrelation, newCorrelation),
+          forumAnalysis: mergeById(prev.forumAnalysis, newForum),
+          ransomwareLeaks: mergeById(prev.ransomwareLeaks, newLeaks),
+          alertRules: mergeById(prev.alertRules, newAlerts),
+          dashboardStats: data?.dashboardStats || prev.dashboardStats,
+          temporalTrends: newTrends.length > 0 ? newTrends : prev.temporalTrends,
+          loading: false,
+          error: null,
+        };
       });
     } catch (err) {
       console.error("Dark web intel error:", err);
