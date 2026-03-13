@@ -939,7 +939,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
     if (isLive) return threats;
     // Map 0-100 to 24h window
     const now = Date.now();
-    const windowMs = 24 * 60 * 60 * 1000;
+    const windowMs = 28 * 24 * 60 * 60 * 1000;
     const cutoffTime = now - windowMs + (timelinePos / 100) * windowMs;
     return threats.filter((t) => {
       const tTime = new Date(t.date).getTime();
