@@ -554,6 +554,9 @@
 
 .scouting-tile-body {
   padding: 6px 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: hsl(190 100% 50% / 0.2) transparent;
 }
