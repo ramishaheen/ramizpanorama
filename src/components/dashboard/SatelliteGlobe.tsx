@@ -2670,14 +2670,14 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 <button
                   onClick={() => runPrediction(selectedSat)}
                   disabled={predicting}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 disabled:opacity-40 transition-all"
+                  className="flex-1 gotham-orbital-btn justify-center"
                 >
                   {predicting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crosshair className="h-3 w-3" />}
                   {predicting ? "PREDICTING..." : "AI PREDICT"}
                 </button>
                 <button
                   onClick={() => openAiChat(selectedSat)}
-                  className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all"
+                  className="gotham-orbital-btn justify-center"
                 >
                   <Bot className="h-3 w-3" /> ASK AI
                 </button>
