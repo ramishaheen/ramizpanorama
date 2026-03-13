@@ -2217,6 +2217,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       trailLinesRef.current.forEach(l => l.setMap(null));
       vesselMarkersRef.current.forEach(m => m.setMap(null));
       earthquakeMarkersRef.current.forEach(m => m.setMap(null));
+      wildfireMarkersRef.current.forEach(m => m.setMap(null));
       weatherMarkersRef.current.forEach(m => m.setMap(null));
       rocketMarkersRef.current.forEach(m => m.setMap(null));
       rocketLinesRef.current.forEach(l => l.setMap(null));
