@@ -766,11 +766,25 @@ function ThreatDetailCard({ threat, onClose }: { threat: CyberThreat; onClose: (
 /* ── Main Modal ── */
 export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const { threats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
+  const { darkWeb, dossier, fetchDarkWeb, fetchDossier, clearDossier } = useDarkWebIntel(threats);
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("All");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
+  const [showDossier, setShowDossier] = useState(false);
+
+  /* Auto-fetch dark web intel when switching to darkweb tab */
+  useEffect(() => {
+    if (centerView === "darkweb" && darkWeb.entries.length === 0 && !darkWeb.loading && threats.length > 0) {
+      fetchDarkWeb();
+    }
+  }, [centerView, threats.length]);
+
+  const handleFetchDossier = useCallback((actorName: string) => {
+    setShowDossier(true);
+    fetchDossier(actorName);
+  }, [fetchDossier]);
 
   /* ── Timeline state ── */
   const [timelinePos, setTimelinePos] = useState(100); // 0-100, 100 = now (LIVE)
