@@ -463,6 +463,20 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const blueUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "blue"), [forceUnits]);
   const redUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "red" || u.affiliation === "unknown"), [forceUnits]);
   const activeTargets = useMemo(() => targetTracks.filter((t: any) => t.status !== "destroyed"), [targetTracks]);
+  const criticalTargetCount = useMemo(() => activeTargets.filter((t: any) => t.priority === "critical").length, [activeTargets]);
+  const offlineSensors = useMemo(() => sensorFeeds.filter((s: any) => s.status === "offline" || s.status === "error").length, [sensorFeeds]);
+  const [tasks_kc_count, setTasksKcCount] = useState(0);
+
+  // Fetch kill chain count
+  useEffect(() => {
+    const fetchKC = async () => {
+      const { count } = await supabase.from("kill_chain_tasks").select("*", { count: "exact", head: true }).neq("phase", "assess" as any);
+      setTasksKcCount(count || 0);
+    };
+    fetchKC();
+    const ch = supabase.channel("kc_count_rt").on("postgres_changes", { event: "*", schema: "public", table: "kill_chain_tasks" }, () => fetchKC()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
 
   const stats = useMemo(() => ({
     sats: allSatellites.length, aircraft: allFlights.length, vessels: aisVessels.length,
@@ -1253,6 +1267,67 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                     </button>
                   </div>
                 ))}
+
+                {/* Threat Level */}
+                {(() => {
+                  const critTargets = activeTargets.filter((t: any) => t.priority === "critical").length;
+                  const level = critTargets >= 3 ? "BLACK" : critTargets >= 2 ? "RED" : activeTargets.length > 5 ? "AMBER" : "GREEN";
+                  const levelColor = level === "BLACK" ? "#1a1a1a" : level === "RED" ? "#ef4444" : level === "AMBER" ? "#eab308" : "#22c55e";
+                  return (
+                    <div className="pt-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[8px] font-mono text-muted-foreground tracking-wider">THREAT LEVEL</span>
+                        <span className="text-[8px] font-mono font-bold" style={{ color: levelColor }}>{level}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[hsl(220,15%,15%)] overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: level === "BLACK" ? "100%" : level === "RED" ? "75%" : level === "AMBER" ? "50%" : "25%", backgroundColor: levelColor }} />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Dynamic suggestion chips */}
+                <  div className="pt-1.5 space-y-1">
+                      <span className="text-[7px] font-mono text-muted-foreground tracking-[0.15em]">SUGGESTIONS</span>
+                  <div className="flex flex-wrap gap-1">
+                    {tasks_kc_count > 0 && (
+                      <button onClick={() => setC2RightTab("KILLCHAIN")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/30 -[#f97316]/70 hover:bg-[#f97316]/10 transition-colors">
+                        ⚡ Kill Chain ({tasks_kc_count})
+                      </button>
+                    )}
+                    {criticalTargetCount > 0 && (
+                      <button onClick={() => setC2RightTab("TARGETS")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#ef4444]/30 text-[#ef4444]/70 hover:bg-[#ef4444]/10 transition-colors">
+                        🎯 {criticalTargetCount} Critical
+                      </button>
+                    )}
+                    {offlineSensors > 0 && (
+                      <button onClick={() => setC2RightTab("SENSORS")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#eab308]/30 text-[#eab308]/70 hover:bg-[#eab308]/10 transition-colors">
+                        📡 {offlineSensors} Offline
+                      </button>
+                    )}
+                    <button onClick={() => setC2RightTab("C2 INTEL")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary/70 hover:bg-primary/10 transition-colors">
+                      🤖 AEGIS Intel
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Layer Presets */}
+                <div className="pt-1">
+                  <span className="text-[7px] font-mono text-muted-foreground tracking-[0.15em]">MODE PRESETS</span>
+                  <div className="flex gap-1 mt-1">
+                    {([
+                      { label: "ISR", layers: { satellites: true, sensorCoverage: true, targetTracks: true, flights: false, maritime: false, shooterAssets: false } },
+                      { label: "STRIKE", layers: { targetTracks: true, killChain: true, shooterAssets: true, satellites: false, flights: false, maritime: false, sensorCoverage: false } },
+                      { label: "RECON", layers: { flights: true, maritime: true, sensorCoverage: true, satellites: true, targetTracks: false, killChain: false, shooterAssets: false } },
+                    ] as const).map(preset => (
+                      <button key={preset.label}
+                        onClick={() => setLayers(prev => ({ ...prev, ...preset.layers }))}
+                        className="flex-1 px-1 py-1 rounded text-[7px] font-mono font-bold border border-[hsl(220,15%,20%)] text-muted-foreground hover:text-[#22c55e] hover:border-[#22c55e]/30 transition-colors">
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1307,7 +1382,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 </>
               )}
               {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
-              {c2RightTab === "KILLCHAIN" && <KillChainPanel />}
+              {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} />}
               {c2RightTab === "C2 INTEL" && <C2ChatTab />}
               {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
               {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}

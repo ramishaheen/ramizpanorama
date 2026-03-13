@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap } from "lucide-react";
+import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface KCTask {
   id: string;
@@ -12,7 +13,18 @@ interface KCTask {
   notes: string;
   bda_result: string;
   created_at: string;
-  target?: { track_id: string; classification: string; priority: string; lat: number; lng: number };
+  target?: { track_id: string; classification: string; priority: string; lat: number; lng: number; confidence?: number };
+}
+
+interface TargetOption {
+  id: string;
+  track_id: string;
+  classification: string;
+  priority: string;
+  lat: number;
+  lng: number;
+  confidence: number;
+  status: string;
 }
 
 const PHASES = ["find", "fix", "track", "target", "engage", "assess"];
@@ -23,14 +35,24 @@ const PHASE_ICONS: Record<string, string> = {
   find: "🔍", fix: "📌", track: "👁", target: "🎯", engage: "💥", assess: "📋",
 };
 
-export const KillChainPanel = () => {
+interface KillChainPanelProps {
+  onLocate?: (lat: number, lng: number) => void;
+}
+
+export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   const [tasks, setTasks] = useState<KCTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPicker, setShowPicker] = useState(false);
+  const [availableTargets, setAvailableTargets] = useState<TargetOption[]>([]);
+  const [loadingTargets, setLoadingTargets] = useState(false);
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [generatingBDA, setGeneratingBDA] = useState<string | null>(null);
+  const [initiatingTarget, setInitiatingTarget] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     const { data } = await supabase
       .from("kill_chain_tasks")
-      .select("*, target_tracks(track_id, classification, priority, lat, lng)")
+      .select("*, target_tracks(track_id, classification, priority, lat, lng, confidence)")
       .order("created_at", { ascending: false })
       .limit(30);
     if (data) {
@@ -48,41 +70,155 @@ export const KillChainPanel = () => {
     return () => { supabase.removeChannel(channel); };
   }, [fetchTasks]);
 
+  const fetchAvailableTargets = async () => {
+    setLoadingTargets(true);
+    const { data } = await supabase
+      .from("target_tracks")
+      .select("id, track_id, classification, priority, lat, lng, confidence, status")
+      .in("status", ["detected", "confirmed"])
+      .order("confidence", { ascending: false })
+      .limit(20);
+    setAvailableTargets(data || []);
+    setLoadingTargets(false);
+  };
+
+  const handleOpenPicker = () => {
+    setShowPicker(true);
+    fetchAvailableTargets();
+  };
+
+  const initiateKillChain = async (target: TargetOption) => {
+    setInitiatingTarget(target.id);
+    try {
+      // Get S2S recommendation for weapon/platform
+      let weapon = "TBD";
+      let platform = "TBD";
+      try {
+        const { data: s2sData } = await supabase.functions.invoke("sensor-to-shooter", {
+          body: { action: "recommend", target_id: target.id },
+        });
+        if (s2sData?.recommendation) {
+          weapon = s2sData.recommendation.recommended_weapon || weapon;
+          platform = s2sData.recommendation.callsign || platform;
+        }
+      } catch { /* proceed without S2S */ }
+
+      await supabase.from("kill_chain_tasks").insert({
+        target_track_id: target.id,
+        phase: "find" as any,
+        status: "in_progress" as any,
+        recommended_weapon: weapon,
+        assigned_platform: platform,
+      });
+
+      toast.success(`⚡ KILL CHAIN INITIATED`, {
+        description: `${target.track_id} • ${target.classification} • ${target.priority.toUpperCase()} priority\nPlatform: ${platform} • Weapon: ${weapon}`,
+      });
+      setShowPicker(false);
+      fetchTasks();
+    } catch (err) {
+      toast.error("Failed to initiate kill chain");
+    } finally {
+      setInitiatingTarget(null);
+    }
+  };
+
+  const runATRScan = async () => {
+    toast.info("🛰 Running ATR scan...");
+    try {
+      await supabase.functions.invoke("simulate-intel", { body: { type: "target_detection" } });
+      toast.success("ATR scan complete — new detections available");
+      setTimeout(() => fetchAvailableTargets(), 1500);
+    } catch {
+      toast.error("ATR scan failed");
+    }
+  };
+
   const advancePhase = async (task: KCTask) => {
     const currentIdx = PHASES.indexOf(task.phase);
     if (currentIdx >= PHASES.length - 1) return;
     const nextPhase = PHASES[currentIdx + 1] as any;
-    // Engage phase requires approved status
     if (nextPhase === "engage" && task.status !== "approved") return;
     await supabase.from("kill_chain_tasks").update({
       phase: nextPhase,
       status: (nextPhase === "engage" ? "in_progress" : "pending") as any,
       updated_at: new Date().toISOString(),
     }).eq("id", task.id);
+    toast.success(`${PHASE_ICONS[nextPhase]} Advanced to ${nextPhase.toUpperCase()}`);
     fetchTasks();
   };
 
   const approveTask = async (id: string) => {
-    await supabase.from("kill_chain_tasks").update({ status: "approved", updated_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from("kill_chain_tasks").update({ status: "approved" as any, updated_at: new Date().toISOString() }).eq("id", id);
+    toast.success("✅ Engagement APPROVED");
     fetchTasks();
   };
 
-  const createKCFromTarget = async () => {
-    // Get first detected target not yet in kill chain
-    const { data: targets } = await supabase.from("target_tracks").select("id").eq("status", "detected").limit(1);
-    if (!targets?.length) return;
-    await supabase.from("kill_chain_tasks").insert({
-      target_track_id: targets[0].id,
-      phase: "find",
-      status: "in_progress",
-    });
-    fetchTasks();
+  const generateBDA = async (task: KCTask) => {
+    if (!task.target) return;
+    setGeneratingBDA(task.id);
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/c2-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: [{
+            role: "user",
+            content: `Generate a concise Battle Damage Assessment (BDA) for target ${task.target.track_id}, classification: ${task.target.classification}, location: ${task.target.lat.toFixed(4)}°N, ${task.target.lng.toFixed(4)}°E. Weapon used: ${task.recommended_weapon || "unknown"}. Platform: ${task.assigned_platform || "unknown"}. Include: damage estimate, functional impact, re-strike recommendation. Keep it under 150 words.`
+          }],
+        }),
+      });
+      if (!resp.ok) throw new Error("BDA generation failed");
+
+      let bdaText = "";
+      const reader = resp.body?.getReader();
+      const decoder = new TextDecoder();
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          for (const line of chunk.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            const json = line.slice(6).trim();
+            if (json === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(json);
+              bdaText += parsed.choices?.[0]?.delta?.content || "";
+            } catch { /* skip */ }
+          }
+        }
+      }
+
+      if (bdaText) {
+        await supabase.from("kill_chain_tasks").update({
+          bda_result: bdaText,
+          updated_at: new Date().toISOString(),
+        }).eq("id", task.id);
+        toast.success("📋 BDA generated");
+        fetchTasks();
+      }
+    } catch {
+      toast.error("BDA generation failed");
+    } finally {
+      setGeneratingBDA(null);
+    }
   };
 
   const phaseCounts = PHASES.reduce((acc, p) => {
     acc[p] = tasks.filter(t => t.phase === p).length;
     return acc;
   }, {} as Record<string, number>);
+
+  const priorityColor = (p: string) => {
+    if (p === "critical") return "#ef4444";
+    if (p === "high") return "#f97316";
+    if (p === "medium") return "#eab308";
+    return "#22c55e";
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -110,12 +246,66 @@ export const KillChainPanel = () => {
         ))}
       </div>
 
+      {/* Initiate button */}
       <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
-        <button onClick={createKCFromTarget} className="w-full px-2 py-1 rounded text-[8px] font-mono border border-[hsl(190,60%,20%)] text-primary hover:bg-primary/10 transition-colors">
-          + INITIATE KILL CHAIN
+        <button onClick={handleOpenPicker} className="w-full px-2 py-1.5 rounded text-[9px] font-mono font-bold border border-[#f97316]/40 text-[#f97316] hover:bg-[#f97316]/10 transition-colors flex items-center justify-center gap-1.5">
+          <Crosshair className="h-3 w-3" /> INITIATE KILL CHAIN
         </button>
       </div>
 
+      {/* Target Picker */}
+      {showPicker && (
+        <div className="border-b border-[hsl(190,60%,10%)] bg-[hsl(220,15%,7%)]">
+          <div className="px-3 py-1.5 border-b border-[hsl(190,60%,8%)] flex items-center justify-between">
+            <span className="text-[8px] font-mono font-bold text-foreground tracking-wider">SELECT TARGET</span>
+            <button onClick={() => setShowPicker(false)} className="text-[8px] font-mono text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+          {loadingTargets ? (
+            <div className="flex items-center justify-center py-4"><Loader2 className="h-3 w-3 animate-spin text-primary" /></div>
+          ) : availableTargets.length === 0 ? (
+            <div className="px-3 py-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-2">
+                <AlertTriangle className="h-3 w-3 text-[#eab308]" />
+                <span className="text-[8px] font-mono text-[#eab308]">NO DETECTED TARGETS</span>
+              </div>
+              <button onClick={runATRScan} className="px-3 py-1 rounded text-[8px] font-mono border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center gap-1 mx-auto">
+                <Scan className="h-2.5 w-2.5" /> RUN ATR SCAN
+              </button>
+            </div>
+          ) : (
+            <div className="max-h-[180px] overflow-y-auto scrollbar-thin">
+              {availableTargets.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => initiateKillChain(t)}
+                  disabled={initiatingTarget === t.id}
+                  className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
+                >
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor(t.priority) }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] font-mono font-bold text-foreground">{t.track_id}</span>
+                      <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${priorityColor(t.priority)}20`, color: priorityColor(t.priority) }}>
+                        {t.priority.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-[7px] font-mono text-muted-foreground">
+                      {t.classification} • {t.confidence}% • {t.lat.toFixed(2)}°N {t.lng.toFixed(2)}°E
+                    </div>
+                  </div>
+                  {initiatingTarget === t.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin text-[#f97316] flex-shrink-0" />
+                  ) : (
+                    <Zap className="h-3 w-3 text-[#f97316] flex-shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Task list */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
         {loading ? (
           <div className="flex items-center justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
@@ -124,37 +314,101 @@ export const KillChainPanel = () => {
         ) : (
           tasks.map(task => {
             const col = PHASE_COLORS[task.phase] || "#888";
+            const isExpanded = expandedTask === task.id;
             return (
-              <div key={task.id} className="px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 hover:bg-[hsl(190,20%,10%)] transition-colors" style={{ borderLeftColor: col }}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono font-bold flex items-center gap-1" style={{ color: col }}>
-                    {PHASE_ICONS[task.phase]} {task.phase.toUpperCase()}
-                  </span>
-                  <span className={`text-[7px] font-mono px-1 py-0.5 rounded ${task.status === "approved" ? "bg-[#22c55e]/20 text-[#22c55e]" : task.status === "in_progress" ? "bg-[#eab308]/20 text-[#eab308]" : "bg-muted text-muted-foreground"}`}>
-                    {task.status.toUpperCase()}
-                  </span>
+              <div key={task.id} className="border-b border-[hsl(220,15%,10%)] border-l-2 hover:bg-[hsl(190,20%,10%)] transition-colors" style={{ borderLeftColor: col }}>
+                <div className="px-2 py-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono font-bold flex items-center gap-1" style={{ color: col }}>
+                      {PHASE_ICONS[task.phase]} {task.phase.toUpperCase()}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className={`text-[7px] font-mono px-1 py-0.5 rounded ${task.status === "approved" ? "bg-[#22c55e]/20 text-[#22c55e]" : task.status === "in_progress" ? "bg-[#eab308]/20 text-[#eab308]" : "bg-muted text-muted-foreground"}`}>
+                        {task.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  {task.target && (
+                    <div className="text-[7px] font-mono text-muted-foreground mt-0.5">
+                      {task.target.track_id} • {task.target.classification} • {task.target.lat.toFixed(2)}°N
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    {task.target && onLocate && (
+                      <button onClick={() => onLocate(task.target!.lat, task.target!.lng)}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/40 text-primary hover:bg-primary/10 transition-colors">
+                        <MapPin className="h-2.5 w-2.5" /> LOCATE
+                      </button>
+                    )}
+                    <button onClick={() => setExpandedTask(isExpanded ? null : task.id)}
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-[hsl(220,15%,25%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,35%)] transition-colors">
+                      {isExpanded ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />} DETAILS
+                    </button>
+                    {task.phase === "target" && task.status !== "approved" && (
+                      <button onClick={() => approveTask(task.id)} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-[#22c55e]/40 text-[#22c55e] hover:bg-[#22c55e]/10">
+                        <CheckCircle className="h-2.5 w-2.5" /> APPROVE
+                      </button>
+                    )}
+                    {PHASES.indexOf(task.phase) < PHASES.length - 1 && (
+                      <button
+                        onClick={() => advancePhase(task)}
+                        disabled={PHASES[PHASES.indexOf(task.phase) + 1] === "engage" && task.status !== "approved"}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/40 text-primary hover:bg-primary/10 disabled:opacity-30"
+                      >
+                        <ArrowRight className="h-2.5 w-2.5" /> ADVANCE
+                      </button>
+                    )}
+                    {task.phase === "assess" && !task.bda_result && (
+                      <button
+                        onClick={() => generateBDA(task)}
+                        disabled={generatingBDA === task.id}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-[#a855f7]/40 text-[#a855f7] hover:bg-[#a855f7]/10 disabled:opacity-50"
+                      >
+                        {generatingBDA === task.id ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileText className="h-2.5 w-2.5" />} GEN BDA
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {task.target && (
-                  <div className="text-[7px] font-mono text-muted-foreground mt-0.5">
-                    {task.target.track_id} • {task.target.classification} • {task.target.lat.toFixed(2)}°N
+
+                {/* Expanded details */}
+                {isExpanded && (
+                  <div className="px-2 pb-2 space-y-1 border-t border-[hsl(220,15%,12%)] bg-[hsl(220,15%,6%)]">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 pt-1.5">
+                      <div>
+                        <span className="text-[6px] font-mono text-muted-foreground tracking-wider">PLATFORM</span>
+                        <div className="text-[8px] font-mono text-foreground">{task.assigned_platform || "—"}</div>
+                      </div>
+                      <div>
+                        <span className="text-[6px] font-mono text-muted-foreground tracking-wider">WEAPON</span>
+                        <div className="text-[8px] font-mono text-foreground">{task.recommended_weapon || "—"}</div>
+                      </div>
+                      <div>
+                        <span className="text-[6px] font-mono text-muted-foreground tracking-wider">CREATED</span>
+                        <div className="text-[8px] font-mono text-foreground">{new Date(task.created_at).toISOString().slice(0, 16).replace("T", " ")}</div>
+                      </div>
+                      {task.target?.confidence && (
+                        <div>
+                          <span className="text-[6px] font-mono text-muted-foreground tracking-wider">CONFIDENCE</span>
+                          <div className="text-[8px] font-mono text-foreground">{task.target.confidence}%</div>
+                        </div>
+                      )}
+                    </div>
+                    {task.notes && (
+                      <div>
+                        <span className="text-[6px] font-mono text-muted-foreground tracking-wider">NOTES</span>
+                        <div className="text-[8px] font-mono text-foreground/80">{task.notes}</div>
+                      </div>
+                    )}
+                    {task.bda_result && (
+                      <div className="mt-1 p-1.5 rounded bg-[#a855f7]/5 border border-[#a855f7]/20">
+                        <span className="text-[7px] font-mono font-bold text-[#a855f7] tracking-wider">📋 BDA REPORT</span>
+                        <div className="text-[8px] font-mono text-foreground/80 mt-0.5 whitespace-pre-wrap leading-relaxed">{task.bda_result}</div>
+                      </div>
+                    )}
                   </div>
                 )}
-                <div className="flex items-center gap-1 mt-1">
-                  {task.phase === "target" && task.status !== "approved" && (
-                    <button onClick={() => approveTask(task.id)} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-[#22c55e]/40 text-[#22c55e] hover:bg-[#22c55e]/10">
-                      <CheckCircle className="h-2.5 w-2.5" /> APPROVE
-                    </button>
-                  )}
-                  {PHASES.indexOf(task.phase) < PHASES.length - 1 && (
-                    <button
-                      onClick={() => advancePhase(task)}
-                      disabled={PHASES[PHASES.indexOf(task.phase) + 1] === "engage" && task.status !== "approved"}
-                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/40 text-primary hover:bg-primary/10 disabled:opacity-30"
-                    >
-                      <ArrowRight className="h-2.5 w-2.5" /> ADVANCE
-                    </button>
-                  )}
-                </div>
               </div>
             );
           })
