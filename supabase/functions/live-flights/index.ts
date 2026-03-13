@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// live-flights edge function
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -252,7 +252,7 @@ function mergeAircraft(sources: RawAircraft[][]): RawAircraft[] {
 // MAIN HANDLER
 // =====================================================================
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
