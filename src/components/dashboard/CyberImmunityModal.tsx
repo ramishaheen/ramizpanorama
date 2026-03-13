@@ -66,7 +66,7 @@ const SEVERITY_BG: Record<string, string> = {
 const COUNTRY_FILTERS = ["All", "Israel", "Iran", "Jordan", "Oman", "Qatar", "Bahrain", "USA", "Russia", "China", "Saudi Arabia", "UAE", "Turkey", "Syria"];
 const SPEEDS = [1, 2, 5] as const;
 const SPEED_INTERVALS: Record<number, number> = { 1: 1500, 2: 750, 5: 300 };
-const EXPECTED_SOURCES = ["CISA KEV", "AlienVault OTX", "abuse.ch URLhaus", "NIST NVD", "CERT-FR"];
+const EXPECTED_SOURCES = ["CISA KEV", "AlienVault OTX", "abuse.ch URLhaus", "NIST NVD", "CERT-FR", "ThreatFox", "Feodo Tracker", "Ransomwatch", "Cisco Talos", "BleepingComputer"];
 
 function lonLatToSvg(lon: number, lat: number, w: number, h: number): [number, number] {
   return [(lon + 180) / 360 * w, (90 - lat) / 180 * h];
