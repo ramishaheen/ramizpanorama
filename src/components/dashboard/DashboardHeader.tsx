@@ -150,12 +150,20 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
             </span>
           </button>
 
-          {/* Single online status — hidden on small screens */}
-          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-            <Wifi className="h-3 w-3 text-success animate-pulse" />
-            <span className="text-[10px] font-mono text-success">
-              {t(translations["status.online"].en, translations["status.online"].ar)}
-            </span>
+          {/* Live data feed + online status — hidden on small screens */}
+          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
+            <LiveDataFeedIndicator
+              lastPollAt={lastPollAt ?? null}
+              activeSources={activeSources}
+              dataFresh={!!dataFresh}
+            />
+            <span className="text-border/50">│</span>
+            <div className="flex items-center gap-1.5">
+              <Wifi className="h-3 w-3 text-success animate-pulse" />
+              <span className="text-[10px] font-mono text-success">
+                {t(translations["status.online"].en, translations["status.online"].ar)}
+              </span>
+            </div>
           </div>
 
           <div className="text-right hidden sm:block flex-shrink-0">
