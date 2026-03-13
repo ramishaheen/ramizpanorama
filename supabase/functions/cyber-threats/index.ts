@@ -92,7 +92,7 @@ STRICT RULES:
 
 Each entry MUST have ALL these fields:
 - id: unique string like "cy-live-001"  
-- date: ISO date (YYYY-MM-DD), use today (${new Date().toISOString().split('T')[0]}) or very recent dates
+- date: ISO date (YYYY-MM-DD). IMPORTANT: Distribute dates across the last 28 days (4 weeks) from today (${new Date().toISOString().split('T')[0]}). Use a realistic distribution with more incidents in recent days but ensure coverage across all 4 weeks. Example spread: ~30% from week 1 (oldest), ~25% from week 2, ~25% from week 3, ~20% from week 4 (most recent/today).
 - attacker: name with unit/group in parentheses, e.g. "Iran (APT33/Elfin)"
 - attackerCountry: full country name, e.g. "Iran"
 - attackerFlag: emoji flag
@@ -109,7 +109,7 @@ Each entry MUST have ALL these fields:
 - iocs: array of up to 3 indicators of compromise (IPs, domains, hashes) from the feed data - can be empty array
 - verified: boolean - true if directly from a feed entry, false if AI-correlated
 
-Generate 12-18 incidents strictly based on the provided data. IMPORTANT: At least 4-5 incidents MUST involve Jordan as either attacker or target. Cover these regions/actors as supported by the data:
+Generate 25-35 incidents strictly based on the provided data, with dates spread across the full 4-week window. IMPORTANT: At least 4-5 incidents MUST involve Jordan as either attacker or target. Cover these regions/actors as supported by the data:
 - **Jordan (PRIORITY)** — Jordanian NCSC cyber defense operations, threats to Jordan's banking sector (Arab Bank, Housing Bank), telecom infrastructure (Zain, Orange, Umniah), government e-services, APT targeting of Jordanian military/intelligence, cross-border cyber operations affecting Jordan
 - Iran-Israel cyber front (APT33, APT34, Unit 8200, MuddyWater)
 - US Cyber Command operations

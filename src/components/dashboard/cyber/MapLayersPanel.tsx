@@ -68,7 +68,7 @@ export function MapLayersPanel({ layers, onToggle }: MapLayersPanelProps) {
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="absolute top-2 left-2 p-1.5 rounded bg-card/90 border border-border backdrop-blur-sm hover:border-primary/50 transition-colors"
+        className="absolute bottom-2 left-2 p-1.5 rounded bg-card/90 border border-border backdrop-blur-sm hover:border-primary/50 transition-colors"
         style={{ zIndex: 1000 }}
       >
         <Layers className="h-3.5 w-3.5 text-primary" />
@@ -77,7 +77,7 @@ export function MapLayersPanel({ layers, onToggle }: MapLayersPanelProps) {
   }
 
   return (
-    <div className="absolute top-2 left-2 w-48 bg-card/95 border border-border rounded backdrop-blur-sm" style={{ zIndex: 1000 }}>
+    <div className="absolute bottom-2 left-2 w-48 bg-card/95 border border-border rounded backdrop-blur-sm" style={{ zIndex: 1000 }}>
       <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border">
         <div className="flex items-center gap-1.5">
           <Layers className="h-3 w-3 text-primary" />
