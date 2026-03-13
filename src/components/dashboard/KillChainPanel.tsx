@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle } from "lucide-react";
+import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -25,6 +25,18 @@ interface TargetOption {
   lng: number;
   confidence: number;
   status: string;
+}
+
+interface EventOption {
+  id: string;
+  title: string;
+  event_type: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  confidence: number;
+  source: "intel" | "conflict";
+  created_at: string;
 }
 
 const PHASES = ["find", "fix", "track", "target", "engage", "assess"];
