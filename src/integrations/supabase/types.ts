@@ -1114,10 +1114,13 @@ export type Database = {
           last_updated: string
           lat: number
           lng: number
+          mission_plan: Json | null
           parent_unit: string | null
           payload: Json
           roe_zone: Database["public"]["Enums"]["roe_zone"]
           speed_kts: number
+          weapon_nonce: string | null
+          weapon_nonce_expires_at: string | null
         }
         Insert: {
           altitude_ft?: number
@@ -1133,10 +1136,13 @@ export type Database = {
           last_updated?: string
           lat?: number
           lng?: number
+          mission_plan?: Json | null
           parent_unit?: string | null
           payload?: Json
           roe_zone?: Database["public"]["Enums"]["roe_zone"]
           speed_kts?: number
+          weapon_nonce?: string | null
+          weapon_nonce_expires_at?: string | null
         }
         Update: {
           altitude_ft?: number
@@ -1152,10 +1158,13 @@ export type Database = {
           last_updated?: string
           lat?: number
           lng?: number
+          mission_plan?: Json | null
           parent_unit?: string | null
           payload?: Json
           roe_zone?: Database["public"]["Enums"]["roe_zone"]
           speed_kts?: number
+          weapon_nonce?: string | null
+          weapon_nonce_expires_at?: string | null
         }
         Relationships: []
       }
