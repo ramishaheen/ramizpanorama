@@ -490,6 +490,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
   const [orbitColor, setOrbitColor] = useState<string>("#ffffff");
+  const [coverageRing, setCoverageRing] = useState<{ lat: number; lng: number; radiusKm: number; color: string } | null>(null);
   const [hoveredSat, setHoveredSat] = useState<SatelliteData | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [aiChatSat, setAiChatSat] = useState<SatelliteData | null>(null);
