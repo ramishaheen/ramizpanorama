@@ -23,7 +23,7 @@ interface DashboardHeaderProps {
   activeSources?: number;
 }
 
-export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [], geoAlerts = [] }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [], geoAlerts = [], lastPollAt, activeSources = 0 }: DashboardHeaderProps) => {
   const now = new Date();
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
