@@ -2181,6 +2181,40 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           animation: "holoSweep 10s linear infinite",
         }}
       />
+
+      {/* Lite Mode — Crosshair / Gun-Eye Reticle */}
+      {liteMode && (
+        <div className="absolute inset-0 z-[2002] pointer-events-none flex items-center justify-center">
+          <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.5 }}>
+            {/* Outer ring */}
+            <circle cx="100" cy="100" r="90" stroke="hsl(190,100%,50%)" strokeWidth="0.75" strokeDasharray="4 4" />
+            {/* Middle ring */}
+            <circle cx="100" cy="100" r="60" stroke="hsl(190,100%,50%)" strokeWidth="0.5" strokeDasharray="2 3" />
+            {/* Inner ring */}
+            <circle cx="100" cy="100" r="30" stroke="hsl(190,100%,50%)" strokeWidth="0.75" />
+            {/* Center dot */}
+            <circle cx="100" cy="100" r="2" fill="hsl(190,100%,50%)" />
+            {/* Cross lines */}
+            <line x1="100" y1="5" x2="100" y2="70" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            <line x1="100" y1="130" x2="100" y2="195" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            <line x1="5" y1="100" x2="70" y2="100" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            <line x1="130" y1="100" x2="195" y2="100" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            {/* Range tick marks */}
+            {[45, 75].map(r => (
+              <g key={r}>
+                <line x1={100} y1={100 - r} x2={100} y2={100 - r + 4} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+                <line x1={100} y1={100 + r} x2={100} y2={100 + r - 4} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+                <line x1={100 - r} y1={100} x2={100 - r + 4} y2={100} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+                <line x1={100 + r} y1={100} x2={100 + r - 4} y2={100} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+              </g>
+            ))}
+            {/* Diagonal tick marks */}
+            {[{x:35,y:35},{x:165,y:35},{x:35,y:165},{x:165,y:165}].map((p,i) => (
+              <line key={i} x1={p.x} y1={p.y} x2={p.x + (p.x < 100 ? 6 : -6)} y2={p.y + (p.y < 100 ? 6 : -6)} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            ))}
+          </svg>
+        </div>
+      )}
       {/* Corner brackets — Gotham frame */}
       <div className="absolute inset-0 z-[2001] pointer-events-none">
         {[
