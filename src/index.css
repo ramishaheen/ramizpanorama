@@ -401,7 +401,29 @@
 
 .flight-icon-svg {
   animation: flightGlow 3s ease-in-out infinite;
-  transition: transform 0.5s ease;
+  transition: transform 0.15s ease-out;
+}
+
+/* Tracked aircraft pulse scale */
+.flight-tracked-pulse {
+  animation: flightGlow 3s ease-in-out infinite, flightTrackedScale 1.5s ease-in-out infinite;
+}
+
+@keyframes flightTrackedScale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* Tracked trail glow */
+.flight-trail-tracked {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.flight-trail-glow {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
 }
 
 .flight-trail {
