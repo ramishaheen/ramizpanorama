@@ -92,3 +92,9 @@ verify_jwt = false
 
 [functions.satellite-chat]
 verify_jwt = false
+
+[functions.dark-web-intel]
+verify_jwt = false
+
+[functions.cyber-threats]
+verify_jwt = false
