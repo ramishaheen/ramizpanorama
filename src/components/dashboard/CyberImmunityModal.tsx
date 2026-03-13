@@ -75,6 +75,46 @@ function arcPath(x1: number, y1: number, x2: number, y2: number): string {
   return `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
 }
 
+/* ── Attack Corridor (intensity-based animated path) ── */
+function AttackCorridor({ x1, y1, x2, y2, intensity, color, idx }: {
+  x1: number; y1: number; x2: number; y2: number;
+  intensity: number; color: string; idx: number;
+}) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2 - Math.abs(x2 - x1) * 0.15 - 20;
+  const d = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
+  const w = 2 + intensity * 6; // width 2–8 based on intensity
+  const gradId = `corridor-grad-${idx}`;
+
+  return (
+    <g className="pointer-events-none">
+      {/* Glow layer */}
+      <path d={d} fill="none" stroke={color} strokeWidth={w + 4} opacity={0.08}>
+        <animate attributeName="opacity" values="0.04;0.12;0.04" dur={`${2 + idx * 0.2}s`} repeatCount="indefinite" />
+      </path>
+      {/* Core corridor with gradient */}
+      <defs>
+        <linearGradient id={gradId} x1={x1} y1={y1} x2={x2} y2={y2} gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={color} stopOpacity="0.1" />
+          <stop offset="50%" stopColor={color} stopOpacity={0.4 + intensity * 0.4} />
+          <stop offset="100%" stopColor={color} stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={w} strokeLinecap="round">
+        <animate attributeName="stroke-width" values={`${w};${w + 2};${w}`} dur={`${1.5 + idx * 0.15}s`} repeatCount="indefinite" />
+      </path>
+      {/* Animated particle dash */}
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,8" opacity={0.7}>
+        <animate attributeName="stroke-dashoffset" from="0" to="-22" dur={`${0.8 + idx * 0.05}s`} repeatCount="indefinite" />
+      </path>
+      {/* Second particle layer (opposite direction) */}
+      <path d={d} fill="none" stroke={color} strokeWidth={0.8} strokeDasharray="2,12" opacity={0.4}>
+        <animate attributeName="stroke-dashoffset" from="-30" to="0" dur={`${1.2 + idx * 0.08}s`} repeatCount="indefinite" />
+      </path>
+    </g>
+  );
+}
+
 /* ── Threat Map (SVG equirectangular) ── */
 function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void; selectedId?: string }) {
   const W = 900, H = 450;
@@ -98,6 +138,33 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
     return Array.from(map.values());
   }, [threats]);
 
+  /* Compute attack corridors — aggregate by country pair */
+  const corridors = useMemo(() => {
+    const pairMap = new Map<string, { count: number; maxSeverity: string; x1: number; y1: number; x2: number; y2: number }>();
+    threats.forEach((t) => {
+      const ac = t.attackerCountry || t.attacker || "Unknown";
+      const tc = t.targetCountry || t.target || "Unknown";
+      const key = `${ac}→${tc}`;
+      const a = getCountryCoords(ac);
+      const b = getCountryCoords(tc);
+      const [x1, y1] = lonLatToSvg(a[0], a[1], W, H);
+      const [x2, y2] = lonLatToSvg(b[0], b[1], W, H);
+      const existing = pairMap.get(key);
+      if (existing) {
+        existing.count++;
+        if (t.severity === "critical") existing.maxSeverity = "critical";
+        else if (t.severity === "high" && existing.maxSeverity !== "critical") existing.maxSeverity = "high";
+      } else {
+        pairMap.set(key, { count: 1, maxSeverity: t.severity, x1, y1, x2, y2 });
+      }
+    });
+    const maxCount = Math.max(...Array.from(pairMap.values()).map(v => v.count), 1);
+    return Array.from(pairMap.entries()).map(([, v]) => ({
+      ...v,
+      intensity: v.count / maxCount,
+    }));
+  }, [threats]);
+
   const arcs = useMemo(() => {
     return threats.slice(0, 30).map((t, i) => {
       const ac = t.attackerCountry || t.attacker || "Unknown";
@@ -107,7 +174,7 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
       const [x1, y1] = lonLatToSvg(a[0], a[1], W, H);
       const [x2, y2] = lonLatToSvg(b[0], b[1], W, H);
       const isSelected = t.id === selectedId;
-      return { id: t.id, d: arcPath(x1, y1, x2, y2), color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium, threat: t, i, isSelected };
+      return { id: t.id, x1, y1, x2, y2, color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium, threat: t, i, isSelected };
     });
   }, [threats, selectedId]);
 
@@ -119,10 +186,20 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
       {Array.from({ length: 13 }, (_, i) => (
         <line key={`v${i}`} x1={i * (W / 12)} y1={0} x2={i * (W / 12)} y2={H} stroke="hsl(var(--border))" strokeWidth={0.5} opacity={0.3} />
       ))}
+      {/* Pulsing attack corridors (rendered behind arcs) */}
+      {corridors.map((c, i) => (
+        <AttackCorridor
+          key={`corridor-${i}`}
+          x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2}
+          intensity={c.intensity}
+          color={SEVERITY_COLORS[c.maxSeverity] || SEVERITY_COLORS.medium}
+          idx={i}
+        />
+      ))}
       {arcs.map((a) => (
         <g key={a.id} onClick={() => onSelect(a.threat)} className="cursor-pointer">
-          <path d={a.d} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} opacity={a.isSelected ? 0.9 : 0.5} />
-          <path d={a.d} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} strokeDasharray="6,4" opacity={0.9}>
+          <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} opacity={a.isSelected ? 0.9 : 0.5} />
+          <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} strokeDasharray="6,4" opacity={0.9}>
             <animate attributeName="stroke-dashoffset" from="0" to="-20" dur={`${1.5 + a.i * 0.1}s`} repeatCount="indefinite" />
           </path>
         </g>
