@@ -770,7 +770,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     setAiInput("");
     setAiLoading(true);
 
-    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/war-chat`;
+    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/satellite-chat`;
     try {
       const resp = await fetch(chatUrl, {
         method: "POST",
@@ -778,7 +778,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMsgs }),
+        body: JSON.stringify({ messages: newMsgs, satellite: aiChatSat ? buildSatContext(aiChatSat) : undefined }),
       });
 
       if (!resp.ok) {
@@ -852,7 +852,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setAiLoading(false);
       setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Connection failed." }]);
     }
-  }, [aiInput, aiLoading, aiMessages]);
+  }, [aiInput, aiLoading, aiMessages, aiChatSat, buildSatContext]);
 
   const runPrediction = useCallback(async (sat: SatelliteData) => {
     setPredicting(true);
