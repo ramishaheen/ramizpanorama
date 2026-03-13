@@ -4,17 +4,8 @@ import { RotateCcw, X } from "lucide-react";
 export function RotateDeviceOverlay() {
   const [isPortrait, setIsPortrait] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   useEffect(() => {
-    // Detect actual mobile device (not just small window)
-    const checkMobile = () => {
-      const ua = navigator.userAgent || "";
-      return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(ua) ||
-        ("ontouchstart" in window && window.innerWidth < 1024);
-    };
-    setIsMobileDevice(checkMobile());
-
     const checkOrientation = () => {
       const portrait = window.innerHeight > window.innerWidth && window.innerWidth < 768;
       setIsPortrait(portrait);
@@ -30,7 +21,7 @@ export function RotateDeviceOverlay() {
     };
   }, []);
 
-  if (!isPortrait || !isMobileDevice || dismissed) return null;
+  if (!isPortrait || dismissed) return null;
 
   return (
     <div className="fixed inset-0 z-[100000] bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">

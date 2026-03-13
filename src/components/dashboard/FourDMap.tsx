@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap, Pause, Play, Eye, Anchor, Lock, Search, Target, AlertTriangle, Radar, ChevronDown, Sparkles, SlidersHorizontal, Monitor } from "lucide-react";
+import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap, Pause, Play, Eye, Anchor, Lock, Search, Target, AlertTriangle, Radar, ChevronDown, Sparkles, SlidersHorizontal, Monitor, Layers } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useEarthquakes } from "@/hooks/useEarthquakes";
@@ -863,6 +863,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     if (globe) globe.pointOfView({ lat, lng, altitude: 1.0 }, 1200);
   }, []);
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   return (
     <div className="fixed inset-0 z-[9999] bg-[hsl(220,25%,5%)] flex flex-col" style={{ filter: bloomEnabled ? "brightness(1.05) contrast(1.08)" : undefined }}>
       {/* Satellite pulse animation */}
@@ -870,9 +872,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       <div className="fixed inset-0 pointer-events-none z-[10000] opacity-[0.03]" style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,210,255,0.1) 2px, rgba(0,210,255,0.1) 4px)" }} />
 
       <div className="flex flex-1 min-h-0">
-        {/* LEFT PANEL */}
+        {/* LEFT PANEL — hidden on mobile by default, togglable */}
         {!cleanUI && (
-          <div className="w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex flex-col overflow-hidden">
+          <div className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-0 z-[10001]' : 'hidden'} md:relative md:block w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex flex-col overflow-hidden`}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <div className="relative"><Radar className="h-4 w-4 text-primary" /><div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" /></div>
@@ -934,7 +936,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
           {/* Search */}
           {!cleanUI && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-80">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-64 sm:w-80">
               <div className="relative">
                 <div className="flex items-center bg-[hsl(220,20%,7%)/0.92] backdrop-blur-md border border-[hsl(190,60%,20%)] rounded-md overflow-hidden">
                   <Search className="h-3.5 w-3.5 text-primary ml-3 flex-shrink-0" />
@@ -964,8 +966,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           )}
 
           {/* X close button — always visible, prominent */}
-          <button onClick={onClose} className="absolute top-3 right-3 z-[10002] w-10 h-10 flex items-center justify-center rounded-lg bg-destructive/90 backdrop-blur-md border-2 border-destructive text-destructive-foreground hover:bg-destructive hover:scale-110 transition-all shadow-[0_0_20px_hsl(0,80%,50%/0.4)] font-bold">
+          <button onClick={onClose} className="absolute top-3 right-3 z-[10002] w-10 h-10 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-destructive/90 backdrop-blur-md border-2 border-destructive text-destructive-foreground hover:bg-destructive hover:scale-110 transition-all shadow-[0_0_20px_hsl(0,80%,50%/0.4)] font-bold">
             <X className="h-5 w-5" strokeWidth={3} />
+          </button>
+
+          {/* Mobile sidebar toggle */}
+          <button onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} className="absolute top-3 left-3 z-[10002] w-10 h-10 flex items-center justify-center rounded-lg bg-[hsl(220,20%,7%)/0.9] backdrop-blur-md border border-[hsl(190,60%,20%)] text-primary hover:bg-primary/10 transition-all md:hidden">
+            <Layers className="h-4 w-4" />
           </button>
 
           {/* Title + HUD */}
@@ -998,7 +1005,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
         {/* RIGHT PANEL — Attributes + Feed */}
         {!cleanUI && (
-          <div className="w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex flex-col overflow-hidden pointer-events-auto" style={{ minWidth: 256 }}>
+          <div className="hidden md:flex w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex-col overflow-hidden pointer-events-auto" style={{ minWidth: 256 }}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-primary" />

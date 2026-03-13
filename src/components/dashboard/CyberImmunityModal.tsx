@@ -1388,11 +1388,11 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   return createPortal(
     <div className="fixed inset-0 bg-background text-foreground flex flex-col" style={{ zIndex: 99999 }}>
       {/* ── TOP BAR ── */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/90 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <ShieldAlert className="h-5 w-5 text-primary" />
-          <h1 className="text-sm font-bold tracking-wider">CYBER <span className="text-primary">IMMUNITY</span></h1>
-          <span className="text-[9px] font-mono text-muted-foreground">OSINT OPERATIONS CENTER</span>
+      <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 border-b border-border bg-card/90 backdrop-blur">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+          <ShieldAlert className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+          <h1 className="text-xs sm:text-sm font-bold tracking-wider flex-shrink-0">CYBER <span className="text-primary">IMMUNITY</span></h1>
+          <span className="text-[9px] font-mono text-muted-foreground hidden sm:inline">OSINT OPERATIONS CENTER</span>
           {/* Live / Replay badge */}
           {isLive ? (
             <span className="flex items-center gap-1 text-[9px] font-mono font-bold text-destructive px-2 py-0.5 rounded bg-destructive/10 border border-destructive/30">
@@ -1425,16 +1425,16 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       </div>
 
       {/* ── THREAT LEVEL BAR ── */}
-      <div className="flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50 text-[10px] font-mono">
-        <div className="flex items-center gap-4">
-          <span className={`font-bold ${threatLevelColor[stats.threatLevel]}`}>■ THREAT LEVEL: {stats.threatLevel}</span>
-          <span className="text-destructive">CRITICAL: {stats.severityCounts.critical}</span>
-          <span className="text-orange-400">HIGH: {stats.severityCounts.high}</span>
-          <span className="text-yellow-400">MEDIUM: {stats.severityCounts.medium}</span>
-          <span className="text-primary">LOW: {stats.severityCounts.low}</span>
-          <span className="text-muted-foreground">TOTAL: {filtered.length}</span>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-2 sm:px-4 py-1 sm:py-1.5 border-b border-border bg-card/50 text-[10px] font-mono gap-1">
+        <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide w-full sm:w-auto">
+          <span className={`font-bold flex-shrink-0 ${threatLevelColor[stats.threatLevel]}`}>■ {stats.threatLevel}</span>
+          <span className="text-destructive flex-shrink-0">C:{stats.severityCounts.critical}</span>
+          <span className="text-orange-400 flex-shrink-0">H:{stats.severityCounts.high}</span>
+          <span className="text-yellow-400 flex-shrink-0">M:{stats.severityCounts.medium}</span>
+          <span className="text-primary flex-shrink-0">L:{stats.severityCounts.low}</span>
+          <span className="text-muted-foreground flex-shrink-0">T:{filtered.length}</span>
         </div>
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide w-full sm:w-auto">
           <button onClick={() => setCenterView("map")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "map" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Globe className="h-3 w-3 inline mr-1" />MAP
           </button>
@@ -1457,9 +1457,9 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       <CyberAlertBanner threats={filtered} />
 
       {/* ── MAIN CONTENT ── */}
-      <div className="flex flex-1 min-h-0">
-        {/* LEFT PANEL */}
-        <div className="w-[272px] border-r border-border bg-card/30 flex flex-col max-md:hidden">
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* LEFT PANEL — hidden on mobile, shown on md+ */}
+        <div className="w-full md:w-[272px] border-b md:border-b-0 md:border-r border-border bg-card/30 flex flex-col max-md:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
               <IOCSearchSection search={search} setSearch={setSearch} />
@@ -1614,8 +1614,8 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           )}
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="w-[272px] border-l border-border bg-card/30 flex flex-col max-lg:hidden">
+        {/* RIGHT PANEL — hidden below lg */}
+        <div className="w-full lg:w-[272px] border-t lg:border-t-0 lg:border-l border-border bg-card/30 flex flex-col max-lg:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
               <div className="text-center p-3 rounded border border-border bg-background/50">
@@ -1846,8 +1846,8 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       })()}
 
       {/* ── TIMELINE SLIDER ── */}
-      <div className="px-4 py-1.5 border-t border-border bg-card/60 flex items-center gap-3">
-        <div className="flex items-center gap-1">
+      <div className="px-2 sm:px-4 py-1.5 border-t border-border bg-card/60 flex items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
           <button onClick={() => setTimelinePos(Math.max(0, timelinePos - 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
             <SkipBack className="h-3 w-3" />
           </button>
@@ -1857,7 +1857,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <button onClick={() => setTimelinePos(Math.min(100, timelinePos + 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
             <SkipForward className="h-3 w-3" />
           </button>
-          <div className="flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
+          <div className="hidden sm:flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
             {SPEEDS.map((s) => (
               <button key={s} onClick={() => setSpeed(s)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${speed === s ? "bg-primary/20 text-primary border border-primary/40" : "text-muted-foreground/60 hover:text-foreground hover:bg-secondary/50 border border-transparent"}`}>
                 {s}×
@@ -1866,16 +1866,16 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           </div>
         </div>
 
-        <span className="text-[9px] font-mono text-muted-foreground w-12">-4w</span>
+        <span className="text-[9px] font-mono text-muted-foreground hidden sm:block w-12">-4w</span>
 
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <input
             type="range" min={0} max={100} step={0.5} value={timelinePos}
             onChange={(e) => { setTimelinePos(parseFloat(e.target.value)); setIsPlaying(false); }}
             className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
           />
           {/* Week ticks */}
-          <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
+          <div className="absolute top-3 left-0 right-0 hidden sm:flex justify-between pointer-events-none">
             {["4w", "·", "3w", "·", "2w", "·", "1w", "·", "NOW"].map((label, i) => (
               <span key={i} className="text-[7px] font-mono text-muted-foreground/40">
                 {label}
@@ -1884,17 +1884,17 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           </div>
         </div>
 
-        <span className={`text-[10px] font-mono font-bold w-16 text-right ${isLive ? "text-destructive" : "text-primary"}`}>
+        <span className={`text-[10px] font-mono font-bold w-10 sm:w-16 text-right flex-shrink-0 ${isLive ? "text-destructive" : "text-primary"}`}>
           {timelineLabel}
         </span>
 
-        <button onClick={() => { setTimelinePos(100); setIsPlaying(false); }} className={`text-[8px] px-2 py-0.5 rounded border font-mono font-bold transition-all ${isLive ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/40"}`}>
+        <button onClick={() => { setTimelinePos(100); setIsPlaying(false); }} className={`text-[8px] px-2 py-0.5 rounded border font-mono font-bold transition-all flex-shrink-0 ${isLive ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/40"}`}>
           LIVE
         </button>
       </div>
 
       {/* ── BOTTOM PANEL — Event Feed ── */}
-      <div className="h-[140px] border-t border-border bg-card/30 flex flex-col">
+      <div className="h-[100px] sm:h-[140px] border-t border-border bg-card/30 flex flex-col">
         <div className="flex items-center justify-between px-3 py-1 border-b border-border">
           <div className="flex items-center gap-2">
             <Radio className={`h-3 w-3 ${isLive ? "text-destructive animate-pulse" : "text-yellow-400"}`} />

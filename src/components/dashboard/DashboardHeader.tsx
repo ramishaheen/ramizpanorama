@@ -36,7 +36,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
   return (
     <>
       <header className={`flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 border-b border-border bg-card/80 backdrop-blur transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_30px_hsl(190_100%_50%/0.08)] border-primary/40" : ""}`}>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <img src={warosLogo} alt="War OS Logo" className="h-6 w-6 sm:h-8 sm:w-8" />
           <div>
             <h1 className="text-xs sm:text-sm font-bold tracking-wide text-foreground">
@@ -67,7 +67,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
               )}
             </button>
             {!chatOpen && showBalloon && (
-              <div className="absolute top-1/2 -translate-y-1/2 left-full ml-2 z-50 animate-bounce">
+              <div className="absolute top-1/2 -translate-y-1/2 left-full ml-2 z-50 animate-bounce hidden sm:block">
                 <div className="relative bg-primary text-primary-foreground text-[9px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap shadow-lg">
                   Chat with me 💬
                   <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-2 h-2 bg-primary rotate-45" />
@@ -76,44 +76,47 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-3">
+
+        {/* Right buttons — scrollable on mobile */}
+        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide flex-shrink min-w-0">
           {/* Live Channels */}
           <button
             onClick={() => setShowLiveChannels(true)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
             title="YouTube Live Channels"
           >
             <Youtube className="h-3 w-3" />
-            <span className="text-[9px] font-mono uppercase tracking-wider font-bold">Live Channels</span>
+            <span className="text-[9px] font-mono uppercase tracking-wider font-bold hidden sm:inline">Live Channels</span>
           </button>
 
           {/* Cyber Immunity */}
           <button
             onClick={() => setShowCyberImmunity(true)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors flex-shrink-0"
             title="Cyber Immunity - OSINT Operations Center"
           >
             <ShieldAlert className="h-3 w-3" />
-            <span className="text-[9px] font-mono uppercase tracking-wider font-bold">Cyber Immunity</span>
+            <span className="text-[9px] font-mono uppercase tracking-wider font-bold hidden sm:inline">Cyber Immunity</span>
           </button>
-          {/* 4D MAP button — next to Live Channels, blue */}
+
+          {/* 4D MAP */}
           <button
             onClick={() => setShow4DMap(true)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex-shrink-0"
             title="Open 4D Intelligence Map"
           >
             <Globe className="h-3 w-3" />
-            <span className="text-[9px] font-mono uppercase tracking-wider font-bold">4D Map</span>
+            <span className="text-[9px] font-mono uppercase tracking-wider font-bold hidden sm:inline">4D Map</span>
           </button>
 
           {/* Language toggle */}
           <button
             onClick={toggle}
-            className="flex items-center gap-1.5 px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+            className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors flex-shrink-0"
             title={isArabic ? "Switch to English" : "التبديل إلى العربية"}
           >
             <Languages className="h-3 w-3" />
-            <span className="text-[9px] font-mono uppercase tracking-wider font-bold">
+            <span className="text-[9px] font-mono uppercase tracking-wider font-bold hidden sm:inline">
               {isArabic ? "EN" : "عربي"}
             </span>
           </button>
@@ -124,7 +127,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
           {/* Alert mute */}
           <button
             onClick={onToggleAlertMute}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded border transition-colors ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded border transition-colors flex-shrink-0 ${
               alertMuted
                 ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground"
                 : "border-destructive/40 text-destructive hover:bg-destructive/10"
@@ -136,26 +139,22 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
             ) : (
               <Volume2 className="h-3 w-3" />
             )}
-            <span className="text-[9px] font-mono uppercase tracking-wider">
+            <span className="text-[9px] font-mono uppercase tracking-wider hidden sm:inline">
               {alertMuted
                 ? t(translations["alerts.muted"].en, translations["alerts.muted"].ar)
                 : t(translations["alerts.on"].en, translations["alerts.on"].ar)}
             </span>
           </button>
 
-          <div className="flex items-center gap-1.5">
+          {/* Single online status — hidden on small screens */}
+          <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
             <Wifi className="h-3 w-3 text-success animate-pulse" />
             <span className="text-[10px] font-mono text-success">
               {t(translations["status.online"].en, translations["status.online"].ar)}
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5">
-            <Wifi className="h-3 w-3 text-success animate-pulse" />
-            <span className="text-[10px] font-mono text-success">
-              {t(translations["status.online"].en, translations["status.online"].ar)}
-            </span>
-          </div>
-          <div className="text-right hidden sm:block">
+
+          <div className="text-right hidden sm:block flex-shrink-0">
             <div className="text-[10px] font-mono text-foreground">
               {now.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: '2-digit' })}
             </div>

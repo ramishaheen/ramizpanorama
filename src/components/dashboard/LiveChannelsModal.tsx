@@ -204,6 +204,7 @@ export function LiveChannelsModal({ onClose }: Props) {
           width: "min(95vw, 900px)", maxHeight: "90vh",
           background: "hsl(var(--card))", border: "1px solid hsl(var(--border))",
           borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column",
+          margin: "0 auto",
         }}
       >
         {/* Header */}
@@ -269,7 +270,7 @@ export function LiveChannelsModal({ onClose }: Props) {
               No channels added yet. Click "Add Channel" to get started.
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(260px, 100%), 1fr))", gap: 12 }}>
               {channels.map((ch) => (
                 <div
                   key={ch.id}
