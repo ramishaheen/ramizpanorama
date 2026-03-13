@@ -1556,7 +1556,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           if (!last || Math.abs(last.lat - ac.lat) > 0.001 || Math.abs(last.lng - ac.lng) > 0.001) {
             trail.push({ lat: ac.lat, lng: ac.lng, ts: now });
           }
-          history[ac.icao24] = trail.filter(p => now - p.ts < 600000).slice(-20);
+          const maxTrail = trackedFlightId === ac.icao24 ? 40 : 20;
+          history[ac.icao24] = trail.filter(p => now - p.ts < 600000).slice(-maxTrail);
           prevPos[ac.icao24] = { lat: ac.lat, lng: ac.lng };
         });
         const activeIds = new Set(newAircraft.map(a => a.icao24));
@@ -1589,41 +1590,109 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   }, [fetchFlightData, layers.flights]);
 
   // ===== REAL-TIME INTERPOLATION ENGINE for 2D map =====
+  // Heading smoothing state: stores smoothed heading per aircraft
+  const smoothedHeadingsRef = useRef<Record<string, number>>({});
+  const prevHeadingsRef = useRef<Record<string, number>>({});
+  const preTrackZoomRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!layers.flights) return;
+    // Use faster tick when tracking for ultra-smooth movement
+    const tickMs = trackedFlightId ? 60 : 200;
     flightInterpRef.current = setInterval(() => {
       const snapshot = flightSnapshotRef.current;
       if (snapshot.length === 0) return;
       const elapsed = (Date.now() - flightLastPollRef.current) / 1000;
+      const smoothed = smoothedHeadingsRef.current;
+      const prevHdg = prevHeadingsRef.current;
+
       const moved = snapshot.map(ac => {
-        const headingRad = ac.heading * Math.PI / 180;
+        // Angular lerp for heading smoothing
+        const targetHdg = ac.heading;
+        const currentSmoothed = smoothed[ac.icao24] ?? targetHdg;
+        let delta = targetHdg - currentSmoothed;
+        // Shortest path around 360°
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+        const lerpFactor = trackedFlightId === ac.icao24 ? 0.08 : 0.15;
+        const newSmoothed = (currentSmoothed + delta * lerpFactor + 360) % 360;
+        smoothed[ac.icao24] = newSmoothed;
+
+        // Compute heading change rate for banking
+        const prevH = prevHdg[ac.icao24] ?? newSmoothed;
+        let hdgDelta = newSmoothed - prevH;
+        if (hdgDelta > 180) hdgDelta -= 360;
+        if (hdgDelta < -180) hdgDelta += 360;
+        prevHdg[ac.icao24] = newSmoothed;
+
+        const headingRad = newSmoothed * Math.PI / 180;
         const speedDegPerSec = ac.velocity / 111320;
         const dLat = Math.cos(headingRad) * speedDegPerSec * elapsed;
         const dLng = Math.sin(headingRad) * speedDegPerSec * elapsed / Math.max(Math.cos(ac.lat * Math.PI / 180), 0.01);
-        return { ...ac, lat: ac.lat + dLat, lng: ac.lng + dLng };
-      });
-      setInterpolatedFlights(moved);
-    }, 200);
-    return () => { if (flightInterpRef.current) { clearInterval(flightInterpRef.current); flightInterpRef.current = null; } };
-  }, [layers.flights]);
 
-  // Click-to-track: pan to tracked aircraft only on significant position change
+        // Altitude interpolation via vertical rate
+        const altDelta = (ac.vertical_rate ?? 0) * elapsed;
+
+        return {
+          ...ac,
+          lat: ac.lat + dLat,
+          lng: ac.lng + dLng,
+          heading: newSmoothed,
+          altitude: ac.altitude + altDelta,
+          _bankAngle: Math.max(-25, Math.min(25, hdgDelta * 8)),
+        };
+      });
+      smoothedHeadingsRef.current = smoothed;
+      prevHeadingsRef.current = prevHdg;
+      setInterpolatedFlights(moved as any);
+    }, tickMs);
+    return () => { if (flightInterpRef.current) { clearInterval(flightInterpRef.current); flightInterpRef.current = null; } };
+  }, [layers.flights, trackedFlightId]);
+
+  // Click-to-track: auto-zoom + smooth pan following
   const lastTrackedPos = useRef<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     if (!trackedFlightId || !mapRef.current) return;
     const ac = interpolatedFlights.find(f => f.icao24 === trackedFlightId);
     if (ac) {
       const prev = lastTrackedPos.current;
-      const moved = !prev || Math.abs(ac.lat - prev.lat) > 0.01 || Math.abs(ac.lng - prev.lng) > 0.01;
+      // Tighter threshold when tracking — 0.002° ≈ 220m
+      const threshold = 0.002;
+      const moved = !prev || Math.abs(ac.lat - prev.lat) > threshold || Math.abs(ac.lng - prev.lng) > threshold;
       if (moved) {
         lastTrackedPos.current = { lat: ac.lat, lng: ac.lng };
-        mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.8 });
+        mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.4 });
       }
     } else {
       lastTrackedPos.current = null;
       setTrackedFlightId(null);
     }
   }, [interpolatedFlights, trackedFlightId]);
+
+  // Auto-zoom on track start / restore on un-track
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (trackedFlightId) {
+      // Save current zoom and zoom in
+      if (preTrackZoomRef.current === null) {
+        preTrackZoomRef.current = map.getZoom();
+      }
+      const ac = interpolatedFlights.find(f => f.icao24 === trackedFlightId);
+      if (ac && map.getZoom() < 9) {
+        map.flyTo([ac.lat, ac.lng], 10, { animate: true, duration: 1.5 });
+      }
+    } else {
+      // Restore previous zoom
+      if (preTrackZoomRef.current !== null) {
+        const restoreZoom = preTrackZoomRef.current;
+        preTrackZoomRef.current = null;
+        map.setZoom(restoreZoom, { animate: true });
+      }
+    }
+  // Only run when trackedFlightId changes, not on every interpolation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackedFlightId]);
 
   // Render flights on map — optimized with proper aircraft icons
   useEffect(() => {
@@ -1647,24 +1716,49 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const trail = flightTrailsRef.current[ac.icao24] || [];
       if (trail.length >= 2) {
         const fullPath: L.LatLngExpression[] = [...trail.map(p => [p.lat, p.lng] as L.LatLngTuple), [ac.lat, ac.lng]];
-        // Faded older trail — animated dashes
-        if (fullPath.length > 3) {
-          L.polyline(fullPath.slice(0, -2), {
-            color: trailColor,
-            weight: isTracked ? 2.5 : 1.5,
-            opacity: 0.4,
-            dashArray: "8 6",
+
+        if (isTracked && fullPath.length > 2) {
+          // Enhanced glowing trail for tracked aircraft — segmented opacity gradient
+          const segCount = fullPath.length - 1;
+          for (let i = 0; i < segCount; i++) {
+            const opacity = 0.15 + (i / segCount) * 0.75;
+            const weight = 1.5 + (i / segCount) * 3;
+            L.polyline([fullPath[i], fullPath[i + 1]], {
+              color,
+              weight,
+              opacity,
+              lineCap: "round",
+              lineJoin: "round",
+              className: "flight-trail-tracked",
+            }).addTo(group);
+          }
+          // Outer glow line for tracked
+          L.polyline(fullPath, {
+            color,
+            weight: 8,
+            opacity: 0.12,
+            lineCap: "round",
+            className: "flight-trail-glow",
+          }).addTo(group);
+        } else {
+          // Standard trail for non-tracked
+          if (fullPath.length > 3) {
+            L.polyline(fullPath.slice(0, -2), {
+              color: trailColor,
+              weight: 1.5,
+              opacity: 0.4,
+              dashArray: "8 6",
+              className: "flight-trail-animated",
+            }).addTo(group);
+          }
+          L.polyline(fullPath.slice(-4), {
+            color,
+            weight: 2,
+            opacity: 0.7,
+            dashArray: "10 5",
             className: "flight-trail-animated",
           }).addTo(group);
         }
-        // Bright recent trail — animated dashes
-        L.polyline(fullPath.slice(-4), {
-          color,
-          weight: isTracked ? 3 : 2,
-          opacity: isTracked ? 0.9 : 0.7,
-          dashArray: "10 5",
-          className: "flight-trail-animated",
-        }).addTo(group);
       }
 
       // Forward prediction line — animated dotted
@@ -1690,10 +1784,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         className: "flight-prediction-animated",
       }).addTo(group);
 
-      // Realistic airplane silhouette (top-down, nose up)
+      // Realistic airplane silhouette (top-down, nose up) with banking
+      const bankAngle = (ac as any)._bankAngle ?? 0;
       const planePath = "M16 3 l-1.5 4.5 l-10 5 l0 2.2 l10-3 l0 6.5 l-3.5 2.8 l0 1.8 l3.5-1.2 l1.5 2 l1.5-2 l3.5 1.2 l0-1.8 l-3.5-2.8 l0-6.5 l10 3 l0-2.2 l-10-5 l-1.5-4.5z";
       const glowFilter = `<defs><filter id="glow-${ac.icao24.replace(/[^a-z0-9]/gi,'')}"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="${color}" flood-opacity="0.9"/></filter></defs>`;
-      const aircraftSvg = `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg" style="--flight-color:${color};transform:rotate(${ac.heading}deg);">
+      const bankTransform = `transform:rotate(${ac.heading}deg) skewY(${bankAngle}deg);transition:transform 0.15s ease-out;`;
+      const trackedPulseClass = isTracked ? " flight-tracked-pulse" : "";
+      const aircraftSvg = `<svg width="${size}" height="${size}" viewBox="0 0 32 32" class="flight-icon-svg${trackedPulseClass}" style="--flight-color:${color};${bankTransform}">
             ${glowFilter}
             <path d="${planePath}" fill="${color}" stroke="rgba(255,255,255,0.4)" stroke-width="0.6" filter="url(#glow-${ac.icao24.replace(/[^a-z0-9]/gi,'')})"/>
           </svg>`;
