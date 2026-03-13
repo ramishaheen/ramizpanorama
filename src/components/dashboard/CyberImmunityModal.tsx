@@ -1396,6 +1396,48 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                   )}
                 </div>
               </div>
+
+              {/* Top Targeted Countries */}
+              <div>
+                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Most Targeted</label>
+                <div className="space-y-1">
+                  {Object.entries(
+                    filtered.reduce((acc: Record<string, number>, t) => {
+                      const tgt = t.targetCountry || t.target;
+                      acc[tgt] = (acc[tgt] || 0) + 1;
+                      return acc;
+                    }, {})
+                  ).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([country, count], i) => (
+                    <div key={country} className="flex items-center gap-2 text-[9px]">
+                      <span className="text-muted-foreground w-3">{i + 1}.</span>
+                      <span className="flex-1 truncate">{country}</span>
+                      <div className="w-16 bg-border/30 rounded-full h-1.5">
+                        <div className="bg-primary/60 h-full rounded-full" style={{ width: `${(count / Math.max(...Object.values(filtered.reduce((a: Record<string, number>, t) => { const tg = t.targetCountry || t.target; a[tg] = (a[tg] || 0) + 1; return a; }, {})), 1)) * 100}%` }} />
+                      </div>
+                      <span className="font-mono w-4 text-right text-primary">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Malware & Ransomware */}
+              <div>
+                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Bug className="h-3 w-3" /> Active Threat Categories
+                </label>
+                <div className="space-y-1">
+                  {["Ransomware", "Wiper Malware", "DDoS Attack", "Espionage", "Zero-Day Exploit", "Phishing Campaign"].map(cat => {
+                    const count = filtered.filter(t => t.type.includes(cat) || t.description.toLowerCase().includes(cat.toLowerCase())).length;
+                    if (count === 0) return null;
+                    return (
+                      <div key={cat} className="flex items-center justify-between text-[9px]">
+                        <span className="text-muted-foreground">{cat}</span>
+                        <span className="font-mono text-foreground font-bold">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </ScrollArea>
         </div>
