@@ -523,7 +523,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("All");
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [centerView, setCenterView] = useState<"map" | "graph">("map");
+  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
 
   /* ── Timeline state ── */
