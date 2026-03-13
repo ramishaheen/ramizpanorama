@@ -265,7 +265,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
-  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL">("FEED");
+  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY">("FEED");
+  const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
 
 
   // Fetch Google POIs for the focused region
