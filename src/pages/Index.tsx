@@ -49,7 +49,7 @@ import {
 } from "@dnd-kit/sortable";
 
 const STORAGE_KEY = "waros-layout";
-const DEFAULT_LEFT_ORDER = ["rockets", "risk", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
+const DEFAULT_LEFT_ORDER = ["rockets", "risk", "ransomware", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "layers", "timeline", "cyber"];
 
 interface LayoutState {
