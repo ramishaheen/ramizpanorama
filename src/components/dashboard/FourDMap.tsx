@@ -1147,28 +1147,47 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <button onClick={() => setCleanUI(true)} className="w-full px-2 py-1.5 rounded text-[9px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors text-center">CLEAN UI</button>
             </div>
 
-            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5"><AlertTriangle className="h-3 w-3 text-[#f97316]" /><span className="text-[9px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
-                <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
+            <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
+              <div className="flex items-center gap-0.5">
+                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL"] as const).map(tab => (
+                  <button key={tab} onClick={() => setC2RightTab(tab)}
+                    className={`flex-1 px-1 py-1 rounded text-[8px] font-mono font-bold border transition-colors ${c2RightTab === tab ? "border-primary/50 bg-primary/15 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div ref={feedRef} className="flex-1 overflow-y-auto">
-              {unifiedFeed.map(ev => (
-                <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
-                  className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
-                      <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
-                    </span>
-                    <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {c2RightTab === "FEED" && (
+                <>
+                  <div className="px-3 py-1 border-b border-[hsl(190,60%,10%)]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5"><AlertTriangle className="h-3 w-3 text-[#f97316]" /><span className="text-[8px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
+                      <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
+                    </div>
                   </div>
-                  <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
-                  <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
-                </button>
-              ))}
-              {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
+                  <div ref={feedRef} className="flex-1 overflow-y-auto">
+                    {unifiedFeed.map(ev => (
+                      <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
+                        className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
+                            <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
+                          </span>
+                          <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                        </div>
+                        <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
+                        <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
+                      </button>
+                    ))}
+                    {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
+                  </div>
+                </>
+              )}
+              {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
+              {c2RightTab === "KILLCHAIN" && <KillChainPanel />}
+              {c2RightTab === "C2 INTEL" && <C2ChatTab />}
             </div>
           </div>
         )}
