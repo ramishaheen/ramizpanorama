@@ -54,6 +54,14 @@ const WEAPON_RANGE_KM: Record<string, number> = {
   sead_package: 100,
 };
 
+const WEAPON_COST_USD: Record<string, number> = {
+  hellfire: 150000, jdam: 25000, gbu39: 40000, tomahawk: 1800000,
+  harpoon: 1500000, excalibur: 68000, harm: 284000, paveway: 20000,
+  "30mm_cannon": 50, hydra_70: 2500, he_155mm: 800, gmlrs: 168000,
+  atacms: 1500000, pac3: 5900000, sm2: 2100000, aim120: 1100000,
+  tow: 93000, sead_package: 500000, naval_gun: 2000,
+};
+
 interface MatchResult {
   shooter_id: string;
   callsign: string;
@@ -65,6 +73,7 @@ interface MatchResult {
   payload_match_score: number;
   roe_status: string;
   collateral_risk: string;
+  cost_estimate_usd: number;
 }
 
 serve(async (req) => {
@@ -139,7 +148,6 @@ serve(async (req) => {
         const distFactor = Math.max(0, 1 - (dist / (weaponRange * 3)));
         const fuelFactor = shooter.fuel_remaining_pct / 100;
         const matchScore = matchingWeapons.length / Math.max(targetWeapons.length, 1);
-        // Factor in threat_level: higher threat = prioritize faster TTT shooters
         const threatBonus = threatLevel >= 4 ? 0.05 : 0;
         const pk = Math.min(0.98, distFactor * 0.5 + matchScore * 0.3 + fuelFactor * 0.2 + threatBonus);
 
@@ -149,12 +157,14 @@ serve(async (req) => {
           : "RESTRICTED — REQUIRES APPROVAL";
 
         const collateralRisk = dist < 5 ? "high" : dist < 20 ? "medium" : "low";
+        const costEstimate = WEAPON_COST_USD[bestWeapon] || 0;
 
         matches.push({
           shooter_id: shooter.id, callsign: shooter.callsign, asset_type: shooter.asset_type,
           distance_km: Math.round(dist * 10) / 10, time_to_target_min: Math.round(tttMin * 10) / 10,
           best_weapon: bestWeapon, probability_of_kill: Math.round(pk * 100) / 100,
-          payload_match_score: Math.round(matchScore * 100) / 100, roe_status: roeStatus, collateral_risk: collateralRisk,
+          payload_match_score: Math.round(matchScore * 100) / 100, roe_status: roeStatus,
+          collateral_risk: collateralRisk, cost_estimate_usd: costEstimate,
         });
       }
 
@@ -177,7 +187,7 @@ serve(async (req) => {
                   content: `You are a JADC2 weaponeering AI. Generate a 2-sentence tactical recommendation for this engagement:
 
 Target: ${target.classification.toUpperCase()} at ${target.lat.toFixed(4)}°N, ${target.lng.toFixed(4)}°E, confidence ${(target.confidence * 100).toFixed(0)}%, priority ${target.priority}, threat level ${threatLevel}/5 (${threatLabel}).
-Best Shooter: ${topMatches[0].callsign} (${topMatches[0].asset_type}), ${topMatches[0].distance_km}km away, weapon: ${topMatches[0].best_weapon}, Pk: ${(topMatches[0].probability_of_kill * 100).toFixed(0)}%, TTT: ${topMatches[0].time_to_target_min}min, ROE: ${topMatches[0].roe_status}.
+Best Shooter: ${topMatches[0].callsign} (${topMatches[0].asset_type}), ${topMatches[0].distance_km}km away, weapon: ${topMatches[0].best_weapon}, Pk: ${(topMatches[0].probability_of_kill * 100).toFixed(0)}%, TTT: ${topMatches[0].time_to_target_min}min, ROE: ${topMatches[0].roe_status}, Cost: $${topMatches[0].cost_estimate_usd.toLocaleString()}.
 IFF Result: ${knownFriendly ? "FRIENDLY - ABORT" : ontMatch?.length ? "CORRELATED — review ontology" : "NEW HOSTILE — no ontology match"}.
 Estimated Time to Intercept: ${topMatches[0].time_to_target_min} minutes.
 
@@ -202,6 +212,7 @@ Be concise and military-professional.`,
           probability_of_kill: m.probability_of_kill, collateral_risk: m.collateral_risk,
           roe_status: m.roe_status, proximity_km: m.distance_km,
           payload_match_score: m.payload_match_score,
+          cost_estimate_usd: m.cost_estimate_usd,
           ai_reasoning: m.shooter_id === topMatches[0].shooter_id ? aiReasoning : "",
           decision: "pending",
         }).select().single();
@@ -267,6 +278,49 @@ Be concise and military-professional.`,
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ============================================
+    // ACTION: slew_sensor
+    // ============================================
+    if (action === "slew_sensor") {
+      const { lat, lng } = body;
+      if (lat == null || lng == null) throw new Error("lat and lng required");
+
+      // Find nearest idle ISR asset (drone preferred)
+      const { data: assets } = await supabase
+        .from("shooter_assets")
+        .select("*")
+        .in("asset_type", ["mq9_reaper", "mq1_predator"])
+        .in("current_tasking", ["idle", "combat"])
+        .eq("command_link_status", "active");
+
+      if (!assets?.length) {
+        return new Response(JSON.stringify({ error: "No idle ISR assets available" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const sorted = assets.sort((a: any, b: any) =>
+        haversine(a.lat, a.lng, lat, lng) - haversine(b.lat, b.lng, lat, lng)
+      );
+      const nearest = sorted[0];
+      const dist = haversine(nearest.lat, nearest.lng, lat, lng);
+      const speedKmh = ASSET_SPEED_KMH[nearest.asset_type] || 300;
+      const etaMin = Math.round((dist / speedKmh) * 60 * 10) / 10;
+
+      await supabase.from("shooter_assets")
+        .update({ current_tasking: "tasked", last_updated: new Date().toISOString() })
+        .eq("id", nearest.id);
+
+      return new Response(JSON.stringify({
+        success: true,
+        slewed_asset: {
+          id: nearest.id, callsign: nearest.callsign, asset_type: nearest.asset_type,
+          distance_km: Math.round(dist * 10) / 10, eta_min: etaMin,
+        },
+        target_coords: { lat, lng },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ============================================
@@ -340,7 +394,7 @@ Be concise and military-professional.`,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action. Use: match_shooters, commit_strike, discard_strike, dark_vessel_detect" }), {
+    return new Response(JSON.stringify({ error: "Unknown action. Use: match_shooters, commit_strike, discard_strike, slew_sensor, dark_vessel_detect" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
