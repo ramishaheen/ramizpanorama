@@ -2374,7 +2374,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
         {/* Row 2: City presets */}
         <div className="flex justify-center">
-          <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1 overflow-x-auto scrollbar-hide max-w-[90vw]" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-1 gotham-orbital-panel px-2 py-1 overflow-x-auto scrollbar-hide max-w-[90vw]" style={{ scrollbarWidth: "none" }}>
             {CITY_PRESETS.map((city) => {
               const badge = countryBadges[city.name];
               const overhead = badge?.total || 0;
@@ -2382,16 +2382,16 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 <button
                   key={city.name}
                   onClick={() => flyToCity(city)}
-                  className={`relative flex-shrink-0 px-2 py-1 rounded-md text-[9px] font-semibold tracking-wide transition-all whitespace-nowrap ${
+                  className={`relative flex-shrink-0 px-2 py-1 text-[9px] font-mono font-semibold tracking-wide transition-all whitespace-nowrap ${
                     activeCity === city.name
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_8px_rgba(0,200,255,0.15)]"
-                      : "text-white/80 hover:text-white hover:bg-white/10 border border-transparent"
+                      ? "bg-primary/15 text-primary border border-primary/40"
+                      : "text-muted-foreground hover:text-foreground hover:bg-primary/5 border border-transparent"
                   }`}
                   title={`${city.landmark} — ${city.country}`}
                 >
                   {city.name}
                   {overhead > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[7px] font-bold leading-none px-0.5 animate-pulse">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold leading-none px-0.5 animate-pulse">
                       {overhead}
                     </span>
                   )}
