@@ -358,5 +358,6 @@ export const MapCommandBar = ({
         </CommandSection>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
