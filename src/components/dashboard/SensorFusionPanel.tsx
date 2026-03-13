@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { Satellite, Camera, Radio, Globe, Radar, Wifi, WifiOff, RefreshCw, Zap, Activity, Cpu, ChevronDown, ChevronRight, AlertTriangle, Signal } from "lucide-react";
+import { Satellite, Camera, Radio, Globe, Radar, Wifi, WifiOff, RefreshCw, Zap, Activity, Cpu, ChevronDown, ChevronRight, AlertTriangle, Signal, Heartbeat } from "lucide-react";
 import { useSensorFeeds, type SensorFeed } from "@/hooks/useSensorFeeds";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const FEED_ICONS: Record<string, React.ReactNode> = {
   satellite: <Satellite className="h-3 w-3" />,
