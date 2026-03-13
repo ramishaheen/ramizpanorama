@@ -282,6 +282,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     fetchPOIs();
   }, [layers.googlePOI]);
 
+  // Fetch C2 force units and target tracks
+  useEffect(() => {
+    const fetchC2 = async () => {
+      const [{ data: fu }, { data: tt }] = await Promise.all([
+        supabase.from("force_units").select("*").limit(100),
+        supabase.from("target_tracks").select("*").limit(50),
+      ]);
+      if (fu) setForceUnits(fu);
+      if (tt) setTargetTracks(tt);
+    };
+    fetchC2();
+    const iv = setInterval(fetchC2, 10000);
+    const ch1 = supabase.channel("c2_forces_rt").on("postgres_changes", { event: "*", schema: "public", table: "force_units" }, () => fetchC2()).subscribe();
+    const ch2 = supabase.channel("c2_targets_rt").on("postgres_changes", { event: "*", schema: "public", table: "target_tracks" }, () => fetchC2()).subscribe();
+    return () => { clearInterval(iv); supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
+  }, []);
+
+
   // Merge real + emulated data — emulated fills gaps when APIs haven't loaded
   const earthquakes = useMemo(() => earthquakesRaw.length > 0 ? earthquakesRaw : EMULATED_EARTHQUAKES, [earthquakesRaw]);
   const wildfires = useMemo(() => wildfiresRaw.length > 0 ? wildfiresRaw : EMULATED_WILDFIRES, [wildfiresRaw]);
