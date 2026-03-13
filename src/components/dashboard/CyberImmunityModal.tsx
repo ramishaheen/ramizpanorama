@@ -353,7 +353,7 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
         {(["critical", "high", "medium", "low"] as const).map((sev, i) => (
           <g key={sev}>
             <circle cx={W - 108} cy={34 + i * 9} r={3} fill={SEVERITY_COLORS[sev]} />
-            <text x={W - 101} y={37 + i * 9} fill="hsl(0 0% 70%)" fontSize={7} fontFamily="monospace" textTransform="capitalize">{sev}</text>
+            <text x={W - 101} y={37 + i * 9} fill="hsl(0 0% 70%)" fontSize={7} fontFamily="monospace" style={{ textTransform: "capitalize" }}>{sev}</text>
           </g>
         ))}
       </g>
