@@ -365,7 +365,7 @@ const Index = () => {
         </div>
 
         {/* Bottom tab bar */}
-        <div className="flex-shrink-0 border-t border-border bg-card/90 backdrop-blur flex">
+        <div className="flex-shrink-0 border-t border-border bg-card/90 backdrop-blur flex pb-safe">
           {MOBILE_TABS.map((tab) => {
             const Icon = tab.icon;
             const active = mobileTab === tab.id;

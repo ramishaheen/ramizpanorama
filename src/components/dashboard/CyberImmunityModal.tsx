@@ -1425,16 +1425,16 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       </div>
 
       {/* ── THREAT LEVEL BAR ── */}
-      <div className="flex items-center justify-between px-4 py-1.5 border-b border-border bg-card/50 text-[10px] font-mono">
-        <div className="flex items-center gap-4">
-          <span className={`font-bold ${threatLevelColor[stats.threatLevel]}`}>■ THREAT LEVEL: {stats.threatLevel}</span>
-          <span className="text-destructive">CRITICAL: {stats.severityCounts.critical}</span>
-          <span className="text-orange-400">HIGH: {stats.severityCounts.high}</span>
-          <span className="text-yellow-400">MEDIUM: {stats.severityCounts.medium}</span>
-          <span className="text-primary">LOW: {stats.severityCounts.low}</span>
-          <span className="text-muted-foreground">TOTAL: {filtered.length}</span>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-2 sm:px-4 py-1 sm:py-1.5 border-b border-border bg-card/50 text-[10px] font-mono gap-1">
+        <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide w-full sm:w-auto">
+          <span className={`font-bold flex-shrink-0 ${threatLevelColor[stats.threatLevel]}`}>■ {stats.threatLevel}</span>
+          <span className="text-destructive flex-shrink-0">C:{stats.severityCounts.critical}</span>
+          <span className="text-orange-400 flex-shrink-0">H:{stats.severityCounts.high}</span>
+          <span className="text-yellow-400 flex-shrink-0">M:{stats.severityCounts.medium}</span>
+          <span className="text-primary flex-shrink-0">L:{stats.severityCounts.low}</span>
+          <span className="text-muted-foreground flex-shrink-0">T:{filtered.length}</span>
         </div>
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide w-full sm:w-auto">
           <button onClick={() => setCenterView("map")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "map" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Globe className="h-3 w-3 inline mr-1" />MAP
           </button>
