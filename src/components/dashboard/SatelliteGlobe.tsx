@@ -488,7 +488,7 @@ interface RawSatTLE {
 
 const SATELLITE_CACHE_KEY = "waros-orbital-cache-v1";
 
-export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, onTrackFlight, flightSource = "" }: SatelliteGlobeProps) => {
+export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlightId = null, onTrackFlight, flightSource: propFlightSource = "" }: SatelliteGlobeProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeElRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<any>(null);
@@ -544,6 +544,96 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [globeStyle, setGlobeStyle] = useState<string>("normal");
   const [selectedCity, setSelectedCity] = useState<CityPreset | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+
+  // ===== INDEPENDENT LIVE DATA FEEDS =====
+  const [liveFlights, setLiveFlights] = useState<FlightAircraft[]>([]);
+  const [liveFlightSource, setLiveFlightSource] = useState("");
+  const [liveGeoAlerts, setLiveGeoAlerts] = useState<any[]>([]);
+  const [liveRockets, setLiveRockets] = useState<any[]>([]);
+  const [liveEarthquakes, setLiveEarthquakes] = useState<any[]>([]);
+  const [liveWildfires, setLiveWildfires] = useState<any[]>([]);
+
+  // Independent flight fetching — dual bbox ME+SA, 15s
+  useEffect(() => {
+    const fetchFlights = async () => {
+      try {
+        const bboxME = { lamin: 10, lamax: 42, lomin: 20, lomax: 70 };
+        const bboxSA = { lamin: -35, lamax: -22, lomin: 16, lomax: 34 };
+        const [resME, resSA] = await Promise.all([
+          supabase.functions.invoke("live-flights", { body: bboxME }),
+          supabase.functions.invoke("live-flights", { body: bboxSA }),
+        ]);
+        const acMap = new Map<string, FlightAircraft>();
+        [resME, resSA].forEach(res => {
+          (res.data?.aircraft || []).forEach((ac: FlightAircraft) => {
+            if (ac.icao24 && ac.lat && ac.lng) acMap.set(ac.icao24, ac);
+          });
+        });
+        setLiveFlights(Array.from(acMap.values()));
+        const sources = [resME.data?.source, resSA.data?.source].filter(Boolean).join("+");
+        setLiveFlightSource(sources || "OSINT");
+      } catch (e) { console.error("[GLOBE] Flight fetch error:", e); }
+    };
+    fetchFlights();
+    const iv = setInterval(fetchFlights, 15_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live geo-alerts from DB — 30s
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const { data } = await supabase.from("geo_alerts").select("*");
+        if (data) setLiveGeoAlerts(data);
+      } catch (e) { console.error("[GLOBE] GeoAlerts fetch error:", e); }
+    };
+    fetchAlerts();
+    const iv = setInterval(fetchAlerts, 30_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live rockets from DB — 10s
+  useEffect(() => {
+    const fetchRockets = async () => {
+      try {
+        const { data } = await supabase.from("rockets").select("*");
+        if (data) setLiveRockets(data);
+      } catch (e) { console.error("[GLOBE] Rockets fetch error:", e); }
+    };
+    fetchRockets();
+    const iv = setInterval(fetchRockets, 10_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live earthquakes via edge function — 5min
+  useEffect(() => {
+    const fetchQuakes = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("usgs-earthquakes");
+        if (!error && data?.earthquakes) setLiveEarthquakes(data.earthquakes);
+      } catch (e) { console.error("[GLOBE] Earthquake fetch error:", e); }
+    };
+    fetchQuakes();
+    const iv = setInterval(fetchQuakes, 300_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live wildfires via edge function — 5min
+  useEffect(() => {
+    const fetchFires = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("nasa-wildfires");
+        if (!error && data?.fires) setLiveWildfires(data.fires);
+      } catch (e) { console.error("[GLOBE] Wildfire fetch error:", e); }
+    };
+    fetchFires();
+    const iv = setInterval(fetchFires, 300_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Merged flights: prefer independent fetch, fall back to props
+  const flights = liveFlights.length > 0 ? liveFlights : propFlights;
+  const flightSource = liveFlights.length > 0 ? liveFlightSource : propFlightSource;
 
   // Globe style presets — change texture, atmosphere, lighting
   const GLOBE_STYLES = [
