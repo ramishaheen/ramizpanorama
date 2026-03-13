@@ -150,6 +150,10 @@ export const COUNTRY_LABELS: { name: string; lon: number; lat: number }[] = [
   { name: "India", lon: 78, lat: 21 },
   { name: "N. Korea", lon: 127, lat: 40 },
   { name: "Ukraine", lon: 32, lat: 49 },
+  { name: "Jordan", lon: 36, lat: 31 },
+  { name: "Oman", lon: 57, lat: 21 },
+  { name: "Qatar", lon: 51, lat: 25 },
+  { name: "Bahrain", lon: 50.5, lat: 26 },
 ];
 
 // Graticule lines for lat/lon labels

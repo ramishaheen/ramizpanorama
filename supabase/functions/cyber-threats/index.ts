@@ -101,7 +101,9 @@ Each entry MUST have ALL these fields:
 Generate 12-18 realistic, technically detailed cyber incidents. Cover:
 - Iran-Israel cyber front (APT33, APT34, Unit 8200, MuddyWater)
 - US Cyber Command operations
-- Gulf state operations (UAE, Saudi Arabia, Qatar)
+- Gulf state operations (UAE, Saudi Arabia, Qatar, Bahrain, Oman, Jordan)
+- Jordanian NCSC cyber defense operations and threat landscape
+- Bahraini and Omani critical infrastructure monitoring (oil/gas, telecom, banking)
 - Russian and Chinese cyber espionage in the region
 - Ransomware groups targeting Middle East infrastructure
 - Hacktivist operations (Anonymous, IT Army, etc.)
