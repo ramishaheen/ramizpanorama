@@ -2130,24 +2130,22 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           <div className="relative" style={{ width: 150 }}>
             <button
               onClick={() => setSatTypesExpanded(!satTypesExpanded)}
-              className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+              className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 gotham-orbital-btn ${satTypesExpanded ? 'gotham-orbital-btn-active' : ''}`}
             >
               <Satellite className="h-3 w-3 text-primary" />
-              <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">SAT Types</span>
-              <span className="text-[8px] font-mono text-white/50">{satellites.length}</span>
-              {satTypesExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+              <span className="flex-1 text-left">SAT Types</span>
+              <span className="gotham-orbital-badge">{satellites.length}</span>
+              {satTypesExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
             </button>
             {satTypesExpanded && (
-              <div className="absolute bottom-full mb-1 left-0 w-[160px] max-h-[50vh] overflow-y-auto rounded-lg bg-black/90 backdrop-blur-md border border-white/15 px-2 py-2 space-y-0.5">
+              <div className="absolute bottom-full mb-1 left-0 w-[160px] max-h-[50vh] overflow-y-auto gotham-orbital-dropdown px-2 py-2 space-y-0.5">
                 <button
                   onClick={() => setSelectedCat(null)}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
-                    !selectedCat ? "bg-white text-black shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"
-                  }`}
+                  className={`gotham-orbital-dropdown-item ${!selectedCat ? 'gotham-orbital-dropdown-item-active' : ''}`}
                 >
-                  <span className="w-2 h-2 rounded-full bg-white flex-shrink-0" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
-                  <span className="truncate">ALL</span>
-                  <span className="ml-auto text-[8px] opacity-70">{satellites.length}</span>
+                  <span className="w-2 h-2 rounded-full bg-foreground flex-shrink-0" />
+                  <span className="truncate flex-1">ALL</span>
+                  <span className="text-[8px] opacity-70">{satellites.length}</span>
                 </button>
                 {categories.map(([cat, color]) => {
                   const count = satellites.filter((s) => s.category === cat).length;
@@ -2157,17 +2155,13 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                       key={cat}
                       disabled={isDisabled}
                       onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
-                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
-                        selectedCat === cat
-                          ? "bg-white text-black shadow-md"
-                          : isDisabled
-                            ? "text-white/20 cursor-not-allowed"
-                            : "text-white/70 hover:text-white hover:bg-white/10"
-                      }`}
+                      className={`gotham-orbital-dropdown-item ${
+                        selectedCat === cat ? 'gotham-orbital-dropdown-item-active' : ''
+                      } ${isDisabled ? 'opacity-20 cursor-not-allowed' : ''}`}
                     >
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="truncate">{cat}</span>
-                      <span className="ml-auto text-[8px] opacity-70">{count}</span>
+                      <span className="truncate flex-1">{cat}</span>
+                      <span className="text-[8px] opacity-70">{count}</span>
                     </button>
                   );
                 })}
