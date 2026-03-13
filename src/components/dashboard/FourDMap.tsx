@@ -870,12 +870,46 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     }
     globe.arcsData(arcs);
 
+    // ========== C2 COP: Blue Force Units ==========
+    if (layers.blueForce) {
+      blueUnits.forEach((u: any) => {
+        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔵" : u.unit_type === "air_defense" ? "🛡" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "💥" : u.unit_type === "command" ? "⭐" : u.unit_type === "special_ops" ? "🗡" : "📦";
+        points.push({
+          lat: u.lat, lng: u.lng, pointAlt: 0.03, color: "#3b82f6", radius: 0.3 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,25,0.96);border:1px solid #3b82f6;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(59,130,246,0.3)"><div style="color:#3b82f6;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> BLUE FORCE</div><div style="font-size:10px;margin-top:2px">▢ ${u.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E ${u.speed_kph > 0 ? `• ${u.speed_kph}kph HDG ${u.heading}°` : ""}</div></div>`,
+        });
+      });
+    }
+
+    // ========== C2 COP: Red Force Units ==========
+    if (layers.redForce) {
+      redUnits.forEach((u: any) => {
+        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔴" : u.unit_type === "air_defense" ? "🎯" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "🚀" : "⚠️";
+        points.push({
+          lat: u.lat, lng: u.lng, pointAlt: 0.03, color: "#ef4444", radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(25,5,5,0.96);border:1px solid #ef4444;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(239,68,68,0.3)"><div style="color:#ef4444;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> RED FORCE</div><div style="font-size:10px;margin-top:2px">◇ ${u.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E • SRC: ${u.source.toUpperCase()}</div></div>`,
+        });
+      });
+    }
+
+    // ========== C2: AI Target Tracks ==========
+    if (layers.targetTracks) {
+      activeTargets.forEach((t: any) => {
+        const pCol = t.priority === "critical" ? "#dc2626" : t.priority === "high" ? "#f97316" : t.priority === "medium" ? "#eab308" : "#22c55e";
+        const cIcon = t.classification === "tank" ? "🪖" : t.classification === "sam_site" ? "🎯" : t.classification === "missile_launcher" ? "🚀" : t.classification === "radar" ? "📡" : t.classification === "artillery" ? "💥" : t.classification === "command_post" ? "🏛" : "⚠️";
+        points.push({
+          lat: t.lat, lng: t.lng, pointAlt: 0.035, color: pCol, radius: (t.priority === "critical" ? 0.4 : 0.3) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(15,5,5,0.96);border:1px solid ${pCol};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${pCol}40"><div style="color:${pCol};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> TARGET ${t.track_id}</div><div style="font-size:10px;margin-top:2px">${t.classification.toUpperCase().replace("_"," ")} — ${(t.confidence*100).toFixed(0)}%</div><div style="color:#888;font-size:8px;margin-top:1px">${t.priority.toUpperCase()} PRIORITY • ${t.source_sensor.toUpperCase()} • ${t.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${t.ai_assessment || ""}</div></div>`,
+        });
+      });
+    }
+
     if (layers.borders) {
       globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets]);
 
   const chipLayers = [
     { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
