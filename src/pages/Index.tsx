@@ -48,7 +48,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-const STORAGE_KEY = "waros-layout";
+const STORAGE_KEY = "waros-layout"; // layout persistence key
 const DEFAULT_LEFT_ORDER = ["rockets", "risk", "ransomware", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "layers", "timeline", "cyber"];
 
