@@ -76,7 +76,7 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   };
 
   const handlePriority = async (id: string, priority: string) => {
-    await supabase.from("target_tracks").update({ priority }).eq("id", id);
+    await supabase.from("target_tracks").update({ priority: priority as any }).eq("id", id);
     fetchTargets();
   };
 

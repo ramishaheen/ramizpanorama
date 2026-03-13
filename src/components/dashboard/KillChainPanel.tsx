@@ -51,12 +51,12 @@ export const KillChainPanel = () => {
   const advancePhase = async (task: KCTask) => {
     const currentIdx = PHASES.indexOf(task.phase);
     if (currentIdx >= PHASES.length - 1) return;
-    const nextPhase = PHASES[currentIdx + 1];
+    const nextPhase = PHASES[currentIdx + 1] as any;
     // Engage phase requires approved status
     if (nextPhase === "engage" && task.status !== "approved") return;
     await supabase.from("kill_chain_tasks").update({
       phase: nextPhase,
-      status: nextPhase === "engage" ? "in_progress" : "pending",
+      status: (nextPhase === "engage" ? "in_progress" : "pending") as any,
       updated_at: new Date().toISOString(),
     }).eq("id", task.id);
     fetchTasks();
