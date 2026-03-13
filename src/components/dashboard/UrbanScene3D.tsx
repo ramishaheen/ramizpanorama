@@ -2477,17 +2477,57 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
+        {/* Lite Mode — Radial Blur (clear center, blurred edges) */}
+        {liteMode && (
+          <div
+            className="absolute inset-0 z-[11] pointer-events-none"
+            style={{
+              backdropFilter: "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+              maskImage: "radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.35) 22%, rgba(0,0,0,0.8) 40%)",
+              WebkitMaskImage: "radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.35) 22%, rgba(0,0,0,0.8) 40%)",
+            }}
+          />
+        )}
+
         {/* Lite Mode crosshair reticle */}
         {liteMode && (
-          <div className="absolute inset-0 z-[12] pointer-events-none flex items-center justify-center">
-            <svg width="80" height="80" viewBox="0 0 80 80" className="opacity-30">
-              <circle cx="40" cy="40" r="30" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" strokeDasharray="4 4" />
-              <circle cx="40" cy="40" r="15" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
-              <line x1="40" y1="5" x2="40" y2="25" stroke="hsl(var(--primary))" strokeWidth="0.5" />
-              <line x1="40" y1="55" x2="40" y2="75" stroke="hsl(var(--primary))" strokeWidth="0.5" />
-              <line x1="5" y1="40" x2="25" y2="40" stroke="hsl(var(--primary))" strokeWidth="0.5" />
-              <line x1="55" y1="40" x2="75" y2="40" stroke="hsl(var(--primary))" strokeWidth="0.5" />
-              <circle cx="40" cy="40" r="2" fill="hsl(var(--primary))" opacity="0.6" />
+          <div className="absolute inset-0 z-[12] pointer-events-none flex items-center justify-center" style={{ filter: "drop-shadow(0 0 5px hsl(var(--primary)))" }}>
+            <svg width="200" height="200" viewBox="0 0 200 200" style={{ opacity: 0.75 }}>
+              {/* Outer ring */}
+              <circle cx="100" cy="100" r="90" fill="none" stroke="hsl(var(--primary))" strokeWidth="1" strokeDasharray="6 4" />
+              {/* Middle ring */}
+              <circle cx="100" cy="100" r="60" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.7" strokeDasharray="3 3" />
+              {/* Inner ring — focus zone */}
+              <circle cx="100" cy="100" r="30" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.2" />
+              {/* Center dot */}
+              <circle cx="100" cy="100" r="2.5" fill="hsl(var(--primary))" />
+              <circle cx="100" cy="100" r="5" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              {/* Cross lines */}
+              <line x1="100" y1="5" x2="100" y2="70" stroke="hsl(var(--primary))" strokeWidth="0.8" />
+              <line x1="100" y1="130" x2="100" y2="195" stroke="hsl(var(--primary))" strokeWidth="0.8" />
+              <line x1="5" y1="100" x2="70" y2="100" stroke="hsl(var(--primary))" strokeWidth="0.8" />
+              <line x1="130" y1="100" x2="195" y2="100" stroke="hsl(var(--primary))" strokeWidth="0.8" />
+              {/* Range tick marks */}
+              {[45, 75].map(r => (
+                <g key={r}>
+                  <line x1={100} y1={100 - r} x2={100} y2={100 - r + 5} stroke="hsl(var(--primary))" strokeWidth="0.7" />
+                  <line x1={100} y1={100 + r} x2={100} y2={100 + r - 5} stroke="hsl(var(--primary))" strokeWidth="0.7" />
+                  <line x1={100 - r} y1={100} x2={100 - r + 5} y2={100} stroke="hsl(var(--primary))" strokeWidth="0.7" />
+                  <line x1={100 + r} y1={100} x2={100 + r - 5} y2={100} stroke="hsl(var(--primary))" strokeWidth="0.7" />
+                </g>
+              ))}
+              {/* Diagonal marks */}
+              {[{x:30,y:30},{x:170,y:30},{x:30,y:170},{x:170,y:170}].map((p,i) => (
+                <line key={i} x1={p.x} y1={p.y} x2={p.x + (p.x < 100 ? 7 : -7)} y2={p.y + (p.y < 100 ? 7 : -7)} stroke="hsl(var(--primary))" strokeWidth="0.7" />
+              ))}
+              {/* Mil-dot range markers */}
+              {[45, 55, 65, 75].map(d => (
+                <g key={`md${d}`}>
+                  <circle cx="100" cy={100 + d} r="1" fill="hsl(var(--primary))" opacity="0.5" />
+                  <circle cx="100" cy={100 - d} r="1" fill="hsl(var(--primary))" opacity="0.5" />
+                </g>
+              ))}
             </svg>
           </div>
         )}
