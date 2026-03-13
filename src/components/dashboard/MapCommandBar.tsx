@@ -309,6 +309,7 @@ export const MapCommandBar = ({
               icon={t.icon}
               active={activeToolMode === t.mode}
               onClick={() => onToolModeChange(activeToolMode === t.mode ? null : t.mode)}
+              tooltip={t.tooltip}
             />
           ))}
         </CommandSection>
