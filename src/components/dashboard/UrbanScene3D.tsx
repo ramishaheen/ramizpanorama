@@ -144,6 +144,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
   const [trackedAircraftId, setTrackedAircraftId] = useState<string | null>(null);
   const [flightSource, setFlightSource] = useState("");
+  const [tilesUsed, setTilesUsed] = useState(0);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(true);
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
