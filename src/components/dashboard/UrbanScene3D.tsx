@@ -2624,6 +2624,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               </div>
               <div className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 bg-black/80 text-center">
                 <span className="text-[7px] font-mono text-emerald-400/80">📍 {lat.toFixed(4)}°, {lng.toFixed(4)}°</span>
+                {geocodeAddress && <span className="text-[6px] font-mono text-muted-foreground/60 block truncate">{geocodeAddress}</span>}
               </div>
             </div>
 
