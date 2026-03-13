@@ -292,12 +292,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   // Fetch C2 force units and target tracks
   useEffect(() => {
     const fetchC2 = async () => {
-      const [{ data: fu }, { data: tt }] = await Promise.all([
+      const [{ data: fu }, { data: tt }, { data: sa }] = await Promise.all([
         supabase.from("force_units").select("*").limit(100),
         supabase.from("target_tracks").select("*").limit(50),
+        supabase.from("shooter_assets").select("*").limit(50),
       ]);
       if (fu) setForceUnits(fu);
       if (tt) setTargetTracks(tt);
+      if (sa) setShooterAssets(sa);
     };
     fetchC2();
     const iv = setInterval(fetchC2, 10000);
