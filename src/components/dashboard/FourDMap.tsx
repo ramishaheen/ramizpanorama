@@ -428,12 +428,17 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => clearInterval(iv);
   }, [satellites.length]);
 
+  const blueUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "blue"), [forceUnits]);
+  const redUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "red" || u.affiliation === "unknown"), [forceUnits]);
+  const activeTargets = useMemo(() => targetTracks.filter((t: any) => t.status !== "destroyed"), [targetTracks]);
+
   const stats = useMemo(() => ({
     sats: allSatellites.length, aircraft: allFlights.length, vessels: aisVessels.length,
     quakes: earthquakes.length, fires: wildfires.length, conflicts: conflictEvents.length,
     rockets: rockets.length, nuclear: nuclearStations.length + (nuclearFacilities?.length || 0),
     fusion: geoFusionData?.events?.length || 0, airQ: airQualityData.length,
-  }), [allSatellites, allFlights, aisVessels, earthquakes, wildfires, conflictEvents, rockets, nuclearStations, nuclearFacilities, geoFusionData, airQualityData]);
+    blu: blueUnits.length, red: redUnits.length, tgt: activeTargets.length,
+  }), [allSatellites, allFlights, aisVessels, earthquakes, wildfires, conflictEvents, rockets, nuclearStations, nuclearFacilities, geoFusionData, airQualityData, blueUnits, redUnits, activeTargets]);
 
   const layerConfigs: LayerConfig[] = [
     { id: "satellites", label: "Satellites", icon: <Satellite className="h-3.5 w-3.5" />, color: "#00d4ff", count: stats.sats },
