@@ -2432,8 +2432,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                                 <span className="text-[8px] font-mono text-white/40 tabular-nums">
                                   HDG {Math.round(v.heading)}°
                                 </span>
-                                <span className="text-[7px] font-mono text-white/25 truncate">
-                                  {v.destination || v.type}
+                                <span className="text-[7px] font-mono text-cyan-400/40 truncate">
+                                  📍 {getSeaRegionName(v.lat, v.lng)}
                                 </span>
                               </div>
                             </button>
