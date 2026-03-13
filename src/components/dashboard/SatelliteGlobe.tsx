@@ -2846,7 +2846,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               <button
                 onClick={sendAiMessage}
                 disabled={aiLoading || !aiInput.trim()}
-                className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 disabled:opacity-30"
+                className="w-6 h-6 flex items-center justify-center hover:bg-primary/10 disabled:opacity-30"
               >
                 <Send className="h-3 w-3 text-white/70" />
               </button>
