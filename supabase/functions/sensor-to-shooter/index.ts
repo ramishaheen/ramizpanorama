@@ -6,7 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Haversine distance in km
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -15,41 +14,38 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Weapon-target matching matrix
 const WEAPON_TARGET_MATRIX: Record<string, string[]> = {
-  tank:             ["hellfire", "jdam", "excalibur", "tow"],
-  truck:            ["hellfire", "gbu39", "30mm_cannon"],
+  tank: ["hellfire", "jdam", "excalibur", "tow"],
+  truck: ["hellfire", "gbu39", "30mm_cannon"],
   missile_launcher: ["jdam", "tomahawk", "hellfire", "gbu39"],
-  apc:              ["hellfire", "excalibur", "30mm_cannon"],
-  radar:            ["harm", "jdam", "tomahawk"],
-  sam_site:         ["harm", "jdam", "tomahawk", "sead_package"],
-  artillery:        ["jdam", "excalibur", "hellfire"],
-  command_post:     ["jdam", "tomahawk", "paveway"],
-  supply_depot:     ["jdam", "gbu39", "paveway"],
-  dark_vessel:      ["harpoon", "naval_gun", "hellfire"],
+  apc: ["hellfire", "excalibur", "30mm_cannon"],
+  radar: ["harm", "jdam", "tomahawk"],
+  sam_site: ["harm", "jdam", "tomahawk", "sead_package"],
+  artillery: ["jdam", "excalibur", "hellfire"],
+  command_post: ["jdam", "tomahawk", "paveway"],
+  supply_depot: ["jdam", "gbu39", "paveway"],
+  dark_vessel: ["harpoon", "naval_gun", "hellfire"],
 };
 
 const ASSET_WEAPONS: Record<string, string[]> = {
-  mq9_reaper:              ["hellfire", "gbu39", "paveway"],
-  mq1_predator:            ["hellfire"],
-  f35_lightning:            ["jdam", "gbu39", "aim120", "harm"],
-  f16_falcon:              ["jdam", "paveway", "harm", "aim120"],
-  ah64_apache:             ["hellfire", "30mm_cannon", "hydra_70"],
-  artillery_m777:          ["excalibur", "he_155mm"],
-  mlrs_himars:             ["gmlrs", "atacms"],
-  naval_destroyer:         ["tomahawk", "harpoon", "naval_gun", "sm2"],
-  naval_frigate:           ["harpoon", "naval_gun"],
+  mq9_reaper: ["hellfire", "gbu39", "paveway"],
+  mq1_predator: ["hellfire"],
+  f35_lightning: ["jdam", "gbu39", "aim120", "harm"],
+  f16_falcon: ["jdam", "paveway", "harm", "aim120"],
+  ah64_apache: ["hellfire", "30mm_cannon", "hydra_70"],
+  artillery_m777: ["excalibur", "he_155mm"],
+  mlrs_himars: ["gmlrs", "atacms"],
+  naval_destroyer: ["tomahawk", "harpoon", "naval_gun", "sm2"],
+  naval_frigate: ["harpoon", "naval_gun"],
   missile_battery_patriot: ["pac3"],
 };
 
-// Speed estimates in km/h for time-to-target
 const ASSET_SPEED_KMH: Record<string, number> = {
   mq9_reaper: 370, mq1_predator: 220, f35_lightning: 1800, f16_falcon: 2100,
   ah64_apache: 290, artillery_m777: 0, mlrs_himars: 0,
   naval_destroyer: 55, naval_frigate: 50, missile_battery_patriot: 0,
 };
 
-// Weapon range in km
 const WEAPON_RANGE_KM: Record<string, number> = {
   hellfire: 11, jdam: 28, gbu39: 110, excalibur: 40, harm: 150,
   tomahawk: 2500, harpoon: 280, paveway: 20, naval_gun: 38,
@@ -83,18 +79,15 @@ serve(async (req) => {
 
     // ============================================
     // ACTION: match_shooters
-    // F2T2EA Step 4 (Target) — find best shooter for a target
     // ============================================
     if (action === "match_shooters") {
       const { target_track_id } = body;
       if (!target_track_id) throw new Error("target_track_id required");
 
-      // 1. Get target
       const { data: target, error: tErr } = await supabase
         .from("target_tracks").select("*").eq("id", target_track_id).single();
       if (tErr || !target) throw new Error("Target not found");
 
-      // 2. Check ontology for affiliation
       const { data: ontMatch } = await supabase
         .from("ontology_entities")
         .select("*")
@@ -110,7 +103,6 @@ serve(async (req) => {
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // 3. Get available shooters (idle or combat, not maintenance/rtb)
       const { data: shooters } = await supabase
         .from("shooter_assets")
         .select("*")
@@ -123,18 +115,16 @@ serve(async (req) => {
         });
       }
 
-      // 4. Weaponeering — match each shooter
       const targetWeapons = WEAPON_TARGET_MATRIX[target.classification] || [];
       const matches: MatchResult[] = [];
+      const threatLevel = target.threat_level || 3;
 
       for (const shooter of shooters) {
         const dist = haversine(shooter.lat, shooter.lng, target.lat, target.lng);
         const assetWeapons = ASSET_WEAPONS[shooter.asset_type] || [];
         const matchingWeapons = assetWeapons.filter((w: string) => targetWeapons.includes(w));
-
         if (matchingWeapons.length === 0) continue;
 
-        // Find best weapon by range coverage
         const bestWeapon = matchingWeapons.reduce((best: string, w: string) => {
           const range = WEAPON_RANGE_KM[w] || 0;
           const bestRange = WEAPON_RANGE_KM[best] || 0;
@@ -143,50 +133,40 @@ serve(async (req) => {
 
         const weaponRange = WEAPON_RANGE_KM[bestWeapon] || 50;
         const speedKmh = ASSET_SPEED_KMH[shooter.asset_type] || 200;
-
-        // Time to target: fly to weapon range, then fire
         const flyDist = Math.max(0, dist - weaponRange);
         const tttMin = speedKmh > 0 ? (flyDist / speedKmh) * 60 : (dist <= weaponRange ? 0.5 : 999);
 
-        // Pk based on distance, weapon match, fuel
         const distFactor = Math.max(0, 1 - (dist / (weaponRange * 3)));
         const fuelFactor = shooter.fuel_remaining_pct / 100;
         const matchScore = matchingWeapons.length / Math.max(targetWeapons.length, 1);
-        const pk = Math.min(0.98, distFactor * 0.5 + matchScore * 0.3 + fuelFactor * 0.2);
+        // Factor in threat_level: higher threat = prioritize faster TTT shooters
+        const threatBonus = threatLevel >= 4 ? 0.05 : 0;
+        const pk = Math.min(0.98, distFactor * 0.5 + matchScore * 0.3 + fuelFactor * 0.2 + threatBonus);
 
-        // ROE check
         const roeStatus = shooter.roe_zone === "no_strike" ? "DENIED"
           : shooter.roe_zone === "weapons_hold" ? "HOLD"
           : shooter.roe_zone === "free_fire" ? "CLEAR"
           : "RESTRICTED — REQUIRES APPROVAL";
 
-        // Collateral risk estimate
         const collateralRisk = dist < 5 ? "high" : dist < 20 ? "medium" : "low";
 
         matches.push({
-          shooter_id: shooter.id,
-          callsign: shooter.callsign,
-          asset_type: shooter.asset_type,
-          distance_km: Math.round(dist * 10) / 10,
-          time_to_target_min: Math.round(tttMin * 10) / 10,
-          best_weapon: bestWeapon,
-          probability_of_kill: Math.round(pk * 100) / 100,
-          payload_match_score: Math.round(matchScore * 100) / 100,
-          roe_status: roeStatus,
-          collateral_risk: collateralRisk,
+          shooter_id: shooter.id, callsign: shooter.callsign, asset_type: shooter.asset_type,
+          distance_km: Math.round(dist * 10) / 10, time_to_target_min: Math.round(tttMin * 10) / 10,
+          best_weapon: bestWeapon, probability_of_kill: Math.round(pk * 100) / 100,
+          payload_match_score: Math.round(matchScore * 100) / 100, roe_status: roeStatus, collateral_risk: collateralRisk,
         });
       }
 
-      // Sort by time-to-target, then Pk
       matches.sort((a, b) => a.time_to_target_min - b.time_to_target_min || b.probability_of_kill - a.probability_of_kill);
       const topMatches = matches.slice(0, 5);
 
-      // 5. AI reasoning for the top match
       let aiReasoning = "";
       if (topMatches.length > 0) {
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
         if (LOVABLE_API_KEY) {
           try {
+            const threatLabel = ["", "MINIMAL", "LOW", "MODERATE", "HIGH", "CRITICAL"][threatLevel] || "UNKNOWN";
             const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
               method: "POST",
               headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -196,9 +176,10 @@ serve(async (req) => {
                   role: "user",
                   content: `You are a JADC2 weaponeering AI. Generate a 2-sentence tactical recommendation for this engagement:
 
-Target: ${target.classification.toUpperCase()} at ${target.lat.toFixed(4)}°N, ${target.lng.toFixed(4)}°E, confidence ${(target.confidence * 100).toFixed(0)}%, priority ${target.priority}.
+Target: ${target.classification.toUpperCase()} at ${target.lat.toFixed(4)}°N, ${target.lng.toFixed(4)}°E, confidence ${(target.confidence * 100).toFixed(0)}%, priority ${target.priority}, threat level ${threatLevel}/5 (${threatLabel}).
 Best Shooter: ${topMatches[0].callsign} (${topMatches[0].asset_type}), ${topMatches[0].distance_km}km away, weapon: ${topMatches[0].best_weapon}, Pk: ${(topMatches[0].probability_of_kill * 100).toFixed(0)}%, TTT: ${topMatches[0].time_to_target_min}min, ROE: ${topMatches[0].roe_status}.
 IFF Result: ${knownFriendly ? "FRIENDLY - ABORT" : ontMatch?.length ? "CORRELATED — review ontology" : "NEW HOSTILE — no ontology match"}.
+Estimated Time to Intercept: ${topMatches[0].time_to_target_min} minutes.
 
 Be concise and military-professional.`,
                 }],
@@ -213,18 +194,13 @@ Be concise and military-professional.`,
         }
       }
 
-      // 6. Create strike recommendations in DB
       const recommendations = [];
       for (const m of topMatches) {
         const { data: rec } = await supabase.from("strike_recommendations").insert({
-          target_track_id,
-          shooter_asset_id: m.shooter_id,
-          recommended_weapon: m.best_weapon,
-          time_to_target_min: m.time_to_target_min,
-          probability_of_kill: m.probability_of_kill,
-          collateral_risk: m.collateral_risk,
-          roe_status: m.roe_status,
-          proximity_km: m.distance_km,
+          target_track_id, shooter_asset_id: m.shooter_id,
+          recommended_weapon: m.best_weapon, time_to_target_min: m.time_to_target_min,
+          probability_of_kill: m.probability_of_kill, collateral_risk: m.collateral_risk,
+          roe_status: m.roe_status, proximity_km: m.distance_km,
           payload_match_score: m.payload_match_score,
           ai_reasoning: m.shooter_id === topMatches[0].shooter_id ? aiReasoning : "",
           decision: "pending",
@@ -233,12 +209,9 @@ Be concise and military-professional.`,
       }
 
       return new Response(JSON.stringify({
-        target,
-        iff_result: knownFriendly ? "friendly" : ontMatch?.length ? "correlated" : "new_hostile",
-        ontology_matches: ontMatch?.length || 0,
-        matches: topMatches,
-        recommendations,
-        ai_reasoning: aiReasoning,
+        target, iff_result: knownFriendly ? "friendly" : ontMatch?.length ? "correlated" : "new_hostile",
+        ontology_matches: ontMatch?.length || 0, matches: topMatches, recommendations, ai_reasoning: aiReasoning,
+        estimated_time_to_intercept: topMatches[0]?.time_to_target_min || null,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -257,19 +230,16 @@ Be concise and military-professional.`,
         .single();
 
       if (rec) {
-        // Update shooter to tasked
         await supabase.from("shooter_assets")
           .update({ current_tasking: "tasked", last_updated: new Date().toISOString() })
           .eq("id", rec.shooter_asset_id);
 
-        // Advance kill chain if linked
         if (rec.kill_chain_task_id) {
           await supabase.from("kill_chain_tasks")
             .update({ phase: "engage", status: "in_progress", updated_at: new Date().toISOString() })
             .eq("id", rec.kill_chain_task_id);
         }
 
-        // Create action log entry
         await supabase.from("action_logs").insert({
           strike_recommendation_id: recommendation_id,
           target_track_id: rec.target_track_id,
@@ -301,7 +271,6 @@ Be concise and military-professional.`,
 
     // ============================================
     // ACTION: dark_vessel_detect
-    // Red Sea scenario — fuse SAR with AIS gaps
     // ============================================
     if (action === "dark_vessel_detect") {
       const { region } = body;
@@ -311,48 +280,39 @@ Be concise and military-professional.`,
         ? { latMin: 25.5, latMax: 27.0, lngMin: 55.5, lngMax: 57.0 }
         : { latMin: 12.0, latMax: 15.0, lngMin: 42.0, lngMax: 45.0 };
 
-      // Get AIS vessels in region
       const { data: aisVessels } = await supabase
-        .from("vessels")
-        .select("*")
+        .from("vessels").select("*")
         .gte("lat", bounds.latMin).lte("lat", bounds.latMax)
         .gte("lng", bounds.lngMin).lte("lng", bounds.lngMax);
 
-      // Simulate SAR detection (hull signatures without AIS)
       const sarDetections = [
         { lat: bounds.latMin + 0.6 + Math.random() * 0.5, lng: bounds.lngMin + 0.3 + Math.random() * 0.3, hull_length_m: 120 + Math.random() * 80, sar_confidence: 0.85 + Math.random() * 0.12 },
         { lat: bounds.latMin + 0.9 + Math.random() * 0.3, lng: bounds.lngMin + 0.5 + Math.random() * 0.2, hull_length_m: 80 + Math.random() * 40, sar_confidence: 0.7 + Math.random() * 0.15 },
       ];
 
-      // Correlation: check if SAR detections match AIS positions
       const darkVessels = sarDetections.filter(sar => {
-        const matched = aisVessels?.some((v: any) =>
-          haversine(sar.lat, sar.lng, v.lat, v.lng) < 2.0 // 2km correlation radius
-        );
-        return !matched; // No AIS match = dark vessel
+        const matched = aisVessels?.some((v: any) => haversine(sar.lat, sar.lng, v.lat, v.lng) < 2.0);
+        return !matched;
       });
 
-      // Create target tracks for dark vessels
       const tracks = [];
       for (const dv of darkVessels) {
         const { data: track } = await supabase.from("target_tracks").insert({
           track_id: `DARK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          classification: "truck", // closest enum for vessel
+          classification: "truck",
           confidence: dv.sar_confidence,
-          lat: dv.lat,
-          lng: dv.lng,
+          lat: dv.lat, lng: dv.lng,
           source_sensor: "satellite",
           status: "detected",
           priority: "high",
+          threat_level: 4,
           ai_assessment: `DARK VESSEL: SAR hull signature (${dv.hull_length_m.toFixed(0)}m) detected with NO AIS correlation. Transponder OFF. Hull moving toward commercial shipping lane. Recommend ISR drone divert for visual ID.`,
         }).select().single();
         if (track) tracks.push(track);
       }
 
-      // Auto-find nearest drone to divert
       const { data: drones } = await supabase
-        .from("shooter_assets")
-        .select("*")
+        .from("shooter_assets").select("*")
         .in("asset_type", ["mq9_reaper", "mq1_predator"])
         .in("current_tasking", ["idle", "combat"]);
 
@@ -363,21 +323,17 @@ Be concise and military-professional.`,
           haversine(a.lat, a.lng, dv.lat, dv.lng) - haversine(b.lat, b.lng, dv.lat, dv.lng)
         );
         divertAsset = sorted[0];
-        // Task the drone
         await supabase.from("shooter_assets")
           .update({ current_tasking: "tasked", last_updated: new Date().toISOString() })
           .eq("id", divertAsset.id);
       }
 
       return new Response(JSON.stringify({
-        region,
-        ais_vessels_in_region: aisVessels?.length || 0,
-        sar_detections: sarDetections.length,
-        dark_vessels_detected: darkVessels.length,
+        region, ais_vessels_in_region: aisVessels?.length || 0,
+        sar_detections: sarDetections.length, dark_vessels_detected: darkVessels.length,
         dark_vessel_tracks: tracks,
         drone_diverted: divertAsset ? {
-          callsign: divertAsset.callsign,
-          asset_type: divertAsset.asset_type,
+          callsign: divertAsset.callsign, asset_type: divertAsset.asset_type,
           distance_km: tracks[0] ? Math.round(haversine(divertAsset.lat, divertAsset.lng, tracks[0].lat, tracks[0].lng) * 10) / 10 : 0,
           eta_min: tracks[0] ? Math.round((haversine(divertAsset.lat, divertAsset.lng, tracks[0].lat, tracks[0].lng) / 370) * 60 * 10) / 10 : 0,
         } : null,
