@@ -4,7 +4,8 @@ import {
   X, RefreshCw, ShieldAlert, Search,
   Activity, Globe, AlertTriangle, Zap, Network,
   Target, Bug, Radio, ChevronRight, ExternalLink,
-  Play, Pause, SkipBack, SkipForward, Clock, Copy, Check
+  Play, Pause, SkipBack, SkipForward, Clock, Copy, Check,
+  Eye, EyeOff, Skull, Link2, FileWarning, Hash
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
 import { ScrollArea } from "@/components/ui/scroll-area";
