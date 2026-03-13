@@ -1266,6 +1266,21 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 {chip.icon} {chip.label}
               </button>
             ))}
+            <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-0.5" />
+            {(() => {
+              const cats = sensorCats();
+              const chips = [
+                { key: "satellite", label: "SAT", count: cats.satellite?.length || 0, active: cats.satellite?.filter(f => f.status === "active").length || 0 },
+                { key: "drone", label: "UAV", count: cats.drone?.length || 0, active: cats.drone?.filter(f => f.status === "active").length || 0 },
+                { key: "cctv", label: "CCTV", count: cats.cctv?.length || 0, active: cats.cctv?.filter(f => f.status === "active").length || 0 },
+                { key: "sigint", label: "SIGINT", count: cats.sigint?.length || 0, active: cats.sigint?.filter(f => f.status === "active").length || 0 },
+              ];
+              return chips.filter(c => c.count > 0).map(c => (
+                <span key={c.key} className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-[hsl(220,15%,15%)]" style={{ color: c.active === c.count ? "#22c55e" : "#eab308" }}>
+                  {c.label}:{c.active} {c.active === c.count ? "✓" : "⚠"}
+                </span>
+              ));
+            })()}
           </div>
         </div>
       )}
