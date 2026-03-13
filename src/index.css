@@ -911,3 +911,147 @@
 .layer-pulse {
   animation: layer-pulse 2s ease-in-out infinite;
 }
+
+/* ===== CYBER THREAT MAP (Leaflet) ===== */
+.cyber-reticle-marker {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.cyber-reticle-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.cyber-reticle-outer {
+  position: absolute;
+  width: calc(var(--reticle-size) * 2.2);
+  height: calc(var(--reticle-size) * 2.2);
+  border: 1px dashed var(--reticle-color);
+  border-radius: 50%;
+  opacity: 0.2;
+  animation: cyber-reticle-spin 12s linear infinite;
+}
+
+.cyber-reticle-inner {
+  position: absolute;
+  width: calc(var(--reticle-size) * 1.5);
+  height: calc(var(--reticle-size) * 1.5);
+  border: 1px dashed var(--reticle-color);
+  border-radius: 50%;
+  opacity: 0.15;
+  animation: cyber-reticle-spin 8s linear infinite reverse;
+}
+
+.cyber-reticle-core {
+  position: absolute;
+  width: var(--reticle-size);
+  height: var(--reticle-size);
+  background: var(--reticle-color);
+  border-radius: 50%;
+  opacity: 0.15;
+  animation: cyber-reticle-pulse 2.5s ease-in-out infinite;
+}
+
+.cyber-reticle-pulse {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--reticle-color);
+  border-radius: 50%;
+  opacity: 0.9;
+  box-shadow: 0 0 6px var(--reticle-color), 0 0 12px var(--reticle-color);
+}
+
+.cyber-reticle-label {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--reticle-color);
+  white-space: nowrap;
+  text-shadow: 0 0 8px var(--reticle-color);
+}
+
+.cyber-reticle-count {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 6.5px;
+  font-weight: 600;
+  color: var(--reticle-color);
+  background: hsl(220, 25%, 8%);
+  border: 1px solid var(--reticle-color);
+  padding: 0 4px;
+  opacity: 0.85;
+  white-space: nowrap;
+  border-radius: 1px;
+}
+
+@keyframes cyber-reticle-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cyber-reticle-pulse {
+  0%, 100% { opacity: 0.1; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.3); }
+}
+
+.cyber-corridor-animated {
+  animation: cyber-dash-flow 1.5s linear infinite;
+}
+
+.cyber-arc-animated {
+  animation: cyber-dash-flow 2s linear infinite;
+}
+
+@keyframes cyber-dash-flow {
+  to { stroke-dashoffset: -30; }
+}
+
+.cyber-node-pulse {
+  animation: cyber-node-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes cyber-node-glow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.35; }
+}
+
+.cyber-map-scan-line {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    hsl(190, 100%, 50%, 0.08) 40%,
+    hsl(190, 100%, 50%, 0.15) 50%,
+    hsl(190, 100%, 50%, 0.08) 60%,
+    transparent 100%
+  );
+  animation: cyber-map-scan-sweep 4s linear infinite;
+}
+
+@keyframes cyber-map-scan-sweep {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(calc(100vh)); }
+}
+
+/* Dark tiles filter for cyber map */
+.cyber-threat-map .leaflet-tile-pane {
+  filter: brightness(0.5) contrast(1.3) saturate(0.4) hue-rotate(10deg);
+}
+
+.cyber-threat-map .leaflet-control-attribution {
+  display: none !important;
+}
