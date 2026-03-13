@@ -596,60 +596,124 @@
 
 /* ===== GOTHAM COMMAND BAR ===== */
 .gotham-cmd-bar {
-  background: hsl(220 30% 4% / 0.95);
-  backdrop-filter: blur(16px);
-  border-top: 1px solid hsl(190 60% 18% / 0.4);
-  box-shadow: 0 -4px 24px hsl(220 30% 2% / 0.6);
+  background: linear-gradient(180deg, hsl(220 30% 6% / 0.92), hsl(220 30% 4% / 0.98));
+  backdrop-filter: blur(20px) saturate(1.2);
+  border-top: 1px solid hsl(190 60% 22% / 0.35);
+  box-shadow: 0 -6px 32px hsl(220 30% 2% / 0.7), inset 0 1px 0 hsl(190 60% 30% / 0.08);
+}
+
+.gotham-cmd-strip {
+  scrollbar-width: none;
+}
+.gotham-cmd-strip::-webkit-scrollbar {
+  display: none;
 }
 
 .gotham-cmd-btn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 24px;
-  padding: 0 6px;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: hsl(var(--muted-foreground));
-  background: transparent;
-  border: 1px solid hsl(var(--border) / 0.3);
+  background: hsl(220 25% 8% / 0.6);
+  border: 1px solid hsl(190 60% 18% / 0.25);
   border-radius: 0;
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .gotham-cmd-btn:hover {
   color: hsl(var(--foreground));
-  background: hsl(var(--secondary) / 0.5);
-  border-color: hsl(var(--border) / 0.6);
+  background: hsl(190 60% 18% / 0.12);
+  border-color: hsl(190 60% 30% / 0.45);
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.08);
 }
 
 .gotham-cmd-btn-active,
 .gotham-cmd-btn-active:hover {
   color: hsl(var(--primary));
   background: hsl(var(--primary) / 0.12);
-  border-color: hsl(var(--primary) / 0.4);
-  box-shadow: 0 0 8px hsl(var(--primary) / 0.15);
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 0 14px hsl(var(--primary) / 0.15), inset 0 0 8px hsl(var(--primary) / 0.06);
+}
+
+.gotham-cmd-btn-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 6px hsl(var(--primary) / 0.6);
+}
+
+.gotham-cmd-badge {
+  font-size: 7px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+  padding: 1px 5px;
+  border: 1px solid hsl(var(--primary) / 0.3);
+  line-height: 1.2;
 }
 
 .gotham-section-divider {
   width: 1px;
   align-self: stretch;
-  background: hsl(190 60% 18% / 0.3);
-  margin: 4px 0;
+  background: linear-gradient(180deg, transparent 10%, hsl(190 60% 22% / 0.35) 50%, transparent 90%);
+  margin: 0;
   flex-shrink: 0;
 }
 
 .gotham-expanded-panel {
-  background: hsl(220 30% 5% / 0.97);
-  backdrop-filter: blur(16px);
+  background: linear-gradient(180deg, hsl(220 30% 6% / 0.97), hsl(220 30% 4% / 0.99));
+  backdrop-filter: blur(20px) saturate(1.2);
   border: 1px solid hsl(190 60% 18% / 0.3);
   border-bottom: none;
-  box-shadow: 0 -8px 32px hsl(220 30% 2% / 0.5);
+  box-shadow: 0 -8px 40px hsl(220 30% 2% / 0.6), inset 0 1px 0 hsl(190 60% 30% / 0.08);
+}
+
+.gotham-expanded-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gotham-expanded-item:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--primary) / 0.06);
+  border-left-color: hsl(var(--primary) / 0.3);
+}
+
+.gotham-expanded-item-active,
+.gotham-expanded-item-active:hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.1);
+  border-left-color: hsl(var(--primary));
 }
 
 /* Wind direction arrow markers */
