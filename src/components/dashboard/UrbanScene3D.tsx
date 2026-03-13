@@ -3274,7 +3274,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         <div className="w-px h-4 bg-border/40" />
         <span className="text-[8px] font-mono text-muted-foreground uppercase truncate">
           SRC: OSINT • {flightSource || "—"}
-          {showVessels ? ` • ${vessels.length} vessels` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showTraffic ? " • Traffic" : ""}
+          {showVessels ? ` • ${vessels.length} vessels` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showWildfires ? ` • ${wildfires.length} fires` : ""}{showTraffic ? " • Traffic" : ""}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50 flex-shrink-0">
           {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} mil` : "Flights OFF"}
