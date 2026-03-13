@@ -89,6 +89,179 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
   );
 }
 
+/* ── IOC Search + Live Scan Section ── */
+function IOCSearchSection({ search, setSearch }: { search: string; setSearch: (v: string) => void }) {
+  const { data, loading, error, scan, reset } = useIOCLookup();
+  const [scanInput, setScanInput] = useState("");
+
+  const handleScan = (e?: FormEvent) => {
+    e?.preventDefault();
+    const target = scanInput.trim() || search.trim();
+    if (target) scan(target);
+  };
+
+  const scoreColor = (s: number) => s >= 70 ? "text-destructive" : s >= 40 ? "text-orange-400" : s >= 15 ? "text-yellow-400" : "text-primary";
+  const scoreLabel = (s: number) => s >= 70 ? "MALICIOUS" : s >= 40 ? "SUSPICIOUS" : s >= 15 ? "LOW RISK" : "CLEAN";
+
+  return (
+    <div className="space-y-2">
+      <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">IOC / Threat Search</label>
+      {/* Filter input */}
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter threats..." className="h-7 pl-7 text-[10px] bg-background/50 border-border" />
+      </div>
+      {/* SCAN input */}
+      <form onSubmit={handleScan} className="flex gap-1">
+        <Input
+          value={scanInput}
+          onChange={(e) => setScanInput(e.target.value)}
+          placeholder="185.234.218.91"
+          className="h-7 text-[10px] bg-background/50 border-border font-mono flex-1"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="h-7 px-2.5 rounded text-[9px] font-mono font-bold border transition-colors bg-destructive/20 text-destructive border-destructive/40 hover:bg-destructive/30 disabled:opacity-50"
+        >
+          {loading ? (
+            <RefreshCw className="h-3 w-3 animate-spin" />
+          ) : (
+            <>
+              <Crosshair className="h-3 w-3 inline mr-1" />SCAN
+            </>
+          )}
+        </button>
+      </form>
+      <div className="flex gap-1 flex-wrap">
+        {["IP", "CVE", "Domain", "APT", "Malware", "Country"].map(chip => (
+          <button key={chip} onClick={() => setSearch(chip === "CVE" ? "CVE-" : chip === "IP" ? "." : "")} className="text-[7px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors font-mono">
+            {chip}
+          </button>
+        ))}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="text-[9px] font-mono text-destructive bg-destructive/10 border border-destructive/20 rounded p-2">
+          ⚠ {error}
+        </div>
+      )}
+
+      {/* Loading animation */}
+      {loading && (
+        <div className="border border-border rounded p-2 space-y-1.5 bg-background/30">
+          <div className="flex items-center gap-1.5 text-[9px] font-mono text-primary">
+            <RefreshCw className="h-3 w-3 animate-spin" />
+            SCANNING TARGET...
+          </div>
+          <Progress value={undefined} className="h-1" />
+          <div className="text-[8px] font-mono text-muted-foreground space-y-0.5">
+            <div className="animate-pulse">→ Querying Shodan InternetDB...</div>
+            <div className="animate-pulse" style={{ animationDelay: "0.2s" }}>→ Querying ip-api geolocation...</div>
+            <div className="animate-pulse" style={{ animationDelay: "0.4s" }}>→ Querying ThreatFox IOC database...</div>
+            <div className="animate-pulse" style={{ animationDelay: "0.6s" }}>→ Querying Feodo Tracker...</div>
+            <div className="animate-pulse" style={{ animationDelay: "0.8s" }}>→ AI threat assessment...</div>
+          </div>
+        </div>
+      )}
+
+      {/* Results */}
+      {data && !loading && (
+        <div className="border border-border rounded bg-background/30 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-2 border-b border-border bg-card/50">
+            <div className="flex items-center gap-1.5">
+              <Target className="h-3 w-3 text-destructive" />
+              <span className="text-[9px] font-mono font-bold text-foreground">{data.ioc}</span>
+              <Badge variant="outline" className="text-[7px] px-1 py-0 h-4">{data.type}</Badge>
+            </div>
+            <button onClick={reset} className="text-[8px] text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+
+          {/* Threat Score */}
+          <div className="p-2 border-b border-border">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[8px] font-mono text-muted-foreground">THREAT SCORE</span>
+              <span className={`text-[11px] font-mono font-bold ${scoreColor(data.threatScore)}`}>
+                {data.threatScore}/100 · {scoreLabel(data.threatScore)}
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-muted/30 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${data.threatScore >= 70 ? "bg-destructive" : data.threatScore >= 40 ? "bg-orange-500" : data.threatScore >= 15 ? "bg-yellow-500" : "bg-primary"}`}
+                style={{ width: `${data.threatScore}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Geolocation */}
+          {data.geolocation && (
+            <div className="p-2 border-b border-border text-[9px] font-mono space-y-0.5">
+              <div className="text-[8px] text-muted-foreground uppercase tracking-wider mb-1">Geolocation</div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Location</span><span className="text-foreground">{data.geolocation.city}, {data.geolocation.country}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">ISP</span><span className="text-foreground truncate ml-2 max-w-[140px]">{data.geolocation.isp}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Org</span><span className="text-foreground truncate ml-2 max-w-[140px]">{data.geolocation.org}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">ASN</span><span className="text-foreground truncate ml-2 max-w-[140px]">{data.geolocation.as}</span></div>
+              <div className="flex gap-1 mt-1">
+                {data.geolocation.isProxy && <Badge variant="destructive" className="text-[7px] px-1 py-0 h-4">PROXY</Badge>}
+                {data.geolocation.isHosting && <Badge variant="secondary" className="text-[7px] px-1 py-0 h-4">HOSTING</Badge>}
+                {data.geolocation.isMobile && <Badge variant="outline" className="text-[7px] px-1 py-0 h-4">MOBILE</Badge>}
+              </div>
+            </div>
+          )}
+
+          {/* Open Ports */}
+          {data.shodan && data.shodan.ports.length > 0 && (
+            <div className="p-2 border-b border-border text-[9px] font-mono">
+              <div className="text-[8px] text-muted-foreground uppercase tracking-wider mb-1">Open Ports ({data.shodan.ports.length})</div>
+              <div className="flex flex-wrap gap-1">
+                {data.shodan.ports.map(p => (
+                  <span key={p} className="text-[8px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CVEs */}
+          {data.shodan && data.shodan.vulns.length > 0 && (
+            <div className="p-2 border-b border-border text-[9px] font-mono">
+              <div className="text-[8px] text-destructive uppercase tracking-wider mb-1">CVEs ({data.shodan.vulns.length})</div>
+              <div className="flex flex-wrap gap-1">
+                {data.shodan.vulns.slice(0, 8).map(v => (
+                  <span key={v} className="text-[8px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20">{v}</span>
+                ))}
+                {data.shodan.vulns.length > 8 && <span className="text-[8px] text-muted-foreground">+{data.shodan.vulns.length - 8} more</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Malware Associations */}
+          {(data.threatfox.found || data.feodoTracker.found) && (
+            <div className="p-2 border-b border-border text-[9px] font-mono">
+              <div className="text-[8px] text-destructive uppercase tracking-wider mb-1 flex items-center gap-1"><Bug className="h-3 w-3" /> Malware Intel</div>
+              {data.threatfox.matches.map((m, i) => (
+                <div key={i} className="flex justify-between py-0.5"><span className="text-destructive">{m.malware}</span><span className="text-muted-foreground">{m.threat_type}</span></div>
+              ))}
+              {data.feodoTracker.matches.map((m, i) => (
+                <div key={`f${i}`} className="flex justify-between py-0.5"><span className="text-destructive">{m.malware}</span><span className="text-muted-foreground">Port {m.port}</span></div>
+              ))}
+            </div>
+          )}
+
+          {/* AI Analysis */}
+          {data.aiAnalysis && (
+            <div className="p-2 text-[9px] font-mono">
+              <div className="text-[8px] text-primary uppercase tracking-wider mb-1 flex items-center gap-1"><Zap className="h-3 w-3" /> AI Assessment</div>
+              <div className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{data.aiAnalysis}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Relationship Graph ── */
 function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
   const W = 900, H = 450, CX = W / 2, CY = H / 2;
