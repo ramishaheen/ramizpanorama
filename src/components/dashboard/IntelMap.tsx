@@ -1648,23 +1648,50 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     return () => { if (flightInterpRef.current) { clearInterval(flightInterpRef.current); flightInterpRef.current = null; } };
   }, [layers.flights, trackedFlightId]);
 
-  // Click-to-track: pan to tracked aircraft only on significant position change
+  // Click-to-track: auto-zoom + smooth pan following
   const lastTrackedPos = useRef<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     if (!trackedFlightId || !mapRef.current) return;
     const ac = interpolatedFlights.find(f => f.icao24 === trackedFlightId);
     if (ac) {
       const prev = lastTrackedPos.current;
-      const moved = !prev || Math.abs(ac.lat - prev.lat) > 0.01 || Math.abs(ac.lng - prev.lng) > 0.01;
+      // Tighter threshold when tracking — 0.002° ≈ 220m
+      const threshold = 0.002;
+      const moved = !prev || Math.abs(ac.lat - prev.lat) > threshold || Math.abs(ac.lng - prev.lng) > threshold;
       if (moved) {
         lastTrackedPos.current = { lat: ac.lat, lng: ac.lng };
-        mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.8 });
+        mapRef.current.panTo([ac.lat, ac.lng], { animate: true, duration: 0.4 });
       }
     } else {
       lastTrackedPos.current = null;
       setTrackedFlightId(null);
     }
   }, [interpolatedFlights, trackedFlightId]);
+
+  // Auto-zoom on track start / restore on un-track
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (trackedFlightId) {
+      // Save current zoom and zoom in
+      if (preTrackZoomRef.current === null) {
+        preTrackZoomRef.current = map.getZoom();
+      }
+      const ac = interpolatedFlights.find(f => f.icao24 === trackedFlightId);
+      if (ac && map.getZoom() < 9) {
+        map.flyTo([ac.lat, ac.lng], 10, { animate: true, duration: 1.5 });
+      }
+    } else {
+      // Restore previous zoom
+      if (preTrackZoomRef.current !== null) {
+        const restoreZoom = preTrackZoomRef.current;
+        preTrackZoomRef.current = null;
+        map.setZoom(restoreZoom, { animate: true });
+      }
+    }
+  // Only run when trackedFlightId changes, not on every interpolation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackedFlightId]);
 
   // Render flights on map — optimized with proper aircraft icons
   useEffect(() => {
