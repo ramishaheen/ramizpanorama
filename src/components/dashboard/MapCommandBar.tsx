@@ -172,6 +172,7 @@ export const MapCommandBar = ({
   ];
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="absolute bottom-0 left-0 right-0 z-[1000] gotham-cmd-bar">
       {/* Overlay layers expanded panel */}
       {overlayExpanded && (
