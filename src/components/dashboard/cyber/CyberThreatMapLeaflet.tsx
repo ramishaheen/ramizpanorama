@@ -286,49 +286,54 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
       </div>
 
       {/* Corner brackets */}
-      <div className="absolute inset-0 pointer-events-none z-[402]">
-        <div className="absolute top-1 left-1 w-5 h-5 border-l-2 border-t-2 border-primary/30" />
-        <div className="absolute top-1 right-1 w-5 h-5 border-r-2 border-t-2 border-primary/30" />
-        <div className="absolute bottom-1 left-1 w-5 h-5 border-l-2 border-b-2 border-primary/30" />
-        <div className="absolute bottom-1 right-1 w-5 h-5 border-r-2 border-b-2 border-primary/30" />
+      <div className="absolute inset-0 pointer-events-none z-[450]">
+        <div className="absolute top-1 left-1 w-8 h-8 border-l-2 border-t-2 border-primary/50" />
+        <div className="absolute top-1 right-1 w-8 h-8 border-r-2 border-t-2 border-primary/50" />
+        <div className="absolute bottom-1 left-1 w-8 h-8 border-l-2 border-b-2 border-primary/50" />
+        <div className="absolute bottom-1 right-1 w-8 h-8 border-r-2 border-b-2 border-primary/50" />
       </div>
 
       {/* HUD Title */}
-      <div className="absolute top-2 left-2 z-[402] pointer-events-none">
-        <div className="px-2 py-0.5 bg-[hsl(220,30%,6%)] border border-[hsl(190,40%,25%)] rounded-sm opacity-90">
-          <span className="font-mono text-[7px] font-bold tracking-[0.12em] text-primary">
+      <div className="absolute top-3 left-3 z-[450] pointer-events-none">
+        <div className="px-3 py-1.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(190,40%,25%)] border-l-2 border-l-primary rounded-sm flex items-center gap-2">
+          <span className="font-mono text-[10px] font-bold tracking-[0.12em] text-primary">
             CYBER THREAT OPERATIONS CENTER
           </span>
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(142,70%,45%)] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[hsl(142,70%,45%)]"></span>
+          </span>
+          <span className="font-mono text-[8px] font-semibold text-[hsl(142,70%,45%)]">LIVE</span>
         </div>
       </div>
 
       {/* HUD Live Stats */}
-      <div className="absolute top-2 right-2 z-[402] pointer-events-none">
-        <div className="px-2 py-1.5 bg-[hsl(220,30%,6%)] border border-[hsl(190,40%,25%)] rounded-sm opacity-90 min-w-[130px]">
-          <div className="font-mono text-[6px] font-semibold tracking-[0.1em] text-[hsl(190,60%,40%)] mb-1">LIVE STATISTICS</div>
-          <div className="font-mono text-[6.5px] text-[hsl(0,0%,55%)]">ATTACKS: <span className="font-bold text-destructive">{totalAttacks}</span></div>
-          <div className="font-mono text-[6.5px] text-[hsl(0,0%,55%)]">CORRIDORS: <span className="font-bold text-[hsl(45,95%,55%)]">{activeCorridors}</span></div>
-          <div className="font-mono text-[6.5px] text-[hsl(0,0%,55%)]">TOP THREAT: <span className="font-bold text-primary">{topAttacker.substring(0, 12)}</span></div>
+      <div className="absolute top-3 right-3 z-[450] pointer-events-none">
+        <div className="px-3 py-2.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(190,40%,25%)] border-l-2 border-l-primary rounded-sm min-w-[160px]">
+          <div className="font-mono text-[9px] font-semibold tracking-[0.1em] text-[hsl(190,60%,40%)] mb-1.5">LIVE STATISTICS</div>
+          <div className="font-mono text-[10px] text-[hsl(0,0%,55%)]">ATTACKS: <span className="font-bold text-destructive">{totalAttacks}</span></div>
+          <div className="font-mono text-[10px] text-[hsl(0,0%,55%)]">CORRIDORS: <span className="font-bold text-warning">{activeCorridors}</span></div>
+          <div className="font-mono text-[10px] text-[hsl(0,0%,55%)]">TOP THREAT: <span className="font-bold text-primary">{topAttacker.substring(0, 12)}</span></div>
         </div>
       </div>
 
       {/* Severity legend */}
-      <div className="absolute top-16 right-2 z-[402] pointer-events-none">
-        <div className="px-2 py-1.5 bg-[hsl(220,30%,6%)] border border-[hsl(190,40%,25%)] rounded-sm opacity-90">
-          <div className="font-mono text-[6px] font-semibold tracking-[0.1em] text-[hsl(190,60%,40%)] mb-1">SEVERITY</div>
+      <div className="absolute top-[72px] right-3 z-[450] pointer-events-none">
+        <div className="px-3 py-2.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(190,40%,25%)] border-l-2 border-l-primary rounded-sm">
+          <div className="font-mono text-[9px] font-semibold tracking-[0.1em] text-[hsl(190,60%,40%)] mb-1.5">SEVERITY</div>
           {(["critical", "high", "medium", "low"] as const).map(sev => (
-            <div key={sev} className="flex items-center gap-1.5 mb-0.5">
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: SEVERITY_COLORS[sev] }} />
-              <span className="font-mono text-[6.5px] text-[hsl(0,0%,60%)] uppercase">{sev}</span>
+            <div key={sev} className="flex items-center gap-2 mb-1">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: SEVERITY_COLORS[sev] }} />
+              <span className="font-mono text-[9px] text-[hsl(0,0%,60%)] uppercase">{sev}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Classification banner */}
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-[402] pointer-events-none">
-        <div className="px-4 py-0.5 bg-[hsl(220,30%,6%)] border border-[hsl(45,60%,30%)] rounded-sm opacity-70">
-          <span className="font-mono text-[6px] font-semibold tracking-[0.15em] text-[hsl(45,80%,50%)]">
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[450] pointer-events-none">
+        <div className="px-5 py-1 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(45,60%,30%)] rounded-sm">
+          <span className="font-mono text-[9px] font-semibold tracking-[0.15em] text-warning">
             UNCLASSIFIED // OSINT DERIVED
           </span>
         </div>
@@ -339,11 +344,11 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
         const nd = nodes.find(n => n.country === hoveredNode);
         if (!nd) return null;
         return (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[403] pointer-events-none">
-            <div className="px-3 py-2 bg-[hsl(220,30%,6%)] border rounded-sm opacity-95 min-w-[120px]"
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[460] pointer-events-none">
+            <div className="px-4 py-2.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border rounded-sm min-w-[140px]"
               style={{ borderColor: SEVERITY_COLORS[nd.severity], borderLeftWidth: 3 }}>
-              <div className="font-mono text-[9px] font-bold text-primary">{nd.country}</div>
-              <div className="font-mono text-[7px] text-muted-foreground">TOTAL: {nd.count} INCIDENTS</div>
+              <div className="font-mono text-[11px] font-bold text-primary">{nd.country}</div>
+              <div className="font-mono text-[9px] text-muted-foreground">TOTAL: {nd.count} INCIDENTS</div>
             </div>
           </div>
         );
