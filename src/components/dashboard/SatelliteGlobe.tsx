@@ -2137,18 +2137,23 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         }}
       />
 
-      {/* Lite Mode — Radial Blur (clear center, blurred edges) */}
-      {liteMode && (
-        <div
-          className="absolute inset-0 z-[2001] pointer-events-none"
-          style={{
-            backdropFilter: "blur(5px)",
-            WebkitBackdropFilter: "blur(5px)",
-            maskImage: "radial-gradient(circle at center, transparent 12%, rgba(0,0,0,0.4) 25%, rgba(0,0,0,0.85) 45%)",
-            WebkitMaskImage: "radial-gradient(circle at center, transparent 12%, rgba(0,0,0,0.4) 25%, rgba(0,0,0,0.85) 45%)",
-          }}
-        />
-      )}
+      {/* Radial Blur + Black vignette around gun-eye center */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none"
+        style={{
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          maskImage: "radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.92) 38%, black 55%)",
+          WebkitMaskImage: "radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.92) 38%, black 55%)",
+        }}
+      />
+      {/* Dark overlay outside gun-eye arc */}
+      <div
+        className="absolute inset-0 z-[2001] pointer-events-none"
+        style={{
+          background: "radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.25) 22%, rgba(0,0,0,0.6) 38%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0.95) 75%)",
+        }}
+      />
 
       {/* Lite Mode — Crosshair / Gun-Eye Reticle */}
       {liteMode && (
