@@ -56,10 +56,12 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   const [loading, setLoading] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
   const [availableTargets, setAvailableTargets] = useState<TargetOption[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<EventOption[]>([]);
   const [loadingTargets, setLoadingTargets] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [generatingBDA, setGeneratingBDA] = useState<string | null>(null);
   const [initiatingTarget, setInitiatingTarget] = useState<string | null>(null);
+  const [pickerTab, setPickerTab] = useState<"targets" | "events">("targets");
 
   const fetchTasks = useCallback(async () => {
     const { data } = await supabase
