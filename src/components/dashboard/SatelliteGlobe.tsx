@@ -2406,52 +2406,36 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       <div className="absolute top-20 right-3 z-[2002] space-y-1.5 pointer-events-auto w-28">
         <button
           onClick={() => setShowLabels(!showLabels)}
-          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border transition-all ${
-            showLabels
-              ? "border-white/50 bg-white/15 text-white"
-              : "border-white/20 text-white/70 hover:text-white hover:border-white/40"
-          }`}
+          className={`w-full gotham-orbital-btn ${showLabels ? 'gotham-orbital-btn-active' : ''}`}
         >
-          {showLabels ? (
-            <Tag className="h-2.5 w-2.5" />
-          ) : (
-            <Tags className="h-2.5 w-2.5" />
-          )}{" "}
-          Labels
+          {showLabels ? <Tag className="h-2.5 w-2.5" /> : <Tags className="h-2.5 w-2.5" />} Labels
         </button>
         <button
           onClick={() => setShowSearch(!showSearch)}
-          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border transition-all ${
-            showSearch
-              ? "border-white/50 bg-white/15 text-white"
-              : "border-white/20 text-white/70 hover:text-white hover:border-white/40"
-          }`}
+          className={`w-full gotham-orbital-btn ${showSearch ? 'gotham-orbital-btn-active' : ''}`}
         >
           <Search className="h-2.5 w-2.5" /> Search
         </button>
         <button
           onClick={fetchSatellites}
-          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-all"
+          className="w-full gotham-orbital-btn"
         >
-          <RefreshCw
-            className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`}
-          />{" "}
-          Refresh
+          <RefreshCw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} /> Refresh
         </button>
         <button
           onClick={onClose}
-          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border border-red-400/40 text-red-300 hover:bg-red-500/10 transition-all"
+          className="w-full gotham-orbital-btn border-destructive/40 text-destructive hover:bg-destructive/10"
         >
           <X className="h-2.5 w-2.5" /> Close
         </button>
 
         {/* Country satellite type breakdown */}
         {activeCity && countrySats.length > 0 && (
-          <div className="bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-2 py-2 w-full">
-            <div className="text-[7px] font-mono uppercase tracking-widest text-center mb-1.5" style={{ color: "rgba(0,255,200,0.5)" }}>
+          <div className="gotham-orbital-panel px-2 py-2 w-full">
+            <div className="text-[7px] font-mono uppercase tracking-widest text-center mb-1.5 text-primary/50">
               {activeCity} SATELLITES
             </div>
-            <div className="text-[8px] font-mono text-white/50 text-center mb-1.5">
+            <div className="text-[8px] font-mono text-muted-foreground text-center mb-1.5">
               {countrySats.reduce((s, c) => s + c.count, 0)} objects overhead
             </div>
             <div className="space-y-0.5 max-h-[300px] overflow-y-auto scrollbar-none">
@@ -2459,10 +2443,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 <button
                   key={category}
                   onClick={() => setSelectedCat(selectedCat === category ? null : category)}
-                  className={`flex items-center gap-1.5 w-full px-1.5 py-1 rounded text-[8px] font-mono transition-all ${
-                    selectedCat === category
-                      ? "bg-white text-black font-bold"
-                      : "text-white/80 hover:bg-white/10"
+                  className={`gotham-orbital-dropdown-item ${
+                    selectedCat === category ? 'gotham-orbital-dropdown-item-active' : ''
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: color }} />
