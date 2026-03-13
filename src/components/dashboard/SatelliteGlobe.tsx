@@ -2062,18 +2062,16 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         }}
       />
 
-      {/* Top-left HUD — holographic */}
-      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1 holo-flicker">
-        <div
-          className="font-mono text-[11px] font-bold tracking-[0.2em] holo-text"
-        >
+      {/* Top-left HUD — Gotham */}
+      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1">
+        <div className="font-mono text-[11px] font-bold tracking-[0.2em] text-primary">
           ◈ ORBITAL INTELLIGENCE
         </div>
-        <div className="text-[8px] font-mono tracking-wider" style={{ color: "rgba(0,255,200,0.5)" }}>
+        <div className="text-[8px] font-mono tracking-wider text-primary/50">
           REAL-TIME SATELLITE TRACKING • OSINT FUSION
         </div>
-        <div className="mt-2 space-y-0.5 text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.55)" }}>
-          <div style={{ color: "rgba(239,68,68,0.7)" }}>⬤ TOP SECRET // SI-TK // NOFORN</div>
+        <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/55">
+          <div className="text-destructive/70">⬤ TOP SECRET // SI-TK // NOFORN</div>
           <div>
             ▸ TRACKING {satellites.length} OBJECTS across {Object.keys(CATEGORY_COLORS).length} TYPES
           </div>
@@ -2095,31 +2093,31 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           <div>
             ▸ SOURCES: CELESTRAK × 23 GROUPS • NORAD TLE
           </div>
-          <div style={{ color: "rgba(255,255,255,0.45)" }}>
+          <div className="text-muted-foreground/45">
             ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
           </div>
         </div>
         {/* OSINT Legend */}
-        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid rgba(0,255,200,0.1)" }}>
-          <div className="text-[7px] font-mono uppercase tracking-widest" style={{ color: "rgba(0,255,200,0.4)" }}>OSINT LAYER</div>
+        <div className="mt-2 pt-2 space-y-1 border-t border-primary/10">
+          <div className="text-[7px] font-mono uppercase tracking-widest text-primary/40">OSINT LAYER</div>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-            <span className="text-[7px] font-mono flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> CONFLICT</span>
+            <span className="text-[7px] font-mono flex items-center gap-1 text-destructive"><span className="w-1.5 h-1.5 rounded-full bg-destructive" /> CONFLICT</span>
             <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#fb923c" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#fb923c" }} /> MILITARY</span>
-            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#38bdf8" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#38bdf8" }} /> NAVAL</span>
+            <span className="text-[7px] font-mono flex items-center gap-1 text-primary"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> NAVAL</span>
             <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#a855f7" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#a855f7" }} /> RADAR</span>
           </div>
         </div>
       </div>
 
-      {/* Top-right timestamp — holographic */}
+      {/* Top-right timestamp — Gotham */}
       <div className="absolute top-3 right-3 z-[2002] pointer-events-none text-right space-y-0.5">
         <div className="flex items-center gap-1.5 justify-end">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[9px] font-mono text-red-400">
+          <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+          <span className="text-[9px] font-mono text-destructive">
             {timestamp}
           </span>
         </div>
-        <div className="text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.4)" }}>
+        <div className="text-[8px] font-mono text-primary/40">
           CELESTRAK NORAD TLE • LIVE OSINT
         </div>
       </div>
