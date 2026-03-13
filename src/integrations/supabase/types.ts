@@ -1292,6 +1292,7 @@ export type Database = {
         Row: {
           ai_reasoning: string | null
           collateral_risk: string
+          cost_estimate_usd: number | null
           created_at: string
           decided_at: string | null
           decided_by: string | null
@@ -1311,6 +1312,7 @@ export type Database = {
         Insert: {
           ai_reasoning?: string | null
           collateral_risk?: string
+          cost_estimate_usd?: number | null
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
@@ -1330,6 +1332,7 @@ export type Database = {
         Update: {
           ai_reasoning?: string | null
           collateral_risk?: string
+          cost_estimate_usd?: number | null
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null

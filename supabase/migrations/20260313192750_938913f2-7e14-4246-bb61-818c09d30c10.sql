@@ -1,0 +1,1 @@
+ALTER TABLE public.strike_recommendations ADD COLUMN IF NOT EXISTS cost_estimate_usd numeric DEFAULT 0;
