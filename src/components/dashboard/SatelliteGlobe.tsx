@@ -2022,7 +2022,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     });
 
     prevVesselPosRef.current = newPositions;
-  }, [aisVessels.data, vesselTypeVisible]);
+  }, [aisVessels.data, vesselTypeVisible, liteMode]);
 
   // Resize
   useEffect(() => {
