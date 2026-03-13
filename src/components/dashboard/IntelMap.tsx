@@ -640,6 +640,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     airQualityGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
     aisGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
     cityGroupRef.current = L.layerGroup().addTo(map);
+    googlePOIGroupRef.current = (L as any).markerClusterGroup(clusterOptions).addTo(map);
+    googleRouteGroupRef.current = L.layerGroup().addTo(map);
     userItemsGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
