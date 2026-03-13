@@ -1736,6 +1736,115 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
         </div>
       </div>
 
+      {/* ── DATE HISTOGRAM ── */}
+      {(() => {
+        const now = new Date();
+        const msPerDay = 86400000;
+        const buckets = Array.from({ length: 28 }, (_, i) => {
+          const dayStart = new Date(now.getTime() - (27 - i) * msPerDay);
+          dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = new Date(dayStart.getTime() + msPerDay);
+          const dayThreats = threats.filter(t => {
+            const d = new Date(t.date);
+            return d >= dayStart && d < dayEnd;
+          });
+          const peakSev = dayThreats.reduce((peak, t) => {
+            const order: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+            return (order[t.severity] || 0) > (order[peak] || 0) ? t.severity : peak;
+          }, "low");
+          return { date: dayStart.toISOString().split("T")[0], count: dayThreats.length, peakSev, threats: dayThreats };
+        });
+        const maxCount = Math.max(...buckets.map(b => b.count), 1);
+        const sevColor: Record<string, string> = { critical: "hsl(0 90% 55%)", high: "hsl(25 95% 55%)", medium: "hsl(45 95% 55%)", low: "hsl(190 80% 55%)" };
+
+        const criticalThreats = threats.filter(t => t.severity === "critical");
+        const topAttacker = criticalThreats.reduce((acc: Record<string, number>, t) => { acc[t.attacker] = (acc[t.attacker] || 0) + 1; return acc; }, {});
+        const topTarget = criticalThreats.reduce((acc: Record<string, number>, t) => { const tgt = t.targetCountry || t.target; acc[tgt] = (acc[tgt] || 0) + 1; return acc; }, {});
+        const topCVE = criticalThreats.reduce((acc: Record<string, number>, t) => { if (t.cve) acc[t.cve] = (acc[t.cve] || 0) + 1; return acc; }, {});
+        const sortedAttacker = Object.entries(topAttacker).sort((a, b) => b[1] - a[1]);
+        const sortedTarget = Object.entries(topTarget).sort((a, b) => b[1] - a[1]);
+        const sortedCVE = Object.entries(topCVE).sort((a, b) => b[1] - a[1]);
+
+        return (
+          <div className="border-t border-border bg-card/40">
+            {/* Histogram bars */}
+            <div className="px-4 pt-1.5 pb-0.5">
+              <div className="flex items-center gap-1 mb-1">
+                <Activity className="h-3 w-3 text-primary" />
+                <span className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider">28-Day Incident Density</span>
+                <span className="text-[7px] font-mono text-muted-foreground ml-auto">{threats.length} total</span>
+              </div>
+              <div className="relative h-[32px] flex items-end gap-[1px]">
+                {buckets.map((b, i) => (
+                  <div key={i} className="flex-1 relative group cursor-pointer" style={{ height: "100%" }}>
+                    <div
+                      className="absolute bottom-0 left-0 right-0 rounded-t-sm transition-all hover:opacity-80"
+                      style={{
+                        height: b.count > 0 ? `${Math.max((b.count / maxCount) * 100, 8)}%` : "2px",
+                        background: b.count > 0 ? sevColor[b.peakSev] || sevColor.low : "hsl(var(--border))",
+                        opacity: b.count > 0 ? 0.85 : 0.3,
+                      }}
+                    />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 rounded bg-popover border border-border text-[7px] font-mono text-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                      {b.date} · {b.count} incident{b.count !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                ))}
+                {/* Current position indicator */}
+                <div
+                  className="absolute top-0 bottom-0 w-[2px] bg-primary shadow-[0_0_6px_hsl(var(--primary))] pointer-events-none z-10"
+                  style={{ left: `${timelinePos}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Critical Ultra Analysis */}
+            <div className="px-4 py-1 border-t border-destructive/20">
+              <div className="flex items-center gap-2">
+                <Skull className="h-3 w-3 text-destructive" />
+                <span className="text-[8px] font-mono font-bold text-destructive uppercase tracking-wider">Critical Ultra Analysis</span>
+                <span className="text-[7px] font-mono px-1.5 py-0.5 rounded-full bg-destructive/20 text-destructive border border-destructive/30">{criticalThreats.length}</span>
+                {criticalThreats.length > 0 && (
+                  <div className="flex items-center gap-3 ml-auto text-[7px] font-mono">
+                    {sortedAttacker[0] && (
+                      <span className="text-muted-foreground">Top Attacker: <span className="text-destructive font-bold">{sortedAttacker[0][0]}</span></span>
+                    )}
+                    {sortedTarget[0] && (
+                      <span className="text-muted-foreground">Top Target: <span className="text-orange-400 font-bold">{sortedTarget[0][0]}</span></span>
+                    )}
+                    {sortedCVE[0] && (
+                      <span className="px-1 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20">{sortedCVE[0][0]}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {criticalThreats.length > 0 ? (
+                <div className="flex gap-2 mt-1 overflow-x-auto pb-0.5">
+                  {criticalThreats.slice(0, 3).map(ct => (
+                    <div
+                      key={ct.id}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded border border-destructive/30 bg-destructive/5 text-[7px] font-mono flex-shrink-0 cursor-pointer hover:bg-destructive/10 transition-colors"
+                      onClick={() => setSelectedThreat(ct)}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                      <span>{ct.attackerFlag}</span>
+                      <span className="font-bold text-foreground">{ct.attacker}</span>
+                      <ChevronRight className="h-2 w-2 text-destructive" />
+                      <span>{ct.targetFlag}</span>
+                      <span className="text-foreground">{ct.target}</span>
+                      {ct.cve && <span className="px-1 rounded bg-destructive/15 text-destructive border border-destructive/25">{ct.cve}</span>}
+                      <span className="text-muted-foreground truncate max-w-[180px]">— {ct.description}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[8px] font-mono text-muted-foreground mt-0.5">No critical incidents in 4-week window</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── TIMELINE SLIDER ── */}
       <div className="px-4 py-1.5 border-t border-border bg-card/60 flex items-center gap-3">
         <div className="flex items-center gap-1">
