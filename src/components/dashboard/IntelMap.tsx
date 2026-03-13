@@ -2269,6 +2269,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         iranFIRActive={showIranAirspace}
         onOpenSnapMe={() => setShowSnapMe(true)}
         onOpenScouting={() => setShowScouting(true)}
+        componentVisibility={componentVisibility || { header: true, statsBar: true, leftSidebar: true, rightSidebar: true, bottomRow: true, holographic: true, disclaimer: true }}
+        onToggleComponent={onToggleComponent || (() => {})}
       />
 
 
