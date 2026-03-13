@@ -63,7 +63,7 @@ const SEVERITY_BG: Record<string, string> = {
   low: "bg-primary/20 text-primary border-primary/30",
 };
 
-const COUNTRY_FILTERS = ["All", "Israel", "Iran", "USA", "Russia", "China", "Saudi Arabia", "UAE", "Turkey", "Syria"];
+const COUNTRY_FILTERS = ["All", "Israel", "Iran", "Jordan", "Oman", "Qatar", "Bahrain", "USA", "Russia", "China", "Saudi Arabia", "UAE", "Turkey", "Syria"];
 const SPEEDS = [1, 2, 5] as const;
 const SPEED_INTERVALS: Record<number, number> = { 1: 1500, 2: 750, 5: 300 };
 const EXPECTED_SOURCES = ["CISA KEV", "AlienVault OTX", "abuse.ch URLhaus", "NIST NVD", "CERT-FR"];
