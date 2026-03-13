@@ -433,6 +433,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     const group = newsGroupRef.current;
     if (!group) return;
     group.clearLayers();
+    if (!layers.news) return;
 
     newsMarkers.forEach((update) => {
       if (!update.lat || !update.lng) return;
@@ -469,7 +470,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         group.addLayer(radius);
       }
     });
-  }, [newsMarkers]);
+  }, [newsMarkers, layers.news]);
 
 
   // Render WarsLeaks Telegram markers on map
@@ -477,6 +478,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     const group = telegramGroupRef.current;
     if (!group) return;
     group.clearLayers();
+    if (!layers.telegram) return;
 
     const categoryEmojis: Record<string, string> = {
       MISSILE: "🚀", MILITARY: "⚔️", NAVAL: "⚓", DRONE: "🛩️",
@@ -532,7 +534,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         group.addLayer(radius);
       }
     });
-  }, [telegramMarkers]);
+  }, [telegramMarkers, layers.telegram]);
 
   // Render Geo Fusion events on map
   useEffect(() => {
@@ -2197,7 +2199,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       )}
       {cmdLegendOpen && (
         <div className="absolute bottom-[36px] left-3 z-[1001]">
-          <MapLegend />
+          <MapLegend layers={layers} onToggleLayer={onToggleLayer} />
         </div>
       )}
       {cmdHistoryOpen && (

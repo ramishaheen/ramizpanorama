@@ -20,6 +20,8 @@ export interface LayerState {
   googlePOI: boolean;
   googleTraffic: boolean;
   googleRoutes: boolean;
+  news: boolean;
+  telegram: boolean;
 }
 
 interface LayerControlsProps {

@@ -1,23 +1,34 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { LayerState } from "./LayerControls";
 
-const LEGEND_ITEMS = [
-  { emoji: "⚔️", label: "Military", color: "hsl(var(--critical))", source: "AI Intel" },
-  { emoji: "🏛️", label: "Diplomatic", color: "hsl(var(--primary))", source: "AI Intel" },
-  { emoji: "💰", label: "Economic", color: "hsl(var(--warning))", source: "AI Intel" },
-  { emoji: "🩺", label: "Humanitarian", color: "hsl(var(--success))", source: "AI Intel" },
-  { emoji: "📰", label: "General News", color: "hsl(var(--primary))", source: "AI Intel" },
-  { emoji: "🚀", label: "Missile / Special", color: "#ff0040", source: "Special Alert" },
-  { emoji: "💣", label: "Airstrike", color: "hsl(var(--accent-foreground))", source: "WarsLeaks" },
-  { emoji: "💥", label: "Explosion", color: "hsl(var(--accent-foreground))", source: "WarsLeaks" },
-  { emoji: "🛩️", label: "Drone", color: "hsl(var(--accent-foreground))", source: "WarsLeaks" },
-  { emoji: "⚓", label: "Naval", color: "hsl(var(--accent-foreground))", source: "WarsLeaks" },
-  { emoji: "✊", label: "Protest", color: "hsl(var(--warning))", source: "WarsLeaks" },
-  { emoji: "📡", label: "WarsLeaks Intel", color: "hsl(var(--accent-foreground))", source: "WarsLeaks" },
-  { emoji: "🔥", label: "Wildfire", color: "#ff6b00", source: "NASA FIRMS" },
-  { emoji: "🌍", label: "Earthquake", color: "hsl(var(--warning))", source: "USGS" },
-  { emoji: "▲", label: "Vessel", color: "hsl(var(--primary))", source: "Maritime" },
+type LegendLayerKey = keyof LayerState;
+
+interface LegendItem {
+  emoji: string;
+  label: string;
+  color: string;
+  source: string;
+  layerKey: LegendLayerKey;
+}
+
+const LEGEND_ITEMS: LegendItem[] = [
+  { emoji: "⚔️", label: "Military", color: "hsl(var(--critical))", source: "AI Intel", layerKey: "news" },
+  { emoji: "🏛️", label: "Diplomatic", color: "hsl(var(--primary))", source: "AI Intel", layerKey: "news" },
+  { emoji: "💰", label: "Economic", color: "hsl(var(--warning))", source: "AI Intel", layerKey: "news" },
+  { emoji: "🩺", label: "Humanitarian", color: "hsl(var(--success))", source: "AI Intel", layerKey: "news" },
+  { emoji: "📰", label: "General News", color: "hsl(var(--primary))", source: "AI Intel", layerKey: "news" },
+  { emoji: "🚀", label: "Missile / Special", color: "#ff0040", source: "Special Alert", layerKey: "rockets" },
+  { emoji: "💣", label: "Airstrike", color: "hsl(var(--accent-foreground))", source: "WarsLeaks", layerKey: "telegram" },
+  { emoji: "💥", label: "Explosion", color: "hsl(var(--accent-foreground))", source: "WarsLeaks", layerKey: "telegram" },
+  { emoji: "🛩️", label: "Drone", color: "hsl(var(--accent-foreground))", source: "WarsLeaks", layerKey: "telegram" },
+  { emoji: "⚓", label: "Naval", color: "hsl(var(--accent-foreground))", source: "WarsLeaks", layerKey: "telegram" },
+  { emoji: "✊", label: "Protest", color: "hsl(var(--warning))", source: "WarsLeaks", layerKey: "telegram" },
+  { emoji: "📡", label: "WarsLeaks Intel", color: "hsl(var(--accent-foreground))", source: "WarsLeaks", layerKey: "telegram" },
+  { emoji: "🔥", label: "Wildfire", color: "#ff6b00", source: "NASA FIRMS", layerKey: "wildfires" },
+  { emoji: "🌍", label: "Earthquake", color: "hsl(var(--warning))", source: "USGS", layerKey: "earthquakes" },
+  { emoji: "▲", label: "Vessel", color: "hsl(var(--primary))", source: "Maritime", layerKey: "aisVessels" },
 ];
 
 const SEVERITY_ITEMS = [
@@ -27,8 +38,21 @@ const SEVERITY_ITEMS = [
   { label: "Low", color: "hsl(var(--success))" },
 ];
 
-export const MapLegend = () => {
+interface MapLegendProps {
+  layers?: LayerState;
+  onToggleLayer?: (key: keyof LayerState) => void;
+}
+
+export const MapLegend = ({ layers, onToggleLayer }: MapLegendProps) => {
   const [expanded, setExpanded] = useState(false);
+
+  const isActive = (key: LegendLayerKey) => layers ? layers[key] : true;
+
+  const handleClick = (item: LegendItem) => {
+    if (onToggleLayer) {
+      onToggleLayer(item.layerKey);
+    }
+  };
 
   return (
     <div className="relative">
@@ -56,15 +80,31 @@ export const MapLegend = () => {
           >
             <div className="p-3">
               <div className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-[0.15em] mb-2 font-semibold">
-                Marker Types
+                Marker Types — click to toggle
               </div>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                {LEGEND_ITEMS.map((item) => (
-                  <div key={item.label} className="flex items-center gap-1.5">
-                    <span className="text-[10px] w-4 text-center leading-none">{item.emoji}</span>
-                    <span className="text-[9px] font-mono text-foreground/70 truncate">{item.label}</span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                {LEGEND_ITEMS.map((item) => {
+                  const active = isActive(item.layerKey);
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => handleClick(item)}
+                      className={`flex items-center gap-1.5 px-1 py-0.5 rounded transition-all cursor-pointer hover:bg-secondary/40 ${
+                        active ? "" : "opacity-35"
+                      }`}
+                    >
+                      <span className={`text-[10px] w-4 text-center leading-none ${active ? "" : "grayscale"}`}>{item.emoji}</span>
+                      <span className={`text-[9px] font-mono truncate flex-1 text-left ${
+                        active ? "text-foreground/70" : "text-muted-foreground/50 line-through"
+                      }`}>{item.label}</span>
+                      {active ? (
+                        <Eye className="h-2 w-2 text-primary/60 flex-shrink-0" />
+                      ) : (
+                        <EyeOff className="h-2 w-2 text-muted-foreground/30 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="border-t border-border/30 mt-2.5 pt-2.5">
