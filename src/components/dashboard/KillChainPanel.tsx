@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle } from "lucide-react";
+import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle, Radio } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -27,6 +27,18 @@ interface TargetOption {
   status: string;
 }
 
+interface EventOption {
+  id: string;
+  title: string;
+  event_type: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  confidence: number;
+  source: "intel" | "conflict";
+  created_at: string;
+}
+
 const PHASES = ["find", "fix", "track", "target", "engage", "assess"];
 const PHASE_COLORS: Record<string, string> = {
   find: "#00d4ff", fix: "#22c55e", track: "#eab308", target: "#f97316", engage: "#ef4444", assess: "#a855f7",
@@ -44,10 +56,12 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   const [loading, setLoading] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
   const [availableTargets, setAvailableTargets] = useState<TargetOption[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<EventOption[]>([]);
   const [loadingTargets, setLoadingTargets] = useState(false);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [generatingBDA, setGeneratingBDA] = useState<string | null>(null);
   const [initiatingTarget, setInitiatingTarget] = useState<string | null>(null);
+  const [pickerTab, setPickerTab] = useState<"targets" | "events">("targets");
 
   const fetchTasks = useCallback(async () => {
     const { data } = await supabase
@@ -82,9 +96,81 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     setLoadingTargets(false);
   };
 
+  const fetchAvailableEvents = async () => {
+    const [{ data: intelEvents }, { data: geoAlerts }] = await Promise.all([
+      supabase.from("intel_events").select("id, title, event_type, severity, lat, lng, confidence, created_at").order("created_at", { ascending: false }).limit(15),
+      supabase.from("geo_alerts").select("id, title, type, severity, lat, lng, timestamp, source").order("timestamp", { ascending: false }).limit(15),
+    ]);
+    const mapped: EventOption[] = [
+      ...(intelEvents || []).map((e: any) => ({ id: e.id, title: e.title, event_type: e.event_type, severity: e.severity, lat: e.lat, lng: e.lng, confidence: e.confidence, source: "intel" as const, created_at: e.created_at })),
+      ...(geoAlerts || []).map((e: any) => ({ id: e.id, title: e.title, event_type: e.type, severity: e.severity, lat: e.lat, lng: e.lng, confidence: 0.8, source: "conflict" as const, created_at: e.timestamp })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20);
+    setAvailableEvents(mapped);
+  };
+
   const handleOpenPicker = () => {
     setShowPicker(true);
+    setPickerTab("targets");
     fetchAvailableTargets();
+    fetchAvailableEvents();
+  };
+
+  const initiateFromEvent = async (ev: EventOption) => {
+    setInitiatingTarget(ev.id);
+    try {
+      // Create a target track from the event first
+      const trackId = `EVT-${Date.now()}`;
+      const classification = ev.event_type.includes("strike") || ev.event_type.includes("explosion") ? "artillery" :
+        ev.event_type.includes("missile") ? "missile_launcher" :
+        ev.event_type.includes("military") ? "command_post" : "unknown";
+      const priority = ev.severity === "critical" ? "critical" : ev.severity === "high" ? "high" : ev.severity === "medium" ? "medium" : "low";
+
+      const { data: newTrack, error: trackErr } = await supabase.from("target_tracks").insert({
+        track_id: trackId,
+        classification: classification as any,
+        confidence: ev.confidence,
+        lat: ev.lat,
+        lng: ev.lng,
+        source_sensor: "osint_news" as any,
+        status: "detected" as any,
+        priority: priority as any,
+        ai_assessment: `Event-sourced: ${ev.title}`,
+      }).select("id").single();
+
+      if (trackErr || !newTrack) throw new Error("Failed to create target track from event");
+
+      // Now initiate kill chain with S2S recommendation
+      let weapon = "TBD";
+      let platform = "TBD";
+      try {
+        const { data: s2sData } = await supabase.functions.invoke("sensor-to-shooter", {
+          body: { action: "recommend", target_id: newTrack.id },
+        });
+        if (s2sData?.recommendation) {
+          weapon = s2sData.recommendation.recommended_weapon || weapon;
+          platform = s2sData.recommendation.callsign || platform;
+        }
+      } catch { /* S2S unavailable */ }
+
+      await supabase.from("kill_chain_tasks").insert({
+        target_track_id: newTrack.id,
+        phase: "find" as any,
+        status: "in_progress" as any,
+        recommended_weapon: weapon,
+        assigned_platform: platform,
+        notes: `Source: ${ev.source.toUpperCase()} EVENT — ${ev.title}`,
+      });
+
+      toast.success(`⚡ KILL CHAIN FROM EVENT`, {
+        description: `${trackId} • ${ev.title.slice(0, 50)} • ${priority.toUpperCase()} priority`,
+      });
+      setShowPicker(false);
+      fetchTasks();
+    } catch (err) {
+      toast.error("Failed to initiate from event");
+    } finally {
+      setInitiatingTarget(null);
+    }
   };
 
   const initiateKillChain = async (target: TargetOption) => {
@@ -259,54 +345,115 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         </button>
       </div>
 
-      {/* Target Picker */}
+      {/* Target / Event Picker */}
       {showPicker && (
         <div className="border-b border-[hsl(190,60%,10%)] bg-[hsl(220,15%,7%)]">
           <div className="px-3 py-1.5 border-b border-[hsl(190,60%,8%)] flex items-center justify-between">
-            <span className="text-[8px] font-mono font-bold text-foreground tracking-wider">SELECT TARGET</span>
-            <button onClick={() => setShowPicker(false)} className="text-[8px] font-mono text-muted-foreground hover:text-foreground">✕</button>
-          </div>
-          {loadingTargets ? (
-            <div className="flex items-center justify-center py-4"><Loader2 className="h-3 w-3 animate-spin text-primary" /></div>
-          ) : availableTargets.length === 0 ? (
-            <div className="px-3 py-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-2">
-                <AlertTriangle className="h-3 w-3 text-[#eab308]" />
-                <span className="text-[8px] font-mono text-[#eab308]">NO DETECTED TARGETS</span>
-              </div>
-              <button onClick={runATRScan} className="px-3 py-1 rounded text-[8px] font-mono border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center gap-1 mx-auto">
-                <Scan className="h-2.5 w-2.5" /> RUN ATR SCAN
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPickerTab("targets")} className={`text-[8px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded transition-colors ${pickerTab === "targets" ? "bg-[#f97316]/20 text-[#f97316]" : "text-muted-foreground hover:text-foreground"}`}>
+                🎯 TARGETS
+              </button>
+              <button onClick={() => setPickerTab("events")} className={`text-[8px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded transition-colors ${pickerTab === "events" ? "bg-[#00d4ff]/20 text-[#00d4ff]" : "text-muted-foreground hover:text-foreground"}`}>
+                <span className="inline-flex items-center gap-0.5"><Radio className="h-2.5 w-2.5 inline" /> EVENTS</span>
               </button>
             </div>
-          ) : (
-            <div className="max-h-[180px] overflow-y-auto scrollbar-thin">
-              {availableTargets.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => initiateKillChain(t)}
-                  disabled={initiatingTarget === t.id}
-                  className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
-                >
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor(t.priority) }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-mono font-bold text-foreground">{t.track_id}</span>
-                      <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${priorityColor(t.priority)}20`, color: priorityColor(t.priority) }}>
-                        {t.priority.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="text-[7px] font-mono text-muted-foreground">
-                      {t.classification} • {t.confidence}% • {t.lat.toFixed(2)}°N {t.lng.toFixed(2)}°E
-                    </div>
+            <button onClick={() => setShowPicker(false)} className="text-[8px] font-mono text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+
+          {pickerTab === "targets" && (
+            <>
+              {loadingTargets ? (
+                <div className="flex items-center justify-center py-4"><Loader2 className="h-3 w-3 animate-spin text-primary" /></div>
+              ) : availableTargets.length === 0 ? (
+                <div className="px-3 py-3 text-center">
+                  <div className="flex items-center justify-center gap-1 mb-2">
+                    <AlertTriangle className="h-3 w-3 text-[#eab308]" />
+                    <span className="text-[8px] font-mono text-[#eab308]">NO DETECTED TARGETS</span>
                   </div>
-                  {initiatingTarget === t.id ? (
-                    <Loader2 className="h-3 w-3 animate-spin text-[#f97316] flex-shrink-0" />
-                  ) : (
-                    <Zap className="h-3 w-3 text-[#f97316] flex-shrink-0" />
-                  )}
-                </button>
-              ))}
-            </div>
+                  <button onClick={runATRScan} className="px-3 py-1 rounded text-[8px] font-mono border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center gap-1 mx-auto">
+                    <Scan className="h-2.5 w-2.5" /> RUN ATR SCAN
+                  </button>
+                </div>
+              ) : (
+                <div className="max-h-[180px] overflow-y-auto scrollbar-thin">
+                  {availableTargets.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => initiateKillChain(t)}
+                      disabled={initiatingTarget === t.id}
+                      className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor(t.priority) }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-mono font-bold text-foreground">{t.track_id}</span>
+                          <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${priorityColor(t.priority)}20`, color: priorityColor(t.priority) }}>
+                            {t.priority.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="text-[7px] font-mono text-muted-foreground">
+                          {t.classification} • {t.confidence}% • {t.lat.toFixed(2)}°N {t.lng.toFixed(2)}°E
+                        </div>
+                      </div>
+                      {initiatingTarget === t.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-[#f97316] flex-shrink-0" />
+                      ) : (
+                        <Zap className="h-3 w-3 text-[#f97316] flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {pickerTab === "events" && (
+            <>
+              {availableEvents.length === 0 ? (
+                <div className="px-3 py-3 text-center">
+                  <span className="text-[8px] font-mono text-muted-foreground">NO RECENT EVENTS</span>
+                </div>
+              ) : (
+                <div className="max-h-[220px] overflow-y-auto scrollbar-thin">
+                  {availableEvents.map(ev => {
+                    const sevColor = ev.severity === "critical" ? "#ef4444" : ev.severity === "high" ? "#f97316" : ev.severity === "medium" ? "#eab308" : "#22c55e";
+                    const typeEmoji = ev.event_type.includes("strike") || ev.event_type.includes("explosion") ? "💥" :
+                      ev.event_type.includes("missile") ? "🚀" :
+                      ev.event_type.includes("conflict") || ev.event_type.includes("military") ? "⚔️" :
+                      ev.event_type.includes("cyber") ? "🔓" :
+                      ev.event_type.includes("earthquake") ? "🌍" : "📡";
+                    const ago = Math.round((Date.now() - new Date(ev.created_at).getTime()) / 60000);
+                    const agoLabel = ago < 60 ? `${ago}m` : `${Math.round(ago / 60)}h`;
+                    return (
+                      <button
+                        key={`${ev.source}-${ev.id}`}
+                        onClick={() => initiateFromEvent(ev)}
+                        disabled={initiatingTarget === ev.id}
+                        className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
+                      >
+                        <span className="text-[10px] flex-shrink-0">{typeEmoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[8px] font-mono font-bold text-foreground truncate">{ev.title}</div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${sevColor}20`, color: sevColor }}>
+                              {ev.severity.toUpperCase()}
+                            </span>
+                            <span className="text-[6px] font-mono text-muted-foreground">{ev.source.toUpperCase()}</span>
+                            <span className="text-[6px] font-mono text-muted-foreground">{ev.lat.toFixed(1)}°N {ev.lng.toFixed(1)}°E</span>
+                            <span className="text-[6px] font-mono text-muted-foreground">{agoLabel} ago</span>
+                          </div>
+                        </div>
+                        {initiatingTarget === ev.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-[#00d4ff] flex-shrink-0" />
+                        ) : (
+                          <Crosshair className="h-3 w-3 text-[#00d4ff] flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
