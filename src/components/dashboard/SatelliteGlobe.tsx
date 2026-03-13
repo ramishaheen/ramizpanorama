@@ -2349,7 +2349,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                     <div className="text-[7px] font-mono text-primary/40 uppercase tracking-widest mb-1">Globe Visibility</div>
                     {(["CARGO", "TANKER", "MILITARY", "FISHING", "UNKNOWN"] as const).map(t => {
                       const typeColors: Record<string, string> = { CARGO: "#3b82f6", TANKER: "#f97316", MILITARY: "#ef4444", FISHING: "#22c55e", UNKNOWN: "#9ca3af" };
-                      const count = aisVessels.data.filter(v => v.type === t).length;
+                      const count = sanitizeVesselsToWater(aisVessels.data).filter(v => v.type === t).length;
                       return (
                         <label key={t} className="flex items-center gap-2 cursor-pointer group">
                           <div
