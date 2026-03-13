@@ -911,12 +911,34 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
+    // ========== SENSOR COVERAGE CIRCLES ==========
+    if (layers.sensorCoverage && sensorFeeds.length > 0) {
+      const coverageColors: Record<string, string> = {
+        satellite: "rgba(0,212,255,0.12)", drone: "rgba(249,115,22,0.15)", cctv: "rgba(34,197,94,0.15)",
+        sigint: "rgba(168,85,247,0.12)", osint: "rgba(234,179,8,0.08)", ground: "rgba(239,68,68,0.12)", iot: "rgba(6,182,212,0.1)",
+      };
+      const coverageBorders: Record<string, string> = {
+        satellite: "#00d4ff", drone: "#f97316", cctv: "#22c55e",
+        sigint: "#a855f7", osint: "#eab308", ground: "#ef4444", iot: "#06b6d4",
+      };
+      sensorFeeds.forEach((sf: any) => {
+        if (sf.status === "offline") return;
+        const cat = sf.feed_type.split("_")[0];
+        const col = coverageBorders[cat] || "#00d4ff";
+        const sIcon = cat === "satellite" ? "🛰" : cat === "drone" ? "👁" : cat === "cctv" ? "📹" : cat === "sigint" ? "📡" : cat === "ground" ? "📡" : "📊";
+        points.push({
+          lat: sf.lat, lng: sf.lng, pointAlt: 0.005, color: col, radius: Math.min(sf.coverage_radius_km / 200, 1.5) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sIcon}</span> SENSOR</div><div style="font-size:10px;margin-top:2px">${sf.source_name}</div><div style="color:#888;font-size:8px;margin-top:1px">${sf.feed_type} • ${sf.status.toUpperCase()} • HP:${sf.health_score}%</div><div style="color:#666;font-size:8px">${sf.coverage_radius_km}km range • ${sf.data_rate_hz}Hz</div></div>`,
+        });
+      });
+    }
+
     if (layers.borders) {
       globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds]);
 
   const chipLayers = [
     { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
