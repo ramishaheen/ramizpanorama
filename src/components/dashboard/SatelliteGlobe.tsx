@@ -490,6 +490,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [lastPropagated, setLastPropagated] = useState<Date>(new Date());
   const [orbitPath, setOrbitPath] = useState<{ lat: number; lng: number }[] | null>(null);
   const [orbitColor, setOrbitColor] = useState<string>("#ffffff");
+  const [coverageRing, setCoverageRing] = useState<{ lat: number; lng: number; radiusKm: number; color: string } | null>(null);
   const [hoveredSat, setHoveredSat] = useState<SatelliteData | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [aiChatSat, setAiChatSat] = useState<SatelliteData | null>(null);
@@ -643,26 +644,50 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     aiScrollRef.current?.scrollTo({ top: aiScrollRef.current.scrollHeight, behavior: "smooth" });
   }, [aiMessages]);
 
+  // Build satellite metadata for AI context
+  const buildSatContext = useCallback((sat: SatelliteData) => ({
+    name: sat.name,
+    noradId: sat.noradId,
+    category: sat.category,
+    country: sat.country,
+    operator: sat.operator,
+    lat: sat.lat,
+    lng: sat.lng,
+    alt: sat.alt,
+    orbitType: getOrbitType(sat.alt, sat.inclination, sat.eccentricity),
+    inclination: sat.inclination,
+    raan: sat.raan,
+    meanAnomaly: sat.meanAnomaly,
+    meanMotion: sat.meanMotion,
+    eccentricity: sat.eccentricity,
+    period: sat.period,
+    velocity: sat.velocity,
+    epochYear: sat.epochYear,
+    epochDay: sat.epochDay,
+    intlDesignator: sat.intlDesignator,
+    launchYear: sat.launchYear,
+    source: sat.source,
+  }), []);
+
   const openAiChat = useCallback((sat: SatelliteData) => {
     setAiChatSat(sat);
     setHoveredSat(null);
-    const initialQ = `Provide OSINT intelligence analysis on satellite "${sat.name}" (NORAD: ${sat.noradId || "N/A"}, Category: ${sat.category}, Country: ${sat.country || "Unknown"}, Operator: ${sat.operator || "Unknown"}, Alt: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}, Inc: ${sat.inclination?.toFixed(1) || "N/A"}°, Source: ${sat.source || "CelesTrak"}). Include: mission purpose, military/intelligence significance, coverage area over Middle East, operator details, and any known OSINT about this satellite's recent activities or significance in current geopolitical context.`;
+    const initialQ = `Provide full intelligence analysis on satellite "${sat.name}". Include: mission purpose & payload sensors, military/intelligence significance, coverage capabilities (ground swath, revisit rate), operator details, constellation membership, and tactical relevance for Middle East coverage. Calculate the current coverage footprint radius.`;
     setAiMessages([{ role: "user", content: initialQ }]);
     setAiLoading(true);
 
-    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/war-chat`;
+    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/satellite-chat`;
     fetch(chatUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages: [{ role: "user", content: initialQ }] }),
+      body: JSON.stringify({ messages: [{ role: "user", content: initialQ }], satellite: buildSatContext(sat) }),
     }).then(async (resp) => {
       if (!resp.ok) {
         const status = resp.status;
         setAiLoading(false);
-        // Check if the response is JSON (error) vs SSE stream
         const contentType = resp.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
           try {
@@ -736,7 +761,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setAiLoading(false);
       setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Connection failed. Try again." }]);
     });
-  }, []);
+  }, [buildSatContext]);
 
   const sendAiMessage = useCallback(async () => {
     const text = aiInput.trim();
@@ -746,7 +771,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     setAiInput("");
     setAiLoading(true);
 
-    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/war-chat`;
+    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/satellite-chat`;
     try {
       const resp = await fetch(chatUrl, {
         method: "POST",
@@ -754,7 +779,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMsgs }),
+        body: JSON.stringify({ messages: newMsgs, satellite: aiChatSat ? buildSatContext(aiChatSat) : undefined }),
       });
 
       if (!resp.ok) {
@@ -828,7 +853,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setAiLoading(false);
       setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Connection failed." }]);
     }
-  }, [aiInput, aiLoading, aiMessages]);
+  }, [aiInput, aiLoading, aiMessages, aiChatSat, buildSatContext]);
 
   const runPrediction = useCallback(async (sat: SatelliteData) => {
     setPredicting(true);
@@ -879,6 +904,30 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     }
   }, []);
 
+  // Calculate coverage radius based on altitude and sensor type
+  const computeCoverageRadius = useCallback((sat: SatelliteData): number => {
+    const R = 6371; // Earth radius km
+    const h = sat.alt;
+    const cat = sat.category;
+    let halfFovDeg: number;
+    if (cat === "ISR" || cat === "Early Warning" || cat === "Earth Observation") halfFovDeg = 2;
+    else if (cat === "SAR Imaging") halfFovDeg = 6;
+    else if (cat === "SIGINT/ELINT") halfFovDeg = 10;
+    else if (cat === "Communication" || cat === "Data Relay") halfFovDeg = 17;
+    else if (cat === "Navigation") halfFovDeg = 12;
+    else if (cat === "Weather") halfFovDeg = 15;
+    else halfFovDeg = 8;
+    const fovRadius = h * Math.tan(halfFovDeg * Math.PI / 180);
+    const horizonRadius = R * Math.acos(R / (R + h)) * (180 / Math.PI) * 111;
+    return Math.min(fovRadius, horizonRadius);
+  }, []);
+
+  const updateCoverageRing = useCallback((sat: SatelliteData) => {
+    const radiusKm = computeCoverageRadius(sat);
+    const color = CATEGORY_COLORS[sat.category] || "#d4a843";
+    setCoverageRing({ lat: sat.lat, lng: sat.lng, radiusKm, color });
+  }, [computeCoverageRadius]);
+
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
@@ -917,6 +966,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setOrbitPath(path);
       setOrbitColor(CATEGORY_COLORS[sat.category] || "#d4a843");
     }
+    // Set holographic coverage ring
+    updateCoverageRing(sat);
     if (globeRef.current) {
       const zoomAlt = sat.alt < 2000 ? 0.6 : sat.alt < 25000 ? 0.9 : 1.2;
       globeRef.current.pointOfView(
@@ -924,7 +975,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         1000
       );
     }
-  }, []);
+  }, [updateCoverageRing]);
 
   // Real-time badge updates every 10 seconds
   useEffect(() => {
@@ -957,6 +1008,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     setActiveCity(city.name);
     setSelectedSat(null);
     setOrbitPath(null);
+    setCoverageRing(null);
     setSelectedCity(city);
 
     // Find satellites within ~2500km radius of the country center
@@ -1251,6 +1303,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             const newPath = computeOrbitPath(sel.inclination, sel.raan, sel.meanAnomaly, sel.meanMotion, sel.eccentricity, sel.epochYear, sel.epochDay, sel.alt, 180);
             setOrbitPath(newPath);
             setSelectedSat(prev => prev ? { ...prev, lat: sel.lat, lng: sel.lng } : null);
+            // Update coverage ring position to follow satellite
+            setCoverageRing(prev => prev ? { ...prev, lat: sel.lat, lng: sel.lng } : null);
           }
         }
       }
@@ -1509,6 +1563,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
+            // Set holographic coverage ring
+            updateCoverageRing(s);
             // Zoom closer: LEO ~0.6, MEO ~0.9, GEO ~1.2
             const zoomAlt = s.alt < 2000 ? 0.6 : s.alt < 25000 ? 0.9 : 1.2;
             globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: zoomAlt }, 1000);
@@ -1555,6 +1611,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
+            updateCoverageRing(s);
             const zoomAlt2 = s.alt < 2000 ? 0.6 : s.alt < 25000 ? 0.9 : 1.2;
             globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: zoomAlt2 }, 1000);
           })
@@ -1990,6 +2047,52 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Render coverage ring on globe
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const cityRings = CITY_PRESETS.map(c => ({ ...c, maxR: 2, propagationSpeed: 1.5, isCoverage: false }));
+
+    if (coverageRing) {
+      // Convert km radius to globe ring maxRadius (degrees approx)
+      const maxRDeg = coverageRing.radiusKm / 111; // rough km to degrees
+      cityRings.push({
+        lat: coverageRing.lat,
+        lng: coverageRing.lng,
+        maxR: Math.min(maxRDeg, 30),
+        propagationSpeed: 2,
+        isCoverage: true,
+        name: "coverage",
+        country: "",
+        landmark: "",
+        description: "",
+        image: "",
+      } as any);
+    }
+
+    globe
+      .ringsData(cityRings)
+      .ringLat((d: any) => d.lat)
+      .ringLng((d: any) => d.lng)
+      .ringAltitude(0.001)
+      .ringColor((d: any) => {
+        if (d.isCoverage && coverageRing) {
+          const c = coverageRing.color;
+          return (t: number) => {
+            const r = parseInt(c.slice(1, 3), 16) || 0;
+            const g = parseInt(c.slice(3, 5), 16) || 0;
+            const b = parseInt(c.slice(5, 7), 16) || 0;
+            return `rgba(${r},${g},${b},${0.35 - t * 0.35})`;
+          };
+        }
+        return (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`;
+      })
+      .ringMaxRadius((d: any) => d.maxR)
+      .ringPropagationSpeed((d: any) => d.isCoverage ? 2 : d.propagationSpeed)
+      .ringRepeatPeriod((d: any) => d.isCoverage ? 1500 : 2000);
+  }, [coverageRing]);
 
   // Cleanup
   useEffect(() => {
@@ -2593,7 +2696,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 </span>
               </div>
               <button
-                onClick={() => { setSelectedSat(null); setOrbitPath(null); }}
+                onClick={() => { setSelectedSat(null); setOrbitPath(null); setCoverageRing(null); }}
                 className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"
               >
                 <X className="h-2.5 w-2.5 text-muted-foreground" />
@@ -2675,6 +2778,15 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                   value={`${selectedSat.lng.toFixed(3)}°`}
                 />
               </div>
+              {/* Coverage footprint info */}
+              {coverageRing && (
+                <div className="flex items-center gap-1.5 pt-1 border-t border-border/20">
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: coverageRing.color, opacity: 0.6 }} />
+                  <span className="text-[8px] font-mono text-muted-foreground/70">
+                    COVERAGE: <span className="text-foreground/80">{Math.round(coverageRing.radiusKm * 2)} km</span> diameter • <span className="text-foreground/80">{Math.round(coverageRing.radiusKm)} km</span> radius
+                  </span>
+                </div>
+              )}
               <div className="text-[7px] font-mono text-muted-foreground/30 pt-1 border-t border-border/20">
                 EPOCH: {selectedSat.epochYear} DAY{" "}
                 {selectedSat.epochDay?.toFixed(2)} • CELESTRAK
