@@ -1,6 +1,6 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Crosshair } from "lucide-react";
+import { X, Crosshair, Shield } from "lucide-react";
 import { useLiveDashboard } from "@/hooks/useLiveDashboard";
 import { useCitizenSecurity } from "@/hooks/useCitizenSecurity";
 import { useWarUpdates } from "@/hooks/useWarUpdates";
@@ -27,6 +27,33 @@ interface ScoutingModalProps {
   onClose: () => void;
 }
 
+/* ── Tile wrapper ─────────────────────────────────────── */
+function ScoutingTile({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`scouting-tile ${className}`}>
+      <div className="scouting-section-label">
+        <span>{label}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto scouting-tile-body">
+        {children}
+      </div>
+      {/* scanline overlay per tile */}
+      <div className="absolute inset-0 pointer-events-none scanline opacity-30" />
+    </div>
+  );
+}
+
+/* ── UTC clock ────────────────────────────────────────── */
+function UtcClock() {
+  const [time, setTime] = useState(new Date().toISOString().slice(11, 19));
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date().toISOString().slice(11, 19)), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <span className="text-primary font-mono text-[10px] tabular-nums">{time}Z</span>;
+}
+
+/* ── Main modal ───────────────────────────────────────── */
 export function ScoutingModal({ onClose }: ScoutingModalProps) {
   const { airspaceAlerts, vessels, geoAlerts, riskScore, rockets, dataFresh, dailyCounts } = useLiveDashboard();
   const citizenSecurity = useCitizenSecurity();
@@ -48,32 +75,38 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
   }, [handleKeyDown]);
 
   return createPortal(
-    <div
-      className="fixed inset-0 bg-background/98 backdrop-blur-sm flex flex-col"
-      style={{ zIndex: 99999 }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/80">
-        <div className="flex items-center gap-2">
-          <Crosshair className="h-4 w-4 text-primary" />
-          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
+    <div className="scouting-overlay">
+      {/* Background grid + scanline */}
+      <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
+      <div className="absolute inset-0 scanline opacity-20 pointer-events-none" />
+
+      {/* ── HEADER ───────────────────────────────────── */}
+      <header className="scouting-header">
+        <div className="flex items-center gap-3">
+          <Shield className="h-4 w-4 text-primary" />
+          <span className="text-[11px] font-mono font-bold text-primary uppercase tracking-[0.25em]">
             Scouting — Intelligence Overview
           </span>
-          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary animate-pulse">
-            LIVE
-          </span>
+          <span className="scouting-live-badge">LIVE</span>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded hover:bg-secondary/50 transition-colors"
-          title="Close (Esc)"
-        >
-          <X className="h-4 w-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-4">
+          <UtcClock />
+          <span className="text-[8px] font-mono text-muted-foreground">
+            REFRESH: {dataFresh ? <span className="text-success">FRESH</span> : <span className="text-warning">STALE</span>}
+          </span>
+          <button onClick={onClose} className="scouting-close-btn" title="Close (Esc)">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* ── Classification banner ────────────────────── */}
+      <div className="classification-banner">
+        UNCLASSIFIED // FOR OFFICIAL USE ONLY
       </div>
 
-      {/* Stats Bar */}
-      <div className="border-b border-border">
+      {/* ── STATS BAR ────────────────────────────────── */}
+      <div className="border-b" style={{ borderColor: "hsl(190 60% 18%)" }}>
         <StatsBar
           airspaceCount={dailyCounts.airspaceCount}
           vesselCount={dailyCounts.vesselCount}
@@ -89,50 +122,93 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
         />
       </div>
 
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {/* Main grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          <div className="space-y-3">
-            <RocketEntryPanel rockets={rockets} />
-            <RiskScoreGauge score={riskScore} />
-            <CountryStatusPanel
-              data={geoFusion.data}
-              loading={geoFusion.loading}
-              error={geoFusion.error}
-              onRefresh={geoFusion.refresh}
-            />
-            <WeatherTrafficPanel />
-          </div>
-          <div className="space-y-3">
-            <WarEscalationEngine />
-            <CommodityTracker riskScore={riskScore.overall} />
-            <NotificationPanel alerts={geoAlerts} />
-            <WarUpdatesPanel
-              data={warUpdates.data}
-              loading={warUpdates.loading}
-              error={warUpdates.error}
-              onRefresh={warUpdates.refresh}
-            />
-          </div>
-          <div className="space-y-3">
-            <LiveNewsFeed />
-            <AIPredictions />
-            <CyberSecurityAlerts />
-            <TelegramFeed />
-          </div>
+      {/* ── MAIN GRID ────────────────────────────────── */}
+      <div className="scouting-grid-container">
+
+        {/* Row 1 — 4 columns */}
+        <div className="scouting-grid-row">
+          <ScoutingTile label="THREAT ASSESSMENT">
+            <div className="space-y-2">
+              <RiskScoreGauge score={riskScore} />
+              <RocketEntryPanel rockets={rockets} />
+            </div>
+          </ScoutingTile>
+
+          <ScoutingTile label="ESCALATION MATRIX">
+            <div className="space-y-2">
+              <WarEscalationEngine />
+              <WarUpdatesPanel
+                data={warUpdates.data}
+                loading={warUpdates.loading}
+                error={warUpdates.error}
+                onRefresh={warUpdates.refresh}
+              />
+            </div>
+          </ScoutingTile>
+
+          <ScoutingTile label="SIGINT / OSINT">
+            <div className="space-y-2">
+              <TelegramFeed />
+              <LiveNewsFeed />
+            </div>
+          </ScoutingTile>
+
+          <ScoutingTile label="ECONOMIC WARFARE">
+            <div className="space-y-2">
+              <CommodityTracker riskScore={riskScore.overall} />
+            </div>
+          </ScoutingTile>
         </div>
 
-        {/* Bottom row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 border-t border-border pt-3">
-          <CitizenSecurity
-            data={citizenSecurity.data}
-            loading={citizenSecurity.loading}
-            error={citizenSecurity.error}
-            onRefresh={citizenSecurity.refresh}
-          />
-          <SectorPredictions />
-          <SocialSentimentBox />
+        {/* Row 2 — 4 columns */}
+        <div className="scouting-grid-row">
+          <ScoutingTile label="GEO-FUSION">
+            <div className="space-y-2">
+              <CountryStatusPanel
+                data={geoFusion.data}
+                loading={geoFusion.loading}
+                error={geoFusion.error}
+                onRefresh={geoFusion.refresh}
+              />
+              <WeatherTrafficPanel />
+            </div>
+          </ScoutingTile>
+
+          <ScoutingTile label="NOTIFICATIONS">
+            <NotificationPanel alerts={geoAlerts} />
+          </ScoutingTile>
+
+          <ScoutingTile label="CYBER OPS">
+            <CyberSecurityAlerts />
+          </ScoutingTile>
+
+          <ScoutingTile label="AI INTEL">
+            <div className="space-y-2">
+              <AIPredictions />
+              <SectorPredictions />
+            </div>
+          </ScoutingTile>
+        </div>
+
+        {/* Row 3 — Civil indicators, full-width 3-col sub-grid */}
+        <div className="scouting-civil-row">
+          <div className="scouting-section-label mb-0" style={{ gridColumn: "1 / -1" }}>
+            <span>CIVIL INDICATORS</span>
+          </div>
+          <ScoutingTile label="CITIZEN SECURITY" className="scouting-civil-tile">
+            <CitizenSecurity
+              data={citizenSecurity.data}
+              loading={citizenSecurity.loading}
+              error={citizenSecurity.error}
+              onRefresh={citizenSecurity.refresh}
+            />
+          </ScoutingTile>
+          <ScoutingTile label="SECTOR PREDICTIONS" className="scouting-civil-tile">
+            <SectorPredictions />
+          </ScoutingTile>
+          <ScoutingTile label="SOCIAL MEDIA HARVESTING" className="scouting-civil-tile">
+            <SocialSentimentBox />
+          </ScoutingTile>
         </div>
       </div>
     </div>,
