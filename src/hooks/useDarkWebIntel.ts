@@ -189,8 +189,11 @@ const EMPTY_STATE: DarkWebState = {
   /** Merge indicator extraction data — append unique items */
   const mergeIndicators = (existing: IndicatorExtraction | null, incoming: IndicatorExtraction): IndicatorExtraction => {
     if (!existing) return incoming;
-    const dedup = <T extends { value?: string; id?: string; name?: string; port?: number }>(a: T[], b: T[]): T[] => {
-      const key = (item: T) => item.value || item.id || item.name || String(item.port) || JSON.stringify(item);
+    const dedup = <T>(a: T[], b: T[]): T[] => {
+      const key = (item: T) => {
+        const o = item as Record<string, unknown>;
+        return String(o.value ?? o.id ?? o.name ?? o.port ?? o.cve ?? o.address ?? JSON.stringify(item));
+      };
       const seen = new Set(a.map(key));
       return [...a, ...b.filter(item => !seen.has(key(item)))];
     };
