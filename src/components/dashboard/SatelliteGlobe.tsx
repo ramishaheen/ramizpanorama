@@ -2320,21 +2320,21 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
 
           <div className="flex-1 flex justify-center">
-            <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-xl px-2 py-1.5">
+            <div className="flex items-center gap-1 gotham-orbital-panel px-2 py-1.5">
               {GLOBE_STYLES.map((style) => (
                 <button
                   key={style.id}
                   onClick={() => applyGlobeStyle(style.id)}
-                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg transition-all ${
+                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1 transition-all ${
                     globeStyle === style.id
-                      ? "bg-cyan-500/20 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,200,255,0.2)]"
-                      : "hover:bg-white/10 border border-transparent"
+                      ? "bg-primary/15 border border-primary/40"
+                      : "hover:bg-primary/5 border border-transparent"
                   }`}
                   title={style.desc}
                 >
                   <span className="text-sm">{style.icon}</span>
                   <span className={`text-[8px] font-mono tracking-wide ${
-                    globeStyle === style.id ? "text-cyan-300 font-bold" : "text-white/70"
+                    globeStyle === style.id ? "text-primary font-bold" : "text-muted-foreground"
                   }`}>{style.label}</span>
                 </button>
               ))}
