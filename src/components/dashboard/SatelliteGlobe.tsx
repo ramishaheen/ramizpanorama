@@ -1682,21 +1682,29 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             const el = document.createElement("div");
 
             if (d.type === "city") {
-              el.style.cssText =
-                "cursor:pointer;font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);padding:2px 5px;border-radius:4px;display:flex;align-items:center;gap:3px;transition:all 0.2s;";
-              el.style.color = "#00dcff";
-              el.style.backgroundColor = "rgba(0,20,40,0.7)";
-              el.style.border = "1px solid rgba(0,220,255,0.3)";
-              el.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 6px #00dcff;"></span> ${d.label}`;
+              const isLite = liteMode;
+              const dotSize = isLite ? 3 : 5;
+              el.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:0;transition:all 0.25s ease;position:relative;`;
+              // Dot only by default
+              const dot = document.createElement("span");
+              dot.style.cssText = `width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 ${isLite ? 4 : 6}px #00dcff;flex-shrink:0;`;
+              el.appendChild(dot);
+              // Label hidden by default
+              const label = document.createElement("span");
+              label.style.cssText = `font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);color:#00dcff;background:rgba(0,20,40,0.85);border:1px solid rgba(0,220,255,0.3);padding:2px 5px;border-radius:4px;margin-left:4px;opacity:0;pointer-events:none;transition:opacity 0.2s ease;`;
+              label.textContent = d.label;
+              el.appendChild(label);
               el.addEventListener("mouseenter", () => {
-                el.style.backgroundColor = "rgba(0,220,255,0.2)";
-                el.style.borderColor = "rgba(0,220,255,0.6)";
-                el.style.transform = "scale(1.15)";
+                label.style.opacity = "1";
+                label.style.pointerEvents = "auto";
+                dot.style.boxShadow = `0 0 10px #00dcff, 0 0 20px rgba(0,220,255,0.3)`;
+                dot.style.transform = "scale(1.4)";
               });
               el.addEventListener("mouseleave", () => {
-                el.style.backgroundColor = "rgba(0,20,40,0.7)";
-                el.style.borderColor = "rgba(0,220,255,0.3)";
-                el.style.transform = "scale(1)";
+                label.style.opacity = "0";
+                label.style.pointerEvents = "none";
+                dot.style.boxShadow = `0 0 ${isLite ? 4 : 6}px #00dcff`;
+                dot.style.transform = "scale(1)";
               });
               el.addEventListener("click", () => {
                 window.dispatchEvent(new CustomEvent("globe-city-click", { detail: d.cityData }));
@@ -2028,21 +2036,27 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       }
 
       if (d.type === "city") {
-        el.style.cssText =
-          "cursor:pointer;font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);padding:2px 5px;border-radius:4px;display:flex;align-items:center;gap:3px;transition:all 0.2s;";
-        el.style.color = "#00dcff";
-        el.style.backgroundColor = "rgba(0,20,40,0.7)";
-        el.style.border = "1px solid rgba(0,220,255,0.3)";
-        el.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 6px #00dcff;"></span> ${d.label}`;
+        const isLite = liteMode;
+        const dotSize = isLite ? 3 : 5;
+        el.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:0;transition:all 0.25s ease;position:relative;`;
+        const dot = document.createElement("span");
+        dot.style.cssText = `width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 ${isLite ? 4 : 6}px #00dcff;flex-shrink:0;`;
+        el.appendChild(dot);
+        const label = document.createElement("span");
+        label.style.cssText = `font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);color:#00dcff;background:rgba(0,20,40,0.85);border:1px solid rgba(0,220,255,0.3);padding:2px 5px;border-radius:4px;margin-left:4px;opacity:0;pointer-events:none;transition:opacity 0.2s ease;`;
+        label.textContent = d.label;
+        el.appendChild(label);
         el.addEventListener("mouseenter", () => {
-          el.style.backgroundColor = "rgba(0,220,255,0.2)";
-          el.style.borderColor = "rgba(0,220,255,0.6)";
-          el.style.transform = "scale(1.15)";
+          label.style.opacity = "1";
+          label.style.pointerEvents = "auto";
+          dot.style.boxShadow = `0 0 10px #00dcff, 0 0 20px rgba(0,220,255,0.3)`;
+          dot.style.transform = "scale(1.4)";
         });
         el.addEventListener("mouseleave", () => {
-          el.style.backgroundColor = "rgba(0,20,40,0.7)";
-          el.style.borderColor = "rgba(0,220,255,0.3)";
-          el.style.transform = "scale(1)";
+          label.style.opacity = "0";
+          label.style.pointerEvents = "none";
+          dot.style.boxShadow = `0 0 ${isLite ? 4 : 6}px #00dcff`;
+          dot.style.transform = "scale(1)";
         });
         el.addEventListener("click", () => {
           window.dispatchEvent(new CustomEvent("globe-city-click", { detail: d.cityData }));
@@ -2167,6 +2181,40 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           animation: "holoSweep 10s linear infinite",
         }}
       />
+
+      {/* Lite Mode — Crosshair / Gun-Eye Reticle */}
+      {liteMode && (
+        <div className="absolute inset-0 z-[2002] pointer-events-none flex items-center justify-center">
+          <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.5 }}>
+            {/* Outer ring */}
+            <circle cx="100" cy="100" r="90" stroke="hsl(190,100%,50%)" strokeWidth="0.75" strokeDasharray="4 4" />
+            {/* Middle ring */}
+            <circle cx="100" cy="100" r="60" stroke="hsl(190,100%,50%)" strokeWidth="0.5" strokeDasharray="2 3" />
+            {/* Inner ring */}
+            <circle cx="100" cy="100" r="30" stroke="hsl(190,100%,50%)" strokeWidth="0.75" />
+            {/* Center dot */}
+            <circle cx="100" cy="100" r="2" fill="hsl(190,100%,50%)" />
+            {/* Cross lines */}
+            <line x1="100" y1="5" x2="100" y2="70" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            <line x1="100" y1="130" x2="100" y2="195" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            <line x1="5" y1="100" x2="70" y2="100" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            <line x1="130" y1="100" x2="195" y2="100" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            {/* Range tick marks */}
+            {[45, 75].map(r => (
+              <g key={r}>
+                <line x1={100} y1={100 - r} x2={100} y2={100 - r + 4} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+                <line x1={100} y1={100 + r} x2={100} y2={100 + r - 4} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+                <line x1={100 - r} y1={100} x2={100 - r + 4} y2={100} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+                <line x1={100 + r} y1={100} x2={100 + r - 4} y2={100} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+              </g>
+            ))}
+            {/* Diagonal tick marks */}
+            {[{x:35,y:35},{x:165,y:35},{x:35,y:165},{x:165,y:165}].map((p,i) => (
+              <line key={i} x1={p.x} y1={p.y} x2={p.x + (p.x < 100 ? 6 : -6)} y2={p.y + (p.y < 100 ? 6 : -6)} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            ))}
+          </svg>
+        </div>
+      )}
       {/* Corner brackets — Gotham frame */}
       <div className="absolute inset-0 z-[2001] pointer-events-none">
         {[
