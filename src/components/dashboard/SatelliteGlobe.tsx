@@ -2047,6 +2047,52 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Render coverage ring on globe
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const cityRings = CITY_PRESETS.map(c => ({ ...c, maxR: 2, propagationSpeed: 1.5, isCoverage: false }));
+
+    if (coverageRing) {
+      // Convert km radius to globe ring maxRadius (degrees approx)
+      const maxRDeg = coverageRing.radiusKm / 111; // rough km to degrees
+      cityRings.push({
+        lat: coverageRing.lat,
+        lng: coverageRing.lng,
+        maxR: Math.min(maxRDeg, 30),
+        propagationSpeed: 2,
+        isCoverage: true,
+        name: "coverage",
+        country: "",
+        landmark: "",
+        description: "",
+        image: "",
+      } as any);
+    }
+
+    globe
+      .ringsData(cityRings)
+      .ringLat((d: any) => d.lat)
+      .ringLng((d: any) => d.lng)
+      .ringAltitude(0.001)
+      .ringColor((d: any) => {
+        if (d.isCoverage && coverageRing) {
+          const c = coverageRing.color;
+          return (t: number) => {
+            const r = parseInt(c.slice(1, 3), 16) || 0;
+            const g = parseInt(c.slice(3, 5), 16) || 0;
+            const b = parseInt(c.slice(5, 7), 16) || 0;
+            return `rgba(${r},${g},${b},${0.35 - t * 0.35})`;
+          };
+        }
+        return (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`;
+      })
+      .ringMaxRadius((d: any) => d.maxR)
+      .ringPropagationSpeed((d: any) => d.isCoverage ? 2 : d.propagationSpeed)
+      .ringRepeatPeriod((d: any) => d.isCoverage ? 1500 : 2000);
+  }, [coverageRing]);
+
   // Cleanup
   useEffect(() => {
     return () => {
