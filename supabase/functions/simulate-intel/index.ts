@@ -2,8 +2,27 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// Maritime corridors — vessels must stay within these water zones
+const MARITIME_CORRIDORS = [
+  { latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 },  // Persian Gulf
+  { latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 },  // Gulf of Oman / Arabian Sea
+  { latMin: 12.0, latMax: 30.8, lngMin: 32.0, lngMax: 43.8 },  // Red Sea
+  { latMin: 30.0, latMax: 33.6, lngMin: 31.8, lngMax: 33.2 },  // Suez Canal
+  { latMin: 31.0, latMax: 37.2, lngMin: 33.2, lngMax: 36.8 },  // Eastern Mediterranean
+  { latMin: 36.3, latMax: 47.2, lngMin: 47.0, lngMax: 54.8 },  // Caspian Sea
+  { latMin: 10.0, latMax: 15.0, lngMin: 42.0, lngMax: 52.0 },  // Gulf of Aden
+  { latMin: 33.0, latMax: 41.0, lngMin: 24.0, lngMax: 36.0 },  // Mediterranean (wider)
+  { latMin: 20.0, latMax: 30.0, lngMin: 58.0, lngMax: 68.0 },  // Arabian Sea (wider)
+];
+
+function isInWater(lat: number, lng: number): boolean {
+  return MARITIME_CORRIDORS.some(
+    (c) => lat >= c.latMin && lat <= c.latMax && lng >= c.lngMin && lng <= c.lngMax
+  );
+}
 
 // All Arab capitals + conflict cities with coords
 const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
@@ -87,8 +106,6 @@ const titles: Record<string, string[]> = {
   ],
 };
 
-const vesselNames = ["USS EISENHOWER", "USS GERALD FORD", "USS BATAAN", "INS MAGEN", "IRGCN SHAHID SOLEIMANI", "HMS DIAMOND", "FS ALSACE", "HMAS HOBART", "COSCO SHIPPING ROSE", "EVER GIVEN II", "PACIFIC TRADER", "IRANIAN TANKER SUEZ", "HOUTHI PATROL 7", "SAUDI COAST GUARD 12"];
-
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -110,26 +127,17 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString();
   const actions: string[] = [];
 
-  // 1. Drift a vessel
+  // 1. Drift a vessel — with water validation
   const vesselId = `v-00${Math.ceil(Math.random() * 8)}`;
   const { data: currentVessel } = await supabase.from("vessels").select("lat,lng,heading,speed").eq("id", vesselId).single();
   if (currentVessel) {
     const headingRad = (currentVessel.heading || 0) * Math.PI / 180;
     const drift = 0.02 + Math.random() * 0.08;
-    let newLat = currentVessel.lat + drift * Math.cos(headingRad);
-    let newLng = currentVessel.lng + drift * Math.sin(headingRad);
-    if (newLat < 2 || newLat > 42 || newLng < -10 || newLng > 63) {
-      const newHeading = (currentVessel.heading + 180) % 360;
-      newLat = currentVessel.lat - drift * Math.cos(headingRad);
-      newLng = currentVessel.lng - drift * Math.sin(headingRad);
-      await supabase.from("vessels").update({
-        lat: Math.max(2, Math.min(42, newLat)),
-        lng: Math.max(-10, Math.min(63, newLng)),
-        heading: newHeading,
-        speed: rand(5, 22),
-        timestamp: now,
-      }).eq("id", vesselId);
-    } else {
+    const newLat = currentVessel.lat + drift * Math.cos(headingRad);
+    const newLng = currentVessel.lng + drift * Math.sin(headingRad);
+
+    if (isInWater(newLat, newLng)) {
+      // New position is still in water — commit
       const headingDrift = (Math.random() - 0.5) * 10;
       await supabase.from("vessels").update({
         lat: newLat,
@@ -138,14 +146,38 @@ Deno.serve(async (req) => {
         speed: rand(5, 22),
         timestamp: now,
       }).eq("id", vesselId);
+      actions.push(`Drifted vessel ${vesselId} (in water)`);
+    } else {
+      // New position is on land — reverse heading and stay put
+      const reversedHeading = (currentVessel.heading + 180) % 360;
+      // Try reversed direction
+      const revLat = currentVessel.lat + drift * Math.cos(reversedHeading * Math.PI / 180);
+      const revLng = currentVessel.lng + drift * Math.sin(reversedHeading * Math.PI / 180);
+      if (isInWater(revLat, revLng)) {
+        await supabase.from("vessels").update({
+          lat: revLat,
+          lng: revLng,
+          heading: reversedHeading,
+          speed: rand(5, 22),
+          timestamp: now,
+        }).eq("id", vesselId);
+        actions.push(`Reversed vessel ${vesselId} (hit land boundary)`);
+      } else {
+        // Both directions lead to land — just update heading, don't move
+        await supabase.from("vessels").update({
+          heading: reversedHeading,
+          speed: rand(3, 10),
+          timestamp: now,
+        }).eq("id", vesselId);
+        actions.push(`Vessel ${vesselId} stuck, reversed heading only`);
+      }
     }
   }
-  actions.push(`Drifted vessel ${vesselId}`);
 
   // 2. Generate geo alerts for 2-3 random cities
   const selectedCities = [];
   const shuffled = [...cityNames].sort(() => Math.random() - 0.5);
-  const numCities = 2 + Math.floor(Math.random() * 2); // 2-3 cities per tick
+  const numCities = 2 + Math.floor(Math.random() * 2);
   for (let i = 0; i < numCities && i < shuffled.length; i++) {
     selectedCities.push(shuffled[i]);
   }
@@ -155,7 +187,6 @@ Deno.serve(async (req) => {
     const geoType = pick(geoTypes);
     const severity = pick(severities);
     const alertId = `ga-live-${cityName.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    // Small random offset within city (±0.05 degrees ≈ 5km)
     const lat = coords.lat + (Math.random() - 0.5) * 0.1;
     const lng = coords.lng + (Math.random() - 0.5) * 0.1;
 
@@ -173,7 +204,6 @@ Deno.serve(async (req) => {
     });
     actions.push(`Inserted geo alert for ${cityName}`);
 
-    // Also insert a timeline event for each alert
     const teId = `te-live-${cityName.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const teTypes = ["airspace", "maritime", "alert", "diplomatic"] as const;
     const teType = geoType === "MILITARY" ? "alert" : geoType === "DIPLOMATIC" ? "diplomatic" : geoType === "ECONOMIC" ? "maritime" : pick(teTypes);
