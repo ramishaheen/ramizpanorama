@@ -56,35 +56,32 @@ function sanitizeVesselsToWater<T extends { lat: number; lng: number }>(rows: T[
   return rows.filter((v) => isLikelyWaterPosition(v.lat, v.lng));
 }
 
-function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: boolean): string {
+function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: boolean, liteMode = false): string {
   const color = isMilitary ? "#ef4444" : "#3b82f6";
   const glow = isMilitary ? "rgba(239,68,68,0.8)" : "rgba(59,130,246,0.7)";
-  const size = isTracked ? 40 : 30;
+  const size = liteMode ? 22 : (isTracked ? 40 : 30);
   const c = size / 2;
-  const trackRing = isTracked
+  const trackRing = (!liteMode && isTracked)
     ? `<circle cx="${c}" cy="${c}" r="${c - 2}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="4 3" opacity="0.7">
         <animateTransform attributeName="transform" type="rotate" from="0 ${c} ${c}" to="360 ${c} ${c}" dur="3s" repeatCount="indefinite"/>
       </circle>`
     : "";
-  const pulse = `<circle cx="${c}" cy="${c}" r="${c * 0.5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.4">
+  const pulse = liteMode ? "" : `<circle cx="${c}" cy="${c}" r="${c * 0.5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.4">
     <animate attributeName="r" values="${c * 0.5};${c - 1}" dur="2s" repeatCount="indefinite"/>
     <animate attributeName="opacity" values="0.4;0" dur="2s" repeatCount="indefinite"/>
   </circle>`;
-  // Clear airplane silhouette — fuselage + swept wings + tail
+  const filter = liteMode ? "" : `<defs><filter id="af${isTracked?1:0}"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${glow}"/></filter></defs>`;
+  const filterAttr = liteMode ? "" : `filter="url(#af${isTracked?1:0})"`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <defs><filter id="af${isTracked?1:0}"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${glow}"/></filter></defs>
+    ${filter}
     ${trackRing}${pulse}
-    <g transform="rotate(${heading} ${c} ${c})" filter="url(#af${isTracked?1:0})">
-      <!-- fuselage -->
+    <g transform="rotate(${heading} ${c} ${c})" ${filterAttr}>
       <ellipse cx="${c}" cy="${c}" rx="${size * 0.06}" ry="${size * 0.35}" fill="${color}"/>
-      <!-- wings -->
       <polygon points="${c},${c - size * 0.02} ${c - size * 0.35},${c + size * 0.08} ${c - size * 0.3},${c + size * 0.12} ${c},${c + size * 0.05}" fill="${color}" opacity="0.95"/>
       <polygon points="${c},${c - size * 0.02} ${c + size * 0.35},${c + size * 0.08} ${c + size * 0.3},${c + size * 0.12} ${c},${c + size * 0.05}" fill="${color}" opacity="0.95"/>
-      <!-- tail fin -->
       <polygon points="${c},${c + size * 0.22} ${c - size * 0.12},${c + size * 0.32} ${c - size * 0.1},${c + size * 0.35} ${c},${c + size * 0.28}" fill="${color}" opacity="0.85"/>
       <polygon points="${c},${c + size * 0.22} ${c + size * 0.12},${c + size * 0.32} ${c + size * 0.1},${c + size * 0.35} ${c},${c + size * 0.28}" fill="${color}" opacity="0.85"/>
-      <!-- cockpit -->
-      <ellipse cx="${c}" cy="${c - size * 0.28}" rx="${size * 0.035}" ry="${size * 0.05}" fill="rgba(255,255,255,0.35)"/>
+      ${liteMode ? "" : `<ellipse cx="${c}" cy="${c - size * 0.28}" rx="${size * 0.035}" ry="${size * 0.05}" fill="rgba(255,255,255,0.35)"/>`}
     </g>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
