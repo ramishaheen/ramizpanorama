@@ -2034,9 +2034,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   useEffect(() => {
     fetchFlights();
-    flightIntervalRef.current = setInterval(fetchFlights, 15000);
+    const interval = liteMode ? 30000 : 15000;
+    flightIntervalRef.current = setInterval(fetchFlights, interval);
     return () => { if (flightIntervalRef.current) clearInterval(flightIntervalRef.current); };
-  }, [fetchFlights]);
+  }, [fetchFlights, liteMode]);
 
   // ===== REAL-TIME INTERPOLATION ENGINE — move aircraft smoothly between polls =====
   // Stores previous heading snapshots for smooth rotation
