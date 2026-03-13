@@ -36,10 +36,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── PULSE: Refresh sensor feed timestamps to simulate live data ──
+    if (action === "pulse") {
+      const { data: activeFeeds, error: pErr } = await sb.from("sensor_feeds")
+        .select("id, health_score, status")
+        .in("status", ["active", "degraded"]);
+      if (pErr) throw pErr;
+
+      let updated = 0;
+      for (const feed of (activeFeeds || [])) {
+        const jitter = (Math.random() - 0.5) * 6; // ±3%
+        const newHealth = Math.max(50, Math.min(100, feed.health_score + jitter));
+        await sb.from("sensor_feeds").update({
+          last_data_at: new Date().toISOString(),
+          health_score: Math.round(newHealth),
+        }).eq("id", feed.id);
+        updated++;
+      }
+
+      return new Response(JSON.stringify({ pulsed: updated }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── INGEST: Accept sensor data, normalize, create/update ontology entities ──
     if (action === "ingest") {
       const { feed_id, detections } = body;
-      if (!feed_id || !detections?.length) throw new Error("feed_id and detections[] required");
+      if (!detections?.length) throw new Error("detections[] required");
 
       const { data: feed, error: feedErr } = await sb.from("sensor_feeds").select("*").eq("id", feed_id).single();
       if (feedErr || !feed) throw new Error("Sensor feed not found");
