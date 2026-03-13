@@ -417,7 +417,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         .showAtmosphere(true)
         .width(globeContainerRef.current.clientWidth)
         .height(globeContainerRef.current.clientHeight)
-        .pointsData([]).pointLat("lat").pointLng("lng").pointAltitude("pointAlt").pointColor("color").pointRadius("radius").pointLabel("label")
+        .pointsData([]).pointLat("lat").pointLng("lng").pointAltitude("pointAlt").pointColor("color").pointRadius("radius").pointLabel("label").onPointClick((point: any) => {
+          if (point?.targetTrackId) setWorkbenchTargetId(point.targetTrackId);
+        })
         .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude("alt").htmlElement("el")
         .objectsData([]).objectLat("lat").objectLng("lng").objectAltitude("alt").objectLabel("label")
         .arcsData([]).arcStartLat("startLat").arcStartLng("startLng").arcEndLat("endLat").arcEndLng("endLng").arcColor("colors").arcStroke(0.5).arcDashLength(0.6).arcDashGap(0.1).arcDashAnimateTime(2000).arcAltitudeAutoScale(0.25)
