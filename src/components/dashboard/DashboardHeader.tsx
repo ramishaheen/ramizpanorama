@@ -26,6 +26,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
   const [showBalloon, setShowBalloon] = useState(true);
   const [showLiveChannels, setShowLiveChannels] = useState(false);
   const [show4DMap, setShow4DMap] = useState(false);
+  const [showCyberImmunity, setShowCyberImmunity] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowBalloon(false), 10000);
