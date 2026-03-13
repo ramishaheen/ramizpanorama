@@ -2230,33 +2230,53 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         <div className="text-[8px] font-mono tracking-wider text-primary/50">
           REAL-TIME SATELLITE TRACKING • OSINT FUSION
         </div>
-        <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/55">
-          <div className="text-destructive/70">⬤ TOP SECRET // SI-TK // NOFORN</div>
-          <div>
-            ▸ TRACKING {satellites.length} OBJECTS across {Object.keys(CATEGORY_COLORS).length} TYPES
+        {(() => {
+          const isLive = satellites.length > 0;
+          const B = { total: 4800, Military: 210, ISR: 145, "Early Warning": 18, "SIGINT/ELINT": 42, Navigation: 135, Communication: 2800, Weather: 85, "Earth Observation": 320, "SAR Imaging": 65, Scientific: 95, "Data Relay": 12, "Search & Rescue": 8 };
+          const BA = { VLEO: 380, LEO: 3200, MEO: 140, GEO: 580 };
+          const c = (cat: string) => isLive ? satellites.filter((s) => s.category === cat).length : (B as any)[cat] || 0;
+          const total = isLive ? satellites.length : B.total;
+          const vleo = isLive ? satellites.filter((s) => s.alt < 450).length : BA.VLEO;
+          const leo = isLive ? satellites.filter((s) => s.alt >= 450 && s.alt < 2000).length : BA.LEO;
+          const meo = isLive ? satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length : BA.MEO;
+          const geo = isLive ? satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length : BA.GEO;
+          const shimmer = !isLive && loading ? "animate-pulse" : "";
+          return (
+          <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/55">
+            <div className="text-destructive/70">⬤ TOP SECRET // SI-TK // NOFORN</div>
+            <div className={shimmer}>
+              ▸ TRACKING <span className="text-primary/90 font-bold">{total.toLocaleString()}</span> OBJECTS across {Object.keys(CATEGORY_COLORS).length} TYPES
+            </div>
+            <div className={shimmer}>
+              ▸ MIL: {c("Military")} • ISR: {c("ISR")} • EW: {c("Early Warning")} • SIGINT: {c("SIGINT/ELINT")}
+            </div>
+            <div className={shimmer}>
+              ▸ NAV: {c("Navigation")} • COMM: {c("Communication")} • WX: {c("Weather")} • EO: {c("Earth Observation")}
+            </div>
+            <div className={shimmer}>
+              ▸ SAR: {c("SAR Imaging")} • SCI: {c("Scientific")} • RELAY: {c("Data Relay")} • S&R: {c("Search & Rescue")}
+            </div>
+            <div className={shimmer}>
+              ▸ VLEO: {vleo} • LEO: {leo} • MEO: {meo} • GEO: {geo}
+            </div>
+            <div>
+              ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
+            </div>
+            <div className="flex items-center gap-1">
+              {loading && !isLive ? (
+                <>▸ STATUS: <span className="text-warning animate-pulse">ACQUIRING NORAD FEED ◌</span></>
+              ) : isLive ? (
+                <>▸ STATUS: <span className="text-success">LIVE</span> <span className="w-1.5 h-1.5 rounded-full bg-success inline-block animate-pulse" /> <span className="text-primary/70">{satellites.length.toLocaleString()} TRACKED</span></>
+              ) : (
+                <>▸ STATUS: <span className="text-warning">CACHED</span> <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block" /> <span className="text-primary/70">{B.total.toLocaleString()} BASELINE</span></>
+              )}
+            </div>
+            <div className="text-muted-foreground/45">
+              ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
+            </div>
           </div>
-          <div>
-            ▸ MIL: {satellites.filter((s) => s.category === "Military").length} • ISR: {satellites.filter((s) => s.category === "ISR").length} • EW: {satellites.filter((s) => s.category === "Early Warning").length} • SIGINT: {satellites.filter((s) => s.category === "SIGINT/ELINT").length}
-          </div>
-          <div>
-            ▸ NAV: {satellites.filter((s) => s.category === "Navigation").length} • COMM: {satellites.filter((s) => s.category === "Communication").length} • WX: {satellites.filter((s) => s.category === "Weather").length} • EO: {satellites.filter((s) => s.category === "Earth Observation").length}
-          </div>
-          <div>
-            ▸ SAR: {satellites.filter((s) => s.category === "SAR Imaging").length} • SCI: {satellites.filter((s) => s.category === "Scientific").length} • RELAY: {satellites.filter((s) => s.category === "Data Relay").length} • S&R: {satellites.filter((s) => s.category === "Search & Rescue").length}
-          </div>
-          <div>
-            ▸ VLEO: {satellites.filter((s) => s.alt < 450).length} • LEO: {satellites.filter((s) => s.alt >= 450 && s.alt < 2000).length} • MEO: {satellites.filter((s) => s.alt >= 2000 && s.alt < 35000).length} • GEO: {satellites.filter((s) => s.alt >= 35000 && s.alt <= 36500).length}
-          </div>
-          <div>
-            ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
-          </div>
-          <div>
-            ▸ SOURCES: CELESTRAK × 23 GROUPS • NORAD TLE
-          </div>
-          <div className="text-muted-foreground/45">
-            ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
-          </div>
-        </div>
+          );
+        })()}
         {/* OSINT Legend */}
         <div className="mt-2 pt-2 space-y-1 border-t border-primary/10">
           <div className="text-[7px] font-mono uppercase tracking-widest text-primary/40">OSINT LAYER</div>
