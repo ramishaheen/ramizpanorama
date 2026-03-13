@@ -1,26 +1,34 @@
 
 
-# Default Cyber Immunity to Jordan + 4-Week Operational Feed
+# Lite Mode: Clear Gun-Eye Center + Radial Blur + Performance Boost
 
-## Changes
+## What Changes
 
-### 1. Default country filter to "Jordan" (line 887)
-Change `useState("All")` → `useState("Jordan")` so when Cyber Immunity opens, it immediately filters all data to show Jordan-related threats.
+### 1. Radial Blur Effect — Clear Center, Blurred Edges
+Add a CSS radial blur overlay when `liteMode` is active in both **SatelliteGlobe** and **UrbanScene3D**. This uses a combination of `backdrop-filter: blur()` with a radial `mask-image` to keep the center (where the gun-eye reticle sits) crystal clear while blurring the periphery.
 
-### 2. Expand timeline window from 24h to 4 weeks (28 days)
-Currently the timeline slider maps 0–100 to a 24-hour window. Change:
-- `windowMs` from `24 * 60 * 60 * 1000` → `28 * 24 * 60 * 60 * 1000` (lines 942, 1011)
-- Update tick labels from `0h–24h` to `4w–0` (week markers) in the timeline footer (lines 1387, 1396–1401)
-- Update the "hours ago" label to show days/weeks instead (lines 1016–1020)
-- Update the "24h Attack Frequency" label to "4-Week Attack Frequency" (line 1302)
-- Update the "Live Operations Feed" label text reference (line 1420–1421)
+**Technique**: A full-screen overlay div with `backdrop-filter: blur(4px)` masked by a radial gradient (`radial-gradient(circle, transparent 15%, black 40%)`) — the transparent center lets the sharp content through, the opaque edges apply the blur.
 
-### 3. Update edge function prompt to emphasize Jordan
-In `supabase/functions/cyber-threats/index.ts`, boost Jordan prominence in the AI prompt (line 116):
-- Move Jordan to the top of the actor list with expanded detail: "Jordanian cyber landscape — NCSC defense operations, banking/telecom infrastructure threats, APT targeting of government systems, cross-border cyber operations"
-- Request more Jordan-specific incidents (at least 3–4 of the 12–18)
+### 2. Gun-Eye Reticle Enhancement
+- Increase reticle opacity from 0.5 → 0.8 (SatelliteGlobe) and 0.3 → 0.7 (UrbanScene3D)
+- Make lines slightly thicker for better visibility against the blurred background
+- Add a subtle glow via `filter: drop-shadow` on the SVG
+
+### 3. Performance Optimizations in Lite Mode
+
+**SatelliteGlobe (`SatelliteGlobe.tsx`)**:
+- Already reduces pixel ratio to 0.5 — good
+- Reduce label rendering: skip city HTML elements entirely when `liteMode` (currently just shrinks them)
+- Disable atmosphere glow layer when lite
+
+**UrbanScene3D (`UrbanScene3D.tsx`)**:
+- Already disables heavy layers and reduces aircraft SVGs
+- Add: reduce Google Maps tile detail by setting `map.setOptions({ maxZoom: 16 })` in lite mode
+- Increase flight poll interval from 30s → 60s in lite mode
+- Disable interpolation animation (smooth aircraft movement) in lite mode — just snap positions
+- Skip info window hover listeners on markers in lite mode
 
 ### Files Changed
-- `src/components/dashboard/CyberImmunityModal.tsx` — default filter, timeline window, labels
-- `supabase/functions/cyber-threats/index.ts` — prompt emphasis on Jordan
+- `src/components/dashboard/SatelliteGlobe.tsx` — blur overlay, reticle enhancement, perf tweaks
+- `src/components/dashboard/UrbanScene3D.tsx` — blur overlay, reticle enhancement, perf tweaks
 
