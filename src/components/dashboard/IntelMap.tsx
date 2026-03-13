@@ -610,7 +610,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       center: [28, 48],
       zoom: 5,
       zoomControl: true,
-      attributionControl: true,
+      attributionControl: false,
       scrollWheelZoom: false,
       dragging: true,
     });
