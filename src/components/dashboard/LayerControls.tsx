@@ -43,6 +43,9 @@ const layerConfig = [
   { key: "conflicts" as const, trKey: "layer.conflicts", icon: Crosshair, color: "text-warning" },
   { key: "heatmap" as const, trKey: "layer.heatmap", icon: Radio, color: "text-critical" },
   { key: "cities" as const, trKey: "layer.cities", icon: MapPin, color: "text-primary" },
+  { key: "googlePOI" as const, trKey: "layer.googlePOI", icon: MapIcon, color: "text-accent" },
+  { key: "googleTraffic" as const, trKey: "layer.googleTraffic", icon: TrafficCone, color: "text-warning" },
+  { key: "googleRoutes" as const, trKey: "layer.googleRoutes", icon: Route, color: "text-primary" },
 ];
 
 export const LayerControls = ({ layers, onToggle }: LayerControlsProps) => {
