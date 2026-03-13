@@ -5,14 +5,19 @@ export interface CyberThreat {
   id: string;
   date: string;
   attacker: string;
+  attackerCountry?: string;
   attackerFlag: string;
   target: string;
+  targetCountry?: string;
   targetFlag: string;
   type: string;
   severity: "critical" | "high" | "medium" | "low";
   description: string;
   details: string;
   source?: string;
+  sourceName?: string;
+  cve?: string;
+  iocs?: string[];
 }
 
 interface CyberThreatsState {
@@ -24,8 +29,8 @@ interface CyberThreatsState {
   refresh: () => void;
 }
 
-const CACHE_KEY = "waros-cyber-threats";
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_KEY = "waros-cyber-threats-v2";
+const CACHE_DURATION = 5 * 60 * 1000;
 
 function getCached(): { data: CyberThreat[]; lastUpdated: string; sources: string[] } | null {
   try {
@@ -53,7 +58,6 @@ export function useCyberThreats(): CyberThreatsState {
   const [sources, setSources] = useState<string[]>([]);
 
   const fetchThreats = useCallback(async (skipCache = false) => {
-    // Check cache first
     if (!skipCache) {
       const cached = getCached();
       if (cached) {
@@ -74,9 +78,14 @@ export function useCyberThreats(): CyberThreatsState {
       if (fnError) throw new Error(fnError.message);
       if (!data?.success) throw new Error(data?.error || 'Failed to fetch threats');
 
-      const fetchedThreats = (data.data || []).map((t: any) => ({
+      const fetchedThreats: CyberThreat[] = (data.data || []).map((t: any) => ({
         ...t,
         severity: ['critical', 'high', 'medium', 'low'].includes(t.severity) ? t.severity : 'medium',
+        attackerCountry: t.attackerCountry || '',
+        targetCountry: t.targetCountry || '',
+        sourceName: t.sourceName || '',
+        cve: t.cve || '',
+        iocs: Array.isArray(t.iocs) ? t.iocs : [],
       }));
 
       setThreats(fetchedThreats);
@@ -92,7 +101,6 @@ export function useCyberThreats(): CyberThreatsState {
   }, []);
 
   useEffect(() => {
-    // Stagger: cyber threats load after 24s
     const initialDelay = setTimeout(() => fetchThreats(), 24000);
     const interval = setInterval(() => fetchThreats(true), CACHE_DURATION);
     return () => { clearTimeout(initialDelay); clearInterval(interval); };
