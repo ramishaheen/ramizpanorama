@@ -2689,8 +2689,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         {/* AI Prediction Results Panel */}
         {predictionData && (
           <div
-            className="absolute top-20 left-[340px] z-[2004] w-80 rounded border backdrop-blur-md pointer-events-auto animate-fade-in"
-            style={{ background: "rgba(5,10,18,0.94)", borderColor: "#22c55e40", boxShadow: "0 0 25px #22c55e15" }}
+            className="absolute top-20 left-[340px] z-[2004] w-80 border backdrop-blur-md pointer-events-auto animate-fade-in gotham-orbital-panel"
+            style={{ borderColor: "#22c55e40", boxShadow: "0 0 25px #22c55e15" }}
           >
             <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: "#22c55e30", background: "#22c55e08" }}>
               <div className="flex items-center gap-1.5">
