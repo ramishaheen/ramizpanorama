@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, FormEvent } from "react";
+import warosLogo from "@/assets/waros-logo.png";
 import { createPortal } from "react-dom";
 import {
   X, RefreshCw, ShieldAlert, Search,
