@@ -119,16 +119,15 @@ export function useLiveDashboard() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d.toISOString();
-  }, []);
+  }, [airspaceAlerts, vessels, geoAlerts, rockets]);
 
   const dailyCounts = useMemo(() => {
     const todayAirspace = airspaceAlerts.filter(a => a.active && a.timestamp >= todayStart);
-    const todayVessels = vessels.filter(v => v.timestamp >= todayStart);
     const todayGeoAlerts = geoAlerts.filter(g => g.timestamp >= todayStart);
     const todayRockets = rockets.filter(r => r.timestamp >= todayStart);
     return {
       airspaceCount: todayAirspace.length,
-      vesselCount: todayVessels.length,
+      vesselCount: vessels.length, // all tracked vessels (persistent entities)
       alertCount: todayGeoAlerts.length + todayAirspace.length,
       rocketCount: todayRockets.filter(r => r.status === 'launched' || r.status === 'in_flight').length,
       impactCount: todayRockets.filter(r => r.status === 'impact' || r.status === 'intercepted').length,

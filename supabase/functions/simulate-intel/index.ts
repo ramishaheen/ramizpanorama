@@ -7,15 +7,15 @@ const corsHeaders = {
 
 // Maritime corridors — vessels must stay within these water zones
 const MARITIME_CORRIDORS = [
-  { latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 },  // Persian Gulf
-  { latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 },  // Gulf of Oman / Arabian Sea
-  { latMin: 12.0, latMax: 30.8, lngMin: 32.0, lngMax: 43.8 },  // Red Sea
-  { latMin: 30.0, latMax: 33.6, lngMin: 31.8, lngMax: 33.2 },  // Suez Canal
-  { latMin: 31.0, latMax: 37.2, lngMin: 33.2, lngMax: 36.8 },  // Eastern Mediterranean
-  { latMin: 36.3, latMax: 47.2, lngMin: 47.0, lngMax: 54.8 },  // Caspian Sea
-  { latMin: 10.0, latMax: 15.0, lngMin: 42.0, lngMax: 52.0 },  // Gulf of Aden
-  { latMin: 33.0, latMax: 41.0, lngMin: 24.0, lngMax: 36.0 },  // Mediterranean (wider)
-  { latMin: 20.0, latMax: 30.0, lngMin: 58.0, lngMax: 68.0 },  // Arabian Sea (wider)
+  { latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 },
+  { latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 },
+  { latMin: 12.0, latMax: 30.8, lngMin: 32.0, lngMax: 43.8 },
+  { latMin: 30.0, latMax: 33.6, lngMin: 31.8, lngMax: 33.2 },
+  { latMin: 31.0, latMax: 37.2, lngMin: 33.2, lngMax: 36.8 },
+  { latMin: 36.3, latMax: 47.2, lngMin: 47.0, lngMax: 54.8 },
+  { latMin: 10.0, latMax: 15.0, lngMin: 42.0, lngMax: 52.0 },
+  { latMin: 33.0, latMax: 41.0, lngMin: 24.0, lngMax: 36.0 },
+  { latMin: 20.0, latMax: 30.0, lngMin: 58.0, lngMax: 68.0 },
 ];
 
 function isInWater(lat: number, lng: number): boolean {
@@ -60,6 +60,9 @@ const cityNames = Object.keys(CITY_COORDS);
 
 const geoTypes = ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"] as const;
 const severities = ["low", "medium", "high", "critical"] as const;
+const airspaceTypes = ["NOTAM", "TFR", "CLOSURE"] as const;
+const rocketTypes = ["Ballistic", "Cruise", "SRBM", "MRBM", "Drone"] as const;
+const rocketStatuses = ["launched", "in_flight"] as const;
 
 const titles: Record<string, string[]> = {
   MILITARY: [
@@ -106,6 +109,17 @@ const titles: Record<string, string[]> = {
   ],
 };
 
+const airspaceDescriptions = [
+  "NOTAM issued — military exercise in progress",
+  "Temporary flight restriction active",
+  "Airspace closure due to security operations",
+  "Restricted zone expanded — UAV activity detected",
+  "Flight advisory — missile defense test",
+  "Emergency airspace restriction — active threat",
+  "No-fly zone enforced — ongoing hostilities",
+  "Air traffic rerouted — military operations",
+];
+
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -137,7 +151,6 @@ Deno.serve(async (req) => {
     const newLng = currentVessel.lng + drift * Math.sin(headingRad);
 
     if (isInWater(newLat, newLng)) {
-      // New position is still in water — commit
       const headingDrift = (Math.random() - 0.5) * 10;
       await supabase.from("vessels").update({
         lat: newLat,
@@ -148,26 +161,18 @@ Deno.serve(async (req) => {
       }).eq("id", vesselId);
       actions.push(`Drifted vessel ${vesselId} (in water)`);
     } else {
-      // New position is on land — reverse heading and stay put
       const reversedHeading = (currentVessel.heading + 180) % 360;
-      // Try reversed direction
       const revLat = currentVessel.lat + drift * Math.cos(reversedHeading * Math.PI / 180);
       const revLng = currentVessel.lng + drift * Math.sin(reversedHeading * Math.PI / 180);
       if (isInWater(revLat, revLng)) {
         await supabase.from("vessels").update({
-          lat: revLat,
-          lng: revLng,
-          heading: reversedHeading,
-          speed: rand(5, 22),
-          timestamp: now,
+          lat: revLat, lng: revLng, heading: reversedHeading,
+          speed: rand(5, 22), timestamp: now,
         }).eq("id", vesselId);
         actions.push(`Reversed vessel ${vesselId} (hit land boundary)`);
       } else {
-        // Both directions lead to land — just update heading, don't move
         await supabase.from("vessels").update({
-          heading: reversedHeading,
-          speed: rand(3, 10),
-          timestamp: now,
+          heading: reversedHeading, speed: rand(3, 10), timestamp: now,
         }).eq("id", vesselId);
         actions.push(`Vessel ${vesselId} stuck, reversed heading only`);
       }
@@ -191,16 +196,10 @@ Deno.serve(async (req) => {
     const lng = coords.lng + (Math.random() - 0.5) * 0.1;
 
     await supabase.from("geo_alerts").insert({
-      id: alertId,
-      type: geoType,
-      region: cityName,
+      id: alertId, type: geoType, region: cityName,
       title: `[${cityName}] ${pick(titles[geoType])}`,
       summary: `Live intelligence update for ${cityName}. Automated monitoring detected activity change.`,
-      severity,
-      source: "WarOS Auto-Monitor",
-      timestamp: now,
-      lat,
-      lng,
+      severity, source: "WarOS Auto-Monitor", timestamp: now, lat, lng,
     });
     actions.push(`Inserted geo alert for ${cityName}`);
 
@@ -208,61 +207,144 @@ Deno.serve(async (req) => {
     const teTypes = ["airspace", "maritime", "alert", "diplomatic"] as const;
     const teType = geoType === "MILITARY" ? "alert" : geoType === "DIPLOMATIC" ? "diplomatic" : geoType === "ECONOMIC" ? "maritime" : pick(teTypes);
     await supabase.from("timeline_events").insert({
-      id: teId,
-      type: teType,
-      title: `[${cityName}] ${pick(titles[geoType])}`,
-      severity,
-      timestamp: now,
+      id: teId, type: teType, title: `[${cityName}] ${pick(titles[geoType])}`,
+      severity, timestamp: now,
     });
     actions.push(`Inserted timeline event for ${cityName}`);
   }
 
-  // 3. Update risk score
-  const { data: currentRisk } = await supabase
-    .from("risk_scores")
+  // 3. Generate airspace alerts (1-2 per poll)
+  const numAirspace = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < numAirspace; i++) {
+    const city = pick(cityNames);
+    const coords = CITY_COORDS[city];
+    const aaId = `aa-live-${city.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    await supabase.from("airspace_alerts").insert({
+      id: aaId,
+      type: pick(airspaceTypes),
+      region: city,
+      lat: coords.lat + (Math.random() - 0.5) * 0.2,
+      lng: coords.lng + (Math.random() - 0.5) * 0.2,
+      radius: rand(5, 50),
+      severity: pick(severities),
+      description: pick(airspaceDescriptions),
+      timestamp: now,
+      active: true,
+    });
+    actions.push(`Inserted airspace alert for ${city}`);
+  }
+
+  // 4. Rocket simulation — 40% chance to launch new, always transition existing active ones
+  // Transition active rockets first
+  const { data: activeRockets } = await supabase
+    .from("rockets")
     .select("*")
-    .order("last_updated", { ascending: false })
-    .limit(1)
-    .single();
+    .like("id", "rk-live-%")
+    .in("status", ["launched", "in_flight"]);
+
+  if (activeRockets) {
+    for (const rocket of activeRockets) {
+      const newStatus = Math.random() < 0.5 ? "intercepted" : (rocket.status === "launched" ? "in_flight" : "impact");
+      const progress = newStatus === "in_flight" ? 0.5 : 1.0;
+      await supabase.from("rockets").update({
+        status: newStatus,
+        current_lat: rocket.origin_lat + (rocket.target_lat - rocket.origin_lat) * progress,
+        current_lng: rocket.origin_lng + (rocket.target_lng - rocket.origin_lng) * progress,
+        altitude: newStatus === "in_flight" ? rand(50, 200) : 0,
+        speed: newStatus === "in_flight" ? rand(800, 2400) : 0,
+        timestamp: now,
+      }).eq("id", rocket.id);
+      actions.push(`Transitioned rocket ${rocket.id} to ${newStatus}`);
+    }
+  }
+
+  // Launch new rocket (40% chance)
+  if (Math.random() < 0.4) {
+    const originCity = pick(cityNames);
+    const targetCity = pick(cityNames.filter(c => c !== originCity));
+    const oCoords = CITY_COORDS[originCity];
+    const tCoords = CITY_COORDS[targetCity];
+    const rkId = `rk-live-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const status = pick(rocketStatuses);
+    const progress = status === "launched" ? 0.1 : 0.4;
+    await supabase.from("rockets").insert({
+      id: rkId,
+      name: `${pick(rocketTypes)}-${Math.floor(Math.random() * 900 + 100)}`,
+      type: pick(rocketTypes),
+      origin_lat: oCoords.lat,
+      origin_lng: oCoords.lng,
+      target_lat: tCoords.lat,
+      target_lng: tCoords.lng,
+      current_lat: oCoords.lat + (tCoords.lat - oCoords.lat) * progress,
+      current_lng: oCoords.lng + (tCoords.lng - oCoords.lng) * progress,
+      status,
+      severity: pick(["high", "critical"] as const),
+      speed: rand(600, 2400),
+      altitude: rand(30, 180),
+      timestamp: now,
+    });
+    actions.push(`Launched new rocket ${rkId} from ${originCity} → ${targetCity}`);
+  }
+
+  // 5. Update risk score
+  const { data: currentRisk } = await supabase
+    .from("risk_scores").select("*")
+    .order("last_updated", { ascending: false }).limit(1).single();
 
   if (currentRisk) {
-    const nudge = () => Math.max(0, Math.min(100, currentRisk.overall + Math.floor(Math.random() * 11) - 5));
-    const newOverall = nudge();
+    const nudge = (v: number) => Math.max(0, Math.min(100, v + Math.floor(Math.random() * 11) - 5));
+    const newOverall = nudge(currentRisk.overall);
     await supabase.from("risk_scores").update({
       overall: newOverall,
-      airspace: Math.max(0, Math.min(100, currentRisk.airspace + Math.floor(Math.random() * 9) - 4)),
-      maritime: Math.max(0, Math.min(100, currentRisk.maritime + Math.floor(Math.random() * 9) - 4)),
-      diplomatic: Math.max(0, Math.min(100, currentRisk.diplomatic + Math.floor(Math.random() * 9) - 4)),
-      sentiment: Math.max(0, Math.min(100, currentRisk.sentiment + Math.floor(Math.random() * 9) - 4)),
+      airspace: nudge(currentRisk.airspace),
+      maritime: nudge(currentRisk.maritime),
+      diplomatic: nudge(currentRisk.diplomatic),
+      sentiment: nudge(currentRisk.sentiment),
       trend: newOverall > currentRisk.overall ? "rising" : newOverall < currentRisk.overall ? "falling" : "stable",
       last_updated: now,
     }).eq("id", currentRisk.id);
     actions.push("Updated risk scores");
   }
 
-  // 5. Prune old live alerts (keep last 20)
+  // 6. Prune old live data (keep reasonable amounts)
+  // Geo alerts — keep last 100
   const { data: oldAlerts } = await supabase
-    .from("geo_alerts")
-    .select("id")
-    .like("id", "ga-live-%")
+    .from("geo_alerts").select("id").like("id", "ga-live-%")
     .order("timestamp", { ascending: false });
-
-  if (oldAlerts && oldAlerts.length > 50) {
-    const toDelete = oldAlerts.slice(50).map((a) => a.id);
+  if (oldAlerts && oldAlerts.length > 100) {
+    const toDelete = oldAlerts.slice(100).map((a) => a.id);
     await supabase.from("geo_alerts").delete().in("id", toDelete);
-    actions.push(`Pruned ${toDelete.length} old alerts`);
+    actions.push(`Pruned ${toDelete.length} old geo alerts`);
   }
 
+  // Timeline events — keep last 80
   const { data: oldEvents } = await supabase
-    .from("timeline_events")
-    .select("id")
-    .like("id", "te-live-%")
+    .from("timeline_events").select("id").like("id", "te-live-%")
     .order("timestamp", { ascending: false });
-
   if (oldEvents && oldEvents.length > 80) {
     const toDelete = oldEvents.slice(80).map((e) => e.id);
     await supabase.from("timeline_events").delete().in("id", toDelete);
     actions.push(`Pruned ${toDelete.length} old timeline events`);
+  }
+
+  // Airspace alerts — keep last 30
+  const { data: oldAirspace } = await supabase
+    .from("airspace_alerts").select("id").like("id", "aa-live-%")
+    .order("timestamp", { ascending: false });
+  if (oldAirspace && oldAirspace.length > 30) {
+    const toDelete = oldAirspace.slice(30).map((a) => a.id);
+    await supabase.from("airspace_alerts").delete().in("id", toDelete);
+    actions.push(`Pruned ${toDelete.length} old airspace alerts`);
+  }
+
+  // Rockets — keep last 15 live ones
+  const { data: oldRockets } = await supabase
+    .from("rockets").select("id").like("id", "rk-live-%")
+    .order("timestamp", { ascending: false });
+  if (oldRockets && oldRockets.length > 15) {
+    const toDelete = oldRockets.slice(15).map((r) => r.id);
+    await supabase.from("rockets").delete().in("id", toDelete);
+    actions.push(`Pruned ${toDelete.length} old rockets`);
   }
 
   return new Response(JSON.stringify({ ok: true, actions }), {
