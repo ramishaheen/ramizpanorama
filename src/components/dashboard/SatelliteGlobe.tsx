@@ -2393,7 +2393,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                   <ScrollArea className="h-48 border-t border-white/10">
                     <div className="divide-y divide-white/5">
                       {(() => {
-                        const filtered = vesselFilter === "ALL" ? aisVessels.data : aisVessels.data.filter(v => v.type === vesselFilter);
+                        const waterOnly = sanitizeVesselsToWater(aisVessels.data);
+                        const filtered = vesselFilter === "ALL" ? waterOnly : waterOnly.filter(v => v.type === vesselFilter);
                         const sorted = [...filtered].sort((a, b) => b.speed - a.speed).slice(0, 50);
                         if (sorted.length === 0) return (
                           <div className="px-3 py-4 text-center">
