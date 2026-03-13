@@ -938,6 +938,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
+    // ========== SHOOTER ASSETS ==========
+    if (layers.shooterAssets && shooterAssets.length > 0) {
+      const SHOOTER_ICONS: Record<string, string> = {
+        mq9_reaper: "🛩️", mq1_predator: "🛩️", f35_lightning: "✈️", f16_falcon: "✈️",
+        ah64_apache: "🚁", artillery_m777: "💥", mlrs_himars: "🚀",
+        naval_destroyer: "🚢", naval_frigate: "⚓", missile_battery_patriot: "🛡️",
+      };
+      const TASKING_COL: Record<string, string> = { idle: "#22c55e", tasked: "#eab308", rtb: "#f97316", maintenance: "#6b7280", combat: "#ef4444" };
+      shooterAssets.forEach((s: any) => {
+        const col = TASKING_COL[s.current_tasking] || "#888";
+        const icon = SHOOTER_ICONS[s.asset_type] || "⚡";
+        points.push({
+          lat: s.lat, lng: s.lng, pointAlt: 0.04, color: col, radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,10,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${col}30"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> SHOOTER — ${s.callsign}</div><div style="font-size:9px;margin-top:2px">${s.asset_type.replace(/_/g," ").toUpperCase()} • ${s.current_tasking.toUpperCase()}</div><div style="color:#888;font-size:8px;margin-top:1px">⛽${s.fuel_remaining_pct?.toFixed(0)}% • ROE:${s.roe_zone?.toUpperCase()} • 📡${s.command_link_status?.toUpperCase()}</div><div style="color:#666;font-size:8px">${s.lat.toFixed(3)}°N ${s.lng.toFixed(3)}°E • ${s.speed_kts}kts HDG ${s.heading}°</div></div>`,
+        });
+      });
+    }
+
     if (layers.borders) {
       globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
