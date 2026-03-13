@@ -207,12 +207,12 @@ const popupOptions: L.PopupOptions = {
 
 const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
-/** Bind popup that opens on hover instead of click */
-function bindHoverPopup(marker: L.Marker, content: string, opts?: L.PopupOptions) {
-  marker.bindPopup(content, { ...popupOptions, ...opts, className: "intel-popup" });
-  marker.on("mouseover", function (this: L.Marker) { this.openPopup(); });
-  marker.on("mouseout", function (this: L.Marker) { this.closePopup(); });
-  return marker;
+/** Bind popup that opens on hover instead of click — works with any Leaflet layer */
+function bindHoverPopup<T extends L.Layer>(layer: T, content: string, opts?: L.PopupOptions): T {
+  (layer as any).bindPopup(content, { ...popupOptions, ...opts, className: "intel-popup" });
+  layer.on("mouseover", function () { (layer as any).openPopup(); });
+  layer.on("mouseout", function () { (layer as any).closePopup(); });
+  return layer;
 }
 
 const newsSeverityColors: Record<string, string> = {
@@ -933,7 +933,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         icon: createUserItemIcon(item.type || "marker"),
       });
 
-      marker.bindPopup(`
+      bindHoverPopup(marker, `
         <div style="${popupStyle}">
           <div style="color:${config.color};font-weight:700;margin-bottom:4px;">${item.label}</div>
           <div style="font-size:9px;text-transform:uppercase;opacity:0.5;margin-bottom:4px;">${item.type}</div>
@@ -941,7 +941,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           ${item.severity ? `<div>Severity: <span style="color:${severityColors[(item.severity as AirspaceAlert["severity"]) || "medium"]}">${item.severity}</span></div>` : ""}
           ${item.radius ? `<div>Radius: ${item.radius} km</div>` : ""}
         </div>
-      `, popupOptions);
+      `);
 
       marker.addTo(group);
     });
@@ -1016,13 +1016,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           weight: 1.5,
           dashArray: alert.type === "CLOSURE" ? undefined : "5 5",
         });
-        circle.bindPopup(`
+        bindHoverPopup(circle, `
           <div style="${popupStyle}">
             <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">${alert.type} — ${alert.region}</div>
             <div style="margin-bottom:4px;">${alert.description}</div>
             <div style="font-size:9px;opacity:0.6;">${new Date(alert.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         circle.addTo(group);
       });
     }
@@ -1032,7 +1032,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const marker = L.marker([vessel.lat, vessel.lng], {
           icon: createVesselIcon(vessel.type, vessel.heading),
         });
-        marker.bindPopup(`
+        bindHoverPopup(marker, `
           <div style="${popupStyle}">
             <div style="color:${vesselColors[vessel.type]};font-weight:700;margin-bottom:4px;">${vessel.name}</div>
             <div>Flag: ${vessel.flag} | Type: ${vessel.type}</div>
@@ -1040,7 +1040,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             ${vessel.destination ? `<div>Dest: ${vessel.destination}</div>` : ""}
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(vessel.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         marker.addTo(group);
       });
     }
@@ -1054,13 +1054,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           fillOpacity: 0.7,
           weight: 2,
         });
-        marker.bindPopup(`
+        bindHoverPopup(marker, `
           <div style="${popupStyle}">
             <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">[${alert.type}] ${alert.title}</div>
             <div style="margin-bottom:4px;">${alert.summary}</div>
             <div style="font-size:9px;opacity:0.6;">${alert.source} — ${new Date(alert.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         marker.addTo(group);
       });
     }
@@ -1093,14 +1093,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const marker = L.marker([rocket.currentLat, rocket.currentLng], {
           icon: createRocketIcon(rocket.status),
         });
-        marker.bindPopup(`
+        bindHoverPopup(marker, `
           <div style="${popupStyle}">
             <div style="color:${color};font-weight:700;margin-bottom:4px;">🚀 ${rocket.name} [${rocket.type}]</div>
             <div>Status: <span style="color:${color};font-weight:600;">${rocket.status.toUpperCase()}</span></div>
             <div>Speed: ${rocket.speed} km/h | Alt: ${rocket.altitude} km</div>
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(rocket.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         marker.addTo(group);
       });
     }
@@ -1136,7 +1136,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const a = Math.sin(dLat / 2) ** 2 + Math.cos((cp.lat * Math.PI) / 180) * Math.cos((v.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
         return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) <= cp.radiusKm;
       }).length;
-      circle.bindPopup(`<div style="${popupStyle}"><div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">⚓ ${cp.name}</div><div>Vessels in zone: <b>${nearbyCount}</b></div><div>Radius: ${cp.radiusKm} km</div><div style="margin-top:4px;font-size:9px;opacity:0.7;">${cp.criticalNote}</div></div>`, popupOptions);
+      bindHoverPopup(circle, `<div style="${popupStyle}"><div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">⚓ ${cp.name}</div><div>Vessels in zone: <b>${nearbyCount}</b></div><div>Radius: ${cp.radiusKm} km</div><div style="margin-top:4px;font-size:9px;opacity:0.7;">${cp.criticalNote}</div></div>`);
       circle.addTo(group);
       L.marker([cp.lat, cp.lng], {
         icon: L.divIcon({
@@ -1186,7 +1186,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         weight: eq.magnitude >= 5 ? 2.5 : 1.5,
       });
 
-      marker.bindPopup(`
+      bindHoverPopup(marker, `
         <div style="${popupStyle}">
           <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${(eq.magnitude ?? 0).toFixed(1)} Earthquake</div>
           <div>${eq.place || "Unknown location"}</div>
@@ -1196,7 +1196,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(eq.time).toLocaleString()}</div>
           ${eq.url ? `<div style="margin-top:4px;"><a href="${eq.url}" target="_blank" style="color:#00d4ff;text-decoration:underline;font-size:9px;">USGS Details →</a></div>` : ""}
         </div>
-      `, popupOptions);
+      `);
 
       marker.addTo(group);
     });
@@ -1236,7 +1236,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const intensity = fire.frp > 100 ? "EXTREME" : fire.frp > 50 ? "HIGH" : fire.frp > 20 ? "MODERATE" : "LOW";
       const intColor = fire.frp > 100 ? "#ff0000" : fire.frp > 50 ? "#ff4500" : fire.frp > 20 ? "#ff6b00" : "#ffb800";
 
-      marker.bindPopup(`
+      bindHoverPopup(marker, `
         <div style="${popupStyle}">
           <div style="color:${intColor};font-weight:700;margin-bottom:4px;">🔥 Active Fire</div>
           <div>Intensity: <span style="color:${intColor};font-weight:600;">${intensity}</span></div>
@@ -1245,7 +1245,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           ${fire.region ? `<div>Region: ${fire.region}</div>` : ""}
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${fire.date} ${fire.time}</div>
         </div>
-      `, popupOptions);
+      `);
 
       marker.addTo(group);
     });
@@ -1526,14 +1526,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           </div>
         </div>`;
 
-      const marker = L.marker([city.lat, city.lng], { icon, zIndexOffset: 500 })
-        .bindPopup(popupContent, {
-          className: "city-landmark-popup",
-          maxWidth: 240,
-          minWidth: 220,
-      closeButton: true,
-          autoPan: false,
-        });
+      const marker = L.marker([city.lat, city.lng], { icon, zIndexOffset: 500 });
+      bindHoverPopup(marker, popupContent, {
+        className: "city-landmark-popup",
+        maxWidth: 240,
+        minWidth: 220,
+        closeButton: false,
+      });
       group.addLayer(marker);
     });
   }, [ME_CITY_LANDMARKS, layers.cities]);
