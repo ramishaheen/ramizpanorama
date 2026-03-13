@@ -110,7 +110,7 @@ export function useCyberThreats(): CyberThreatsState {
   useEffect(() => {
     fetchThreats();
     const interval = setInterval(() => fetchThreats(true), CACHE_DURATION);
-    return () => { clearTimeout(initialDelay); clearInterval(interval); };
+    return () => { clearInterval(interval); };
   }, [fetchThreats]);
 
   const refresh = useCallback(() => fetchThreats(true), [fetchThreats]);
