@@ -698,6 +698,9 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <button onClick={() => setCenterView("graph")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "graph" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Network className="h-3 w-3 inline mr-1" />GRAPH
           </button>
+          <button onClick={() => setCenterView("darkweb")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "darkweb" ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Skull className="h-3 w-3 inline mr-1" />DARK WEB
+          </button>
         </div>
       </div>
 
