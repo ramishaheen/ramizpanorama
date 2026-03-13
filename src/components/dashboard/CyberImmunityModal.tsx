@@ -1263,9 +1263,18 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
             ) : centerView === "map" ? (
-              <ThreatMap threats={filtered} onSelect={handleSelect} selectedId={selectedThreat?.id} />
+              <div className="relative w-full h-full">
+                <ThreatMap threats={filterByLayers(filtered, layers)} onSelect={handleSelect} selectedId={selectedThreat?.id} />
+                <MapLayersPanel layers={layers} onToggle={toggleLayer} />
+              </div>
             ) : centerView === "graph" ? (
               <RelationshipGraph threats={filtered} />
+            ) : centerView === "apt" ? (
+              <APTIntelPanel />
+            ) : centerView === "timeline" ? (
+              <IncidentTimeline threats={filtered} onSelect={handleSelect} />
+            ) : centerView === "engines" ? (
+              <IntelEnginesPanel />
             ) : (
               <EnhancedDarkWebMonitor entries={darkWeb.entries} torAnalysis={darkWeb.torAnalysis} loading={darkWeb.loading} onFetchDossier={handleFetchDossier} />
             )}
