@@ -56,35 +56,32 @@ function sanitizeVesselsToWater<T extends { lat: number; lng: number }>(rows: T[
   return rows.filter((v) => isLikelyWaterPosition(v.lat, v.lng));
 }
 
-function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: boolean): string {
+function createAircraftSvg(isMilitary: boolean, heading: number, isTracked: boolean, liteMode = false): string {
   const color = isMilitary ? "#ef4444" : "#3b82f6";
   const glow = isMilitary ? "rgba(239,68,68,0.8)" : "rgba(59,130,246,0.7)";
-  const size = isTracked ? 40 : 30;
+  const size = liteMode ? 22 : (isTracked ? 40 : 30);
   const c = size / 2;
-  const trackRing = isTracked
+  const trackRing = (!liteMode && isTracked)
     ? `<circle cx="${c}" cy="${c}" r="${c - 2}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="4 3" opacity="0.7">
         <animateTransform attributeName="transform" type="rotate" from="0 ${c} ${c}" to="360 ${c} ${c}" dur="3s" repeatCount="indefinite"/>
       </circle>`
     : "";
-  const pulse = `<circle cx="${c}" cy="${c}" r="${c * 0.5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.4">
+  const pulse = liteMode ? "" : `<circle cx="${c}" cy="${c}" r="${c * 0.5}" fill="none" stroke="${color}" stroke-width="1" opacity="0.4">
     <animate attributeName="r" values="${c * 0.5};${c - 1}" dur="2s" repeatCount="indefinite"/>
     <animate attributeName="opacity" values="0.4;0" dur="2s" repeatCount="indefinite"/>
   </circle>`;
-  // Clear airplane silhouette — fuselage + swept wings + tail
+  const filter = liteMode ? "" : `<defs><filter id="af${isTracked?1:0}"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${glow}"/></filter></defs>`;
+  const filterAttr = liteMode ? "" : `filter="url(#af${isTracked?1:0})"`;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <defs><filter id="af${isTracked?1:0}"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="${glow}"/></filter></defs>
+    ${filter}
     ${trackRing}${pulse}
-    <g transform="rotate(${heading} ${c} ${c})" filter="url(#af${isTracked?1:0})">
-      <!-- fuselage -->
+    <g transform="rotate(${heading} ${c} ${c})" ${filterAttr}>
       <ellipse cx="${c}" cy="${c}" rx="${size * 0.06}" ry="${size * 0.35}" fill="${color}"/>
-      <!-- wings -->
       <polygon points="${c},${c - size * 0.02} ${c - size * 0.35},${c + size * 0.08} ${c - size * 0.3},${c + size * 0.12} ${c},${c + size * 0.05}" fill="${color}" opacity="0.95"/>
       <polygon points="${c},${c - size * 0.02} ${c + size * 0.35},${c + size * 0.08} ${c + size * 0.3},${c + size * 0.12} ${c},${c + size * 0.05}" fill="${color}" opacity="0.95"/>
-      <!-- tail fin -->
       <polygon points="${c},${c + size * 0.22} ${c - size * 0.12},${c + size * 0.32} ${c - size * 0.1},${c + size * 0.35} ${c},${c + size * 0.28}" fill="${color}" opacity="0.85"/>
       <polygon points="${c},${c + size * 0.22} ${c + size * 0.12},${c + size * 0.32} ${c + size * 0.1},${c + size * 0.35} ${c},${c + size * 0.28}" fill="${color}" opacity="0.85"/>
-      <!-- cockpit -->
-      <ellipse cx="${c}" cy="${c - size * 0.28}" rx="${size * 0.035}" ry="${size * 0.05}" fill="rgba(255,255,255,0.35)"/>
+      ${liteMode ? "" : `<ellipse cx="${c}" cy="${c - size * 0.28}" rx="${size * 0.035}" ry="${size * 0.05}" fill="rgba(255,255,255,0.35)"/>`}
     </g>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
@@ -248,6 +245,46 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
   const [showTrafficParticles, setShowTrafficParticles] = useState(false);
   const [opacityTrafficParticles, setOpacityTrafficParticles] = useState(0.85);
+
+  // Lite Mode — performance optimization
+  const [liteMode, setLiteMode] = useState(false);
+  const savedLayersRef = useRef<Record<string, boolean> | null>(null);
+
+  const toggleLiteMode = useCallback(() => {
+    setLiteMode(prev => {
+      const next = !prev;
+      if (next) {
+        // Save current heavy layer states then disable them
+        savedLayersRef.current = {
+          showTrafficParticles, showWeatherRadar, showIncidents,
+          showNrtModis, showNrtViirs, showNrtNoaa20, showNrtFires, showNrtNightLights, showHeatmap,
+        };
+        setShowTrafficParticles(false);
+        setShowWeatherRadar(false);
+        setShowIncidents(false);
+        setShowNrtModis(false);
+        setShowNrtViirs(false);
+        setShowNrtNoaa20(false);
+        setShowNrtFires(false);
+        setShowNrtNightLights(false);
+        setShowHeatmap(false);
+      } else if (savedLayersRef.current) {
+        // Restore previous states
+        const s = savedLayersRef.current;
+        setShowTrafficParticles(s.showTrafficParticles);
+        setShowWeatherRadar(s.showWeatherRadar);
+        setShowIncidents(s.showIncidents);
+        setShowNrtModis(s.showNrtModis);
+        setShowNrtViirs(s.showNrtViirs);
+        setShowNrtNoaa20(s.showNrtNoaa20);
+        setShowNrtFires(s.showNrtFires);
+        setShowNrtNightLights(s.showNrtNightLights);
+        setShowHeatmap(s.showHeatmap);
+        savedLayersRef.current = null;
+      }
+      return next;
+    });
+  }, [showTrafficParticles, showWeatherRadar, showIncidents, showNrtModis, showNrtViirs, showNrtNoaa20, showNrtFires, showNrtNightLights, showHeatmap]);
 
   useEffect(() => {
     const fetchNearby = async () => {
@@ -702,9 +739,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         position: { lat: ac.lat, lng: ac.lng },
         map,
         icon: {
-          url: createAircraftSvg(isMil, ac.heading, isTracked),
-          scaledSize: new google.maps.Size(size, size),
-          anchor: new google.maps.Point(size / 2, size / 2),
+          url: createAircraftSvg(isMil, ac.heading, isTracked, liteMode),
+          scaledSize: new google.maps.Size(liteMode ? 22 : size, liteMode ? 22 : size),
+          anchor: new google.maps.Point((liteMode ? 22 : size) / 2, (liteMode ? 22 : size) / 2),
         },
         title: `${ac.callsign || ac.icao24} | ${ac.origin_country}`,
         zIndex: isTracked ? 200 : (isMil ? 100 : 50),
@@ -875,7 +912,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }, 80);
 
     return () => clearInterval(animInterval);
-  }, [interpolatedAircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
+  }, [interpolatedAircraft, showFlights, showMarkers, showTrails, trackedAircraftId, liteMode]);
 
   // ===== HEATMAP LAYER =====
   useEffect(() => {
@@ -1997,9 +2034,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   useEffect(() => {
     fetchFlights();
-    flightIntervalRef.current = setInterval(fetchFlights, 15000);
+    const interval = liteMode ? 30000 : 15000;
+    flightIntervalRef.current = setInterval(fetchFlights, interval);
     return () => { if (flightIntervalRef.current) clearInterval(flightIntervalRef.current); };
-  }, [fetchFlights]);
+  }, [fetchFlights, liteMode]);
 
   // ===== REAL-TIME INTERPOLATION ENGINE — move aircraft smoothly between polls =====
   // Stores previous heading snapshots for smooth rotation
@@ -2120,6 +2158,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-primary" />
             <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">RamiZpanorama 3D View</span>
+            {liteMode && (
+              <span className="text-[8px] font-mono font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded animate-pulse">⚡ LITE</span>
+            )}
             <span className="text-[9px] font-mono text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded">PHOTOREALISTIC TILES</span>
           </div>
           <div className="flex items-center gap-1">
@@ -2420,7 +2461,34 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   <span>{preset.label}</span>
                 </button>
               ))}
+              <div className="w-px h-5 bg-border/40 mx-0.5" />
+              <button
+                onClick={toggleLiteMode}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono uppercase transition-all duration-200 ${
+                  liteMode
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]"
+                    : "text-muted-foreground/70 hover:text-foreground hover:bg-white/5 border border-transparent"
+                }`}
+              >
+                <span className="text-sm">⚡</span>
+                <span>{liteMode ? "Lite" : "HD"}</span>
+              </button>
             </div>
+          </div>
+        )}
+
+        {/* Lite Mode crosshair reticle */}
+        {liteMode && (
+          <div className="absolute inset-0 z-[12] pointer-events-none flex items-center justify-center">
+            <svg width="80" height="80" viewBox="0 0 80 80" className="opacity-30">
+              <circle cx="40" cy="40" r="30" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" strokeDasharray="4 4" />
+              <circle cx="40" cy="40" r="15" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="40" y1="5" x2="40" y2="25" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="40" y1="55" x2="40" y2="75" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="5" y1="40" x2="25" y2="40" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="55" y1="40" x2="75" y2="40" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <circle cx="40" cy="40" r="2" fill="hsl(var(--primary))" opacity="0.6" />
+            </svg>
           </div>
         )}
 
