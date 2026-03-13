@@ -1576,13 +1576,29 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   // ===== LIVE FLIGHT TRACKING LAYER =====
   const fetchFlightData = useCallback(async () => {
     if (!layers.flights) return;
-    // Always fetch the whole Middle East region for comprehensive coverage
-    const bbox = { lamin: 10, lamax: 45, lomin: 25, lomax: 70 };
+    // Two parallel bbox calls: Middle East + Turkey + Egypt, and South Africa
+    const bboxME = { lamin: 10, lamax: 42, lomin: 20, lomax: 70 };
+    const bboxSA = { lamin: -35, lamax: -22, lomin: 16, lomax: 34 };
     try {
-      const { data, error } = await supabase.functions.invoke("live-flights", { body: bbox });
-      if (!error && data?.aircraft) {
-        const newAircraft: FlightAircraft[] = data.aircraft;
-        if (data.source) setFlightSource(data.source);
+      const [resME, resSA] = await Promise.all([
+        supabase.functions.invoke("live-flights", { body: bboxME }),
+        supabase.functions.invoke("live-flights", { body: bboxSA }),
+      ]);
+      // Merge & deduplicate by icao24
+      const acMap = new Map<string, FlightAircraft>();
+      const sources: string[] = [];
+      for (const res of [resME, resSA]) {
+        if (!res.error && res.data?.aircraft) {
+          for (const ac of res.data.aircraft as FlightAircraft[]) {
+            if (!acMap.has(ac.icao24)) acMap.set(ac.icao24, ac);
+          }
+          if (res.data.source) sources.push(res.data.source);
+        }
+      }
+      if (acMap.size > 0) {
+        if (sources.length) setFlightSource(sources.join(" + "));
+        const newAircraft: FlightAircraft[] = Array.from(acMap.values());
+        
         const now = Date.now();
         const history = { ...flightTrailsRef.current };
         const prevPos = { ...prevFlightPositions.current };
