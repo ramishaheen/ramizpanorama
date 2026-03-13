@@ -41,6 +41,9 @@ import { useAirQuality, type AirQualityStation } from "@/hooks/useAirQuality";
 import { useAISVessels, type AISVessel } from "@/hooks/useAISVessels";
 import { UP42Panel } from "./UP42Panel";
 import type { UP42Feature } from "@/hooks/useUP42Catalog";
+import { useGooglePlaces, getPOIColor, getPOIIcon, type GooglePlace } from "@/hooks/useGooglePlaces";
+import { useGoogleGeocode } from "@/hooks/useGoogleGeocode";
+import { useGoogleDirections } from "@/hooks/useGoogleDirections";
 
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
