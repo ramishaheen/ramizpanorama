@@ -1929,93 +1929,88 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   return (
     <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
       <HolographicOverlay alertCount={totalAlerts} />
-      <ImageryLayerPanel
-        layers={imageryLayers}
-        onToggle={handleOverlayToggle}
-        onOpacityChange={handleOpacityChange}
-        onBaseChange={handleBaseChange}
-      />
-      <MapToolbar
-        activeMode={activeMode}
-        onModeChange={setActiveMode}
-        pendingItem={pendingItem}
-        onConfirmItem={handleConfirmItem}
-        onCancelItem={handleCancelItem}
-      />
-      {/* Unified bottom bar */}
-      <div className="absolute bottom-3 left-3 right-3 z-[1000] flex items-end gap-2 flex-wrap">
-        <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
-        <MapLegend />
-        <MapHistorySlider
-          onTimeFilter={setHistoryFilter}
-          events={historyEvents}
-          onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
-        />
-        <MapStyleToggle style={currentMapStyle} onChange={handleMapStyleChange} />
-        <MapBookmarks
-          currentLat={mapRef.current?.getCenter().lat || 28}
-          currentLng={mapRef.current?.getCenter().lng || 48}
-          currentZoom={mapRef.current?.getZoom() || 5}
-          currentLayers={layers as unknown as Record<string, boolean>}
-          onGoTo={(lat, lng, zoom) => mapRef.current?.flyTo([lat, lng], zoom, { duration: 1.5 })}
-        />
-        <div className="flex-1" />
-        <ChokepointMonitor
-          vessels={vessels}
-          onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
-        />
-        <TotalLaunchesWidget rockets={rockets} />
-        {/* Intel Tools */}
-        <div className="relative" style={{ width: 200 }}>
-          <button
-            onClick={() => setToolsExpanded(!toolsExpanded)}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] hover:bg-secondary/50 transition-all cursor-pointer"
-          >
-            <div className="flex items-center justify-center w-5 h-5 rounded-md bg-primary/10 border border-primary/20">
-              <Satellite className="h-3 w-3 text-primary" />
-            </div>
-            <span className="text-[9px] font-mono text-foreground/80 uppercase tracking-wider flex-1 text-left font-semibold">
-              Intel Tools
-            </span>
-            {toolsExpanded ? (
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            ) : (
-              <ChevronUp className="h-3 w-3 text-muted-foreground" />
-            )}
-          </button>
-          {toolsExpanded && (
-            <div className="absolute bottom-full mb-1 w-full rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] overflow-hidden">
-              <div className="divide-y divide-border/30">
-                {[
-                  { onClick: () => setShowSatGlobe(true), Icon: Satellite, label: "ORBITAL INTEL" },
-                  { onClick: () => setShowUrbanScene(true), Icon: Building2, label: "URBAN 3D" },
-                  { onClick: () => setShowLiveCameras(true), Icon: Camera, label: "CCTV" },
-                  { onClick: toggleArabCCTV, Icon: Camera, label: loadingCCTV ? "LOADING..." : showArabCCTV ? `ALL CCTV (${arabCameras.length})` : "ALL CCTV", active: showArabCCTV, disabled: loadingCCTV },
-                  { onClick: () => setShowResponseMap(true), Icon: ShieldAlert, label: "RESPONSE MAP" },
-                  { onClick: () => setShowCrisisIntel(true), Icon: Brain, label: "CRISIS INTEL" },
-                  { onClick: () => setShowIranAirspace(!showIranAirspace), Icon: Radar, label: "IRAN FIR", active: showIranAirspace },
-                  { onClick: () => setShowSnapMe(true), Icon: Aperture, label: "SNAP ME" },
-                  { onClick: () => setShowScouting(true), Icon: Crosshair, label: "SCOUTING" },
-                ].map(({ onClick, Icon, label, active, disabled }, i) => (
-                  <button
-                    key={label + i}
-                    onClick={onClick}
-                    disabled={disabled}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 hover:bg-secondary/30 transition-all cursor-pointer text-left ${
-                      active ? "bg-primary/10" : ""
-                    }`}
-                  >
-                    <Icon className={`h-3 w-3 ${active ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
-                    <span className={`text-[9px] font-mono uppercase tracking-wider font-semibold ${
-                      active ? "text-primary" : "text-foreground/70"
-                    }`}>{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
+      {/* Expanded sub-panels that pop up from command bar */}
+      {cmdUp42Open && (
+        <div className="absolute bottom-12 left-3 z-[1001]">
+          <UP42Panel onFeaturesChange={handleUP42FeaturesChange} mapBounds={mapBounds} />
         </div>
-      </div>
+      )}
+      {cmdLegendOpen && (
+        <div className="absolute bottom-12 left-3 z-[1001]">
+          <MapLegend />
+        </div>
+      )}
+      {cmdHistoryOpen && (
+        <div className="absolute bottom-12 left-3 z-[1001]">
+          <MapHistorySlider
+            onTimeFilter={setHistoryFilter}
+            events={historyEvents}
+            onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
+          />
+        </div>
+      )}
+      {cmdBookmarksOpen && (
+        <div className="absolute bottom-12 left-3 z-[1001]">
+          <MapBookmarks
+            currentLat={mapRef.current?.getCenter().lat || 28}
+            currentLng={mapRef.current?.getCenter().lng || 48}
+            currentZoom={mapRef.current?.getZoom() || 5}
+            currentLayers={layers as unknown as Record<string, boolean>}
+            onGoTo={(lat, lng, zoom) => mapRef.current?.flyTo([lat, lng], zoom, { duration: 1.5 })}
+          />
+        </div>
+      )}
+      {cmdChokepointsOpen && (
+        <div className="absolute bottom-12 right-3 z-[1001]">
+          <ChokepointMonitor
+            vessels={vessels}
+            onFlyTo={(lat, lng) => mapRef.current?.flyTo([lat, lng], 8, { duration: 1.5 })}
+          />
+        </div>
+      )}
+      {cmdLaunchesOpen && (
+        <div className="absolute bottom-12 right-3 z-[1001]">
+          <TotalLaunchesWidget rockets={rockets} />
+        </div>
+      )}
+
+      {/* Unified Gotham Command Bar */}
+      <MapCommandBar
+        imageryLayers={imageryLayers}
+        onBaseChange={handleBaseChange}
+        onOverlayToggle={handleOverlayToggle}
+        onOpacityChange={handleOpacityChange}
+        activeToolMode={activeMode}
+        onToolModeChange={setActiveMode}
+        onToggleUP42={() => setCmdUp42Open(v => !v)}
+        up42Open={cmdUp42Open}
+        onToggleLegend={() => setCmdLegendOpen(v => !v)}
+        legendOpen={cmdLegendOpen}
+        onToggleHistory={() => setCmdHistoryOpen(v => !v)}
+        historyOpen={cmdHistoryOpen}
+        onToggleBookmarks={() => setCmdBookmarksOpen(v => !v)}
+        bookmarksOpen={cmdBookmarksOpen}
+        onToggleChokepoints={() => setCmdChokepointsOpen(v => !v)}
+        chokepointsOpen={cmdChokepointsOpen}
+        onToggleLaunches={() => setCmdLaunchesOpen(v => !v)}
+        launchesOpen={cmdLaunchesOpen}
+        currentMapStyle={currentMapStyle}
+        onMapStyleChange={handleMapStyleChange}
+        onOpenOrbital={() => setShowSatGlobe(true)}
+        onOpenUrban3D={() => setShowUrbanScene(true)}
+        onOpenCCTV={() => setShowLiveCameras(true)}
+        onToggleAllCCTV={toggleArabCCTV}
+        allCCTVActive={showArabCCTV}
+        allCCTVCount={arabCameras.length}
+        loadingCCTV={loadingCCTV}
+        onOpenResponseMap={() => setShowResponseMap(true)}
+        onOpenCrisisIntel={() => setShowCrisisIntel(true)}
+        onToggleIranFIR={() => setShowIranAirspace(!showIranAirspace)}
+        iranFIRActive={showIranAirspace}
+        onOpenSnapMe={() => setShowSnapMe(true)}
+        onOpenScouting={() => setShowScouting(true)}
+      />
 
 
       {/* 3D overlays */}
