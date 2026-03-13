@@ -973,7 +973,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       <div className="flex flex-1 min-h-0">
         {/* LEFT PANEL — hidden on mobile by default, togglable */}
         {!cleanUI && (
-          <div className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-0 z-[10001]' : 'hidden'} md:relative md:flex w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex-col overflow-hidden`}>
+          <div className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-0 z-[10001]' : 'hidden'} md:relative md:flex w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex-col overflow-hidden min-h-0`}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <div className="relative"><Radar className="h-4 w-4 text-primary" /><div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" /></div>
@@ -1006,20 +1006,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <span className="text-[9px] text-muted-foreground font-mono tracking-wider">{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto scrollbar-thin py-1 min-h-0">
-              {layerConfigs.map(layer => (
-                <button key={layer.id} onClick={() => toggleLayer(layer.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
-                  <Checkbox checked={layers[layer.id]} onCheckedChange={() => toggleLayer(layer.id)} className="h-3 w-3 pointer-events-none rounded-sm" />
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
-                  <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${layers[layer.id] ? "text-foreground" : "text-muted-foreground"}`}>
-                    {layer.icon} {layer.label}
-                  </span>
-                  {layer.count !== undefined && layer.count > 0 && (
-                    <span className="ml-auto text-[8px] font-mono px-1.5 py-0.5 rounded text-muted-foreground" style={{ backgroundColor: layers[layer.id] ? `${layer.color}15` : "transparent", color: layers[layer.id] ? layer.color : undefined }}>{layer.count}</span>
-                  )}
-                </button>
-              ))}
+            <div className="flex-1 overflow-y-scroll scrollbar-thin py-1 min-h-0 direction-rtl">
+              <div className="direction-ltr">
+                {layerConfigs.map(layer => (
+                  <button key={layer.id} onClick={() => toggleLayer(layer.id)}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
+                    <Checkbox checked={layers[layer.id]} onCheckedChange={() => toggleLayer(layer.id)} className="h-3 w-3 pointer-events-none rounded-sm" />
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
+                    <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${layers[layer.id] ? "text-foreground" : "text-muted-foreground"}`}>
+                      {layer.icon} {layer.label}
+                    </span>
+                    {layer.count !== undefined && layer.count > 0 && (
+                      <span className="ml-auto text-[8px] font-mono px-1.5 py-0.5 rounded text-muted-foreground" style={{ backgroundColor: layers[layer.id] ? `${layer.color}15` : "transparent", color: layers[layer.id] ? layer.color : undefined }}>{layer.count}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="px-3 py-2 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)]">
