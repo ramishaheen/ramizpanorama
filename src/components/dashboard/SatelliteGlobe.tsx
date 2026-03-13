@@ -8,6 +8,35 @@ import militarySatSprite from "@/assets/military-sat-sprite.png";
 import { FlightEmulationPanel } from "./FlightEmulationPanel";
 import { useAISVessels, type AISVessel } from "@/hooks/useAISVessels";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MARITIME_CORRIDORS } from "./urban3d/constants";
+
+// Water validation & sea region names
+function isLikelyWaterPosition(lat: number, lng: number): boolean {
+  return MARITIME_CORRIDORS.some((c) => lat >= c.latMin && lat <= c.latMax && lng >= c.lngMin && lng <= c.lngMax);
+}
+
+function sanitizeVesselsToWater<T extends { lat: number; lng: number }>(rows: T[]): T[] {
+  return rows.filter((v) => isLikelyWaterPosition(v.lat, v.lng));
+}
+
+const SEA_REGIONS: { name: string; latMin: number; latMax: number; lngMin: number; lngMax: number }[] = [
+  { name: "Persian Gulf", latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 },
+  { name: "Gulf of Oman", latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 },
+  { name: "Red Sea", latMin: 15.0, latMax: 30.8, lngMin: 32.0, lngMax: 43.8 },
+  { name: "Gulf of Aden", latMin: 10.0, latMax: 15.0, lngMin: 42.0, lngMax: 52.0 },
+  { name: "Suez Canal", latMin: 30.0, latMax: 33.6, lngMin: 31.8, lngMax: 33.2 },
+  { name: "Eastern Mediterranean", latMin: 31.0, latMax: 37.2, lngMin: 33.2, lngMax: 36.8 },
+  { name: "Mediterranean Sea", latMin: 33.0, latMax: 41.0, lngMin: 24.0, lngMax: 36.0 },
+  { name: "Caspian Sea", latMin: 36.3, latMax: 47.2, lngMin: 47.0, lngMax: 54.8 },
+  { name: "Arabian Sea", latMin: 20.0, latMax: 30.0, lngMin: 58.0, lngMax: 68.0 },
+];
+
+function getSeaRegionName(lat: number, lng: number): string {
+  for (const r of SEA_REGIONS) {
+    if (lat >= r.latMin && lat <= r.latMax && lng >= r.lngMin && lng <= r.lngMax) return r.name;
+  }
+  return `${lat.toFixed(2)}°N ${lng.toFixed(2)}°E`;
+}
 
 interface SatelliteData {
   name: string;
