@@ -8,6 +8,7 @@ import { LiveChannelsModal } from "./LiveChannelsModal";
 import { FourDMap } from "./FourDMap";
 import { CyberImmunityModal } from "./CyberImmunityModal";
 import warosLogo from "@/assets/waros-logo.png";
+import { LiveDataFeedIndicator } from "./LiveDataFeedIndicator";
 import type { Rocket, GeoAlert } from "@/data/mockData";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 
@@ -18,6 +19,8 @@ interface DashboardHeaderProps {
   rockets?: Rocket[];
   telegramMarkers?: TelegramMarker[];
   geoAlerts?: GeoAlert[];
+  lastPollAt?: string | null;
+  activeSources?: number;
 }
 
 export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [], geoAlerts = [] }: DashboardHeaderProps) => {
