@@ -2015,61 +2015,63 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#050a12] flex flex-col overflow-hidden">
 
-      {/* Holographic scanline overlay */}
+      {/* Gotham scanline overlay */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,200,0.015) 2px, rgba(0,255,200,0.015) 4px)",
+          background: "repeating-linear-gradient(0deg, transparent, transparent 3px, hsl(190 100% 50% / 0.012) 3px, hsl(190 100% 50% / 0.012) 4px)",
           mixBlendMode: "screen",
         }}
       />
-      {/* Holographic sweep line */}
+      {/* Gotham sweep beam */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background: "linear-gradient(180deg, transparent 0%, transparent 45%, rgba(0,255,200,0.06) 50%, transparent 55%, transparent 100%)",
-          animation: "holoSweep 8s linear infinite",
+          background: "linear-gradient(180deg, transparent 0%, transparent 46%, hsl(190 100% 50% / 0.04) 50%, transparent 54%, transparent 100%)",
+          animation: "holoSweep 10s linear infinite",
         }}
       />
-      {/* Corner brackets — holographic frame */}
+      {/* Corner brackets — Gotham frame */}
       <div className="absolute inset-0 z-[2001] pointer-events-none">
-        {/* Top-left */}
-        <div className="absolute top-2 left-2 w-12 h-12 border-t border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
-        {/* Top-right */}
-        <div className="absolute top-2 right-2 w-12 h-12 border-t border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
-        {/* Bottom-left */}
-        <div className="absolute bottom-2 left-2 w-12 h-12 border-b border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
-        {/* Bottom-right */}
-        <div className="absolute bottom-2 right-2 w-12 h-12 border-b border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {[
+          { pos: "top-2 left-2", d: "M1 14V1H14" },
+          { pos: "top-2 right-2", d: "M23 14V1H10" },
+          { pos: "bottom-2 left-2", d: "M1 10V23H14" },
+          { pos: "bottom-2 right-2", d: "M23 10V23H10" },
+        ].map(({ pos, d }) => (
+          <div key={pos} className={`absolute ${pos}`}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d={d} stroke="hsl(var(--primary))" strokeWidth="0.75" strokeOpacity="0.2" />
+            </svg>
+          </div>
+        ))}
       </div>
-      {/* Holographic vignette glow */}
+      {/* Vignette */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,20,30,0.6) 100%)",
+          boxShadow: "inset 0 0 120px 40px hsl(220 30% 4% / 0.5)",
         }}
       />
-      {/* Holographic grid overlay (subtle) */}
+      {/* Grid overlay */}
       <div
-        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.02]"
+        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.015]"
         style={{
-          backgroundImage: "linear-gradient(rgba(0,255,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,200,0.3) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(hsl(190 60% 50% / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(190 60% 50% / 0.3) 1px, transparent 1px)",
           backgroundSize: "60px 60px",
         }}
       />
 
-      {/* Top-left HUD — holographic */}
-      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1 holo-flicker">
-        <div
-          className="font-mono text-[11px] font-bold tracking-[0.2em] holo-text"
-        >
+      {/* Top-left HUD — Gotham */}
+      <div className="absolute top-3 left-3 z-[2002] pointer-events-none space-y-1">
+        <div className="font-mono text-[11px] font-bold tracking-[0.2em] text-primary">
           ◈ ORBITAL INTELLIGENCE
         </div>
-        <div className="text-[8px] font-mono tracking-wider" style={{ color: "rgba(0,255,200,0.5)" }}>
+        <div className="text-[8px] font-mono tracking-wider text-primary/50">
           REAL-TIME SATELLITE TRACKING • OSINT FUSION
         </div>
-        <div className="mt-2 space-y-0.5 text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.55)" }}>
-          <div style={{ color: "rgba(239,68,68,0.7)" }}>⬤ TOP SECRET // SI-TK // NOFORN</div>
+        <div className="mt-2 space-y-0.5 text-[8px] font-mono text-primary/55">
+          <div className="text-destructive/70">⬤ TOP SECRET // SI-TK // NOFORN</div>
           <div>
             ▸ TRACKING {satellites.length} OBJECTS across {Object.keys(CATEGORY_COLORS).length} TYPES
           </div>
@@ -2091,31 +2093,31 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           <div>
             ▸ SOURCES: CELESTRAK × 23 GROUPS • NORAD TLE
           </div>
-          <div style={{ color: "rgba(255,255,255,0.45)" }}>
+          <div className="text-muted-foreground/45">
             ▸ LAST PROPAGATION: {lastPropagated.toISOString().replace('T', ' ').slice(0, 19)}Z
           </div>
         </div>
         {/* OSINT Legend */}
-        <div className="mt-2 pt-2 space-y-1" style={{ borderTop: "1px solid rgba(0,255,200,0.1)" }}>
-          <div className="text-[7px] font-mono uppercase tracking-widest" style={{ color: "rgba(0,255,200,0.4)" }}>OSINT LAYER</div>
+        <div className="mt-2 pt-2 space-y-1 border-t border-primary/10">
+          <div className="text-[7px] font-mono uppercase tracking-widest text-primary/40">OSINT LAYER</div>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-            <span className="text-[7px] font-mono flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" /> CONFLICT</span>
+            <span className="text-[7px] font-mono flex items-center gap-1 text-destructive"><span className="w-1.5 h-1.5 rounded-full bg-destructive" /> CONFLICT</span>
             <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#fb923c" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#fb923c" }} /> MILITARY</span>
-            <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#38bdf8" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#38bdf8" }} /> NAVAL</span>
+            <span className="text-[7px] font-mono flex items-center gap-1 text-primary"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> NAVAL</span>
             <span className="text-[7px] font-mono flex items-center gap-1" style={{ color: "#a855f7" }}><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#a855f7" }} /> RADAR</span>
           </div>
         </div>
       </div>
 
-      {/* Top-right timestamp — holographic */}
+      {/* Top-right timestamp — Gotham */}
       <div className="absolute top-3 right-3 z-[2002] pointer-events-none text-right space-y-0.5">
         <div className="flex items-center gap-1.5 justify-end">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[9px] font-mono text-red-400">
+          <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+          <span className="text-[9px] font-mono text-destructive">
             {timestamp}
           </span>
         </div>
-        <div className="text-[8px] font-mono" style={{ color: "rgba(0,255,200,0.4)" }}>
+        <div className="text-[8px] font-mono text-primary/40">
           CELESTRAK NORAD TLE • LIVE OSINT
         </div>
       </div>
@@ -2128,24 +2130,22 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           <div className="relative" style={{ width: 150 }}>
             <button
               onClick={() => setSatTypesExpanded(!satTypesExpanded)}
-              className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+              className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 gotham-orbital-btn ${satTypesExpanded ? 'gotham-orbital-btn-active' : ''}`}
             >
               <Satellite className="h-3 w-3 text-primary" />
-              <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">SAT Types</span>
-              <span className="text-[8px] font-mono text-white/50">{satellites.length}</span>
-              {satTypesExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+              <span className="flex-1 text-left">SAT Types</span>
+              <span className="gotham-orbital-badge">{satellites.length}</span>
+              {satTypesExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
             </button>
             {satTypesExpanded && (
-              <div className="absolute bottom-full mb-1 left-0 w-[160px] max-h-[50vh] overflow-y-auto rounded-lg bg-black/90 backdrop-blur-md border border-white/15 px-2 py-2 space-y-0.5">
+              <div className="absolute bottom-full mb-1 left-0 w-[160px] max-h-[50vh] overflow-y-auto gotham-orbital-dropdown px-2 py-2 space-y-0.5">
                 <button
                   onClick={() => setSelectedCat(null)}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
-                    !selectedCat ? "bg-white text-black shadow-md" : "text-white/70 hover:text-white hover:bg-white/10"
-                  }`}
+                  className={`gotham-orbital-dropdown-item ${!selectedCat ? 'gotham-orbital-dropdown-item-active' : ''}`}
                 >
-                  <span className="w-2 h-2 rounded-full bg-white flex-shrink-0" style={!selectedCat ? { backgroundColor: '#000' } : {}} />
-                  <span className="truncate">ALL</span>
-                  <span className="ml-auto text-[8px] opacity-70">{satellites.length}</span>
+                  <span className="w-2 h-2 rounded-full bg-foreground flex-shrink-0" />
+                  <span className="truncate flex-1">ALL</span>
+                  <span className="text-[8px] opacity-70">{satellites.length}</span>
                 </button>
                 {categories.map(([cat, color]) => {
                   const count = satellites.filter((s) => s.category === cat).length;
@@ -2155,17 +2155,13 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                       key={cat}
                       disabled={isDisabled}
                       onClick={() => !isDisabled && setSelectedCat(selectedCat === cat ? null : cat)}
-                      className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-mono font-semibold transition-all w-full ${
-                        selectedCat === cat
-                          ? "bg-white text-black shadow-md"
-                          : isDisabled
-                            ? "text-white/20 cursor-not-allowed"
-                            : "text-white/70 hover:text-white hover:bg-white/10"
-                      }`}
+                      className={`gotham-orbital-dropdown-item ${
+                        selectedCat === cat ? 'gotham-orbital-dropdown-item-active' : ''
+                      } ${isDisabled ? 'opacity-20 cursor-not-allowed' : ''}`}
                     >
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <span className="truncate">{cat}</span>
-                      <span className="ml-auto text-[8px] opacity-70">{count}</span>
+                      <span className="truncate flex-1">{cat}</span>
+                      <span className="text-[8px] opacity-70">{count}</span>
                     </button>
                   );
                 })}
@@ -2178,15 +2174,15 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             <div className="relative" style={{ width: 150 }}>
               <button
                 onClick={() => setFlightsPanelExpanded(!flightsPanelExpanded)}
-                className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+                className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 gotham-orbital-btn ${flightsPanelExpanded ? 'gotham-orbital-btn-active' : ''}`}
               >
                 <Plane className="h-3 w-3 text-primary" />
-                <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">Flights</span>
-                <span className="text-[8px] font-mono text-white/50">{flights.length}</span>
-                {flightsPanelExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+                <span className="flex-1 text-left">Flights</span>
+                <span className="gotham-orbital-badge">{flights.length}</span>
+                {flightsPanelExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
               </button>
               {flightsPanelExpanded && (
-                <div className="absolute bottom-full mb-1 left-0 w-[220px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
+                <div className="absolute bottom-full mb-1 left-0 w-[220px] max-h-[60vh] overflow-hidden gotham-orbital-dropdown">
                   <FlightEmulationPanel
                     flights={flights}
                     trackedFlightId={trackedFlightId ?? null}
@@ -2202,19 +2198,19 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           <div className="relative" style={{ width: 150 }}>
             <button
               onClick={() => setVesselsPanelExpanded(!vesselsPanelExpanded)}
-              className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+              className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 gotham-orbital-btn ${vesselsPanelExpanded ? 'gotham-orbital-btn-active' : ''}`}
             >
-              <Anchor className="h-3 w-3 text-cyan-400" />
-              <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">Vessels</span>
-              <span className="text-[8px] font-mono text-white/50">{aisVessels.data.length}</span>
-              {vesselsPanelExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+              <Anchor className="h-3 w-3 text-primary" />
+              <span className="flex-1 text-left">Vessels</span>
+              <span className="gotham-orbital-badge">{aisVessels.data.length}</span>
+              {vesselsPanelExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
             </button>
             {vesselsPanelExpanded && (
-              <div className="absolute bottom-full mb-1 left-0 w-[240px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
+              <div className="absolute bottom-full mb-1 left-0 w-[240px] max-h-[60vh] overflow-hidden gotham-orbital-dropdown">
                 <div className="w-full pointer-events-auto">
                   {/* Vessel type checkboxes */}
                   <div className="px-3 py-2 space-y-1 border-b border-white/10">
-                    <div className="text-[7px] font-mono text-white/40 uppercase tracking-widest mb-1">Globe Visibility</div>
+                    <div className="text-[7px] font-mono text-primary/40 uppercase tracking-widest mb-1">Globe Visibility</div>
                     {(["CARGO", "TANKER", "MILITARY", "FISHING", "UNKNOWN"] as const).map(t => {
                       const typeColors: Record<string, string> = { CARGO: "#3b82f6", TANKER: "#f97316", MILITARY: "#ef4444", FISHING: "#22c55e", UNKNOWN: "#9ca3af" };
                       const count = aisVessels.data.filter(v => v.type === t).length;
@@ -2248,10 +2244,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                       <button
                         key={f}
                         onClick={() => setVesselFilter(f)}
-                        className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                          vesselFilter === f
-                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                            : "bg-white/5 text-white/40 border border-transparent hover:bg-white/10"
+                        className={`gotham-orbital-btn text-[8px] h-5 px-2 ${
+                          vesselFilter === f ? 'gotham-orbital-btn-active' : ''
                         }`}
                       >
                         {f}
@@ -2326,21 +2320,21 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
 
           <div className="flex-1 flex justify-center">
-            <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-xl px-2 py-1.5">
+            <div className="flex items-center gap-1 gotham-orbital-panel px-2 py-1.5">
               {GLOBE_STYLES.map((style) => (
                 <button
                   key={style.id}
                   onClick={() => applyGlobeStyle(style.id)}
-                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg transition-all ${
+                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1 transition-all ${
                     globeStyle === style.id
-                      ? "bg-cyan-500/20 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,200,255,0.2)]"
-                      : "hover:bg-white/10 border border-transparent"
+                      ? "bg-primary/15 border border-primary/40"
+                      : "hover:bg-primary/5 border border-transparent"
                   }`}
                   title={style.desc}
                 >
                   <span className="text-sm">{style.icon}</span>
                   <span className={`text-[8px] font-mono tracking-wide ${
-                    globeStyle === style.id ? "text-cyan-300 font-bold" : "text-white/70"
+                    globeStyle === style.id ? "text-primary font-bold" : "text-muted-foreground"
                   }`}>{style.label}</span>
                 </button>
               ))}
@@ -2349,30 +2343,30 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
           {/* Nav & Zoom controls — right */}
           <div className="flex items-center gap-1">
-            <div className="flex gap-0.5 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
+            <div className="flex gap-0.5 gotham-orbital-panel p-1">
               <button
                 onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, altitude: Math.max(pov.altitude * 0.75, 0.3) }, 400); }}
-                className="w-7 h-7 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+                className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
                 title="Zoom In"
               >
                 <ZoomIn className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, altitude: Math.min(pov.altitude * 1.35, 6) }, 400); }}
-                className="w-7 h-7 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+                className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
                 title="Zoom Out"
               >
                 <ZoomOut className="h-3.5 w-3.5" />
               </button>
             </div>
-            <div className="bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
+            <div className="gotham-orbital-panel p-1">
               <div className="grid grid-cols-3 gap-0.5">
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Rotate Left"><RotateCcw className="h-3 w-3" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.min(pov.lat + 15, 85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Move Up"><ChevronUp className="h-3.5 w-3.5" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Rotate Right"><RotateCw className="h-3 w-3" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Pan Left"><ChevronLeft className="h-3.5 w-3.5" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.max(pov.lat - 15, -85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Move Down"><ChevronDown className="h-3.5 w-3.5" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Pan Right"><ChevronRight className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Rotate Left"><RotateCcw className="h-3 w-3" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.min(pov.lat + 15, 85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Move Up"><ChevronUp className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Rotate Right"><RotateCw className="h-3 w-3" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Pan Left"><ChevronLeft className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.max(pov.lat - 15, -85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Move Down"><ChevronDown className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Pan Right"><ChevronRight className="h-3.5 w-3.5" /></button>
               </div>
             </div>
           </div>
@@ -2380,7 +2374,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
         {/* Row 2: City presets */}
         <div className="flex justify-center">
-          <div className="flex items-center gap-1 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-2 py-1 overflow-x-auto scrollbar-hide max-w-[90vw]" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-1 gotham-orbital-panel px-2 py-1 overflow-x-auto scrollbar-hide max-w-[90vw]" style={{ scrollbarWidth: "none" }}>
             {CITY_PRESETS.map((city) => {
               const badge = countryBadges[city.name];
               const overhead = badge?.total || 0;
@@ -2388,16 +2382,16 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 <button
                   key={city.name}
                   onClick={() => flyToCity(city)}
-                  className={`relative flex-shrink-0 px-2 py-1 rounded-md text-[9px] font-semibold tracking-wide transition-all whitespace-nowrap ${
+                  className={`relative flex-shrink-0 px-2 py-1 text-[9px] font-mono font-semibold tracking-wide transition-all whitespace-nowrap ${
                     activeCity === city.name
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_8px_rgba(0,200,255,0.15)]"
-                      : "text-white/80 hover:text-white hover:bg-white/10 border border-transparent"
+                      ? "bg-primary/15 text-primary border border-primary/40"
+                      : "text-muted-foreground hover:text-foreground hover:bg-primary/5 border border-transparent"
                   }`}
                   title={`${city.landmark} — ${city.country}`}
                 >
                   {city.name}
                   {overhead > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[7px] font-bold leading-none px-0.5 animate-pulse">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[7px] font-bold leading-none px-0.5 animate-pulse">
                       {overhead}
                     </span>
                   )}
@@ -2412,52 +2406,36 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       <div className="absolute top-20 right-3 z-[2002] space-y-1.5 pointer-events-auto w-28">
         <button
           onClick={() => setShowLabels(!showLabels)}
-          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border transition-all ${
-            showLabels
-              ? "border-white/50 bg-white/15 text-white"
-              : "border-white/20 text-white/70 hover:text-white hover:border-white/40"
-          }`}
+          className={`w-full gotham-orbital-btn ${showLabels ? 'gotham-orbital-btn-active' : ''}`}
         >
-          {showLabels ? (
-            <Tag className="h-2.5 w-2.5" />
-          ) : (
-            <Tags className="h-2.5 w-2.5" />
-          )}{" "}
-          Labels
+          {showLabels ? <Tag className="h-2.5 w-2.5" /> : <Tags className="h-2.5 w-2.5" />} Labels
         </button>
         <button
           onClick={() => setShowSearch(!showSearch)}
-          className={`w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border transition-all ${
-            showSearch
-              ? "border-white/50 bg-white/15 text-white"
-              : "border-white/20 text-white/70 hover:text-white hover:border-white/40"
-          }`}
+          className={`w-full gotham-orbital-btn ${showSearch ? 'gotham-orbital-btn-active' : ''}`}
         >
           <Search className="h-2.5 w-2.5" /> Search
         </button>
         <button
           onClick={fetchSatellites}
-          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-all"
+          className="w-full gotham-orbital-btn"
         >
-          <RefreshCw
-            className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`}
-          />{" "}
-          Refresh
+          <RefreshCw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} /> Refresh
         </button>
         <button
           onClick={onClose}
-          className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-semibold uppercase border border-red-400/40 text-red-300 hover:bg-red-500/10 transition-all"
+          className="w-full gotham-orbital-btn border-destructive/40 text-destructive hover:bg-destructive/10"
         >
           <X className="h-2.5 w-2.5" /> Close
         </button>
 
         {/* Country satellite type breakdown */}
         {activeCity && countrySats.length > 0 && (
-          <div className="bg-black/80 backdrop-blur-md border border-white/15 rounded-lg px-2 py-2 w-full">
-            <div className="text-[7px] font-mono uppercase tracking-widest text-center mb-1.5" style={{ color: "rgba(0,255,200,0.5)" }}>
+          <div className="gotham-orbital-panel px-2 py-2 w-full">
+            <div className="text-[7px] font-mono uppercase tracking-widest text-center mb-1.5 text-primary/50">
               {activeCity} SATELLITES
             </div>
-            <div className="text-[8px] font-mono text-white/50 text-center mb-1.5">
+            <div className="text-[8px] font-mono text-muted-foreground text-center mb-1.5">
               {countrySats.reduce((s, c) => s + c.count, 0)} objects overhead
             </div>
             <div className="space-y-0.5 max-h-[300px] overflow-y-auto scrollbar-none">
@@ -2465,10 +2443,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 <button
                   key={category}
                   onClick={() => setSelectedCat(selectedCat === category ? null : category)}
-                  className={`flex items-center gap-1.5 w-full px-1.5 py-1 rounded text-[8px] font-mono transition-all ${
-                    selectedCat === category
-                      ? "bg-white text-black font-bold"
-                      : "text-white/80 hover:bg-white/10"
+                  className={`gotham-orbital-dropdown-item ${
+                    selectedCat === category ? 'gotham-orbital-dropdown-item-active' : ''
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: color }} />
@@ -2484,8 +2460,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       {/* Search overlay */}
       {showSearch && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[2003] w-80 pointer-events-auto">
-          <div
-            className="rounded-lg border border-primary/30 bg-black/90 backdrop-blur-md p-2 space-y-1.5"
+          <div className="gotham-orbital-panel p-2 space-y-1.5"
             style={{ boxShadow: "0 0 30px hsl(190 100% 50% / 0.1)" }}
           >
             <div className="flex items-center gap-2">
@@ -2574,11 +2549,10 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         {/* Selected satellite detail panel */}
         {selectedSat && (
           <div
-            className="absolute top-20 left-36 z-[2003] w-64 rounded border backdrop-blur-md pointer-events-auto animate-fade-in holo-flicker"
+            className="absolute top-20 left-36 z-[2003] w-64 border backdrop-blur-md pointer-events-auto animate-fade-in gotham-orbital-panel"
             style={{
               borderColor: CATEGORY_COLORS[selectedSat.category] + "40",
-              background: "rgba(0,15,20,0.92)",
-              boxShadow: `0 0 25px ${CATEGORY_COLORS[selectedSat.category]}18, inset 0 0 40px rgba(0,255,200,0.02)`,
+              boxShadow: `0 0 25px ${CATEGORY_COLORS[selectedSat.category]}18`,
             }}
           >
             <div
@@ -2696,14 +2670,14 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 <button
                   onClick={() => runPrediction(selectedSat)}
                   disabled={predicting}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 disabled:opacity-40 transition-all"
+                  className="flex-1 gotham-orbital-btn justify-center"
                 >
                   {predicting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crosshair className="h-3 w-3" />}
                   {predicting ? "PREDICTING..." : "AI PREDICT"}
                 </button>
                 <button
                   onClick={() => openAiChat(selectedSat)}
-                  className="flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[9px] font-mono font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all"
+                  className="gotham-orbital-btn justify-center"
                 >
                   <Bot className="h-3 w-3" /> ASK AI
                 </button>
@@ -2715,8 +2689,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         {/* AI Prediction Results Panel */}
         {predictionData && (
           <div
-            className="absolute top-20 left-[340px] z-[2004] w-80 rounded border backdrop-blur-md pointer-events-auto animate-fade-in"
-            style={{ background: "rgba(5,10,18,0.94)", borderColor: "#22c55e40", boxShadow: "0 0 25px #22c55e15" }}
+            className="absolute top-20 left-[340px] z-[2004] w-80 border backdrop-blur-md pointer-events-auto animate-fade-in gotham-orbital-panel"
+            style={{ borderColor: "#22c55e40", boxShadow: "0 0 25px #22c55e15" }}
           >
             <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: "#22c55e30", background: "#22c55e08" }}>
               <div className="flex items-center gap-1.5">
@@ -2793,7 +2767,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             top: Math.max(hoverPos.y - 40, 10),
           }}
         >
-          <div className="bg-black/90 backdrop-blur-md border border-white/20 rounded-lg px-3 py-2 min-w-[200px] shadow-xl">
+          <div className="gotham-orbital-panel px-3 py-2 min-w-[200px]">
             <div className="flex items-center gap-2 mb-1">
               <span
                 className="w-2 h-2 rounded-full animate-pulse"
@@ -2821,7 +2795,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       {aiChatSat && (
         <div className="absolute top-16 right-36 z-[2005] w-80 pointer-events-auto animate-fade-in">
           <div
-            className="rounded-lg border border-white/20 bg-black/92 backdrop-blur-md shadow-2xl flex flex-col"
+            className="gotham-orbital-panel flex flex-col"
             style={{ maxHeight: "70vh" }}
           >
             {/* Header */}
@@ -2872,7 +2846,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               <button
                 onClick={sendAiMessage}
                 disabled={aiLoading || !aiInput.trim()}
-                className="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 disabled:opacity-30"
+                className="w-6 h-6 flex items-center justify-center hover:bg-primary/10 disabled:opacity-30"
               >
                 <Send className="h-3 w-3 text-white/70" />
               </button>
@@ -2886,7 +2860,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       {/* City Landmark Tooltip */}
       {selectedCity && (
         <div className="absolute top-16 right-3 z-[2003] pointer-events-auto w-[280px]">
-          <div className="bg-black/85 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden shadow-2xl">
+          <div className="gotham-orbital-panel overflow-hidden shadow-2xl">
             {/* Landmark Image */}
             <div className="relative h-[140px] overflow-hidden">
               <img
