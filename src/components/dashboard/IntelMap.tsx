@@ -277,6 +277,9 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const airQualityGroupRef = useRef<L.LayerGroup | null>(null);
   const aisGroupRef = useRef<L.LayerGroup | null>(null);
   const cityGroupRef = useRef<L.LayerGroup | null>(null);
+  const googlePOIGroupRef = useRef<L.LayerGroup | null>(null);
+  const googleRouteGroupRef = useRef<L.LayerGroup | null>(null);
+  const googleTrafficTileRef = useRef<L.TileLayer | null>(null);
   const weatherTileRef = useRef<L.TileLayer | null>(null);
   const tileLayersRef = useRef<Map<string, L.TileLayer>>(new Map());
   const [imageryLayers, setImageryLayers] = useState<ImageryLayer[]>(DEFAULT_IMAGERY_LAYERS);
@@ -287,6 +290,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [loadingCCTV, setLoadingCCTV] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<number | null>(null);
   const { selectEvent } = useMapSync();
+
+  // Google API hooks
+  const googlePlaces = useGooglePlaces();
+  const googleGeocode = useGoogleGeocode();
+  const googleDirections = useGoogleDirections();
+  const [routeOrigin, setRouteOrigin] = useState<{ lat: number; lng: number } | null>(null);
+  const [routeDestination, setRouteDestination] = useState<{ lat: number; lng: number } | null>(null);
 
   // Cluster group styling options
   const clusterOptions = useMemo(() => ({
