@@ -1183,7 +1183,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
             <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)] flex-shrink-0">
               <div className="flex items-center gap-0.5">
-                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL", "SENSORS", "ONTOLOGY"] as const).map(tab => (
+                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL", "SENSORS", "ONTOLOGY", "S2S"] as const).map(tab => (
                   <button key={tab} onClick={() => setC2RightTab(tab)}
                     className={`flex-1 px-0.5 py-1 rounded text-[7px] font-mono font-bold border transition-colors ${c2RightTab === tab ? "border-primary/50 bg-primary/15 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                     {tab}
