@@ -1970,6 +1970,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       if (!error && data?.aircraft) {
         const newAircraft: Aircraft[] = data.aircraft;
         if (data.source) setFlightSource(data.source);
+        if (data.tiles_used != null) setTilesUsed(data.tiles_used);
 
         // --- ALERT: New military aircraft entering viewport ---
         const prevMilIds = new Set(aircraft.filter(a => a.is_military).map(a => a.icao24));
