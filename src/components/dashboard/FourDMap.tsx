@@ -1046,8 +1046,19 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
+            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)] flex items-center justify-between">
               <span className="text-[9px] text-muted-foreground font-mono tracking-wider">{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
+              <button
+                onClick={() => setLayers(prev => {
+                  const allOff = Object.values(prev).every(v => !v);
+                  const newVal = {} as typeof prev;
+                  for (const k of Object.keys(prev) as (keyof typeof prev)[]) newVal[k] = allOff;
+                  return newVal;
+                })}
+                className="text-[8px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors"
+              >
+                {totalActive === 0 ? "Enable All" : "Disable All"}
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-scroll scrollbar-thin py-1 min-h-0 direction-rtl">
