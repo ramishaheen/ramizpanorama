@@ -17,6 +17,7 @@ import { KillChainPanel } from "./KillChainPanel";
 import { C2ChatTab } from "./C2ChatTab";
 import { SensorFusionPanel } from "./SensorFusionPanel";
 import { OntologyPanel } from "./OntologyPanel";
+import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 
 
