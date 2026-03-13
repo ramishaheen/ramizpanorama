@@ -51,6 +51,23 @@ interface SensorFusionPanelProps {
 export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate }: SensorFusionPanelProps) => {
   const { feeds, summary, loading, fetchFeeds, feedsByCategory } = useSensorFeeds();
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [pulsing, setPulsing] = useState(false);
+
+  const handlePulse = async () => {
+    setPulsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sensor-ingest", {
+        body: { action: "pulse" },
+      });
+      if (error) throw error;
+      toast.success(`⚡ Pulsed ${data?.pulsed || 0} sensor feeds`);
+      fetchFeeds();
+    } catch {
+      toast.error("Pulse failed");
+    } finally {
+      setPulsing(false);
+    }
+  };
   const cats = feedsByCategory();
 
   const catOrder = ["satellite", "drone", "cctv", "sigint", "osint", "ground", "iot"];
