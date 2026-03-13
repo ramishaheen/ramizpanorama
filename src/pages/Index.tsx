@@ -243,6 +243,7 @@ const Index = () => {
     news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
     telegram: <TelegramFeed />,
+    ransomware: <RansomwareTracker />,
   };
 
   const rightWidgets: Record<string, ReactNode> = {
