@@ -1,72 +1,54 @@
 import { useState, useEffect } from "react";
-import { ShieldAlert, Globe, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Wifi, WifiOff, X, Maximize2 } from "lucide-react";
+import { ShieldAlert, Globe, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Wifi, WifiOff, X, Maximize2, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useCyberThreats, CyberThreat } from "@/hooks/useCyberThreats";
 
 // Static fallback data used when live feed is unavailable
 const FALLBACK_ATTACKS: CyberThreat[] = [
   {
-    id: "cy-001",
-    date: "2026-03-05",
-    attacker: "Israel (Unit 8200)",
-    attackerFlag: "🇮🇱",
-    target: "Iran Nuclear Facilities",
-    targetFlag: "🇮🇷",
-    type: "SCADA/ICS Attack",
-    severity: "critical",
+    id: "cy-001", date: "2026-03-05",
+    attacker: "Israel (Unit 8200)", attackerCountry: "Israel", attackerFlag: "🇮🇱",
+    target: "Iran Nuclear Facilities", targetCountry: "Iran", targetFlag: "🇮🇷",
+    type: "SCADA/ICS Attack", severity: "critical",
     description: "Stuxnet-variant malware deployed against Iranian uranium enrichment centrifuges at Natanz",
-    details: "Advanced persistent threat targeting Siemens S7-400 PLCs controlling gas centrifuge cascades. Caused physical damage to ~1,000 IR-6 centrifuges, setting back enrichment program by estimated 6 months.",
-    source: "https://www.reuters.com",
+    details: "Advanced persistent threat targeting Siemens S7-400 PLCs controlling gas centrifuge cascades. Caused physical damage to ~1,000 IR-6 centrifuges.",
+    source: "https://www.reuters.com", sourceName: "Reuters",
   },
   {
-    id: "cy-004",
-    date: "2026-03-05",
-    attacker: "USA (Cyber Command)",
-    attackerFlag: "🇺🇸",
-    target: "Iranian Military Networks",
-    targetFlag: "🇮🇷",
-    type: "Network Disruption",
-    severity: "critical",
+    id: "cy-004", date: "2026-03-05",
+    attacker: "USA (Cyber Command)", attackerCountry: "United States", attackerFlag: "🇺🇸",
+    target: "Iranian Military Networks", targetCountry: "Iran", targetFlag: "🇮🇷",
+    type: "Network Disruption", severity: "critical",
     description: "USCYBERCOM offensive operation against IRGC command-and-control infrastructure",
-    details: "Operation 'Digital Fury' — coordinated takedown of IRGC C2 nodes across 14 military bases. Disrupted drone control systems, missile telemetry networks, and logistics databases.",
-    source: "https://www.defense.gov",
+    details: "Operation 'Digital Fury' — coordinated takedown of IRGC C2 nodes across 14 military bases. Disrupted drone control and missile telemetry networks.",
+    source: "https://www.defense.gov", sourceName: "DoD",
   },
   {
-    id: "cy-007",
-    date: "2026-03-05",
-    attacker: "Iran (APT33/Elfin)",
-    attackerFlag: "🇮🇷",
-    target: "Israeli Water Systems",
-    targetFlag: "🇮🇱",
-    type: "Critical Infrastructure",
-    severity: "critical",
+    id: "cy-007", date: "2026-03-05",
+    attacker: "Iran (APT33/Elfin)", attackerCountry: "Iran", attackerFlag: "🇮🇷",
+    target: "Israeli Water Systems", targetCountry: "Israel", targetFlag: "🇮🇱",
+    type: "Critical Infrastructure", severity: "critical",
     description: "Attempted manipulation of chlorine levels in Israeli water treatment facilities",
-    details: "APT33 gained access to SCADA systems at 6 water treatment plants via spear-phishing. Attempted to alter chemical dosing parameters. Neutralized within 2 hours.",
-    source: "https://www.jpost.com",
+    details: "APT33 gained access to SCADA systems at 6 water treatment plants via spear-phishing. Neutralized within 2 hours by IDF Cyber Defense.",
+    source: "https://www.jpost.com", sourceName: "JPost",
   },
   {
-    id: "cy-009",
-    date: "2026-03-03",
-    attacker: "Iran (Charming Kitten)",
-    attackerFlag: "🇮🇷",
-    target: "Saudi Aramco",
-    targetFlag: "🇸🇦",
-    type: "Wiper Malware",
-    severity: "critical",
+    id: "cy-009", date: "2026-03-03",
+    attacker: "Iran (Charming Kitten)", attackerCountry: "Iran", attackerFlag: "🇮🇷",
+    target: "Saudi Aramco", targetCountry: "Saudi Arabia", targetFlag: "🇸🇦",
+    type: "Wiper Malware", severity: "critical",
     description: "Shamoon-4 wiper malware deployed against Saudi Aramco IT and OT networks",
     details: "New Shamoon variant targeted both IT workstations and OT networks controlling pipeline SCADA. 12,000+ endpoints affected.",
+    sourceName: "BleepingComputer",
   },
   {
-    id: "cy-010",
-    date: "2026-03-05",
-    attacker: "UAE (DarkMatter/Edge Group)",
-    attackerFlag: "🇦🇪",
-    target: "Houthi C2 Networks",
-    targetFlag: "🇾🇪",
-    type: "Offensive Cyber",
-    severity: "high",
+    id: "cy-010", date: "2026-03-05",
+    attacker: "UAE (DarkMatter/Edge Group)", attackerCountry: "UAE", attackerFlag: "🇦🇪",
+    target: "Houthi C2 Networks", targetCountry: "Yemen", targetFlag: "🇾🇪",
+    type: "Offensive Cyber", severity: "high",
     description: "Disruption of Houthi drone command-and-control and targeting systems",
-    details: "UAE cyber operators compromised satellite communication links used by Houthi forces for drone operations. Injected false GPS coordinates causing 4 armed drones to crash.",
+    details: "UAE cyber operators compromised satellite communication links used by Houthi forces for drone operations. Injected false GPS coordinates.",
+    sourceName: "The Record",
   },
 ];
 
@@ -85,27 +67,15 @@ const SEVERITY_DOT: Record<string, string> = {
 };
 
 const ATTACK_TYPE_ICON: Record<string, string> = {
-  "SCADA/ICS Attack": "⚡",
-  "Signal Intelligence": "📡",
-  "Electronic Warfare": "🛡️",
-  "Network Disruption": "🌐",
-  "Financial Disruption": "💰",
-  "Information Operations": "📰",
-  "Critical Infrastructure": "🏗️",
-  "Espionage": "🕵️",
-  "Wiper Malware": "💀",
-  "Offensive Cyber": "⚔️",
-  "Counter-Intelligence": "🔍",
-  "Defensive/Counter-IO": "🛡️",
-  "Defensive": "🔒",
-  "Ransomware": "🔐",
-  "Supply Chain": "🔗",
-  "Zero-Day Exploit": "💥",
-  "DDoS Attack": "🌊",
-  "Phishing Campaign": "🎣",
+  "SCADA/ICS Attack": "⚡", "Signal Intelligence": "📡", "Electronic Warfare": "🛡️",
+  "Network Disruption": "🌐", "Financial Disruption": "💰", "Information Operations": "📰",
+  "Critical Infrastructure": "🏗️", "Espionage": "🕵️", "Wiper Malware": "💀",
+  "Offensive Cyber": "⚔️", "Counter-Intelligence": "🔍", "Defensive/Counter-IO": "🛡️",
+  "Defensive": "🔒", "Ransomware": "🔐", "Supply Chain": "🔗",
+  "Zero-Day Exploit": "💥", "DDoS Attack": "🌊", "Phishing Campaign": "🎣",
 };
 
-type FilterCountry = "all" | "🇮🇱" | "🇺🇸" | "🇮🇷" | "🇦🇪" | "🇸🇦" | "🇶🇦" | "🇯🇴";
+type FilterCountry = "all" | "🇮🇱" | "🇺🇸" | "🇮🇷" | "🇦🇪" | "🇸🇦" | "🇶🇦" | "🇯🇴" | "🇷🇺" | "🇨🇳";
 const FILTER_OPTIONS: { flag: FilterCountry; label: string }[] = [
   { flag: "all", label: "ALL" },
   { flag: "🇮🇱", label: "Israel" },
@@ -115,6 +85,8 @@ const FILTER_OPTIONS: { flag: FilterCountry; label: string }[] = [
   { flag: "🇸🇦", label: "Saudi" },
   { flag: "🇶🇦", label: "Qatar" },
   { flag: "🇯🇴", label: "Jordan" },
+  { flag: "🇷🇺", label: "Russia" },
+  { flag: "🇨🇳", label: "China" },
 ];
 
 export const CyberSecurityAlerts = () => {
@@ -132,13 +104,12 @@ export const CyberSecurityAlerts = () => {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [modalOpen]);
 
-  // Use live data if available, fallback to static
   const allAttacks = liveThreats.length > 0 ? liveThreats : FALLBACK_ATTACKS;
   const isLive = liveThreats.length > 0;
 
   const filtered = filter === "all"
     ? allAttacks
-    : allAttacks.filter((a) => a.attackerFlag === filter);
+    : allAttacks.filter((a) => a.attackerFlag === filter || a.targetFlag === filter);
 
   const criticalCount = allAttacks.filter((a) => a.severity === "critical").length;
   const highCount = allAttacks.filter((a) => a.severity === "high").length;
@@ -146,29 +117,47 @@ export const CyberSecurityAlerts = () => {
   const renderAttackCard = (attack: CyberThreat, large = false) => (
     <div
       key={attack.id}
-      className={`border rounded p-${large ? "3" : "2"} transition-all cursor-pointer hover:bg-secondary/30 ${SEVERITY_COLORS[attack.severity] || SEVERITY_COLORS.medium}`}
+      className={`border transition-all cursor-pointer hover:bg-secondary/30 ${SEVERITY_COLORS[attack.severity] || SEVERITY_COLORS.medium} ${large ? "rounded p-3" : "rounded p-2"}`}
       onClick={() => setExpandedId(expandedId === attack.id ? null : attack.id)}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
+          {/* Severity + Date + CVE */}
+          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
             <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${SEVERITY_DOT[attack.severity] || SEVERITY_DOT.medium} ${attack.severity === "critical" ? "animate-pulse" : ""}`} />
             <span className={`${large ? "text-xs" : "text-[8px]"} font-mono font-bold uppercase`}>{attack.severity}</span>
             <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground`}>{attack.date}</span>
+            {attack.cve && (
+              <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-primary bg-primary/10 px-1 rounded`}>{attack.cve}</span>
+            )}
+            {attack.sourceName && (
+              <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground/70`}>via {attack.sourceName}</span>
+            )}
           </div>
+
+          {/* Attack Type */}
           <div className="flex items-center gap-1 mb-0.5">
             <span className={large ? "text-sm" : "text-[10px]"}>{ATTACK_TYPE_ICON[attack.type] || "⚡"}</span>
             <span className={`${large ? "text-xs" : "text-[8px]"} font-mono font-bold text-foreground truncate`}>{attack.type}</span>
           </div>
+
+          {/* Description */}
           <p className={`${large ? "text-xs" : "text-[8px]"} font-mono text-foreground/90 leading-tight`}>{attack.description}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground`}>
-              {attack.attackerFlag} {attack.attacker}
+
+          {/* Attacker → Target with country names */}
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            <span className={`${large ? "text-[11px]" : "text-[8px]"} font-mono font-semibold text-foreground/80`}>
+              {attack.attackerFlag} {attack.attackerCountry || attack.attacker}
             </span>
-            <span className={`${large ? "text-[10px]" : "text-[7px]"} text-muted-foreground`}>→</span>
-            <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground`}>
-              {attack.targetFlag} {attack.target}
+            <span className={`${large ? "text-[11px]" : "text-[8px]"} text-primary font-bold`}>→</span>
+            <span className={`${large ? "text-[11px]" : "text-[8px]"} font-mono font-semibold text-foreground/80`}>
+              {attack.targetFlag} {attack.targetCountry || attack.target}
             </span>
+          </div>
+
+          {/* Actor name (smaller, below country) */}
+          <div className={`${large ? "text-[10px]" : "text-[7px]"} font-mono text-muted-foreground mt-0.5`}>
+            {attack.attacker} → {attack.target}
           </div>
         </div>
         <div className="flex-shrink-0">
@@ -180,19 +169,36 @@ export const CyberSecurityAlerts = () => {
         </div>
       </div>
 
+      {/* Expanded details */}
       {expandedId === attack.id && (
-        <div className="mt-2 pt-2 border-t border-border/50">
+        <div className="mt-2 pt-2 border-t border-border/50 space-y-1.5">
           <p className={`${large ? "text-xs" : "text-[8px]"} font-mono text-foreground/80 leading-relaxed`}>{attack.details}</p>
+
+          {/* IOCs */}
+          {attack.iocs && attack.iocs.length > 0 && (
+            <div>
+              <span className={`${large ? "text-[10px]" : "text-[7px]"} font-mono font-bold text-warning uppercase`}>IOCs:</span>
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                {attack.iocs.map((ioc, i) => (
+                  <span key={i} className={`${large ? "text-[10px]" : "text-[7px]"} font-mono bg-secondary/50 text-foreground/70 px-1.5 py-0.5 rounded`}>
+                    {ioc}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Source link */}
           {attack.source && (
             <a
               href={attack.source}
               target="_blank"
               rel="noopener noreferrer"
-              className={`inline-flex items-center gap-0.5 mt-1.5 ${large ? "text-xs" : "text-[7px]"} font-mono text-primary hover:underline`}
+              className={`inline-flex items-center gap-0.5 ${large ? "text-xs" : "text-[7px]"} font-mono text-primary hover:underline`}
               onClick={(e) => e.stopPropagation()}
             >
               <ExternalLink className={large ? "h-3.5 w-3.5" : "h-2.5 w-2.5"} />
-              {t("Source", "المصدر")}
+              {attack.sourceName || t("Source", "المصدر")}
             </a>
           )}
         </div>
@@ -206,7 +212,7 @@ export const CyberSecurityAlerts = () => {
         <button
           key={opt.flag}
           onClick={() => setFilter(opt.flag)}
-          className={`flex-shrink-0 px-${large ? "2.5" : "1.5"} py-${large ? "1" : "0.5"} rounded font-mono ${large ? "text-xs" : "text-[7px]"} transition-colors whitespace-nowrap ${
+          className={`flex-shrink-0 ${large ? "px-2.5 py-1" : "px-1.5 py-0.5"} rounded font-mono ${large ? "text-xs" : "text-[7px]"} transition-colors whitespace-nowrap ${
             filter === opt.flag
               ? "bg-primary text-primary-foreground"
               : "bg-secondary/50 text-muted-foreground hover:text-foreground"
@@ -256,27 +262,30 @@ export const CyberSecurityAlerts = () => {
         </div>
       </div>
 
-      {/* Live status bar */}
+      {/* Live status bar with sources */}
       {lastUpdated && (
-        <div className="flex items-center gap-1 mb-1.5">
+        <div className="flex items-center gap-1 mb-1.5 flex-wrap">
           <span className={`h-1 w-1 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-muted-foreground"}`} />
           <span className="text-[6px] font-mono text-muted-foreground">
             {isLive ? "LIVE" : "CACHED"} • {new Date(lastUpdated).toLocaleTimeString()}
-            {sources.length > 0 && ` • ${sources.join(", ")}`}
           </span>
+          {sources.length > 0 && (
+            <span className="text-[6px] font-mono text-primary/60">
+              [{sources.join(" · ")}]
+            </span>
+          )}
         </div>
       )}
 
       {error && (
-        <div className="text-[7px] font-mono text-warning bg-warning/10 rounded px-1.5 py-0.5 mb-1.5">
-          ⚠ {t("Using cached data", "استخدام البيانات المخزنة")} — {error}
+        <div className="text-[7px] font-mono text-warning bg-warning/10 rounded px-1.5 py-0.5 mb-1.5 flex items-center gap-1">
+          <AlertTriangle className="h-2.5 w-2.5" />
+          {t("Using cached data", "استخدام البيانات المخزنة")}
         </div>
       )}
 
-      {/* Country filter */}
       {filterButtons()}
 
-      {/* Loading skeleton */}
       {loading && allAttacks.length === 0 && (
         <div className="space-y-1.5">
           {[1, 2, 3].map((i) => (
@@ -289,7 +298,6 @@ export const CyberSecurityAlerts = () => {
         </div>
       )}
 
-      {/* Attack list (compact) */}
       <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent space-y-1.5">
         {filtered.map((attack) => renderAttackCard(attack))}
       </div>
@@ -298,8 +306,7 @@ export const CyberSecurityAlerts = () => {
     {/* Fullscreen modal */}
     {modalOpen && (
       <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex flex-col" onClick={() => setModalOpen(false)}>
-        <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto p-4" onClick={(e) => e.stopPropagation()}>
-          {/* Modal header */}
+        <div className="flex-1 flex flex-col max-w-6xl w-full mx-auto p-4" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <ShieldAlert className="h-6 w-6 text-critical" />
@@ -317,8 +324,17 @@ export const CyberSecurityAlerts = () => {
               <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                 <span className="text-critical font-bold">{criticalCount} CRITICAL</span>
                 <span className="text-warning font-bold">{highCount} HIGH</span>
-                <span>{allAttacks.length} {t("TOTAL OPS", "إجمالي العمليات")}</span>
+                <span>{allAttacks.length} TOTAL</span>
               </div>
+              {sources.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {sources.map((s, i) => (
+                    <span key={i} className="text-[9px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
               <button
                 onClick={refresh}
                 disabled={loading}
@@ -335,19 +351,16 @@ export const CyberSecurityAlerts = () => {
             </div>
           </div>
 
-          {/* Modal status */}
           {lastUpdated && (
             <div className="flex items-center gap-2 mb-3 text-[10px] font-mono text-muted-foreground">
               <span className={`h-1.5 w-1.5 rounded-full ${isLive ? "bg-green-400 animate-pulse" : "bg-muted-foreground"}`} />
-              {isLive ? "LIVE" : "CACHED"} • {t("Last updated", "آخر تحديث")}: {new Date(lastUpdated).toLocaleString()}
-              {sources.length > 0 && ` • ${t("Sources", "المصادر")}: ${sources.join(", ")}`}
+              {isLive ? "LIVE" : "CACHED"} • Last updated: {new Date(lastUpdated).toLocaleString()}
+              {sources.length > 0 && ` • Sources: ${sources.join(", ")}`}
             </div>
           )}
 
-          {/* Modal filters */}
           {filterButtons(true)}
 
-          {/* Modal attack list */}
           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent space-y-2 pr-2">
             {filtered.map((attack) => renderAttackCard(attack, true))}
             {filtered.length === 0 && (
