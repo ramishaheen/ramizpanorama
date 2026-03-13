@@ -94,8 +94,25 @@ export function useLiveDashboard() {
     };
   }, [flashFresh]);
 
-  // Simulation disabled — dashboard uses only real OSINT data sources
-  // (USGS, NASA FIRMS, GDELT, OpenSky, OpenAQ, AIS, WarsLeaks, etc.)
+  // Live simulation polling — triggers DB writes that feed realtime subscriptions
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      if (!active) return;
+      try {
+        await supabase.functions.invoke('simulate-intel');
+      } catch (err) {
+        console.warn('simulate-intel poll error:', err);
+      }
+    };
+    const initialDelay = setTimeout(poll, 5000);
+    const interval = setInterval(poll, 45000);
+    return () => {
+      active = false;
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Daily filtered counts
   const todayStart = useMemo(() => {

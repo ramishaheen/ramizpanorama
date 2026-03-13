@@ -31,7 +31,7 @@ interface CyberThreatsState {
 }
 
 const CACHE_KEY = "waros-cyber-threats-v2";
-const CACHE_DURATION = 5 * 60 * 1000;
+const CACHE_DURATION = 2 * 60 * 1000;
 
 function getCached(): { data: CyberThreat[]; lastUpdated: string; sources: string[] } | null {
   try {
