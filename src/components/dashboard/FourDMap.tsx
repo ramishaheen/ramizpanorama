@@ -1146,6 +1146,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </>
           )}
+          {/* Targeting Workbench — bottom docked panel */}
+          {workbenchTargetId && (
+            <TargetingWorkbench
+              targetId={workbenchTargetId}
+              onClose={() => setWorkbenchTargetId(null)}
+              onLocate={handleFeedClick}
+              onCommitStrike={commitStrike}
+            />
+          )}
         </div>
 
         {/* RIGHT PANEL — Attributes + Feed */}
