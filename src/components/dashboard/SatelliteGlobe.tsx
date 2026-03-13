@@ -2210,7 +2210,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 <div className="w-full pointer-events-auto">
                   {/* Vessel type checkboxes */}
                   <div className="px-3 py-2 space-y-1 border-b border-white/10">
-                    <div className="text-[7px] font-mono text-white/40 uppercase tracking-widest mb-1">Globe Visibility</div>
+                    <div className="text-[7px] font-mono text-primary/40 uppercase tracking-widest mb-1">Globe Visibility</div>
                     {(["CARGO", "TANKER", "MILITARY", "FISHING", "UNKNOWN"] as const).map(t => {
                       const typeColors: Record<string, string> = { CARGO: "#3b82f6", TANKER: "#f97316", MILITARY: "#ef4444", FISHING: "#22c55e", UNKNOWN: "#9ca3af" };
                       const count = aisVessels.data.filter(v => v.type === t).length;
