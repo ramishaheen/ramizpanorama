@@ -201,18 +201,38 @@ export function useDarkWebIntel(threats: CyberThreat[]) {
         body: { threatContext: context },
       });
       if (error) throw new Error(error.message);
-      setDarkWeb({
-        entries: data?.entries || [],
-        torAnalysis: data?.torAnalysis || null,
-        indicatorExtraction: data?.indicatorExtraction || null,
-        threatCorrelation: data?.threatCorrelation || [],
-        forumAnalysis: data?.forumAnalysis || [],
-        ransomwareLeaks: data?.ransomwareLeaks || [],
-        alertRules: data?.alertRules || [],
-        dashboardStats: data?.dashboardStats || null,
-        temporalTrends: data?.temporalTrends || [],
-        loading: false,
-        error: null,
+
+      // Merge new data with existing, deduplicating by id
+      setDarkWeb(prev => {
+        const mergeById = <T extends { id: string }>(existing: T[], incoming: T[]): T[] => {
+          const map = new Map<string, T>();
+          existing.forEach(item => map.set(item.id, item));
+          incoming.forEach(item => map.set(item.id, item));
+          return Array.from(map.values());
+        };
+
+        const newEntries = data?.entries || [];
+        const newCorrelation = data?.threatCorrelation || [];
+        const newForum = data?.forumAnalysis || [];
+        const newLeaks = data?.ransomwareLeaks || [];
+        const newAlerts = data?.alertRules || [];
+        const newTrends = data?.temporalTrends || [];
+
+        return {
+          entries: mergeById(prev.entries, newEntries),
+          torAnalysis: data?.torAnalysis || prev.torAnalysis,
+          indicatorExtraction: data?.indicatorExtraction
+            ? mergeIndicators(prev.indicatorExtraction, data.indicatorExtraction)
+            : prev.indicatorExtraction,
+          threatCorrelation: mergeById(prev.threatCorrelation, newCorrelation),
+          forumAnalysis: mergeById(prev.forumAnalysis, newForum),
+          ransomwareLeaks: mergeById(prev.ransomwareLeaks, newLeaks),
+          alertRules: mergeById(prev.alertRules, newAlerts),
+          dashboardStats: data?.dashboardStats || prev.dashboardStats,
+          temporalTrends: newTrends.length > 0 ? newTrends : prev.temporalTrends,
+          loading: false,
+          error: null,
+        };
       });
     } catch (err) {
       console.error("Dark web intel error:", err);
