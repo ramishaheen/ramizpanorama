@@ -2015,45 +2015,49 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#050a12] flex flex-col overflow-hidden">
 
-      {/* Holographic scanline overlay */}
+      {/* Gotham scanline overlay */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,200,0.015) 2px, rgba(0,255,200,0.015) 4px)",
+          background: "repeating-linear-gradient(0deg, transparent, transparent 3px, hsl(190 100% 50% / 0.012) 3px, hsl(190 100% 50% / 0.012) 4px)",
           mixBlendMode: "screen",
         }}
       />
-      {/* Holographic sweep line */}
+      {/* Gotham sweep beam */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background: "linear-gradient(180deg, transparent 0%, transparent 45%, rgba(0,255,200,0.06) 50%, transparent 55%, transparent 100%)",
-          animation: "holoSweep 8s linear infinite",
+          background: "linear-gradient(180deg, transparent 0%, transparent 46%, hsl(190 100% 50% / 0.04) 50%, transparent 54%, transparent 100%)",
+          animation: "holoSweep 10s linear infinite",
         }}
       />
-      {/* Corner brackets — holographic frame */}
+      {/* Corner brackets — Gotham frame */}
       <div className="absolute inset-0 z-[2001] pointer-events-none">
-        {/* Top-left */}
-        <div className="absolute top-2 left-2 w-12 h-12 border-t border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
-        {/* Top-right */}
-        <div className="absolute top-2 right-2 w-12 h-12 border-t border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
-        {/* Bottom-left */}
-        <div className="absolute bottom-2 left-2 w-12 h-12 border-b border-l" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
-        {/* Bottom-right */}
-        <div className="absolute bottom-2 right-2 w-12 h-12 border-b border-r" style={{ borderColor: "rgba(0,255,200,0.25)" }} />
+        {[
+          { pos: "top-2 left-2", d: "M1 14V1H14" },
+          { pos: "top-2 right-2", d: "M23 14V1H10" },
+          { pos: "bottom-2 left-2", d: "M1 10V23H14" },
+          { pos: "bottom-2 right-2", d: "M23 10V23H10" },
+        ].map(({ pos, d }) => (
+          <div key={pos} className={`absolute ${pos}`}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d={d} stroke="hsl(var(--primary))" strokeWidth="0.75" strokeOpacity="0.2" />
+            </svg>
+          </div>
+        ))}
       </div>
-      {/* Holographic vignette glow */}
+      {/* Vignette */}
       <div
         className="absolute inset-0 z-[2001] pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,20,30,0.6) 100%)",
+          boxShadow: "inset 0 0 120px 40px hsl(220 30% 4% / 0.5)",
         }}
       />
-      {/* Holographic grid overlay (subtle) */}
+      {/* Grid overlay */}
       <div
-        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.02]"
+        className="absolute inset-0 z-[2001] pointer-events-none opacity-[0.015]"
         style={{
-          backgroundImage: "linear-gradient(rgba(0,255,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,200,0.3) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(hsl(190 60% 50% / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(190 60% 50% / 0.3) 1px, transparent 1px)",
           backgroundSize: "60px 60px",
         }}
       />
