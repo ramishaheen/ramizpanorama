@@ -1608,6 +1608,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               setOrbitPath(path);
               setOrbitColor(CATEGORY_COLORS[s.category] || "#d4a843");
             }
+            updateCoverageRing(s);
             const zoomAlt2 = s.alt < 2000 ? 0.6 : s.alt < 25000 ? 0.9 : 1.2;
             globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: zoomAlt2 }, 1000);
           })
