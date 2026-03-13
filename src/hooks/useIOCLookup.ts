@@ -60,7 +60,7 @@ export function useIOCLookup() {
 
   const scan = useCallback(async (ioc: string) => {
     if (!ioc || ioc.trim().length < 3) {
-      setError("Enter a valid IP address");
+      setError("Enter a valid IP, domain, or hash");
       return;
     }
     setLoading(true);
