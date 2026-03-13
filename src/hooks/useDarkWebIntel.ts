@@ -186,6 +186,43 @@ const EMPTY_STATE: DarkWebState = {
   loading: false, error: null,
 };
 
+  /** Merge indicator extraction data — append unique items */
+  const mergeIndicators = (existing: IndicatorExtraction | null, incoming: IndicatorExtraction): IndicatorExtraction => {
+    if (!existing) return incoming;
+    const dedup = <T extends { value?: string; id?: string; name?: string; port?: number }>(a: T[], b: T[]): T[] => {
+      const key = (item: T) => item.value || item.id || item.name || String(item.port) || JSON.stringify(item);
+      const seen = new Set(a.map(key));
+      return [...a, ...b.filter(item => !seen.has(key(item)))];
+    };
+    return {
+      network: {
+        ips: dedup(existing.network.ips, incoming.network.ips),
+        domains: dedup(existing.network.domains, incoming.network.domains),
+        urls: dedup(existing.network.urls, incoming.network.urls),
+        asns: dedup(existing.network.asns, incoming.network.asns),
+        ports: dedup(existing.network.ports, incoming.network.ports),
+      },
+      vulnerability: {
+        cves: dedup(existing.vulnerability.cves, incoming.vulnerability.cves),
+        exploits: dedup(existing.vulnerability.exploits, incoming.vulnerability.exploits),
+        patches: dedup(existing.vulnerability.patches, incoming.vulnerability.patches),
+      },
+      malware: {
+        hashes: dedup(existing.malware.hashes, incoming.malware.hashes),
+        families: dedup(existing.malware.families, incoming.malware.families),
+        c2Servers: dedup(existing.malware.c2Servers, incoming.malware.c2Servers),
+      },
+      actors: {
+        aptGroups: dedup(existing.actors.aptGroups, incoming.actors.aptGroups),
+        ransomwareGangs: dedup(existing.actors.ransomwareGangs, incoming.actors.ransomwareGangs),
+        hacktivistGroups: dedup(existing.actors.hacktivistGroups, incoming.actors.hacktivistGroups),
+      },
+      financial: {
+        cryptoWallets: dedup(existing.financial.cryptoWallets, incoming.financial.cryptoWallets),
+      },
+    };
+  };
+
 export function useDarkWebIntel(threats: CyberThreat[]) {
   const [darkWeb, setDarkWeb] = useState<DarkWebState>(EMPTY_STATE);
   const [dossier, setDossier] = useState<DossierState>({ dossier: null, loading: false, error: null });
