@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Target, CheckCircle, XCircle, ChevronDown, Loader2, Crosshair, Eye } from "lucide-react";
+import { Target, CheckCircle, XCircle, ChevronDown, Loader2, Crosshair, Eye, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TargetDetailModal } from "./TargetDetailModal";
+import { toast } from "sonner";
 import { useSensorToShooter } from "@/hooks/useSensorToShooter";
 
 interface TargetTrack {
@@ -43,12 +44,29 @@ const CLASS_ICONS: Record<string, string> = {
   supply_depot: "📦",
 };
 
+const COUNTRY_COORDS: Record<string, { lat: number; lng: number; latRange: number; lngRange: number }> = {
+  "Iran": { lat: 32.5, lng: 53.0, latRange: 6, lngRange: 10 },
+  "Israel": { lat: 31.5, lng: 34.8, latRange: 1.5, lngRange: 1 },
+  "Iraq": { lat: 33.3, lng: 44.0, latRange: 4, lngRange: 6 },
+  "Syria": { lat: 35.0, lng: 38.5, latRange: 3, lngRange: 4 },
+  "Lebanon": { lat: 33.9, lng: 35.9, latRange: 1, lngRange: 0.5 },
+  "Jordan": { lat: 31.2, lng: 36.5, latRange: 2, lngRange: 2 },
+  "Saudi Arabia": { lat: 24.0, lng: 45.0, latRange: 8, lngRange: 12 },
+  "UAE": { lat: 24.5, lng: 54.5, latRange: 1.5, lngRange: 2 },
+  "Yemen": { lat: 15.5, lng: 48.0, latRange: 4, lngRange: 6 },
+  "Kuwait": { lat: 29.3, lng: 47.5, latRange: 1, lngRange: 1 },
+  "Bahrain": { lat: 26.1, lng: 50.5, latRange: 0.3, lngRange: 0.3 },
+  "Qatar": { lat: 25.3, lng: 51.2, latRange: 0.8, lngRange: 0.5 },
+  "Oman": { lat: 23.6, lng: 58.5, latRange: 4, lngRange: 4 },
+};
+
 export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const [targets, setTargets] = useState<TargetTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState("Iran");
   const { commitStrike } = useSensorToShooter();
 
   const fetchTargets = useCallback(async () => {
@@ -87,10 +105,18 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const runATR = async () => {
     setScanning(true);
     try {
+      const country = COUNTRY_COORDS[selectedCountry];
+      const lat = country.lat + (Math.random() - 0.5) * country.latRange;
+      const lng = country.lng + (Math.random() - 0.5) * country.lngRange;
       const { data, error } = await supabase.functions.invoke("c2-targeting", {
-        body: { lat: 33.5 + Math.random() * 4, lng: 36 + Math.random() * 15, source_sensor: "satellite" },
+        body: { lat, lng, source_sensor: "satellite" },
       });
-      if (!error) fetchTargets();
+      if (!error) {
+        fetchTargets();
+        toast.success(`ATR scan complete — ${selectedCountry}`, {
+          description: `${data?.detections?.length || 0} targets detected at ${lat.toFixed(2)}°N ${lng.toFixed(2)}°E`,
+        });
+      }
     } catch { /* silent */ }
     setScanning(false);
   };
@@ -113,14 +139,30 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
         </div>
       </div>
 
-      <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)]">
+      <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)] space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <MapPin className="h-3 w-3 text-muted-foreground" />
+          <span className="text-[8px] font-mono text-muted-foreground tracking-wider">SCAN AREA</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {Object.keys(COUNTRY_COORDS).map(c => (
+            <button key={c} onClick={() => setSelectedCountry(c)}
+              className={`px-1.5 py-0.5 rounded text-[7px] font-mono border transition-colors ${
+                selectedCountry === c
+                  ? "border-[#ef4444]/50 bg-[#ef4444]/15 text-[#ef4444] font-bold"
+                  : "border-[hsl(220,15%,18%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,25%)]"
+              }`}>
+              {c}
+            </button>
+          ))}
+        </div>
         <button
           onClick={runATR}
           disabled={scanning}
           className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded text-[9px] font-mono font-bold border border-[#ef4444]/40 bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 disabled:opacity-50 transition-colors"
         >
           {scanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crosshair className="h-3 w-3" />}
-          {scanning ? "AI SCANNING..." : "RUN ATR SCAN"}
+          {scanning ? `SCANNING ${selectedCountry.toUpperCase()}...` : `ATR SCAN — ${selectedCountry.toUpperCase()}`}
         </button>
       </div>
 
