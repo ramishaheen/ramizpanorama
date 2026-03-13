@@ -2777,6 +2777,15 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                   value={`${selectedSat.lng.toFixed(3)}°`}
                 />
               </div>
+              {/* Coverage footprint info */}
+              {coverageRing && (
+                <div className="flex items-center gap-1.5 pt-1 border-t border-border/20">
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: coverageRing.color, opacity: 0.6 }} />
+                  <span className="text-[8px] font-mono text-muted-foreground/70">
+                    COVERAGE: <span className="text-foreground/80">{Math.round(coverageRing.radiusKm * 2)} km</span> diameter • <span className="text-foreground/80">{Math.round(coverageRing.radiusKm)} km</span> radius
+                  </span>
+                </div>
+              )}
               <div className="text-[7px] font-mono text-muted-foreground/30 pt-1 border-t border-border/20">
                 EPOCH: {selectedSat.epochYear} DAY{" "}
                 {selectedSat.epochDay?.toFixed(2)} • CELESTRAK
