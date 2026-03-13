@@ -1098,6 +1098,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
           <div ref={globeContainerRef} className="absolute inset-0" />
 
+          {/* Inline 3D Realistic View */}
+          {inline3DTarget && (
+            <Inline3DView
+              lat={inline3DTarget.lat}
+              lng={inline3DTarget.lng}
+              onClose={() => setInline3DTarget(null)}
+            />
+          )}
+
           {/* Search */}
           {!cleanUI && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-64 sm:w-80">
