@@ -590,6 +590,64 @@
   min-height: 0;
 }
 
+/* ===== GOTHAM COMMAND BAR ===== */
+.gotham-cmd-bar {
+  background: hsl(220 30% 4% / 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid hsl(190 60% 18% / 0.4);
+  box-shadow: 0 -4px 24px hsl(220 30% 2% / 0.6);
+}
+
+.gotham-cmd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  border: 1px solid hsl(var(--border) / 0.3);
+  border-radius: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gotham-cmd-btn:hover {
+  color: hsl(var(--foreground));
+  background: hsl(var(--secondary) / 0.5);
+  border-color: hsl(var(--border) / 0.6);
+}
+
+.gotham-cmd-btn-active,
+.gotham-cmd-btn-active:hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.4);
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.15);
+}
+
+.gotham-section-divider {
+  width: 1px;
+  align-self: stretch;
+  background: hsl(190 60% 18% / 0.3);
+  margin: 4px 0;
+  flex-shrink: 0;
+}
+
+.gotham-expanded-panel {
+  background: hsl(220 30% 5% / 0.97);
+  backdrop-filter: blur(16px);
+  border: 1px solid hsl(190 60% 18% / 0.3);
+  border-bottom: none;
+  box-shadow: 0 -8px 32px hsl(220 30% 2% / 0.5);
+}
+
 /* Wind direction arrow markers */
 .wind-arrow-marker {
   background: transparent !important;
