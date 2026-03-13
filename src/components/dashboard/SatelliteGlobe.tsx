@@ -468,6 +468,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [loading, setLoading] = useState(true);
   const [globeInitError, setGlobeInitError] = useState<string | null>(null);
   const [showLabels, setShowLabels] = useState(false);
+  const [liteMode, setLiteMode] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedSat, setSelectedSat] = useState<SatelliteData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
