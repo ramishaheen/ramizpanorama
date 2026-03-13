@@ -2460,8 +2460,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       {/* Search overlay */}
       {showSearch && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[2003] w-80 pointer-events-auto">
-          <div
-            className="rounded-lg border border-primary/30 bg-black/90 backdrop-blur-md p-2 space-y-1.5"
+          <div className="gotham-orbital-panel p-2 space-y-1.5"
             style={{ boxShadow: "0 0 30px hsl(190 100% 50% / 0.1)" }}
           >
             <div className="flex items-center gap-2">
