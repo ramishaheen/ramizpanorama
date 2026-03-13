@@ -182,7 +182,8 @@ const KillChainEventModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
