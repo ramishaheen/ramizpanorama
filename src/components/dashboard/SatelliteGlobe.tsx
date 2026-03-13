@@ -2036,21 +2036,27 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       }
 
       if (d.type === "city") {
-        el.style.cssText =
-          "cursor:pointer;font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);padding:2px 5px;border-radius:4px;display:flex;align-items:center;gap:3px;transition:all 0.2s;";
-        el.style.color = "#00dcff";
-        el.style.backgroundColor = "rgba(0,20,40,0.7)";
-        el.style.border = "1px solid rgba(0,220,255,0.3)";
-        el.innerHTML = `<span style="width:5px;height:5px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 6px #00dcff;"></span> ${d.label}`;
+        const isLite = liteMode;
+        const dotSize = isLite ? 3 : 5;
+        el.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:0;transition:all 0.25s ease;position:relative;`;
+        const dot = document.createElement("span");
+        dot.style.cssText = `width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 ${isLite ? 4 : 6}px #00dcff;flex-shrink:0;`;
+        el.appendChild(dot);
+        const label = document.createElement("span");
+        label.style.cssText = `font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);color:#00dcff;background:rgba(0,20,40,0.85);border:1px solid rgba(0,220,255,0.3);padding:2px 5px;border-radius:4px;margin-left:4px;opacity:0;pointer-events:none;transition:opacity 0.2s ease;`;
+        label.textContent = d.label;
+        el.appendChild(label);
         el.addEventListener("mouseenter", () => {
-          el.style.backgroundColor = "rgba(0,220,255,0.2)";
-          el.style.borderColor = "rgba(0,220,255,0.6)";
-          el.style.transform = "scale(1.15)";
+          label.style.opacity = "1";
+          label.style.pointerEvents = "auto";
+          dot.style.boxShadow = `0 0 10px #00dcff, 0 0 20px rgba(0,220,255,0.3)`;
+          dot.style.transform = "scale(1.4)";
         });
         el.addEventListener("mouseleave", () => {
-          el.style.backgroundColor = "rgba(0,20,40,0.7)";
-          el.style.borderColor = "rgba(0,220,255,0.3)";
-          el.style.transform = "scale(1)";
+          label.style.opacity = "0";
+          label.style.pointerEvents = "none";
+          dot.style.boxShadow = `0 0 ${isLite ? 4 : 6}px #00dcff`;
+          dot.style.transform = "scale(1)";
         });
         el.addEventListener("click", () => {
           window.dispatchEvent(new CustomEvent("globe-city-click", { detail: d.cityData }));
