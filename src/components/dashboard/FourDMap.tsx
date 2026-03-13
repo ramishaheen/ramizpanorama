@@ -966,8 +966,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           )}
 
           {/* X close button — always visible, prominent */}
-          <button onClick={onClose} className="absolute top-3 right-3 z-[10002] w-10 h-10 flex items-center justify-center rounded-lg bg-destructive/90 backdrop-blur-md border-2 border-destructive text-destructive-foreground hover:bg-destructive hover:scale-110 transition-all shadow-[0_0_20px_hsl(0,80%,50%/0.4)] font-bold">
+          <button onClick={onClose} className="absolute top-3 right-3 z-[10002] w-10 h-10 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-destructive/90 backdrop-blur-md border-2 border-destructive text-destructive-foreground hover:bg-destructive hover:scale-110 transition-all shadow-[0_0_20px_hsl(0,80%,50%/0.4)] font-bold">
             <X className="h-5 w-5" strokeWidth={3} />
+          </button>
+
+          {/* Mobile sidebar toggle */}
+          <button onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} className="absolute top-3 left-3 z-[10002] w-10 h-10 flex items-center justify-center rounded-lg bg-[hsl(220,20%,7%)/0.9] backdrop-blur-md border border-[hsl(190,60%,20%)] text-primary hover:bg-primary/10 transition-all md:hidden">
+            <Layers className="h-4 w-4" />
           </button>
 
           {/* Title + HUD */}
