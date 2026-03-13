@@ -1032,7 +1032,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const marker = L.marker([vessel.lat, vessel.lng], {
           icon: createVesselIcon(vessel.type, vessel.heading),
         });
-        marker.bindPopup(`
+        bindHoverPopup(marker, `
           <div style="${popupStyle}">
             <div style="color:${vesselColors[vessel.type]};font-weight:700;margin-bottom:4px;">${vessel.name}</div>
             <div>Flag: ${vessel.flag} | Type: ${vessel.type}</div>
@@ -1040,7 +1040,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
             ${vessel.destination ? `<div>Dest: ${vessel.destination}</div>` : ""}
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(vessel.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         marker.addTo(group);
       });
     }
