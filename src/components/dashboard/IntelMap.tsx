@@ -1054,13 +1054,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           fillOpacity: 0.7,
           weight: 2,
         });
-        marker.bindPopup(`
+        bindHoverPopup(marker, `
           <div style="${popupStyle}">
             <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">[${alert.type}] ${alert.title}</div>
             <div style="margin-bottom:4px;">${alert.summary}</div>
             <div style="font-size:9px;opacity:0.6;">${alert.source} — ${new Date(alert.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         marker.addTo(group);
       });
     }
