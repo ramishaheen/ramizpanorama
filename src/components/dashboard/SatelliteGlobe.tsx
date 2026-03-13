@@ -2419,7 +2419,10 @@ export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlig
               ▸ VLEO: {vleo} • LEO: {leo} • MEO: {meo} • GEO: {geo}
             </div>
             <div>
-              ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
+              ▸ OSINT: {OSINT_MARKERS.length} MARKERS • {OSINT_ARCS.length + liveRockets.length} ARCS • {liveGeoAlerts.length} ALERTS
+            </div>
+            <div>
+              ▸ FLIGHTS: {flights.length} • QUAKES: {liveEarthquakes.length} • FIRES: {liveWildfires.length}
             </div>
             <div className="flex items-center gap-1">
               {loading && !isLive ? (
