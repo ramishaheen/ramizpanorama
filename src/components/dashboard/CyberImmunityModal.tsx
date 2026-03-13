@@ -1080,7 +1080,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
             ) : centerView === "graph" ? (
               <RelationshipGraph threats={filtered} />
             ) : (
-              <DarkWebMonitor threats={filtered} />
+              <EnhancedDarkWebMonitor entries={darkWeb.entries} torAnalysis={darkWeb.torAnalysis} loading={darkWeb.loading} onFetchDossier={handleFetchDossier} />
             )}
 
             {/* Live stats HUD overlay (when no threat selected) */}
