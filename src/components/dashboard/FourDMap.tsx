@@ -1006,7 +1006,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <span className="text-[9px] text-muted-foreground font-mono tracking-wider">{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-1">
+            <div className="flex-1 overflow-y-auto scrollbar-thin py-1 min-h-0">
               {layerConfigs.map(layer => (
                 <button key={layer.id} onClick={() => toggleLayer(layer.id)}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
