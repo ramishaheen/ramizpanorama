@@ -31,7 +31,7 @@ interface CyberThreatsState {
 }
 
 const CACHE_KEY = "waros-cyber-threats-v2";
-const CACHE_DURATION = 5 * 60 * 1000;
+const CACHE_DURATION = 2 * 60 * 1000;
 
 function getCached(): { data: CyberThreat[]; lastUpdated: string; sources: string[] } | null {
   try {
@@ -90,7 +90,12 @@ export function useCyberThreats(): CyberThreatsState {
         verified: typeof t.verified === 'boolean' ? t.verified : false,
       }));
 
-      setThreats(fetchedThreats);
+      // Accumulate threats across refreshes (deduplicate by ID)
+      setThreats(prev => {
+        const merged = new Map(prev.map(t => [t.id, t]));
+        fetchedThreats.forEach(t => merged.set(t.id, t));
+        return Array.from(merged.values());
+      });
       setLastUpdated(data.lastUpdated);
       setSources(data.sources || []);
       setCache(fetchedThreats, data.lastUpdated, data.sources || []);
@@ -103,9 +108,9 @@ export function useCyberThreats(): CyberThreatsState {
   }, []);
 
   useEffect(() => {
-    const initialDelay = setTimeout(() => fetchThreats(), 24000);
+    fetchThreats();
     const interval = setInterval(() => fetchThreats(true), CACHE_DURATION);
-    return () => { clearTimeout(initialDelay); clearInterval(interval); };
+    return () => { clearInterval(interval); };
   }, [fetchThreats]);
 
   const refresh = useCallback(() => fetchThreats(true), [fetchThreats]);

@@ -24,8 +24,20 @@ import { useIOCLookup, type IOCResult } from "@/hooks/useIOCLookup";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
+interface OsintGeoAlert {
+  id: string;
+  type: string;
+  region: string;
+  title: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  timestamp: string;
+}
+
 interface CyberImmunityModalProps {
   onClose: () => void;
+  geoAlerts?: OsintGeoAlert[];
 }
 
 /* ── country coordinates (kept for RelationshipGraph) ── */
@@ -1244,8 +1256,32 @@ function ThreatDetailCard({ threat, onClose }: { threat: CyberThreat; onClose: (
 }
 
 /* ── Main Modal ── */
-export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
-  const { threats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
+export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityModalProps) => {
+  const { threats: cyberThreats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
+
+  // Merge cyber threats with OSINT geo alerts converted to CyberThreat format
+  const threats = useMemo(() => {
+    const osintAsCyber: CyberThreat[] = geoAlerts.map(g => ({
+      id: `osint-${g.id}`,
+      date: g.timestamp,
+      attacker: g.type,
+      attackerCountry: g.region,
+      attackerFlag: "🌐",
+      target: g.region,
+      targetCountry: g.region,
+      targetFlag: "🎯",
+      type: g.type,
+      severity: (["critical", "high", "medium", "low"].includes(g.severity) ? g.severity : "medium") as CyberThreat["severity"],
+      description: g.title,
+      details: `OSINT alert: ${g.title}`,
+      source: "OSINT",
+      sourceName: "WarOS OSINT",
+      verified: true,
+    }));
+    const merged = new Map(cyberThreats.map(t => [t.id, t]));
+    osintAsCyber.forEach(t => merged.set(t.id, t));
+    return Array.from(merged.values());
+  }, [cyberThreats, geoAlerts]);
   const { darkWeb, dossier, fetchDarkWeb, fetchDossier, clearDossier } = useDarkWebIntel(threats);
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("Jordan");
