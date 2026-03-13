@@ -119,7 +119,7 @@ export function useLiveDashboard() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d.toISOString();
-  }, []);
+  }, [airspaceAlerts, vessels, geoAlerts, rockets]);
 
   const dailyCounts = useMemo(() => {
     const todayAirspace = airspaceAlerts.filter(a => a.active && a.timestamp >= todayStart);
