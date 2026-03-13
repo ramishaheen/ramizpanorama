@@ -2158,6 +2158,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-primary" />
             <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">RamiZpanorama 3D View</span>
+            {liteMode && (
+              <span className="text-[8px] font-mono font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded animate-pulse">⚡ LITE</span>
+            )}
             <span className="text-[9px] font-mono text-muted-foreground bg-muted/30 px-1.5 py-0.5 rounded">PHOTOREALISTIC TILES</span>
           </div>
           <div className="flex items-center gap-1">
