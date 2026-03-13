@@ -64,8 +64,12 @@ Deno.serve(async (req) => {
       const { feed_id, detections } = body;
       if (!detections?.length) throw new Error("detections[] required");
 
-      const { data: feed, error: feedErr } = await sb.from("sensor_feeds").select("*").eq("id", feed_id).single();
-      if (feedErr || !feed) throw new Error("Sensor feed not found");
+      let feed: any = null;
+      if (feed_id) {
+        const { data: f, error: feedErr } = await sb.from("sensor_feeds").select("*").eq("id", feed_id).single();
+        if (feedErr || !f) throw new Error("Sensor feed not found");
+        feed = f;
+      }
 
       const results: any[] = [];
 
