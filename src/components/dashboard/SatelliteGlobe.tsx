@@ -1672,13 +1672,6 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           .arcDashGap(0.15)
           .arcDashAnimateTime(3000)
           .htmlElementsData([])  // HTML elements managed by consolidated useEffect
-          .ringLat((d: any) => d.lat)
-          .ringLng((d: any) => d.lng)
-          .ringAltitude(0.001)
-          .ringColor(() => (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`)
-          .ringMaxRadius((d: any) => d.maxR)
-          .ringPropagationSpeed((d: any) => d.propagationSpeed)
-          .ringRepeatPeriod(2000)
           // Country polygon layer for click-to-zoom
           .polygonsData(getCountryGeoJSON(["IR","IQ","SA","AE","JO","IL","SY","LB","KW","QA","BH","OM","YE","EG","TR"]).features)
           .polygonCapColor(() => "rgba(0,220,255,0.08)")
