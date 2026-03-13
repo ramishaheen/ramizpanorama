@@ -120,7 +120,7 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />

@@ -130,8 +130,8 @@ export const C2ChatTab = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-2 py-2 space-y-2">
+    <div className="flex flex-col h-full min-h-0">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-2 py-2 space-y-2">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-4">
             <div className="h-10 w-10 rounded-full bg-[#f97316]/10 flex items-center justify-center">
