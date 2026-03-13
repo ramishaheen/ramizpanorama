@@ -1457,9 +1457,9 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       <CyberAlertBanner threats={filtered} />
 
       {/* ── MAIN CONTENT ── */}
-      <div className="flex flex-1 min-h-0">
-        {/* LEFT PANEL */}
-        <div className="w-[272px] border-r border-border bg-card/30 flex flex-col max-md:hidden">
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* LEFT PANEL — hidden on mobile, shown on md+ */}
+        <div className="w-full md:w-[272px] border-b md:border-b-0 md:border-r border-border bg-card/30 flex flex-col max-md:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
               <IOCSearchSection search={search} setSearch={setSearch} />
