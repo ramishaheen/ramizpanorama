@@ -2343,30 +2343,30 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
           {/* Nav & Zoom controls — right */}
           <div className="flex items-center gap-1">
-            <div className="flex gap-0.5 bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
+            <div className="flex gap-0.5 gotham-orbital-panel p-1">
               <button
                 onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, altitude: Math.max(pov.altitude * 0.75, 0.3) }, 400); }}
-                className="w-7 h-7 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+                className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
                 title="Zoom In"
               >
                 <ZoomIn className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, altitude: Math.min(pov.altitude * 1.35, 6) }, 400); }}
-                className="w-7 h-7 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all"
+                className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
                 title="Zoom Out"
               >
                 <ZoomOut className="h-3.5 w-3.5" />
               </button>
             </div>
-            <div className="bg-black/70 backdrop-blur-md border border-white/20 rounded-lg p-1">
+            <div className="gotham-orbital-panel p-1">
               <div className="grid grid-cols-3 gap-0.5">
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Rotate Left"><RotateCcw className="h-3 w-3" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.min(pov.lat + 15, 85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Move Up"><ChevronUp className="h-3.5 w-3.5" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Rotate Right"><RotateCw className="h-3 w-3" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Pan Left"><ChevronLeft className="h-3.5 w-3.5" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.max(pov.lat - 15, -85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Move Down"><ChevronDown className="h-3.5 w-3.5" /></button>
-                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded transition-all" title="Pan Right"><ChevronRight className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Rotate Left"><RotateCcw className="h-3 w-3" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.min(pov.lat + 15, 85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Move Up"><ChevronUp className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 15 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Rotate Right"><RotateCw className="h-3 w-3" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng - 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Pan Left"><ChevronLeft className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lat: Math.max(pov.lat - 15, -85) }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Move Down"><ChevronDown className="h-3.5 w-3.5" /></button>
+                <button onClick={() => { const g = globeRef.current; if (!g) return; const pov = g.pointOfView(); g.pointOfView({ ...pov, lng: pov.lng + 30 }, 400); }} className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all" title="Pan Right"><ChevronRight className="h-3.5 w-3.5" /></button>
               </div>
             </div>
           </div>
