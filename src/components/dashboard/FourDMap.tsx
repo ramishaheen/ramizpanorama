@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap, Pause, Play, Eye, Anchor, Lock, Search, Target, AlertTriangle, Radar, ChevronDown, Sparkles, SlidersHorizontal, Monitor, Layers } from "lucide-react";
+import { X, Globe, Satellite, Plane, Ship, Flame, Activity, Radio, Wind, Shield, Crosshair, Rocket, MapPin, Zap, Pause, Play, Eye, Anchor, Lock, Search, Target, AlertTriangle, Radar, ChevronDown, Sparkles, SlidersHorizontal, Monitor, Layers, Users, Swords } from "lucide-react";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useEarthquakes } from "@/hooks/useEarthquakes";
@@ -11,6 +12,10 @@ import { useGeoFusion } from "@/hooks/useGeoFusion";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import type { Rocket as RocketType } from "@/data/mockData";
+import { C2TargetingPanel } from "./C2TargetingPanel";
+import { KillChainPanel } from "./KillChainPanel";
+import { C2ChatTab } from "./C2ChatTab";
+
 
 interface FourDMapProps { onClose: () => void; rockets?: RocketType[]; }
 interface LayerConfig { id: string; label: string; icon: React.ReactNode; color: string; count?: number; }
@@ -224,6 +229,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     satellites: true, flights: true, maritime: true, earthquakes: true, wildfires: true,
     conflicts: true, rockets: true, nuclear: true, airQuality: false, geoFusion: true,
     borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
+    blueForce: true, redForce: true, targetTracks: true, killChain: false,
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
@@ -253,6 +259,10 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
+  const [forceUnits, setForceUnits] = useState<any[]>([]);
+  const [targetTracks, setTargetTracks] = useState<any[]>([]);
+  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL">("FEED");
+
 
   // Fetch Google POIs for the focused region
   useEffect(() => {
@@ -271,6 +281,25 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     };
     fetchPOIs();
   }, [layers.googlePOI]);
+
+  // Fetch C2 force units and target tracks
+  useEffect(() => {
+    const fetchC2 = async () => {
+      const [{ data: fu }, { data: tt }] = await Promise.all([
+        supabase.from("force_units").select("*").limit(100),
+        supabase.from("target_tracks").select("*").limit(50),
+      ]);
+      if (fu) setForceUnits(fu);
+      if (tt) setTargetTracks(tt);
+    };
+    fetchC2();
+    const iv = setInterval(fetchC2, 10000);
+    const ch1 = supabase.channel("c2_forces_rt").on("postgres_changes", { event: "*", schema: "public", table: "force_units" }, () => fetchC2()).subscribe();
+    const ch2 = supabase.channel("c2_targets_rt").on("postgres_changes", { event: "*", schema: "public", table: "target_tracks" }, () => fetchC2()).subscribe();
+    return () => { clearInterval(iv); supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
+  }, []);
+
+  const totalActive = Object.values(layers).filter(Boolean).length;
 
   // Merge real + emulated data — emulated fills gaps when APIs haven't loaded
   const earthquakes = useMemo(() => earthquakesRaw.length > 0 ? earthquakesRaw : EMULATED_EARTHQUAKES, [earthquakesRaw]);
@@ -400,12 +429,17 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => clearInterval(iv);
   }, [satellites.length]);
 
+  const blueUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "blue"), [forceUnits]);
+  const redUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "red" || u.affiliation === "unknown"), [forceUnits]);
+  const activeTargets = useMemo(() => targetTracks.filter((t: any) => t.status !== "destroyed"), [targetTracks]);
+
   const stats = useMemo(() => ({
     sats: allSatellites.length, aircraft: allFlights.length, vessels: aisVessels.length,
     quakes: earthquakes.length, fires: wildfires.length, conflicts: conflictEvents.length,
     rockets: rockets.length, nuclear: nuclearStations.length + (nuclearFacilities?.length || 0),
     fusion: geoFusionData?.events?.length || 0, airQ: airQualityData.length,
-  }), [allSatellites, allFlights, aisVessels, earthquakes, wildfires, conflictEvents, rockets, nuclearStations, nuclearFacilities, geoFusionData, airQualityData]);
+    blu: blueUnits.length, red: redUnits.length, tgt: activeTargets.length,
+  }), [allSatellites, allFlights, aisVessels, earthquakes, wildfires, conflictEvents, rockets, nuclearStations, nuclearFacilities, geoFusionData, airQualityData, blueUnits, redUnits, activeTargets]);
 
   const layerConfigs: LayerConfig[] = [
     { id: "satellites", label: "Satellites", icon: <Satellite className="h-3.5 w-3.5" />, color: "#00d4ff", count: stats.sats },
@@ -422,9 +456,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "borders", label: "Country Borders", icon: <MapPin className="h-3.5 w-3.5" />, color: "#00ffc8" },
     { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3.5 w-3.5" />, color: "#e879f9" },
     { id: "googlePOI", label: "Google POIs", icon: <MapPin className="h-3.5 w-3.5" />, color: "#a855f7" },
+    { id: "blueForce", label: "Blue Force (COP)", icon: <Users className="h-3.5 w-3.5" />, color: "#3b82f6", count: stats.blu },
+    { id: "redForce", label: "Red Force (COP)", icon: <Swords className="h-3.5 w-3.5" />, color: "#ef4444", count: stats.red },
+    { id: "targetTracks", label: "Target Tracks", icon: <Target className="h-3.5 w-3.5" />, color: "#f97316", count: stats.tgt },
+    { id: "killChain", label: "Kill Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
   ];
-
-  const totalActive = Object.values(layers).filter(Boolean).length;
 
   // Timeline
   const [playing, setPlaying] = useState(false);
@@ -834,12 +870,46 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     }
     globe.arcsData(arcs);
 
+    // ========== C2 COP: Blue Force Units ==========
+    if (layers.blueForce) {
+      blueUnits.forEach((u: any) => {
+        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔵" : u.unit_type === "air_defense" ? "🛡" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "💥" : u.unit_type === "command" ? "⭐" : u.unit_type === "special_ops" ? "🗡" : "📦";
+        points.push({
+          lat: u.lat, lng: u.lng, pointAlt: 0.03, color: "#3b82f6", radius: 0.3 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,25,0.96);border:1px solid #3b82f6;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(59,130,246,0.3)"><div style="color:#3b82f6;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> BLUE FORCE</div><div style="font-size:10px;margin-top:2px">▢ ${u.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E ${u.speed_kph > 0 ? `• ${u.speed_kph}kph HDG ${u.heading}°` : ""}</div></div>`,
+        });
+      });
+    }
+
+    // ========== C2 COP: Red Force Units ==========
+    if (layers.redForce) {
+      redUnits.forEach((u: any) => {
+        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔴" : u.unit_type === "air_defense" ? "🎯" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "🚀" : "⚠️";
+        points.push({
+          lat: u.lat, lng: u.lng, pointAlt: 0.03, color: "#ef4444", radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(25,5,5,0.96);border:1px solid #ef4444;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(239,68,68,0.3)"><div style="color:#ef4444;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> RED FORCE</div><div style="font-size:10px;margin-top:2px">◇ ${u.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E • SRC: ${u.source.toUpperCase()}</div></div>`,
+        });
+      });
+    }
+
+    // ========== C2: AI Target Tracks ==========
+    if (layers.targetTracks) {
+      activeTargets.forEach((t: any) => {
+        const pCol = t.priority === "critical" ? "#dc2626" : t.priority === "high" ? "#f97316" : t.priority === "medium" ? "#eab308" : "#22c55e";
+        const cIcon = t.classification === "tank" ? "🪖" : t.classification === "sam_site" ? "🎯" : t.classification === "missile_launcher" ? "🚀" : t.classification === "radar" ? "📡" : t.classification === "artillery" ? "💥" : t.classification === "command_post" ? "🏛" : "⚠️";
+        points.push({
+          lat: t.lat, lng: t.lng, pointAlt: 0.035, color: pCol, radius: (t.priority === "critical" ? 0.4 : 0.3) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(15,5,5,0.96);border:1px solid ${pCol};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${pCol}40"><div style="color:${pCol};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> TARGET ${t.track_id}</div><div style="font-size:10px;margin-top:2px">${t.classification.toUpperCase().replace("_"," ")} — ${(t.confidence*100).toFixed(0)}%</div><div style="color:#888;font-size:8px;margin-top:1px">${t.priority.toUpperCase()} PRIORITY • ${t.source_sensor.toUpperCase()} • ${t.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${t.ai_assessment || ""}</div></div>`,
+        });
+      });
+    }
+
     if (layers.borders) {
       globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets]);
 
   const chipLayers = [
     { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
@@ -891,9 +961,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   { label: "SAT", value: stats.sats, color: "#00d4ff" },
                   { label: "AIR", value: stats.aircraft, color: "#00d4ff" },
                   { label: "SEA", value: stats.vessels, color: "#22c55e" },
-                  { label: "EQ", value: stats.quakes, color: "#ef4444" },
-                  { label: "FIRE", value: stats.fires, color: "#ff4500" },
-                  { label: "INTEL", value: stats.fusion + emulatedEvents.length, color: "#eab308" },
+                  { label: "BLU", value: stats.blu, color: "#3b82f6" },
+                  { label: "RED", value: stats.red, color: "#ef4444" },
+                  { label: "TGT", value: stats.tgt, color: "#f97316" },
                 ].map(s => (
                   <div key={s.label} className="text-center py-1 rounded bg-[hsl(220,18%,8%)] border border-[hsl(220,15%,15%)]">
                     <div className="text-[9px] font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
@@ -1077,28 +1147,47 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <button onClick={() => setCleanUI(true)} className="w-full px-2 py-1.5 rounded text-[9px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors text-center">CLEAN UI</button>
             </div>
 
-            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5"><AlertTriangle className="h-3 w-3 text-[#f97316]" /><span className="text-[9px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
-                <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
+            <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
+              <div className="flex items-center gap-0.5">
+                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL"] as const).map(tab => (
+                  <button key={tab} onClick={() => setC2RightTab(tab)}
+                    className={`flex-1 px-1 py-1 rounded text-[8px] font-mono font-bold border transition-colors ${c2RightTab === tab ? "border-primary/50 bg-primary/15 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div ref={feedRef} className="flex-1 overflow-y-auto">
-              {unifiedFeed.map(ev => (
-                <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
-                  className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
-                      <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
-                    </span>
-                    <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {c2RightTab === "FEED" && (
+                <>
+                  <div className="px-3 py-1 border-b border-[hsl(190,60%,10%)]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5"><AlertTriangle className="h-3 w-3 text-[#f97316]" /><span className="text-[8px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
+                      <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
+                    </div>
                   </div>
-                  <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
-                  <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
-                </button>
-              ))}
-              {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
+                  <div ref={feedRef} className="flex-1 overflow-y-auto">
+                    {unifiedFeed.map(ev => (
+                      <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
+                        className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
+                            <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
+                          </span>
+                          <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                        </div>
+                        <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
+                        <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
+                      </button>
+                    ))}
+                    {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
+                  </div>
+                </>
+              )}
+              {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
+              {c2RightTab === "KILLCHAIN" && <KillChainPanel />}
+              {c2RightTab === "C2 INTEL" && <C2ChatTab />}
             </div>
           </div>
         )}

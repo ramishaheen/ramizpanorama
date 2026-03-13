@@ -280,6 +280,65 @@ export type Database = {
         }
         Relationships: []
       }
+      force_units: {
+        Row: {
+          affiliation: Database["public"]["Enums"]["affiliation"]
+          echelon: Database["public"]["Enums"]["echelon"]
+          heading: number
+          icon_sidc: string | null
+          id: string
+          last_updated: string
+          lat: number
+          lng: number
+          name: string
+          parent_unit_id: string | null
+          source: Database["public"]["Enums"]["intel_source_type"]
+          speed_kph: number
+          status: Database["public"]["Enums"]["unit_status"]
+          unit_type: Database["public"]["Enums"]["unit_type"]
+        }
+        Insert: {
+          affiliation?: Database["public"]["Enums"]["affiliation"]
+          echelon?: Database["public"]["Enums"]["echelon"]
+          heading?: number
+          icon_sidc?: string | null
+          id?: string
+          last_updated?: string
+          lat?: number
+          lng?: number
+          name: string
+          parent_unit_id?: string | null
+          source?: Database["public"]["Enums"]["intel_source_type"]
+          speed_kph?: number
+          status?: Database["public"]["Enums"]["unit_status"]
+          unit_type?: Database["public"]["Enums"]["unit_type"]
+        }
+        Update: {
+          affiliation?: Database["public"]["Enums"]["affiliation"]
+          echelon?: Database["public"]["Enums"]["echelon"]
+          heading?: number
+          icon_sidc?: string | null
+          id?: string
+          last_updated?: string
+          lat?: number
+          lng?: number
+          name?: string
+          parent_unit_id?: string | null
+          source?: Database["public"]["Enums"]["intel_source_type"]
+          speed_kph?: number
+          status?: Database["public"]["Enums"]["unit_status"]
+          unit_type?: Database["public"]["Enums"]["unit_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "force_units_parent_unit_id_fkey"
+            columns: ["parent_unit_id"]
+            isOneToOne: false
+            referencedRelation: "force_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geo_alerts: {
         Row: {
           id: string
@@ -582,6 +641,59 @@ export type Database = {
         }
         Relationships: []
       }
+      kill_chain_tasks: {
+        Row: {
+          approved_by: string | null
+          assigned_platform: string | null
+          bda_result: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          phase: Database["public"]["Enums"]["kc_phase"]
+          recommended_weapon: string | null
+          requested_by: string | null
+          status: Database["public"]["Enums"]["kc_status"]
+          target_track_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          assigned_platform?: string | null
+          bda_result?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phase?: Database["public"]["Enums"]["kc_phase"]
+          recommended_weapon?: string | null
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["kc_status"]
+          target_track_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          assigned_platform?: string | null
+          bda_result?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phase?: Database["public"]["Enums"]["kc_phase"]
+          recommended_weapon?: string | null
+          requested_by?: string | null
+          status?: Database["public"]["Enums"]["kc_status"]
+          target_track_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kill_chain_tasks_target_track_id_fkey"
+            columns: ["target_track_id"]
+            isOneToOne: false
+            referencedRelation: "target_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       launch_history: {
         Row: {
           date: string
@@ -848,6 +960,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      target_tracks: {
+        Row: {
+          ai_assessment: string | null
+          analyst_notes: string | null
+          analyst_verified: boolean
+          classification: Database["public"]["Enums"]["target_classification"]
+          confidence: number
+          detected_at: string
+          id: string
+          image_url: string | null
+          lat: number
+          lng: number
+          priority: Database["public"]["Enums"]["target_priority"]
+          source_sensor: Database["public"]["Enums"]["sensor_type"]
+          status: Database["public"]["Enums"]["target_status"]
+          track_id: string
+        }
+        Insert: {
+          ai_assessment?: string | null
+          analyst_notes?: string | null
+          analyst_verified?: boolean
+          classification?: Database["public"]["Enums"]["target_classification"]
+          confidence?: number
+          detected_at?: string
+          id?: string
+          image_url?: string | null
+          lat?: number
+          lng?: number
+          priority?: Database["public"]["Enums"]["target_priority"]
+          source_sensor?: Database["public"]["Enums"]["sensor_type"]
+          status?: Database["public"]["Enums"]["target_status"]
+          track_id?: string
+        }
+        Update: {
+          ai_assessment?: string | null
+          analyst_notes?: string | null
+          analyst_verified?: boolean
+          classification?: Database["public"]["Enums"]["target_classification"]
+          confidence?: number
+          detected_at?: string
+          id?: string
+          image_url?: string | null
+          lat?: number
+          lng?: number
+          priority?: Database["public"]["Enums"]["target_priority"]
+          source_sensor?: Database["public"]["Enums"]["sensor_type"]
+          status?: Database["public"]["Enums"]["target_status"]
+          track_id?: string
+        }
+        Relationships: []
       }
       telegram_intel_cache: {
         Row: {
@@ -1139,6 +1302,7 @@ export type Database = {
       }
     }
     Enums: {
+      affiliation: "blue" | "red" | "neutral" | "unknown"
       airspace_alert_type: "NOTAM" | "TFR" | "CLOSURE"
       app_role: "admin" | "analyst" | "viewer" | "partner"
       camera_category: "traffic" | "tourism" | "ports" | "weather" | "public"
@@ -1159,6 +1323,14 @@ export type Database = {
         | "weather_api"
         | "news_feed"
         | "partner_feed"
+      echelon:
+        | "team"
+        | "squad"
+        | "platoon"
+        | "company"
+        | "battalion"
+        | "brigade"
+        | "division"
       event_severity: "info" | "low" | "medium" | "high" | "critical"
       event_verification:
         | "unverified"
@@ -1173,6 +1345,14 @@ export type Database = {
         | "confirmed"
         | "resolved"
         | "dismissed"
+      intel_source_type: "humint" | "sigint" | "imint" | "osint"
+      kc_phase: "find" | "fix" | "track" | "target" | "engage" | "assess"
+      kc_status:
+        | "pending"
+        | "in_progress"
+        | "approved"
+        | "rejected"
+        | "complete"
       ownership_type:
         | "government"
         | "municipality"
@@ -1196,6 +1376,7 @@ export type Database = {
         | "external_link_only"
       risk_trend: "rising" | "falling" | "stable"
       rocket_status: "launched" | "in_flight" | "intercepted" | "impact"
+      sensor_type: "satellite" | "drone" | "sigint"
       severity_level: "low" | "medium" | "high" | "critical"
       source_category:
         | "traffic"
@@ -1226,7 +1407,35 @@ export type Database = {
         | "embed"
         | "rtsp"
         | "unknown"
+      target_classification:
+        | "tank"
+        | "truck"
+        | "missile_launcher"
+        | "apc"
+        | "radar"
+        | "sam_site"
+        | "artillery"
+        | "command_post"
+        | "supply_depot"
+      target_priority: "critical" | "high" | "medium" | "low"
+      target_status:
+        | "detected"
+        | "confirmed"
+        | "engaged"
+        | "destroyed"
+        | "bda_pending"
       timeline_event_type: "airspace" | "maritime" | "alert" | "diplomatic"
+      unit_status: "active" | "destroyed" | "retreating" | "unknown"
+      unit_type:
+        | "infantry"
+        | "armor"
+        | "artillery"
+        | "air_defense"
+        | "naval"
+        | "drone"
+        | "logistics"
+        | "command"
+        | "special_ops"
       validation_status:
         | "valid"
         | "invalid"
@@ -1361,6 +1570,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      affiliation: ["blue", "red", "neutral", "unknown"],
       airspace_alert_type: ["NOTAM", "TFR", "CLOSURE"],
       app_role: ["admin", "analyst", "viewer", "partner"],
       camera_category: ["traffic", "tourism", "ports", "weather", "public"],
@@ -1383,6 +1593,15 @@ export const Constants = {
         "news_feed",
         "partner_feed",
       ],
+      echelon: [
+        "team",
+        "squad",
+        "platoon",
+        "company",
+        "battalion",
+        "brigade",
+        "division",
+      ],
       event_severity: ["info", "low", "medium", "high", "critical"],
       event_verification: [
         "unverified",
@@ -1399,6 +1618,9 @@ export const Constants = {
         "resolved",
         "dismissed",
       ],
+      intel_source_type: ["humint", "sigint", "imint", "osint"],
+      kc_phase: ["find", "fix", "track", "target", "engage", "assess"],
+      kc_status: ["pending", "in_progress", "approved", "rejected", "complete"],
       ownership_type: [
         "government",
         "municipality",
@@ -1425,6 +1647,7 @@ export const Constants = {
       ],
       risk_trend: ["rising", "falling", "stable"],
       rocket_status: ["launched", "in_flight", "intercepted", "impact"],
+      sensor_type: ["satellite", "drone", "sigint"],
       severity_level: ["low", "medium", "high", "critical"],
       source_category: [
         "traffic",
@@ -1458,7 +1681,38 @@ export const Constants = {
         "rtsp",
         "unknown",
       ],
+      target_classification: [
+        "tank",
+        "truck",
+        "missile_launcher",
+        "apc",
+        "radar",
+        "sam_site",
+        "artillery",
+        "command_post",
+        "supply_depot",
+      ],
+      target_priority: ["critical", "high", "medium", "low"],
+      target_status: [
+        "detected",
+        "confirmed",
+        "engaged",
+        "destroyed",
+        "bda_pending",
+      ],
       timeline_event_type: ["airspace", "maritime", "alert", "diplomatic"],
+      unit_status: ["active", "destroyed", "retreating", "unknown"],
+      unit_type: [
+        "infantry",
+        "armor",
+        "artillery",
+        "air_defense",
+        "naval",
+        "drone",
+        "logistics",
+        "command",
+        "special_ops",
+      ],
       validation_status: [
         "valid",
         "invalid",
