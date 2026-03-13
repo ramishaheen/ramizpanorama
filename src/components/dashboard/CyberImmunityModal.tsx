@@ -1086,9 +1086,6 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <button onClick={() => setCenterView("timeline")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "timeline" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Clock className="h-3 w-3 inline mr-1" />TIMELINE
           </button>
-          <button onClick={() => setCenterView("engines")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "engines" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Github className="h-3 w-3 inline mr-1" />ENGINES
-          </button>
         </div>
       </div>
 
