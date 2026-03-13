@@ -13,14 +13,12 @@ interface CommandSectionProps {
 }
 
 const CommandSection = ({ label, children }: CommandSectionProps) => (
-  <div className="flex flex-col justify-center gap-1.5 px-3 py-2 min-w-0">
-    <div className="flex items-center gap-1.5">
-      <div className="w-[3px] h-3 bg-primary rounded-[1px]" />
-      <span className="text-[8px] font-mono font-bold uppercase tracking-[0.18em] text-primary/80 whitespace-nowrap select-none">
-        {label}
-      </span>
-    </div>
-    <div className="flex flex-wrap items-center gap-[5px]">
+  <div className="flex items-center gap-[3px] px-1.5 min-w-0">
+    <span className="text-[6px] font-mono font-bold uppercase tracking-[0.15em] text-primary/50 whitespace-nowrap select-none writing-mode-vertical hidden sm:block"
+      style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', lineHeight: 1 }}>
+      {label}
+    </span>
+    <div className="flex flex-wrap items-center gap-[3px]">
       {children}
     </div>
   </div>
