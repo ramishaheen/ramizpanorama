@@ -109,11 +109,11 @@ Each entry MUST have ALL these fields:
 - iocs: array of up to 3 indicators of compromise (IPs, domains, hashes) from the feed data - can be empty array
 - verified: boolean - true if directly from a feed entry, false if AI-correlated
 
-Generate 12-18 incidents strictly based on the provided data. Cover these regions/actors as supported by the data:
+Generate 12-18 incidents strictly based on the provided data. IMPORTANT: At least 4-5 incidents MUST involve Jordan as either attacker or target. Cover these regions/actors as supported by the data:
+- **Jordan (PRIORITY)** — Jordanian NCSC cyber defense operations, threats to Jordan's banking sector (Arab Bank, Housing Bank), telecom infrastructure (Zain, Orange, Umniah), government e-services, APT targeting of Jordanian military/intelligence, cross-border cyber operations affecting Jordan
 - Iran-Israel cyber front (APT33, APT34, Unit 8200, MuddyWater)
 - US Cyber Command operations
-- Gulf state operations (UAE, Saudi Arabia, Qatar, Bahrain, Oman, Jordan)
-- Jordanian NCSC cyber defense operations and threat landscape
+- Gulf state operations (UAE, Saudi Arabia, Qatar, Bahrain, Oman)
 - Bahraini and Omani critical infrastructure monitoring (oil/gas, telecom, banking)
 - Russian and Chinese cyber espionage in the region
 - Ransomware groups targeting Middle East infrastructure

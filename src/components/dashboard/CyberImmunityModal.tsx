@@ -884,7 +884,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const { threats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
   const { darkWeb, dossier, fetchDarkWeb, fetchDossier, clearDossier } = useDarkWebIntel(threats);
   const [search, setSearch] = useState("");
-  const [countryFilter, setCountryFilter] = useState("All");
+  const [countryFilter, setCountryFilter] = useState("Jordan");
   const [severityFilter, setSeverityFilter] = useState("all");
   const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline" | "engines">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
@@ -939,7 +939,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
     if (isLive) return threats;
     // Map 0-100 to 24h window
     const now = Date.now();
-    const windowMs = 24 * 60 * 60 * 1000;
+    const windowMs = 28 * 24 * 60 * 60 * 1000;
     const cutoffTime = now - windowMs + (timelinePos / 100) * windowMs;
     return threats.filter((t) => {
       const tTime = new Date(t.date).getTime();
@@ -1008,15 +1008,17 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const timelineLabel = useMemo(() => {
     if (isLive) return "NOW";
     const now = Date.now();
-    const windowMs = 24 * 60 * 60 * 1000;
+    const windowMs = 28 * 24 * 60 * 60 * 1000;
     const ts = now - windowMs + (timelinePos / 100) * windowMs;
-    return new Date(ts).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }) + " UTC";
+    return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }, [timelinePos, isLive]);
 
   const hoursAgoLabel = useMemo(() => {
     if (isLive) return "";
-    const hoursAgo = ((100 - timelinePos) / 100) * 24;
-    return `${hoursAgo.toFixed(1)}h ago`;
+    const daysAgo = ((100 - timelinePos) / 100) * 28;
+    if (daysAgo < 1) return `${(daysAgo * 24).toFixed(0)}h ago`;
+    if (daysAgo < 7) return `${daysAgo.toFixed(1)}d ago`;
+    return `${(daysAgo / 7).toFixed(1)}w ago`;
   }, [timelinePos, isLive]);
 
   return createPortal(
@@ -1299,7 +1301,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
               {/* 24h attack frequency chart */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <Activity className="h-3 w-3" /> 24h Attack Frequency
+                  <Activity className="h-3 w-3" /> 4-Week Attack Frequency
                 </label>
                 <AttackSparkline threats={threats} />
               </div>
@@ -1384,7 +1386,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           </div>
         </div>
 
-        <span className="text-[9px] font-mono text-muted-foreground w-12">-24h</span>
+        <span className="text-[9px] font-mono text-muted-foreground w-12">-4w</span>
 
         <div className="flex-1 relative">
           <input
@@ -1392,11 +1394,11 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
             onChange={(e) => { setTimelinePos(parseFloat(e.target.value)); setIsPlaying(false); }}
             className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
           />
-          {/* Hour ticks */}
+          {/* Week ticks */}
           <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
-            {Array.from({ length: 13 }, (_, i) => (
+            {["4w", "·", "3w", "·", "2w", "·", "1w", "·", "NOW"].map((label, i) => (
               <span key={i} className="text-[7px] font-mono text-muted-foreground/40">
-                {i % 3 === 0 ? `${i * 2}h` : "·"}
+                {label}
               </span>
             ))}
           </div>
