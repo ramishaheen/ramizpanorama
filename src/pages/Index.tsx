@@ -148,6 +148,11 @@ const Index = () => {
   const [mobileTab, setMobileTab] = useState<MobileTab>("map");
   const [layoutLocked, setLayoutLocked] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [componentVisibility, setComponentVisibility] = useState<ComponentVisibility>(DEFAULT_COMPONENT_VISIBILITY);
+
+  const toggleComponent = useCallback((key: keyof ComponentVisibility) => {
+    setComponentVisibility(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   // Persist layout changes
   useEffect(() => {
