@@ -1136,7 +1136,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const a = Math.sin(dLat / 2) ** 2 + Math.cos((cp.lat * Math.PI) / 180) * Math.cos((v.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
         return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) <= cp.radiusKm;
       }).length;
-      circle.bindPopup(`<div style="${popupStyle}"><div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">⚓ ${cp.name}</div><div>Vessels in zone: <b>${nearbyCount}</b></div><div>Radius: ${cp.radiusKm} km</div><div style="margin-top:4px;font-size:9px;opacity:0.7;">${cp.criticalNote}</div></div>`, popupOptions);
+      bindHoverPopup(circle, `<div style="${popupStyle}"><div style="color:#00d4ff;font-weight:700;margin-bottom:4px;">⚓ ${cp.name}</div><div>Vessels in zone: <b>${nearbyCount}</b></div><div>Radius: ${cp.radiusKm} km</div><div style="margin-top:4px;font-size:9px;opacity:0.7;">${cp.criticalNote}</div></div>`);
       circle.addTo(group);
       L.marker([cp.lat, cp.lng], {
         icon: L.divIcon({
