@@ -29,6 +29,7 @@ import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
 import { WeatherTrafficPanel } from "@/components/dashboard/WeatherTrafficPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { RotateDeviceOverlay } from "@/components/RotateDeviceOverlay";
 import {
   DndContext,
   closestCenter,
