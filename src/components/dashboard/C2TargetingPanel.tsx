@@ -43,12 +43,29 @@ const CLASS_ICONS: Record<string, string> = {
   supply_depot: "📦",
 };
 
+const COUNTRY_COORDS: Record<string, { lat: number; lng: number; latRange: number; lngRange: number }> = {
+  "Iran": { lat: 32.5, lng: 53.0, latRange: 6, lngRange: 10 },
+  "Israel": { lat: 31.5, lng: 34.8, latRange: 1.5, lngRange: 1 },
+  "Iraq": { lat: 33.3, lng: 44.0, latRange: 4, lngRange: 6 },
+  "Syria": { lat: 35.0, lng: 38.5, latRange: 3, lngRange: 4 },
+  "Lebanon": { lat: 33.9, lng: 35.9, latRange: 1, lngRange: 0.5 },
+  "Jordan": { lat: 31.2, lng: 36.5, latRange: 2, lngRange: 2 },
+  "Saudi Arabia": { lat: 24.0, lng: 45.0, latRange: 8, lngRange: 12 },
+  "UAE": { lat: 24.5, lng: 54.5, latRange: 1.5, lngRange: 2 },
+  "Yemen": { lat: 15.5, lng: 48.0, latRange: 4, lngRange: 6 },
+  "Kuwait": { lat: 29.3, lng: 47.5, latRange: 1, lngRange: 1 },
+  "Bahrain": { lat: 26.1, lng: 50.5, latRange: 0.3, lngRange: 0.3 },
+  "Qatar": { lat: 25.3, lng: 51.2, latRange: 0.8, lngRange: 0.5 },
+  "Oman": { lat: 23.6, lng: 58.5, latRange: 4, lngRange: 4 },
+};
+
 export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const [targets, setTargets] = useState<TargetTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState("Iran");
   const { commitStrike } = useSensorToShooter();
 
   const fetchTargets = useCallback(async () => {
