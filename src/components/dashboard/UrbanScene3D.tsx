@@ -2445,6 +2445,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <div className="border-t border-border/20 my-2" />
 
                 <LayerControl icon={<Activity className="h-3 w-3" />} label="Earthquakes" color="#eab308" active={showEarthquakes} onToggle={() => setShowEarthquakes(!showEarthquakes)} count={earthquakes.length} opacity={opacityEarthquakes} onOpacity={setOpacityEarthquakes} source="USGS" />
+                <LayerControl icon={<Flame className="h-3 w-3" />} label="Wildfires" color="#fb923c" active={showWildfires} onToggle={() => setShowWildfires(!showWildfires)} count={wildfires.length} opacity={opacityWildfires} onOpacity={setOpacityWildfires} source="NASA FIRMS" />
                 <LayerControl icon={<Flame className="h-3 w-3" />} label="Heatmap" color="#f97316" active={showHeatmap} onToggle={() => setShowHeatmap(!showHeatmap)} opacity={opacityHeatmap} onOpacity={setOpacityHeatmap} source="Conflict data" />
 
                 <div className="border-t border-border/20 my-2" />
