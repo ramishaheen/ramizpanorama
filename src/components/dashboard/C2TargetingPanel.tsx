@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Target, CheckCircle, XCircle, ChevronDown, Loader2, Crosshair, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { TargetDetailModal } from "./TargetDetailModal";
+import { useSensorToShooter } from "@/hooks/useSensorToShooter";
 
 interface TargetTrack {
   id: string;
