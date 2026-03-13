@@ -18,7 +18,10 @@ import { C2ChatTab } from "./C2ChatTab";
 import { SensorFusionPanel } from "./SensorFusionPanel";
 import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
+import { TargetingWorkbench } from "./TargetingWorkbench";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
+import { useSensorToShooter } from "@/hooks/useSensorToShooter";
+import { toast } from "sonner";
 
 
 interface FourDMapProps { onClose: () => void; rockets?: RocketType[]; }
