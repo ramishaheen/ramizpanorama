@@ -944,9 +944,10 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("All");
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb">("map");
+  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline" | "engines">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
   const [showDossier, setShowDossier] = useState(false);
+  const { layers, toggleLayer } = useMapLayers();
 
   /* Auto-fetch dark web intel when switching to darkweb tab */
   useEffect(() => {
