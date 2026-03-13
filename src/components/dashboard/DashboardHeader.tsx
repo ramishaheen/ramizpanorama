@@ -87,6 +87,15 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
             <span className="text-[9px] font-mono uppercase tracking-wider font-bold">Live Channels</span>
           </button>
 
+          {/* Cyber Immunity */}
+          <button
+            onClick={() => setShowCyberImmunity(true)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+            title="Cyber Immunity - OSINT Operations Center"
+          >
+            <ShieldAlert className="h-3 w-3" />
+            <span className="text-[9px] font-mono uppercase tracking-wider font-bold">Cyber Immunity</span>
+          </button>
           {/* 4D MAP button — next to Live Channels, blue */}
           <button
             onClick={() => setShow4DMap(true)}
