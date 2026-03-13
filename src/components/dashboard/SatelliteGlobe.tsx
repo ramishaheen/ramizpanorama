@@ -1960,7 +1960,12 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
       if (d.type === "city") {
         const isLite = liteMode;
-        const dotSize = isLite ? 3 : 5;
+        // In lite mode, skip city labels entirely for performance — just show dot
+        if (isLite) {
+          el.style.cssText = `width:3px;height:3px;border-radius:50%;background:#00dcff;box-shadow:0 0 4px #00dcff;`;
+          return el;
+        }
+        const dotSize = 5;
         el.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:0;transition:all 0.25s ease;position:relative;`;
         const dot = document.createElement("span");
         dot.style.cssText = `width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 ${isLite ? 4 : 6}px #00dcff;flex-shrink:0;`;
