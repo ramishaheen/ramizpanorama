@@ -739,9 +739,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         position: { lat: ac.lat, lng: ac.lng },
         map,
         icon: {
-          url: createAircraftSvg(isMil, ac.heading, isTracked),
-          scaledSize: new google.maps.Size(size, size),
-          anchor: new google.maps.Point(size / 2, size / 2),
+          url: createAircraftSvg(isMil, ac.heading, isTracked, liteMode),
+          scaledSize: new google.maps.Size(liteMode ? 22 : size, liteMode ? 22 : size),
+          anchor: new google.maps.Point((liteMode ? 22 : size) / 2, (liteMode ? 22 : size) / 2),
         },
         title: `${ac.callsign || ac.icao24} | ${ac.origin_country}`,
         zIndex: isTracked ? 200 : (isMil ? 100 : 50),
