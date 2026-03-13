@@ -2323,6 +2323,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               <Activity className="h-3 w-3" /> Quakes
               {earthquakes.length > 0 && <span className="bg-yellow-500/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5">{earthquakes.length}</span>}
             </button>
+            <button onClick={() => setShowWildfires(!showWildfires)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showWildfires ? "border-orange-400/60 bg-orange-400/20 text-white shadow-[0_0_8px_rgba(251,146,60,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Flame className="h-3 w-3" /> Fires
+              {wildfires.length > 0 && <span className="bg-orange-400/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5">{wildfires.length}</span>}
+            </button>
             <button onClick={() => setShowWeather(!showWeather)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showWeather ? "border-cyan-500/60 bg-cyan-500/20 text-white shadow-[0_0_8px_rgba(6,182,212,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
               <CloudRain className="h-3 w-3" /> Weather
             </button>
