@@ -8,7 +8,7 @@ import {
   Play, Pause, SkipBack, SkipForward, Clock, Copy, Check,
   Eye, EyeOff, Skull, Link2, FileWarning, Hash,
   UserSearch, Shield, Crosshair, Fingerprint, Server,
-  Layers, Github
+  Layers, Lock, Key, Wifi
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
 import { useDarkWebIntel, type ActorDossier, type DarkWebEntry, type TorAnalysis, type IndicatorExtraction, type ThreatCorrelation, type ForumPost, type RansomwareLeak, type AlertRule, type DashboardStats, type TemporalTrend } from "@/hooks/useDarkWebIntel";
