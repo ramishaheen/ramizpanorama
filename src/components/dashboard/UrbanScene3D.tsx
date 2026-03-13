@@ -912,7 +912,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }, 80);
 
     return () => clearInterval(animInterval);
-  }, [interpolatedAircraft, showFlights, showMarkers, showTrails, trackedAircraftId]);
+  }, [interpolatedAircraft, showFlights, showMarkers, showTrails, trackedAircraftId, liteMode]);
 
   // ===== HEATMAP LAYER =====
   useEffect(() => {
