@@ -345,54 +345,115 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         </button>
       </div>
 
-      {/* Target Picker */}
+      {/* Target / Event Picker */}
       {showPicker && (
         <div className="border-b border-[hsl(190,60%,10%)] bg-[hsl(220,15%,7%)]">
           <div className="px-3 py-1.5 border-b border-[hsl(190,60%,8%)] flex items-center justify-between">
-            <span className="text-[8px] font-mono font-bold text-foreground tracking-wider">SELECT TARGET</span>
-            <button onClick={() => setShowPicker(false)} className="text-[8px] font-mono text-muted-foreground hover:text-foreground">✕</button>
-          </div>
-          {loadingTargets ? (
-            <div className="flex items-center justify-center py-4"><Loader2 className="h-3 w-3 animate-spin text-primary" /></div>
-          ) : availableTargets.length === 0 ? (
-            <div className="px-3 py-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-2">
-                <AlertTriangle className="h-3 w-3 text-[#eab308]" />
-                <span className="text-[8px] font-mono text-[#eab308]">NO DETECTED TARGETS</span>
-              </div>
-              <button onClick={runATRScan} className="px-3 py-1 rounded text-[8px] font-mono border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center gap-1 mx-auto">
-                <Scan className="h-2.5 w-2.5" /> RUN ATR SCAN
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPickerTab("targets")} className={`text-[8px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded transition-colors ${pickerTab === "targets" ? "bg-[#f97316]/20 text-[#f97316]" : "text-muted-foreground hover:text-foreground"}`}>
+                🎯 TARGETS
+              </button>
+              <button onClick={() => setPickerTab("events")} className={`text-[8px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded transition-colors ${pickerTab === "events" ? "bg-[#00d4ff]/20 text-[#00d4ff]" : "text-muted-foreground hover:text-foreground"}`}>
+                <span className="inline-flex items-center gap-0.5"><Radio className="h-2.5 w-2.5 inline" /> EVENTS</span>
               </button>
             </div>
-          ) : (
-            <div className="max-h-[180px] overflow-y-auto scrollbar-thin">
-              {availableTargets.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => initiateKillChain(t)}
-                  disabled={initiatingTarget === t.id}
-                  className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
-                >
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor(t.priority) }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-mono font-bold text-foreground">{t.track_id}</span>
-                      <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${priorityColor(t.priority)}20`, color: priorityColor(t.priority) }}>
-                        {t.priority.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="text-[7px] font-mono text-muted-foreground">
-                      {t.classification} • {t.confidence}% • {t.lat.toFixed(2)}°N {t.lng.toFixed(2)}°E
-                    </div>
+            <button onClick={() => setShowPicker(false)} className="text-[8px] font-mono text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+
+          {pickerTab === "targets" && (
+            <>
+              {loadingTargets ? (
+                <div className="flex items-center justify-center py-4"><Loader2 className="h-3 w-3 animate-spin text-primary" /></div>
+              ) : availableTargets.length === 0 ? (
+                <div className="px-3 py-3 text-center">
+                  <div className="flex items-center justify-center gap-1 mb-2">
+                    <AlertTriangle className="h-3 w-3 text-[#eab308]" />
+                    <span className="text-[8px] font-mono text-[#eab308]">NO DETECTED TARGETS</span>
                   </div>
-                  {initiatingTarget === t.id ? (
-                    <Loader2 className="h-3 w-3 animate-spin text-[#f97316] flex-shrink-0" />
-                  ) : (
-                    <Zap className="h-3 w-3 text-[#f97316] flex-shrink-0" />
-                  )}
-                </button>
-              ))}
-            </div>
+                  <button onClick={runATRScan} className="px-3 py-1 rounded text-[8px] font-mono border border-primary/40 text-primary hover:bg-primary/10 transition-colors flex items-center gap-1 mx-auto">
+                    <Scan className="h-2.5 w-2.5" /> RUN ATR SCAN
+                  </button>
+                </div>
+              ) : (
+                <div className="max-h-[180px] overflow-y-auto scrollbar-thin">
+                  {availableTargets.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => initiateKillChain(t)}
+                      disabled={initiatingTarget === t.id}
+                      className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor(t.priority) }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-mono font-bold text-foreground">{t.track_id}</span>
+                          <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${priorityColor(t.priority)}20`, color: priorityColor(t.priority) }}>
+                            {t.priority.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="text-[7px] font-mono text-muted-foreground">
+                          {t.classification} • {t.confidence}% • {t.lat.toFixed(2)}°N {t.lng.toFixed(2)}°E
+                        </div>
+                      </div>
+                      {initiatingTarget === t.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-[#f97316] flex-shrink-0" />
+                      ) : (
+                        <Zap className="h-3 w-3 text-[#f97316] flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {pickerTab === "events" && (
+            <>
+              {availableEvents.length === 0 ? (
+                <div className="px-3 py-3 text-center">
+                  <span className="text-[8px] font-mono text-muted-foreground">NO RECENT EVENTS</span>
+                </div>
+              ) : (
+                <div className="max-h-[220px] overflow-y-auto scrollbar-thin">
+                  {availableEvents.map(ev => {
+                    const sevColor = ev.severity === "critical" ? "#ef4444" : ev.severity === "high" ? "#f97316" : ev.severity === "medium" ? "#eab308" : "#22c55e";
+                    const typeEmoji = ev.event_type.includes("strike") || ev.event_type.includes("explosion") ? "💥" :
+                      ev.event_type.includes("missile") ? "🚀" :
+                      ev.event_type.includes("conflict") || ev.event_type.includes("military") ? "⚔️" :
+                      ev.event_type.includes("cyber") ? "🔓" :
+                      ev.event_type.includes("earthquake") ? "🌍" : "📡";
+                    const ago = Math.round((Date.now() - new Date(ev.created_at).getTime()) / 60000);
+                    const agoLabel = ago < 60 ? `${ago}m` : `${Math.round(ago / 60)}h`;
+                    return (
+                      <button
+                        key={`${ev.source}-${ev.id}`}
+                        onClick={() => initiateFromEvent(ev)}
+                        disabled={initiatingTarget === ev.id}
+                        className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
+                      >
+                        <span className="text-[10px] flex-shrink-0">{typeEmoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[8px] font-mono font-bold text-foreground truncate">{ev.title}</div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${sevColor}20`, color: sevColor }}>
+                              {ev.severity.toUpperCase()}
+                            </span>
+                            <span className="text-[6px] font-mono text-muted-foreground">{ev.source.toUpperCase()}</span>
+                            <span className="text-[6px] font-mono text-muted-foreground">{ev.lat.toFixed(1)}°N {ev.lng.toFixed(1)}°E</span>
+                            <span className="text-[6px] font-mono text-muted-foreground">{agoLabel} ago</span>
+                          </div>
+                        </div>
+                        {initiatingTarget === ev.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-[#00d4ff] flex-shrink-0" />
+                        ) : (
+                          <Crosshair className="h-3 w-3 text-[#00d4ff] flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
