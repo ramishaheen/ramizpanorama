@@ -465,6 +465,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "redForce", label: "Red Force (COP)", icon: <Swords className="h-3.5 w-3.5" />, color: "#ef4444", count: stats.red },
     { id: "targetTracks", label: "Target Tracks", icon: <Target className="h-3.5 w-3.5" />, color: "#f97316", count: stats.tgt },
     { id: "killChain", label: "Kill Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
+    { id: "sensorCoverage", label: "Sensor Coverage", icon: <Radar className="h-3.5 w-3.5" />, color: "#06b6d4", count: sensorFeeds.length },
+    { id: "ontologyEntities", label: "Ontology Entities", icon: <Globe className="h-3.5 w-3.5" />, color: "#8b5cf6" },
   ];
 
   // Timeline
