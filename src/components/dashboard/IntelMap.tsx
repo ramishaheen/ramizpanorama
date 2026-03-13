@@ -1186,7 +1186,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         weight: eq.magnitude >= 5 ? 2.5 : 1.5,
       });
 
-      marker.bindPopup(`
+      bindHoverPopup(marker, `
         <div style="${popupStyle}">
           <div style="color:${color};font-weight:700;margin-bottom:4px;">🌍 M${(eq.magnitude ?? 0).toFixed(1)} Earthquake</div>
           <div>${eq.place || "Unknown location"}</div>
@@ -1196,7 +1196,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(eq.time).toLocaleString()}</div>
           ${eq.url ? `<div style="margin-top:4px;"><a href="${eq.url}" target="_blank" style="color:#00d4ff;text-decoration:underline;font-size:9px;">USGS Details →</a></div>` : ""}
         </div>
-      `, popupOptions);
+      `);
 
       marker.addTo(group);
     });
