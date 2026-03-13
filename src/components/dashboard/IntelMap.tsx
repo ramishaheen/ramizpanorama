@@ -1589,23 +1589,64 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   }, [fetchFlightData, layers.flights]);
 
   // ===== REAL-TIME INTERPOLATION ENGINE for 2D map =====
+  // Heading smoothing state: stores smoothed heading per aircraft
+  const smoothedHeadingsRef = useRef<Record<string, number>>({});
+  const prevHeadingsRef = useRef<Record<string, number>>({});
+  const preTrackZoomRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!layers.flights) return;
+    // Use faster tick when tracking for ultra-smooth movement
+    const tickMs = trackedFlightId ? 60 : 200;
     flightInterpRef.current = setInterval(() => {
       const snapshot = flightSnapshotRef.current;
       if (snapshot.length === 0) return;
       const elapsed = (Date.now() - flightLastPollRef.current) / 1000;
+      const smoothed = smoothedHeadingsRef.current;
+      const prevHdg = prevHeadingsRef.current;
+
       const moved = snapshot.map(ac => {
-        const headingRad = ac.heading * Math.PI / 180;
+        // Angular lerp for heading smoothing
+        const targetHdg = ac.heading;
+        const currentSmoothed = smoothed[ac.icao24] ?? targetHdg;
+        let delta = targetHdg - currentSmoothed;
+        // Shortest path around 360°
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+        const lerpFactor = trackedFlightId === ac.icao24 ? 0.08 : 0.15;
+        const newSmoothed = (currentSmoothed + delta * lerpFactor + 360) % 360;
+        smoothed[ac.icao24] = newSmoothed;
+
+        // Compute heading change rate for banking
+        const prevH = prevHdg[ac.icao24] ?? newSmoothed;
+        let hdgDelta = newSmoothed - prevH;
+        if (hdgDelta > 180) hdgDelta -= 360;
+        if (hdgDelta < -180) hdgDelta += 360;
+        prevHdg[ac.icao24] = newSmoothed;
+
+        const headingRad = newSmoothed * Math.PI / 180;
         const speedDegPerSec = ac.velocity / 111320;
         const dLat = Math.cos(headingRad) * speedDegPerSec * elapsed;
         const dLng = Math.sin(headingRad) * speedDegPerSec * elapsed / Math.max(Math.cos(ac.lat * Math.PI / 180), 0.01);
-        return { ...ac, lat: ac.lat + dLat, lng: ac.lng + dLng };
+
+        // Altitude interpolation via vertical rate
+        const altDelta = (ac.vertical_rate ?? 0) * elapsed;
+
+        return {
+          ...ac,
+          lat: ac.lat + dLat,
+          lng: ac.lng + dLng,
+          heading: newSmoothed,
+          altitude: ac.altitude + altDelta,
+          _bankAngle: Math.max(-25, Math.min(25, hdgDelta * 8)),
+        };
       });
-      setInterpolatedFlights(moved);
-    }, 200);
+      smoothedHeadingsRef.current = smoothed;
+      prevHeadingsRef.current = prevHdg;
+      setInterpolatedFlights(moved as any);
+    }, tickMs);
     return () => { if (flightInterpRef.current) { clearInterval(flightInterpRef.current); flightInterpRef.current = null; } };
-  }, [layers.flights]);
+  }, [layers.flights, trackedFlightId]);
 
   // Click-to-track: pan to tracked aircraft only on significant position change
   const lastTrackedPos = useRef<{ lat: number; lng: number } | null>(null);
