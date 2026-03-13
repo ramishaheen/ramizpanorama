@@ -20,6 +20,7 @@ import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
 import { TargetingWorkbench } from "./TargetingWorkbench";
+import { Inline3DView } from "./Inline3DView";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 import { useSensorToShooter } from "@/hooks/useSensorToShooter";
 import { toast } from "sonner";
@@ -1002,12 +1003,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     switch (sev) { case "critical": return "border-l-[#dc2626]"; case "high": return "border-l-[#f97316]"; case "medium": return "border-l-[#eab308]"; default: return "border-l-[#00d4ff]"; }
   };
 
+  const [inline3DTarget, setInline3DTarget] = useState<{lat: number; lng: number} | null>(null);
+
   const handleFeedClick = useCallback((lat: number, lng: number) => {
     const globe = globeRef.current;
     if (globe) {
-      // Smooth two-stage zoom: first approach, then close-up
-      globe.pointOfView({ lat, lng, altitude: 0.15 }, 1800);
+      // Smooth zoom toward location, then transition to 3D
+      globe.pointOfView({ lat, lng, altitude: 0.5 }, 1200);
     }
+    setTimeout(() => setInline3DTarget({ lat, lng }), 1400);
   }, []);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -1093,6 +1097,15 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         {/* GLOBE */}
         <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
           <div ref={globeContainerRef} className="absolute inset-0" />
+
+          {/* Inline 3D Realistic View */}
+          {inline3DTarget && (
+            <Inline3DView
+              lat={inline3DTarget.lat}
+              lng={inline3DTarget.lng}
+              onClose={() => setInline3DTarget(null)}
+            />
+          )}
 
           {/* Search */}
           {!cleanUI && (
