@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
 import { useDarkWebIntel, type ActorDossier, type DarkWebEntry, type TorAnalysis } from "@/hooks/useDarkWebIntel";
+import { WORLD_REGIONS, COUNTRY_LABELS, GRATICULE_LATS, GRATICULE_LONS } from "@/data/worldMapPaths";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 
@@ -117,12 +118,13 @@ function AttackCorridor({ x1, y1, x2, y2, intensity, color, idx }: {
   );
 }
 
-/* ── Threat Map (SVG equirectangular) ── */
+/* ── Threat Map (SVG equirectangular with world outlines) ── */
 function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void; selectedId?: string }) {
   const W = 900, H = 450;
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
   const nodes = useMemo(() => {
-    const map = new Map<string, { country: string; count: number; severity: string; x: number; y: number }>();
+    const map = new Map<string, { country: string; count: number; severity: string; x: number; y: number; severityCounts: Record<string, number>; types: string[] }>();
     threats.forEach((t) => {
       for (const c of [t.attackerCountry || t.attacker, t.targetCountry || t.target]) {
         const key = c || "Unknown";
@@ -131,16 +133,17 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
         const existing = map.get(key);
         if (existing) {
           existing.count++;
+          existing.severityCounts[t.severity] = (existing.severityCounts[t.severity] || 0) + 1;
+          if (!existing.types.includes(t.type)) existing.types.push(t.type);
           if (t.severity === "critical" || (t.severity === "high" && existing.severity !== "critical")) existing.severity = t.severity;
         } else {
-          map.set(key, { country: key, count: 1, severity: t.severity, x, y });
+          map.set(key, { country: key, count: 1, severity: t.severity, x, y, severityCounts: { [t.severity]: 1 }, types: [t.type] });
         }
       }
     });
     return Array.from(map.values());
   }, [threats]);
 
-  /* Compute attack corridors — aggregate by country pair */
   const corridors = useMemo(() => {
     const pairMap = new Map<string, { count: number; maxSeverity: string; x1: number; y1: number; x2: number; y2: number }>();
     threats.forEach((t) => {
@@ -180,15 +183,73 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
     });
   }, [threats, selectedId]);
 
+  // Active country set for highlighting
+  const activeCountries = useMemo(() => new Set(nodes.map(n => n.country)), [nodes]);
+
+  // Hovered node data
+  const hoveredData = useMemo(() => {
+    if (!hoveredNode) return null;
+    return nodes.find(n => n.country === hoveredNode) || null;
+  }, [hoveredNode, nodes]);
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" style={{ background: "hsl(var(--background))" }}>
-      {Array.from({ length: 7 }, (_, i) => (
-        <line key={`h${i}`} x1={0} y1={i * (H / 6)} x2={W} y2={i * (H / 6)} stroke="hsl(var(--border))" strokeWidth={0.5} opacity={0.3} />
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" style={{ background: "hsl(220 25% 6%)" }}>
+      {/* Ocean background */}
+      <rect x={0} y={0} width={W} height={H} fill="hsl(220 25% 6%)" />
+
+      {/* World continent outlines */}
+      {WORLD_REGIONS.map((region) => (
+        <path
+          key={region.name}
+          d={region.d}
+          fill="hsl(220 15% 13%)"
+          stroke="hsl(220 15% 22%)"
+          strokeWidth={0.6}
+          opacity={0.9}
+        />
       ))}
-      {Array.from({ length: 13 }, (_, i) => (
-        <line key={`v${i}`} x1={i * (W / 12)} y1={0} x2={i * (W / 12)} y2={H} stroke="hsl(var(--border))" strokeWidth={0.5} opacity={0.3} />
-      ))}
-      {/* Pulsing attack corridors (rendered behind arcs) */}
+
+      {/* Graticule grid lines */}
+      {GRATICULE_LATS.map((lat) => {
+        const y = ((90 - lat) / 180) * H;
+        return (
+          <g key={`glat-${lat}`}>
+            <line x1={0} y1={y} x2={W} y2={y} stroke="hsl(220 15% 20%)" strokeWidth={0.3} opacity={0.4} strokeDasharray="4,6" />
+            <text x={4} y={y - 3} fill="hsl(220 15% 35%)" fontSize={6} fontFamily="monospace">{lat}°</text>
+          </g>
+        );
+      })}
+      {GRATICULE_LONS.map((lon) => {
+        const x = ((lon + 180) / 360) * W;
+        return (
+          <g key={`glon-${lon}`}>
+            <line x1={x} y1={0} x2={x} y2={H} stroke="hsl(220 15% 20%)" strokeWidth={0.3} opacity={0.4} strokeDasharray="4,6" />
+            <text x={x + 2} y={H - 4} fill="hsl(220 15% 35%)" fontSize={6} fontFamily="monospace">{lon}°</text>
+          </g>
+        );
+      })}
+
+      {/* Country labels */}
+      {COUNTRY_LABELS.map((cl) => {
+        const [cx, cy] = lonLatToSvg(cl.lon, cl.lat, W, H);
+        const isActive = activeCountries.has(cl.name);
+        return (
+          <text
+            key={cl.name}
+            x={cx}
+            y={cy + 14}
+            textAnchor="middle"
+            fill={isActive ? "hsl(220 15% 65%)" : "hsl(220 15% 30%)"}
+            fontSize={7}
+            fontFamily="monospace"
+            fontWeight={isActive ? "bold" : "normal"}
+          >
+            {cl.name}
+          </text>
+        );
+      })}
+
+      {/* Pulsing attack corridors */}
       {corridors.map((c, i) => (
         <AttackCorridor
           key={`corridor-${i}`}
@@ -198,6 +259,8 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
           idx={i}
         />
       ))}
+
+      {/* Attack arcs */}
       {arcs.map((a) => (
         <g key={a.id} onClick={() => onSelect(a.threat)} className="cursor-pointer">
           <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} opacity={a.isSelected ? 0.9 : 0.5} />
@@ -206,15 +269,94 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
           </path>
         </g>
       ))}
+
+      {/* Country nodes */}
       {nodes.map((n) => (
-        <g key={n.country}>
-          <circle cx={n.x} cy={n.y} r={Math.min(4 + n.count * 1.5, 18)} fill={SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium} opacity={0.25}>
+        <g
+          key={n.country}
+          onMouseEnter={() => setHoveredNode(n.country)}
+          onMouseLeave={() => setHoveredNode(null)}
+          className="cursor-pointer"
+        >
+          <circle cx={n.x} cy={n.y} r={Math.min(4 + n.count * 1.5, 18)} fill={SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium} opacity={0.2}>
             <animate attributeName="r" values={`${Math.min(4 + n.count * 1.5, 18)};${Math.min(6 + n.count * 1.5, 22)};${Math.min(4 + n.count * 1.5, 18)}`} dur="2s" repeatCount="indefinite" />
           </circle>
-          <circle cx={n.x} cy={n.y} r={3} fill={SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium} />
-          <text x={n.x} y={n.y - 8} textAnchor="middle" fill="hsl(var(--foreground))" fontSize={8} opacity={0.7}>{n.country}</text>
+          <circle cx={n.x} cy={n.y} r={3.5} fill={SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium} stroke="hsl(0 0% 100%)" strokeWidth={0.5} opacity={0.9} />
+          <text x={n.x} y={n.y - 10} textAnchor="middle" fill="hsl(0 0% 90%)" fontSize={8} fontWeight="bold" fontFamily="monospace">{n.country}</text>
+          <text x={n.x} y={n.y - 2} textAnchor="middle" fill="hsl(0 0% 60%)" fontSize={6} fontFamily="monospace">{n.count} incident{n.count !== 1 ? "s" : ""}</text>
         </g>
       ))}
+
+      {/* Hover tooltip */}
+      {hoveredData && (
+        <g>
+          <rect
+            x={Math.min(hoveredData.x + 12, W - 145)}
+            y={Math.max(hoveredData.y - 60, 5)}
+            width={135}
+            height={55 + Math.min(hoveredData.types.length, 3) * 10}
+            rx={4}
+            fill="hsl(220 20% 10%)"
+            stroke="hsl(220 15% 25%)"
+            strokeWidth={0.8}
+            opacity={0.95}
+          />
+          <text x={Math.min(hoveredData.x + 18, W - 139)} y={Math.max(hoveredData.y - 45, 20)} fill="hsl(0 0% 95%)" fontSize={9} fontWeight="bold" fontFamily="monospace">
+            {hoveredData.country}
+          </text>
+          <text x={Math.min(hoveredData.x + 18, W - 139)} y={Math.max(hoveredData.y - 33, 32)} fill="hsl(0 0% 60%)" fontSize={7} fontFamily="monospace">
+            Total: {hoveredData.count} incidents
+          </text>
+          {/* Severity breakdown */}
+          {Object.entries(hoveredData.severityCounts).slice(0, 4).map(([sev, cnt], i) => (
+            <g key={sev}>
+              <circle
+                cx={Math.min(hoveredData.x + 22, W - 135)}
+                cy={Math.max(hoveredData.y - 20 + i * 11, 43 + i * 11)}
+                r={3}
+                fill={SEVERITY_COLORS[sev] || SEVERITY_COLORS.medium}
+              />
+              <text
+                x={Math.min(hoveredData.x + 28, W - 129)}
+                y={Math.max(hoveredData.y - 17 + i * 11, 46 + i * 11)}
+                fill="hsl(0 0% 75%)"
+                fontSize={7}
+                fontFamily="monospace"
+              >
+                {sev}: {cnt}
+              </text>
+            </g>
+          ))}
+          {/* Top attack types */}
+          {hoveredData.types.slice(0, 2).map((type, i) => {
+            const yOff = Object.keys(hoveredData.severityCounts).length;
+            return (
+              <text
+                key={type}
+                x={Math.min(hoveredData.x + 18, W - 139)}
+                y={Math.max(hoveredData.y - 20 + (yOff + i) * 11, 43 + (yOff + i) * 11)}
+                fill="hsl(45 80% 55%)"
+                fontSize={6}
+                fontFamily="monospace"
+              >
+                ⚡ {type.substring(0, 22)}
+              </text>
+            );
+          })}
+        </g>
+      )}
+
+      {/* Severity legend */}
+      <g>
+        <rect x={W - 120} y={8} width={112} height={60} rx={4} fill="hsl(220 20% 10%)" stroke="hsl(220 15% 22%)" strokeWidth={0.5} opacity={0.9} />
+        <text x={W - 114} y={22} fill="hsl(0 0% 65%)" fontSize={7} fontWeight="bold" fontFamily="monospace">SEVERITY</text>
+        {(["critical", "high", "medium", "low"] as const).map((sev, i) => (
+          <g key={sev}>
+            <circle cx={W - 108} cy={34 + i * 9} r={3} fill={SEVERITY_COLORS[sev]} />
+            <text x={W - 101} y={37 + i * 9} fill="hsl(0 0% 70%)" fontSize={7} fontFamily="monospace" style={{ textTransform: "capitalize" }}>{sev}</text>
+          </g>
+        ))}
+      </g>
     </svg>
   );
 }
