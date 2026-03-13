@@ -279,111 +279,355 @@ function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
     </svg>
   );
 }
-/* ── Dark Web Monitor ── */
-function DarkWebMonitor({ threats }: { threats: CyberThreat[] }) {
-  const darkWebEntries = useMemo(() => {
-    const entries: Array<{
-      id: string; type: "onion" | "paste" | "forum" | "marketplace";
-      title: string; detail: string; severity: string;
-      timestamp: string; indicators: string[];
-    }> = [];
+/* ── Threat Actor Dossier Panel ── */
+function ThreatActorDossierPanel({ dossier, loading, error, onClose }: {
+  dossier: ActorDossier | null; loading: boolean; error: string | null; onClose: () => void;
+}) {
+  if (loading) {
+    return (
+      <div className="absolute inset-4 bg-card/98 backdrop-blur-lg border border-border rounded-lg shadow-2xl flex flex-col items-center justify-center" style={{ zIndex: 20 }}>
+        <UserSearch className="h-10 w-10 text-primary animate-pulse mb-3" />
+        <p className="text-xs font-mono text-muted-foreground">COMPILING ACTOR DOSSIER...</p>
+        <p className="text-[9px] text-muted-foreground/60 mt-1">Querying dark web intelligence feeds</p>
+      </div>
+    );
+  }
 
-    threats.forEach((t, i) => {
-      if (t.severity === "critical" || t.severity === "high") {
-        entries.push({
-          id: `dw-${t.id}-onion`,
-          type: "onion",
-          title: `.onion infrastructure linked to ${t.attacker}`,
-          detail: `Hidden service detected hosting C2 panel for ${t.type} operations targeting ${t.target}. ${t.cve ? `Exploiting ${t.cve}.` : ""}`,
-          severity: t.severity,
-          timestamp: t.date,
-          indicators: t.iocs?.slice(0, 2) || [],
-        });
-      }
-      if (i < 8) {
-        entries.push({
-          id: `dw-${t.id}-paste`,
-          type: i % 3 === 0 ? "paste" : i % 3 === 1 ? "forum" : "marketplace",
-          title: i % 3 === 0
-            ? `Paste site leak: ${t.targetCountry || t.target} credentials`
-            : i % 3 === 1
-            ? `Underground forum chatter: ${t.type} tools`
-            : `Marketplace listing: ${t.targetCountry || t.target} access`,
-          detail: i % 3 === 0
-            ? `Bulk credential dump mentioning ${t.target} infrastructure detected on paste monitoring service.`
-            : i % 3 === 1
-            ? `Threat actor associated with ${t.attacker} discussing new ${t.type.toLowerCase()} tooling and target acquisition.`
-            : `Initial access broker offering RDP/VPN credentials for ${t.target} network on darknet marketplace.`,
-          severity: t.severity,
-          timestamp: t.date,
-          indicators: t.iocs?.slice(0, 1) || [],
-        });
-      }
-    });
-    return entries.slice(0, 20);
-  }, [threats]);
+  if (error || !dossier) {
+    return (
+      <div className="absolute inset-4 bg-card/98 backdrop-blur-lg border border-border rounded-lg shadow-2xl flex flex-col items-center justify-center" style={{ zIndex: 20 }}>
+        <AlertTriangle className="h-8 w-8 text-destructive mb-2" />
+        <p className="text-xs text-destructive font-mono">{error || "Failed to load dossier"}</p>
+        <button onClick={onClose} className="mt-3 text-[9px] px-3 py-1 rounded border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground transition-colors font-mono">CLOSE</button>
+      </div>
+    );
+  }
 
-  const typeLabels: Record<string, string> = { onion: ".ONION", paste: "PASTE", forum: "FORUM", marketplace: "MARKET" };
+  const riskColors: Record<string, string> = {
+    critical: "text-destructive", high: "text-orange-400", medium: "text-yellow-400", low: "text-primary",
+  };
+
+  return (
+    <div className="absolute inset-4 bg-card/98 backdrop-blur-lg border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden" style={{ zIndex: 20 }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background/50">
+        <div className="flex items-center gap-3">
+          <UserSearch className="h-4 w-4 text-primary" />
+          <span className="text-[9px] px-2 py-0.5 rounded border font-mono uppercase font-bold bg-destructive/20 text-destructive border-destructive/30">
+            {dossier.risk_assessment}
+          </span>
+          <span className="text-xs font-bold">{dossier.flag} {dossier.name}</span>
+          <span className="text-[9px] font-mono text-muted-foreground">{dossier.type} · Since {dossier.active_since}</span>
+        </div>
+        <button onClick={onClose} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-4">
+          {/* Overview */}
+          <div className="p-3 rounded border border-border bg-background/50">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Overview</div>
+            <p className="text-[11px] text-foreground leading-relaxed">{dossier.description}</p>
+            {dossier.aliases.length > 0 && (
+              <div className="flex gap-1 mt-2 flex-wrap">
+                {dossier.aliases.map((a, i) => (
+                  <span key={i} className="text-[8px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground font-mono">{a}</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* TTPs */}
+          <div className="p-3 rounded border border-destructive/20 bg-destructive/5">
+            <div className="text-[9px] font-mono text-destructive uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Crosshair className="h-3 w-3" /> MITRE ATT&CK TTPs
+            </div>
+            <div className="space-y-1.5">
+              {dossier.ttps.slice(0, 8).map((ttp, i) => (
+                <div key={i} className="flex items-start gap-2 text-[10px]">
+                  <span className="font-mono text-destructive font-bold flex-shrink-0 w-12">{ttp.technique}</span>
+                  <div className="flex-1">
+                    <span className="font-bold text-foreground">{ttp.tactic}</span>
+                    <span className="text-muted-foreground ml-1">— {ttp.description}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Campaigns */}
+          <div className="p-3 rounded border border-border bg-background/50">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Target className="h-3 w-3" /> Known Campaigns
+            </div>
+            <div className="space-y-2">
+              {dossier.campaigns.slice(0, 5).map((c, i) => (
+                <div key={i} className="p-2 rounded bg-muted/20 border border-border">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-foreground">{c.name}</span>
+                    <span className="text-[8px] font-mono text-muted-foreground">{c.year}</span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground">{c.description}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-[8px] text-muted-foreground">Targets:</span>
+                    <span className="text-[8px] text-primary">{c.targets}</span>
+                  </div>
+                  {c.malware.length > 0 && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {c.malware.map((m, j) => (
+                        <span key={j} className="text-[7px] px-1 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20 font-mono">{m}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Targeting Patterns */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded border border-border bg-background/50">
+              <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Target Sectors</div>
+              <div className="space-y-1">
+                {dossier.targeting_patterns.sectors.map((s, i) => (
+                  <div key={i} className="text-[9px] text-foreground">• {s}</div>
+                ))}
+              </div>
+            </div>
+            <div className="p-3 rounded border border-border bg-background/50">
+              <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Target Countries</div>
+              <div className="space-y-1">
+                {dossier.targeting_patterns.countries.map((c, i) => (
+                  <div key={i} className="text-[9px] text-foreground">• {c}</div>
+                ))}
+              </div>
+            </div>
+            <div className="p-3 rounded border border-border bg-background/50">
+              <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Infrastructure</div>
+              <div className="space-y-1">
+                {dossier.targeting_patterns.infrastructure.map((inf, i) => (
+                  <div key={i} className="text-[9px] text-foreground">• {inf}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tools & Malware */}
+          <div className="p-3 rounded border border-border bg-background/50">
+            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Bug className="h-3 w-3" /> Tools & Malware Arsenal
+            </div>
+            <div className="flex gap-1 flex-wrap">
+              {dossier.tools_and_malware.map((t, i) => (
+                <span key={i} className="text-[8px] px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-mono">{t}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* Dark Web & Tor */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded border border-purple-500/20 bg-purple-500/5">
+              <div className="text-[9px] font-mono text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Skull className="h-3 w-3" /> Dark Web Presence
+              </div>
+              <div className="space-y-1.5 text-[9px]">
+                <div><span className="text-muted-foreground">Forums:</span> <span className="text-foreground">{dossier.dark_web_presence.forums.join(", ") || "None detected"}</span></div>
+                <div><span className="text-muted-foreground">Paste Activity:</span> <span className="text-foreground">{dossier.dark_web_presence.paste_activity}</span></div>
+                {dossier.dark_web_presence.onion_services.map((s, i) => (
+                  <div key={i} className="text-[8px] font-mono text-purple-400 truncate">🧅 {s}</div>
+                ))}
+              </div>
+            </div>
+            <div className="p-3 rounded border border-primary/20 bg-primary/5">
+              <div className="text-[9px] font-mono text-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Fingerprint className="h-3 w-3" /> Tor Infrastructure
+              </div>
+              <div className="space-y-1.5 text-[9px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Hidden Services</span><span className="text-foreground font-bold">{dossier.tor_infrastructure.hidden_services_count}</span></div>
+                <div><span className="text-muted-foreground">Relay Patterns:</span> <span className="text-foreground">{dossier.tor_infrastructure.relay_patterns}</span></div>
+                {dossier.tor_infrastructure.known_exit_nodes.slice(0, 3).map((n, i) => (
+                  <div key={i} className="text-[8px] font-mono text-primary truncate">⊕ {n}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="p-3 rounded border border-yellow-500/20 bg-yellow-500/5">
+            <div className="text-[9px] font-mono text-yellow-400 uppercase tracking-wider mb-1.5">Recent Activity</div>
+            <p className="text-[10px] text-foreground leading-relaxed">{dossier.recent_activity}</p>
+          </div>
+
+          {/* Countermeasures */}
+          <div className="p-3 rounded border border-green-500/20 bg-green-500/5">
+            <div className="text-[9px] font-mono text-green-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Shield className="h-3 w-3" /> Recommended Countermeasures
+            </div>
+            <div className="space-y-1">
+              {dossier.countermeasures.map((c, i) => (
+                <div key={i} className="text-[9px] text-foreground flex items-start gap-1.5">
+                  <span className="text-green-400">✓</span> {c}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+/* ── Enhanced Dark Web Monitor ── */
+function EnhancedDarkWebMonitor({ entries, torAnalysis, loading, onFetchDossier }: {
+  entries: DarkWebEntry[]; torAnalysis: TorAnalysis | null; loading: boolean;
+  onFetchDossier: (actor: string) => void;
+}) {
+  const typeLabels: Record<string, string> = { onion: ".ONION", paste: "PASTE", forum: "FORUM", marketplace: "MARKET", exit_node: "EXIT NODE", hidden_service: "HIDDEN SVC" };
   const typeBg: Record<string, string> = {
     onion: "bg-purple-500/15 text-purple-400 border-purple-500/30",
     paste: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
     forum: "bg-primary/15 text-primary border-primary/30",
     marketplace: "bg-destructive/15 text-destructive border-destructive/30",
+    exit_node: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+    hidden_service: "bg-purple-500/15 text-purple-400 border-purple-500/30",
   };
-  const typeIcons: Record<string, typeof Skull> = { onion: Eye, paste: FileWarning, forum: Hash, marketplace: Link2 };
+  const typeIcons: Record<string, typeof Skull> = { onion: Eye, paste: FileWarning, forum: Hash, marketplace: Link2, exit_node: Server, hidden_service: Fingerprint };
 
   const countByType = useMemo(() => {
-    const counts: Record<string, number> = { onion: 0, paste: 0, forum: 0, marketplace: 0 };
-    darkWebEntries.forEach(e => counts[e.type]++);
+    const counts: Record<string, number> = {};
+    entries.forEach(e => { counts[e.type] = (counts[e.type] || 0) + 1; });
     return counts;
-  }, [darkWebEntries]);
+  }, [entries]);
 
   return (
     <div className="h-full flex flex-col" style={{ background: "hsl(var(--background))" }}>
+      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
         <Skull className="h-4 w-4 text-purple-400" />
         <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">Dark Web Intelligence</span>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
           {Object.entries(countByType).map(([type, count]) => (
-            <span key={type} className={`text-[8px] px-1.5 py-0.5 rounded border font-mono ${typeBg[type]}`}>
-              {typeLabels[type]}: {count}
+            <span key={type} className={`text-[8px] px-1.5 py-0.5 rounded border font-mono ${typeBg[type] || typeBg.onion}`}>
+              {typeLabels[type] || type}: {count}
             </span>
           ))}
         </div>
       </div>
+
+      {/* Tor Analysis Summary */}
+      {torAnalysis && (
+        <div className="px-4 py-2 border-b border-border bg-card/30">
+          <div className="grid grid-cols-4 gap-2 mb-2">
+            <div className="text-center p-1.5 rounded bg-purple-500/10 border border-purple-500/20">
+              <div className="text-sm font-black text-purple-400">{torAnalysis.hiddenServiceStats.newServicesDetected}</div>
+              <div className="text-[7px] font-mono text-muted-foreground">New Services</div>
+            </div>
+            <div className="text-center p-1.5 rounded bg-destructive/10 border border-destructive/20">
+              <div className="text-sm font-black text-destructive">{torAnalysis.hiddenServiceStats.c2PanelsIdentified}</div>
+              <div className="text-[7px] font-mono text-muted-foreground">C2 Panels</div>
+            </div>
+            <div className="text-center p-1.5 rounded bg-orange-500/10 border border-orange-500/20">
+              <div className="text-sm font-black text-orange-400">{torAnalysis.hiddenServiceStats.marketplacesActive}</div>
+              <div className="text-[7px] font-mono text-muted-foreground">Marketplaces</div>
+            </div>
+            <div className="text-center p-1.5 rounded bg-yellow-500/10 border border-yellow-500/20">
+              <div className="text-sm font-black text-yellow-400">{torAnalysis.hiddenServiceStats.pasteMonitorsTriggered}</div>
+              <div className="text-[7px] font-mono text-muted-foreground">Paste Alerts</div>
+            </div>
+          </div>
+          {torAnalysis.networkTrends && (
+            <p className="text-[9px] text-muted-foreground italic">{torAnalysis.networkTrends}</p>
+          )}
+          {/* Exit Nodes */}
+          {torAnalysis.suspiciousExitNodes.length > 0 && (
+            <div className="mt-2">
+              <div className="text-[8px] font-mono text-orange-400 uppercase mb-1">Suspicious Exit Nodes</div>
+              <div className="flex gap-1 flex-wrap">
+                {torAnalysis.suspiciousExitNodes.slice(0, 6).map((n, i) => (
+                  <span key={i} className="text-[7px] px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 font-mono">
+                    {n.flag} {n.ip} <span className="text-muted-foreground">({n.risk})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-2">
-          {darkWebEntries.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <Skull className="h-8 w-8 mb-2 animate-pulse text-purple-400" />
+              <span className="text-xs font-mono">SCANNING DARK WEB...</span>
+              <span className="text-[9px] text-muted-foreground/60 mt-1">Analyzing .onion infrastructure & paste sites</span>
+            </div>
+          ) : entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <EyeOff className="h-8 w-8 mb-2 opacity-40" />
               <span className="text-xs font-mono">No dark web intelligence available</span>
             </div>
-          ) : darkWebEntries.map((entry) => {
+          ) : entries.map((entry) => {
             const Icon = typeIcons[entry.type] || Eye;
             return (
               <div key={entry.id} className="p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
                 <div className="flex items-start gap-2">
-                  <div className={`p-1.5 rounded ${typeBg[entry.type]}`}>
+                  <div className={`p-1.5 rounded ${typeBg[entry.type] || typeBg.onion}`}>
                     <Icon className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${typeBg[entry.type]}`}>
-                        {typeLabels[entry.type]}
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${typeBg[entry.type] || typeBg.onion}`}>
+                        {typeLabels[entry.type] || entry.type}
                       </span>
                       <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[entry.severity]}`}>
                         {entry.severity}
                       </span>
-                      <span className="text-[8px] font-mono text-muted-foreground ml-auto">{entry.timestamp}</span>
+                      {entry.category && (
+                        <span className="text-[7px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground font-mono">{entry.category}</span>
+                      )}
+                      <span className="text-[8px] font-mono text-muted-foreground ml-auto">{entry.timestamp?.split("T")[0]}</span>
                     </div>
-                    <h4 className="text-[11px] font-bold text-foreground mb-1 truncate">{entry.title}</h4>
+                    <h4 className="text-[11px] font-bold text-foreground mb-1">{entry.title}</h4>
                     <p className="text-[9px] text-muted-foreground leading-relaxed">{entry.detail}</p>
-                    {entry.indicators.length > 0 && (
-                      <div className="flex gap-1 mt-1.5">
+                    {/* Tor exit nodes */}
+                    {entry.torExitNodes && entry.torExitNodes.length > 0 && (
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
+                        {entry.torExitNodes.map((node, i) => (
+                          <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 truncate max-w-[200px]">
+                            ⊕ {node}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Hidden service fingerprint */}
+                    {entry.hiddenServiceFingerprint && (
+                      <div className="mt-1">
+                        <span className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                          🧅 {entry.hiddenServiceFingerprint}
+                        </span>
+                      </div>
+                    )}
+                    {/* IOCs */}
+                    {entry.indicators && entry.indicators.length > 0 && (
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
                         {entry.indicators.map((ioc, i) => (
                           <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground truncate max-w-[200px]">
                             {ioc}
                           </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Related actors (clickable for dossier) */}
+                    {entry.relatedActors && entry.relatedActors.length > 0 && (
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
+                        {entry.relatedActors.map((actor, i) => (
+                          <button key={i} onClick={() => onFetchDossier(actor)}
+                            className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-colors cursor-pointer">
+                            <UserSearch className="h-2.5 w-2.5 inline mr-0.5" />{actor}
+                          </button>
                         ))}
                       </div>
                     )}
