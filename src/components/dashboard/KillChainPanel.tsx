@@ -103,10 +103,10 @@ const KillChainEventModal = ({
     event.event_type.includes("conflict") || event.event_type.includes("military") ? "⚔️" :
     event.event_type.includes("cyber") ? "🔓" : "📡";
 
-  return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={onCancel}>
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={onCancel}>
       <div
-        className="w-[95%] max-h-[90%] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl"
+        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
