@@ -1236,7 +1236,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       const intensity = fire.frp > 100 ? "EXTREME" : fire.frp > 50 ? "HIGH" : fire.frp > 20 ? "MODERATE" : "LOW";
       const intColor = fire.frp > 100 ? "#ff0000" : fire.frp > 50 ? "#ff4500" : fire.frp > 20 ? "#ff6b00" : "#ffb800";
 
-      marker.bindPopup(`
+      bindHoverPopup(marker, `
         <div style="${popupStyle}">
           <div style="color:${intColor};font-weight:700;margin-bottom:4px;">🔥 Active Fire</div>
           <div>Intensity: <span style="color:${intColor};font-weight:600;">${intensity}</span></div>
@@ -1245,7 +1245,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           ${fire.region ? `<div>Region: ${fire.region}</div>` : ""}
           <div style="font-size:9px;opacity:0.6;margin-top:4px;">${fire.date} ${fire.time}</div>
         </div>
-      `, popupOptions);
+      `);
 
       marker.addTo(group);
     });
