@@ -2458,7 +2458,34 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   <span>{preset.label}</span>
                 </button>
               ))}
+              <div className="w-px h-5 bg-border/40 mx-0.5" />
+              <button
+                onClick={toggleLiteMode}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono uppercase transition-all duration-200 ${
+                  liteMode
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]"
+                    : "text-muted-foreground/70 hover:text-foreground hover:bg-white/5 border border-transparent"
+                }`}
+              >
+                <span className="text-sm">⚡</span>
+                <span>{liteMode ? "Lite" : "HD"}</span>
+              </button>
             </div>
+          </div>
+        )}
+
+        {/* Lite Mode crosshair reticle */}
+        {liteMode && (
+          <div className="absolute inset-0 z-[12] pointer-events-none flex items-center justify-center">
+            <svg width="80" height="80" viewBox="0 0 80 80" className="opacity-30">
+              <circle cx="40" cy="40" r="30" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" strokeDasharray="4 4" />
+              <circle cx="40" cy="40" r="15" fill="none" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="40" y1="5" x2="40" y2="25" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="40" y1="55" x2="40" y2="75" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="5" y1="40" x2="25" y2="40" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <line x1="55" y1="40" x2="75" y2="40" stroke="hsl(var(--primary))" strokeWidth="0.5" />
+              <circle cx="40" cy="40" r="2" fill="hsl(var(--primary))" opacity="0.6" />
+            </svg>
           </div>
         )}
 
