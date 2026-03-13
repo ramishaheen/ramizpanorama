@@ -20,6 +20,8 @@ import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
 import { TargetingWorkbench } from "./TargetingWorkbench";
+import { lazy, Suspense } from "react";
+const UrbanScene3D = lazy(() => import("./UrbanScene3D").then(m => ({ default: m.UrbanScene3D })));
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 import { useSensorToShooter } from "@/hooks/useSensorToShooter";
 import { toast } from "sonner";
