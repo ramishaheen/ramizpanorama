@@ -96,9 +96,81 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     setLoadingTargets(false);
   };
 
+  const fetchAvailableEvents = async () => {
+    const [{ data: intelEvents }, { data: geoAlerts }] = await Promise.all([
+      supabase.from("intel_events").select("id, title, event_type, severity, lat, lng, confidence, created_at").order("created_at", { ascending: false }).limit(15),
+      supabase.from("geo_alerts").select("id, title, type, severity, lat, lng, timestamp, source").order("timestamp", { ascending: false }).limit(15),
+    ]);
+    const mapped: EventOption[] = [
+      ...(intelEvents || []).map((e: any) => ({ id: e.id, title: e.title, event_type: e.event_type, severity: e.severity, lat: e.lat, lng: e.lng, confidence: e.confidence, source: "intel" as const, created_at: e.created_at })),
+      ...(geoAlerts || []).map((e: any) => ({ id: e.id, title: e.title, event_type: e.type, severity: e.severity, lat: e.lat, lng: e.lng, confidence: 0.8, source: "conflict" as const, created_at: e.timestamp })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20);
+    setAvailableEvents(mapped);
+  };
+
   const handleOpenPicker = () => {
     setShowPicker(true);
+    setPickerTab("targets");
     fetchAvailableTargets();
+    fetchAvailableEvents();
+  };
+
+  const initiateFromEvent = async (ev: EventOption) => {
+    setInitiatingTarget(ev.id);
+    try {
+      // Create a target track from the event first
+      const trackId = `EVT-${Date.now()}`;
+      const classification = ev.event_type.includes("strike") || ev.event_type.includes("explosion") ? "artillery" :
+        ev.event_type.includes("missile") ? "missile_launcher" :
+        ev.event_type.includes("military") ? "command_post" : "unknown";
+      const priority = ev.severity === "critical" ? "critical" : ev.severity === "high" ? "high" : ev.severity === "medium" ? "medium" : "low";
+
+      const { data: newTrack, error: trackErr } = await supabase.from("target_tracks").insert({
+        track_id: trackId,
+        classification: classification as any,
+        confidence: ev.confidence,
+        lat: ev.lat,
+        lng: ev.lng,
+        source_sensor: "osint_news" as any,
+        status: "detected" as any,
+        priority: priority as any,
+        ai_assessment: `Event-sourced: ${ev.title}`,
+      }).select("id").single();
+
+      if (trackErr || !newTrack) throw new Error("Failed to create target track from event");
+
+      // Now initiate kill chain with S2S recommendation
+      let weapon = "TBD";
+      let platform = "TBD";
+      try {
+        const { data: s2sData } = await supabase.functions.invoke("sensor-to-shooter", {
+          body: { action: "recommend", target_id: newTrack.id },
+        });
+        if (s2sData?.recommendation) {
+          weapon = s2sData.recommendation.recommended_weapon || weapon;
+          platform = s2sData.recommendation.callsign || platform;
+        }
+      } catch { /* S2S unavailable */ }
+
+      await supabase.from("kill_chain_tasks").insert({
+        target_track_id: newTrack.id,
+        phase: "find" as any,
+        status: "in_progress" as any,
+        recommended_weapon: weapon,
+        assigned_platform: platform,
+        notes: `Source: ${ev.source.toUpperCase()} EVENT — ${ev.title}`,
+      });
+
+      toast.success(`⚡ KILL CHAIN FROM EVENT`, {
+        description: `${trackId} • ${ev.title.slice(0, 50)} • ${priority.toUpperCase()} priority`,
+      });
+      setShowPicker(false);
+      fetchTasks();
+    } catch (err) {
+      toast.error("Failed to initiate from event");
+    } finally {
+      setInitiatingTarget(null);
+    }
   };
 
   const initiateKillChain = async (target: TargetOption) => {
