@@ -94,6 +94,9 @@ export function useLiveDashboard() {
     };
   }, [flashFresh]);
 
+  // Track last poll timestamp
+  const [lastPollAt, setLastPollAt] = useState<string | null>(null);
+
   // Live simulation polling — triggers DB writes that feed realtime subscriptions
   useEffect(() => {
     let active = true;
@@ -101,6 +104,7 @@ export function useLiveDashboard() {
       if (!active) return;
       try {
         await supabase.functions.invoke('simulate-intel');
+        setLastPollAt(new Date().toISOString());
       } catch (err) {
         console.warn('simulate-intel poll error:', err);
       }
