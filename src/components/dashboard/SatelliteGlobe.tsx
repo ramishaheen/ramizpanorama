@@ -1644,22 +1644,9 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             const zoomAlt2 = s.alt < 2000 ? 0.6 : s.alt < 25000 ? 0.9 : 1.2;
             globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: zoomAlt2 }, 1000);
           })
-          .ringsData(OSINT_MARKERS)
+          .ringsData([])  // Rings managed by consolidated useEffect (OSINT + City + Coverage)
           .ringLat((d: any) => d.lat)
           .ringLng((d: any) => d.lng)
-          .ringAltitude(0.002)
-          .ringMaxRadius((d: any) => (d.type === "conflict" ? 3 : d.type === "naval" ? 2.5 : 1.5))
-          .ringPropagationSpeed((d: any) => (d.severity === "critical" ? 4 : d.severity === "high" ? 2.5 : 1.5))
-          .ringRepeatPeriod((d: any) => (d.severity === "critical" ? 600 : d.severity === "high" ? 900 : 1200))
-          .ringColor((d: any) => {
-            const colors: Record<string, (t: number) => string> = {
-              conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
-              military: (t: number) => `rgba(251,146,60,${0.8 - t * 0.8})`,
-              naval: (t: number) => `rgba(56,189,248,${0.9 - t * 0.9})`,
-              radar: (t: number) => `rgba(168,85,247,${0.8 - t * 0.8})`,
-            };
-            return colors[d.type] || colors.military;
-          })
           .arcsData(OSINT_ARCS)
           .arcStartLat((d: any) => d.startLat)
           .arcStartLng((d: any) => d.startLng)
