@@ -463,6 +463,20 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const blueUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "blue"), [forceUnits]);
   const redUnits = useMemo(() => forceUnits.filter((u: any) => u.affiliation === "red" || u.affiliation === "unknown"), [forceUnits]);
   const activeTargets = useMemo(() => targetTracks.filter((t: any) => t.status !== "destroyed"), [targetTracks]);
+  const criticalTargetCount = useMemo(() => activeTargets.filter((t: any) => t.priority === "critical").length, [activeTargets]);
+  const offlineSensors = useMemo(() => sensorFeeds.filter((s: any) => s.status === "offline" || s.status === "error").length, [sensorFeeds]);
+  const [tasks_kc_count, setTasksKcCount] = useState(0);
+
+  // Fetch kill chain count
+  useEffect(() => {
+    const fetchKC = async () => {
+      const { count } = await supabase.from("kill_chain_tasks").select("*", { count: "exact", head: true }).neq("phase", "assess" as any);
+      setTasksKcCount(count || 0);
+    };
+    fetchKC();
+    const ch = supabase.channel("kc_count_rt").on("postgres_changes", { event: "*", schema: "public", table: "kill_chain_tasks" }, () => fetchKC()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
 
   const stats = useMemo(() => ({
     sats: allSatellites.length, aircraft: allFlights.length, vessels: aisVessels.length,
