@@ -595,12 +595,21 @@ function ThreatActorDossierPanel({ dossier, loading, error, onClose }: {
   );
 }
 
-/* ── Enhanced Dark Web Monitor ── */
-function EnhancedDarkWebMonitor({ entries, torAnalysis, loading, onFetchDossier }: {
-  entries: DarkWebEntry[]; torAnalysis: TorAnalysis | null; loading: boolean;
-  onFetchDossier: (actor: string) => void;
+/* ── Enhanced Dark Web CTI Dashboard ── */
+function EnhancedDarkWebMonitor({ entries, torAnalysis, indicatorExtraction, threatCorrelation, forumAnalysis, ransomwareLeaks, alertRules, dashboardStats, temporalTrends, loading, onFetchDossier }: {
+  entries: DarkWebEntry[]; torAnalysis: TorAnalysis | null;
+  indicatorExtraction: IndicatorExtraction | null; threatCorrelation: ThreatCorrelation[];
+  forumAnalysis: ForumPost[]; ransomwareLeaks: RansomwareLeak[];
+  alertRules: AlertRule[]; dashboardStats: DashboardStats | null;
+  temporalTrends: TemporalTrend[];
+  loading: boolean; onFetchDossier: (actor: string) => void;
 }) {
-  const typeLabels: Record<string, string> = { onion: ".ONION", paste: "PASTE", forum: "FORUM", marketplace: "MARKET", exit_node: "EXIT NODE", hidden_service: "HIDDEN SVC" };
+  const [subTab, setSubTab] = useState<"overview" | "indicators" | "forum" | "ransomware" | "correlation" | "entries">("overview");
+  const [copiedValue, setCopiedValue] = useState<string | null>(null);
+
+  const copyToClipboard = (v: string) => { navigator.clipboard.writeText(v); setCopiedValue(v); setTimeout(() => setCopiedValue(null), 1500); };
+
+  const typeLabels: Record<string, string> = { onion: ".ONION", paste: "PASTE", forum: "FORUM", marketplace: "MARKET", exit_node: "EXIT NODE", hidden_service: "HIDDEN SVC", ransomware_leak: "RANSOM LEAK", exploit_trade: "EXPLOIT", credential_dump: "CRED DUMP", botnet_c2: "BOTNET C2" };
   const typeBg: Record<string, string> = {
     onion: "bg-purple-500/15 text-purple-400 border-purple-500/30",
     paste: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
@@ -608,150 +617,505 @@ function EnhancedDarkWebMonitor({ entries, torAnalysis, loading, onFetchDossier 
     marketplace: "bg-destructive/15 text-destructive border-destructive/30",
     exit_node: "bg-orange-500/15 text-orange-400 border-orange-500/30",
     hidden_service: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+    ransomware_leak: "bg-destructive/15 text-destructive border-destructive/30",
+    exploit_trade: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+    credential_dump: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+    botnet_c2: "bg-primary/15 text-primary border-primary/30",
   };
-  const typeIcons: Record<string, typeof Skull> = { onion: Eye, paste: FileWarning, forum: Hash, marketplace: Link2, exit_node: Server, hidden_service: Fingerprint };
+  const typeIcons: Record<string, typeof Skull> = { onion: Eye, paste: FileWarning, forum: Hash, marketplace: Link2, exit_node: Server, hidden_service: Fingerprint, ransomware_leak: Lock, exploit_trade: Zap, credential_dump: Key, botnet_c2: Wifi };
 
-  const countByType = useMemo(() => {
-    const counts: Record<string, number> = {};
-    entries.forEach(e => { counts[e.type] = (counts[e.type] || 0) + 1; });
-    return counts;
-  }, [entries]);
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full" style={{ background: "hsl(var(--background))" }}>
+        <Skull className="h-10 w-10 mb-3 animate-pulse text-purple-400" />
+        <span className="text-xs font-mono font-bold text-foreground tracking-wider">SCANNING DARK WEB & DEEP WEB</span>
+        <span className="text-[9px] text-muted-foreground mt-1">Analyzing .onion infrastructure, paste sites, underground forums…</span>
+        <div className="mt-4 space-y-1 text-[8px] font-mono text-muted-foreground/60">
+          <div className="animate-pulse">→ Enumerating hidden services…</div>
+          <div className="animate-pulse" style={{ animationDelay: "0.3s" }}>→ Extracting IOCs from paste monitors…</div>
+          <div className="animate-pulse" style={{ animationDelay: "0.6s" }}>→ Correlating threat actor infrastructure…</div>
+          <div className="animate-pulse" style={{ animationDelay: "0.9s" }}>→ Scanning ransomware leak sites…</div>
+          <div className="animate-pulse" style={{ animationDelay: "1.2s" }}>→ Processing forum intelligence…</div>
+        </div>
+      </div>
+    );
+  }
+
+  const SUB_TABS = [
+    { key: "overview" as const, label: "OVERVIEW", icon: Activity },
+    { key: "indicators" as const, label: "INDICATORS", icon: Target },
+    { key: "forum" as const, label: "FORUM INTEL", icon: Hash },
+    { key: "ransomware" as const, label: "RANSOMWARE", icon: Lock },
+    { key: "correlation" as const, label: "CORRELATION", icon: Network },
+    { key: "entries" as const, label: "ENTRIES", icon: Eye },
+  ];
 
   return (
     <div className="h-full flex flex-col" style={{ background: "hsl(var(--background))" }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
-        <Skull className="h-4 w-4 text-purple-400" />
-        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">Dark Web Intelligence</span>
-        <div className="flex items-center gap-2 ml-auto flex-wrap">
-          {Object.entries(countByType).map(([type, count]) => (
-            <span key={type} className={`text-[8px] px-1.5 py-0.5 rounded border font-mono ${typeBg[type] || typeBg.onion}`}>
-              {typeLabels[type] || type}: {count}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Tor Analysis Summary */}
-      {torAnalysis && (
-        <div className="px-4 py-2 border-b border-border bg-card/30">
-          <div className="grid grid-cols-4 gap-2 mb-2">
-            <div className="text-center p-1.5 rounded bg-purple-500/10 border border-purple-500/20">
-              <div className="text-sm font-black text-purple-400">{torAnalysis.hiddenServiceStats.newServicesDetected}</div>
-              <div className="text-[7px] font-mono text-muted-foreground">New Services</div>
-            </div>
-            <div className="text-center p-1.5 rounded bg-destructive/10 border border-destructive/20">
-              <div className="text-sm font-black text-destructive">{torAnalysis.hiddenServiceStats.c2PanelsIdentified}</div>
-              <div className="text-[7px] font-mono text-muted-foreground">C2 Panels</div>
-            </div>
-            <div className="text-center p-1.5 rounded bg-orange-500/10 border border-orange-500/20">
-              <div className="text-sm font-black text-orange-400">{torAnalysis.hiddenServiceStats.marketplacesActive}</div>
-              <div className="text-[7px] font-mono text-muted-foreground">Marketplaces</div>
-            </div>
-            <div className="text-center p-1.5 rounded bg-yellow-500/10 border border-yellow-500/20">
-              <div className="text-sm font-black text-yellow-400">{torAnalysis.hiddenServiceStats.pasteMonitorsTriggered}</div>
-              <div className="text-[7px] font-mono text-muted-foreground">Paste Alerts</div>
-            </div>
+      {/* Alert ticker */}
+      {alertRules.length > 0 && (
+        <div className="px-3 py-1 border-b border-destructive/30 bg-destructive/5 flex items-center gap-2 overflow-hidden">
+          <AlertTriangle className="h-3 w-3 text-destructive flex-shrink-0 animate-pulse" />
+          <div className="flex gap-6 text-[8px] font-mono overflow-x-auto whitespace-nowrap">
+            {alertRules.slice(0, 6).map((a, i) => (
+              <span key={i} className={`${a.severity === "critical" ? "text-destructive" : a.severity === "high" ? "text-orange-400" : "text-yellow-400"}`}>
+                ▲ {a.message}
+              </span>
+            ))}
           </div>
-          {torAnalysis.networkTrends && (
-            <p className="text-[9px] text-muted-foreground italic">{torAnalysis.networkTrends}</p>
-          )}
-          {/* Exit Nodes */}
-          {torAnalysis.suspiciousExitNodes.length > 0 && (
-            <div className="mt-2">
-              <div className="text-[8px] font-mono text-orange-400 uppercase mb-1">Suspicious Exit Nodes</div>
-              <div className="flex gap-1 flex-wrap">
-                {torAnalysis.suspiciousExitNodes.slice(0, 6).map((n, i) => (
-                  <span key={i} className="text-[7px] px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 font-mono">
-                    {n.flag} {n.ip} <span className="text-muted-foreground">({n.risk})</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
+      {/* Sub-tab bar */}
+      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-card/30">
+        <Skull className="h-3.5 w-3.5 text-purple-400 mr-1" />
+        <span className="text-[9px] font-mono font-bold text-foreground uppercase tracking-wider mr-3">CTI ENGINE</span>
+        {SUB_TABS.map(t => {
+          const Icon = t.icon;
+          return (
+            <button key={t.key} onClick={() => setSubTab(t.key)}
+              className={`px-2 py-0.5 rounded text-[8px] font-mono border transition-colors flex items-center gap-1 ${subTab === t.key ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+              <Icon className="h-2.5 w-2.5" />{t.label}
+            </button>
+          );
+        })}
+        <span className="text-[8px] font-mono text-muted-foreground ml-auto">{entries.length} entries</span>
+      </div>
+
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-2">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Skull className="h-8 w-8 mb-2 animate-pulse text-purple-400" />
-              <span className="text-xs font-mono">SCANNING DARK WEB...</span>
-              <span className="text-[9px] text-muted-foreground/60 mt-1">Analyzing .onion infrastructure & paste sites</span>
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <EyeOff className="h-8 w-8 mb-2 opacity-40" />
-              <span className="text-xs font-mono">No dark web intelligence available</span>
-            </div>
-          ) : entries.map((entry) => {
-            const Icon = typeIcons[entry.type] || Eye;
-            return (
-              <div key={entry.id} className="p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
-                <div className="flex items-start gap-2">
-                  <div className={`p-1.5 rounded ${typeBg[entry.type] || typeBg.onion}`}>
-                    <Icon className="h-3.5 w-3.5" />
+        <div className="p-3">
+          {/* ═══ OVERVIEW ═══ */}
+          {subTab === "overview" && (
+            <div className="space-y-3">
+              {torAnalysis && (
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="text-center p-2 rounded bg-purple-500/10 border border-purple-500/20">
+                    <div className="text-lg font-black text-purple-400">{torAnalysis.hiddenServiceStats.newServicesDetected}</div>
+                    <div className="text-[7px] font-mono text-muted-foreground">New Hidden Svcs</div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${typeBg[entry.type] || typeBg.onion}`}>
-                        {typeLabels[entry.type] || entry.type}
-                      </span>
-                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[entry.severity]}`}>
-                        {entry.severity}
-                      </span>
-                      {entry.category && (
-                        <span className="text-[7px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground font-mono">{entry.category}</span>
-                      )}
-                      <span className="text-[8px] font-mono text-muted-foreground ml-auto">{entry.timestamp?.split("T")[0]}</span>
-                    </div>
-                    <h4 className="text-[11px] font-bold text-foreground mb-1">{entry.title}</h4>
-                    <p className="text-[9px] text-muted-foreground leading-relaxed">{entry.detail}</p>
-                    {/* Tor exit nodes */}
-                    {entry.torExitNodes && entry.torExitNodes.length > 0 && (
-                      <div className="flex gap-1 mt-1.5 flex-wrap">
-                        {entry.torExitNodes.map((node, i) => (
-                          <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 truncate max-w-[200px]">
-                            ⊕ {node}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {/* Hidden service fingerprint */}
-                    {entry.hiddenServiceFingerprint && (
-                      <div className="mt-1">
-                        <span className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                          🧅 {entry.hiddenServiceFingerprint}
-                        </span>
-                      </div>
-                    )}
-                    {/* IOCs */}
-                    {entry.indicators && entry.indicators.length > 0 && (
-                      <div className="flex gap-1 mt-1.5 flex-wrap">
-                        {entry.indicators.map((ioc, i) => (
-                          <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground truncate max-w-[200px]">
-                            {ioc}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {/* Related actors (clickable for dossier) */}
-                    {entry.relatedActors && entry.relatedActors.length > 0 && (
-                      <div className="flex gap-1 mt-1.5 flex-wrap">
-                        {entry.relatedActors.map((actor, i) => (
-                          <button key={i} onClick={() => onFetchDossier(actor)}
-                            className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-colors cursor-pointer">
-                            <UserSearch className="h-2.5 w-2.5 inline mr-0.5" />{actor}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <div className="text-center p-2 rounded bg-destructive/10 border border-destructive/20">
+                    <div className="text-lg font-black text-destructive">{torAnalysis.hiddenServiceStats.c2PanelsIdentified}</div>
+                    <div className="text-[7px] font-mono text-muted-foreground">C2 Panels</div>
+                  </div>
+                  <div className="text-center p-2 rounded bg-orange-500/10 border border-orange-500/20">
+                    <div className="text-lg font-black text-orange-400">{torAnalysis.hiddenServiceStats.marketplacesActive}</div>
+                    <div className="text-[7px] font-mono text-muted-foreground">Marketplaces</div>
+                  </div>
+                  <div className="text-center p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
+                    <div className="text-lg font-black text-yellow-400">{torAnalysis.hiddenServiceStats.pasteMonitorsTriggered}</div>
+                    <div className="text-[7px] font-mono text-muted-foreground">Paste Alerts</div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              )}
+
+              {dashboardStats && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded border border-destructive/20 bg-destructive/5">
+                    <div className="text-[8px] font-mono text-destructive uppercase tracking-wider mb-2 flex items-center gap-1"><Crosshair className="h-3 w-3" /> Top Attacking Countries</div>
+                    <div className="space-y-1">
+                      {dashboardStats.topAttackingCountries.slice(0, 5).map((c, i) => (
+                        <div key={i} className="flex items-center gap-2 text-[9px]">
+                          <span className="w-3 text-muted-foreground">{i + 1}.</span><span>{c.flag}</span>
+                          <span className="flex-1 text-foreground">{c.country}</span>
+                          <span className="font-mono font-bold text-destructive">{c.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded border border-primary/20 bg-primary/5">
+                    <div className="text-[8px] font-mono text-primary uppercase tracking-wider mb-2 flex items-center gap-1"><Target className="h-3 w-3" /> Top Targeted Countries</div>
+                    <div className="space-y-1">
+                      {dashboardStats.topTargetedCountries.slice(0, 5).map((c, i) => (
+                        <div key={i} className="flex items-center gap-2 text-[9px]">
+                          <span className="w-3 text-muted-foreground">{i + 1}.</span><span>{c.flag}</span>
+                          <span className="flex-1 text-foreground">{c.country}</span>
+                          <span className="font-mono font-bold text-primary">{c.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded border border-destructive/20 bg-destructive/5">
+                    <div className="text-[8px] font-mono text-destructive uppercase tracking-wider mb-2 flex items-center gap-1"><Lock className="h-3 w-3" /> Active Ransomware Groups</div>
+                    <div className="space-y-1">
+                      {dashboardStats.activeRansomwareGroups.slice(0, 5).map((g, i) => (
+                        <div key={i} className="flex items-center justify-between text-[9px]">
+                          <span className="text-foreground font-bold">{g.name}</span>
+                          <span className="font-mono text-destructive">{g.activeLeaks} leaks</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded border border-orange-500/20 bg-orange-500/5">
+                    <div className="text-[8px] font-mono text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Bug className="h-3 w-3" /> Most Discussed CVEs</div>
+                    <div className="space-y-1">
+                      {dashboardStats.mostDiscussedCVEs.slice(0, 5).map((c, i) => (
+                        <div key={i} className="flex items-center justify-between text-[9px]">
+                          <span className="font-mono text-foreground">{c.id}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[7px] px-1 py-0.5 rounded border font-mono uppercase ${SEVERITY_BG[c.severity]}`}>{c.severity}</span>
+                            <span className="font-mono text-muted-foreground">{c.mentions}x</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {temporalTrends.length > 0 && (
+                <div className="p-3 rounded border border-border bg-card/50">
+                  <div className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1"><Activity className="h-3 w-3" /> 4-Week Trend Analysis</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {temporalTrends.map((t, i) => (
+                      <div key={i} className="p-2 rounded bg-background/50 border border-border text-center">
+                        <div className="text-[8px] font-mono text-muted-foreground mb-1">{t.period.replace("_", " ").toUpperCase()}</div>
+                        <div className="space-y-0.5 text-[8px]">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Malware</span><span className="text-destructive font-bold">{t.malwareIncidents}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Ransom</span><span className="text-orange-400 font-bold">{t.ransomwareIncidents}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Exploits</span><span className="text-yellow-400 font-bold">{t.exploitDiscussions}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Breaches</span><span className="text-purple-400 font-bold">{t.dataBreaches}</span></div>
+                        </div>
+                        <div className={`text-[7px] font-mono mt-1 ${t.trend === "rising" ? "text-destructive" : t.trend === "declining" ? "text-green-400" : "text-muted-foreground"}`}>
+                          {t.trend === "rising" ? "▲ RISING" : t.trend === "declining" ? "▼ DECLINING" : "— STABLE"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {torAnalysis && torAnalysis.suspiciousExitNodes.length > 0 && (
+                <div className="p-3 rounded border border-orange-500/20 bg-orange-500/5">
+                  <div className="text-[8px] font-mono text-orange-400 uppercase tracking-wider mb-2">Suspicious Tor Exit Nodes</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {torAnalysis.suspiciousExitNodes.map((n, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[8px] p-1.5 rounded bg-background/30 border border-border">
+                        <span>{n.flag}</span>
+                        <span className="font-mono text-foreground">{n.ip}</span>
+                        <span className={`text-[7px] px-1 rounded border font-mono ${n.risk === "high" ? "text-destructive border-destructive/30" : "text-yellow-400 border-yellow-500/30"}`}>{n.risk}</span>
+                        <span className="text-muted-foreground truncate flex-1">{n.activity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {torAnalysis?.networkTrends && <p className="text-[9px] text-muted-foreground italic px-1">{torAnalysis.networkTrends}</p>}
+
+              {dashboardStats && dashboardStats.largestBotnets.length > 0 && (
+                <div className="p-3 rounded border border-primary/20 bg-primary/5">
+                  <div className="text-[8px] font-mono text-primary uppercase tracking-wider mb-2 flex items-center gap-1"><Wifi className="h-3 w-3" /> Largest Botnets</div>
+                  <div className="space-y-1">
+                    {dashboardStats.largestBotnets.map((b, i) => (
+                      <div key={i} className="flex items-center justify-between text-[9px]">
+                        <span className="text-foreground font-bold">{b.name}</span>
+                        <span className="text-muted-foreground font-mono">{b.primaryMalware}</span>
+                        <span className="font-mono text-primary font-bold">{b.estimatedSize.toLocaleString()} nodes</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ INDICATORS ═══ */}
+          {subTab === "indicators" && indicatorExtraction && (
+            <div className="space-y-3">
+              {indicatorExtraction.network.ips.length > 0 && (
+                <div className="p-3 rounded border border-border bg-card/50">
+                  <div className="text-[8px] font-mono text-destructive uppercase tracking-wider mb-2 flex items-center gap-1"><Globe className="h-3 w-3" /> Network IPs ({indicatorExtraction.network.ips.length})</div>
+                  <div className="space-y-1">
+                    {indicatorExtraction.network.ips.map((ip, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[8px] p-1 rounded bg-background/30 border border-border group">
+                        <span>{ip.flag}</span>
+                        <span className="font-mono text-foreground">{ip.value}</span>
+                        <span className={`text-[7px] px-1 rounded border font-mono ${ip.reputation === "malicious" ? "text-destructive border-destructive/30 bg-destructive/10" : "text-yellow-400 border-yellow-500/30 bg-yellow-500/10"}`}>{ip.reputation}</span>
+                        <span className="text-muted-foreground">{ip.activity}</span>
+                        <span className="text-muted-foreground/60 font-mono ml-auto">{ip.asn}</span>
+                        <button onClick={() => copyToClipboard(ip.value)} className="opacity-0 group-hover:opacity-100 p-0.5 transition-opacity">
+                          {copiedValue === ip.value ? <Check className="h-2.5 w-2.5 text-green-400" /> : <Copy className="h-2.5 w-2.5 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {indicatorExtraction.network.domains.length > 0 && (
+                <div className="p-3 rounded border border-border bg-card/50">
+                  <div className="text-[8px] font-mono text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Link2 className="h-3 w-3" /> Domains ({indicatorExtraction.network.domains.length})</div>
+                  <div className="space-y-1">
+                    {indicatorExtraction.network.domains.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[8px] p-1 rounded bg-background/30 border border-border group">
+                        <span className="font-mono text-foreground">{d.value}</span>
+                        <span className={`text-[7px] px-1 rounded border font-mono ${d.reputation === "malicious" ? "text-destructive border-destructive/30" : "text-yellow-400 border-yellow-500/30"}`}>{d.reputation}</span>
+                        <span className="text-muted-foreground">{d.activity}</span>
+                        <button onClick={() => copyToClipboard(d.value)} className="opacity-0 group-hover:opacity-100 p-0.5 transition-opacity ml-auto">
+                          {copiedValue === d.value ? <Check className="h-2.5 w-2.5 text-green-400" /> : <Copy className="h-2.5 w-2.5 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {indicatorExtraction.vulnerability.cves.length > 0 && (
+                <div className="p-3 rounded border border-destructive/20 bg-destructive/5">
+                  <div className="text-[8px] font-mono text-destructive uppercase tracking-wider mb-2 flex items-center gap-1"><Bug className="h-3 w-3" /> CVEs ({indicatorExtraction.vulnerability.cves.length})</div>
+                  <div className="space-y-1.5">
+                    {indicatorExtraction.vulnerability.cves.map((c, i) => (
+                      <div key={i} className="p-2 rounded bg-background/30 border border-border">
+                        <div className="flex items-center gap-2 text-[9px] mb-1">
+                          <a href={`https://nvd.nist.gov/vuln/detail/${c.id}`} target="_blank" rel="noopener noreferrer" className="font-mono font-bold text-destructive hover:underline flex items-center gap-1">{c.id} <ExternalLink className="h-2.5 w-2.5" /></a>
+                          <span className="text-[8px] font-mono text-orange-400 font-bold">CVSS {c.cvss}</span>
+                          {c.exploitAvailable && <span className="text-[7px] px-1 rounded bg-destructive/20 text-destructive border border-destructive/30 font-mono">EXPLOIT AVAIL</span>}
+                          {c.discussedInForums && <span className="text-[7px] px-1 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-mono">FORUM BUZZ</span>}
+                          {c.patchAvailable && <span className="text-[7px] px-1 rounded bg-green-500/20 text-green-400 border border-green-500/30 font-mono">PATCH</span>}
+                        </div>
+                        <p className="text-[8px] text-muted-foreground">{c.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {indicatorExtraction.malware.families.length > 0 && (
+                <div className="p-3 rounded border border-purple-500/20 bg-purple-500/5">
+                  <div className="text-[8px] font-mono text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Skull className="h-3 w-3" /> Malware Families ({indicatorExtraction.malware.families.length})</div>
+                  <div className="space-y-1">
+                    {indicatorExtraction.malware.families.map((f, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[8px] p-1.5 rounded bg-background/30 border border-border">
+                        <span className="font-bold text-foreground">{f.name}</span>
+                        <span className="text-[7px] px-1 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30 font-mono">{f.type}</span>
+                        <span className="text-muted-foreground">C2: {f.activeC2Count}</span>
+                        <span className="text-muted-foreground truncate flex-1">{f.recentActivity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {indicatorExtraction.malware.c2Servers.length > 0 && (
+                <div className="p-3 rounded border border-border bg-card/50">
+                  <div className="text-[8px] font-mono text-primary uppercase tracking-wider mb-2 flex items-center gap-1"><Server className="h-3 w-3" /> C2 Infrastructure ({indicatorExtraction.malware.c2Servers.length})</div>
+                  <div className="space-y-1">
+                    {indicatorExtraction.malware.c2Servers.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[8px] p-1 rounded bg-background/30 border border-border group">
+                        <span>{s.flag}</span>
+                        <span className="font-mono text-foreground">{s.ip}:{s.port}</span>
+                        <span className="text-muted-foreground">{s.domain}</span>
+                        <span className="text-[7px] px-1 rounded bg-destructive/10 text-destructive border border-destructive/20 font-mono">{s.malware}</span>
+                        <span className={`text-[7px] font-mono ml-auto ${s.status === "active" ? "text-destructive" : "text-muted-foreground"}`}>● {s.status}</span>
+                        <button onClick={() => copyToClipboard(s.ip)} className="opacity-0 group-hover:opacity-100 p-0.5 transition-opacity">
+                          {copiedValue === s.ip ? <Check className="h-2.5 w-2.5 text-green-400" /> : <Copy className="h-2.5 w-2.5 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {indicatorExtraction.financial.cryptoWallets.length > 0 && (
+                <div className="p-3 rounded border border-yellow-500/20 bg-yellow-500/5">
+                  <div className="text-[8px] font-mono text-yellow-400 uppercase tracking-wider mb-2">💰 Crypto Wallets Linked to Threat Actors</div>
+                  <div className="space-y-1">
+                    {indicatorExtraction.financial.cryptoWallets.map((w, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[8px] p-1 rounded bg-background/30 border border-border group">
+                        <span className="font-mono text-foreground truncate max-w-[200px]">{w.address}</span>
+                        <span className="text-[7px] px-1 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 font-mono">{w.currency}</span>
+                        <span className="text-muted-foreground">{w.associatedGroup}</span>
+                        <span className="font-mono text-yellow-400 ml-auto">{w.estimatedValue}</span>
+                        <button onClick={() => copyToClipboard(w.address)} className="opacity-0 group-hover:opacity-100 p-0.5 transition-opacity">
+                          {copiedValue === w.address ? <Check className="h-2.5 w-2.5 text-green-400" /> : <Copy className="h-2.5 w-2.5 text-muted-foreground" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {indicatorExtraction.actors.aptGroups.length > 0 && (
+                <div className="p-3 rounded border border-destructive/20 bg-destructive/5">
+                  <div className="text-[8px] font-mono text-destructive uppercase tracking-wider mb-2 flex items-center gap-1"><UserSearch className="h-3 w-3" /> Active APT Groups</div>
+                  <div className="space-y-1">
+                    {indicatorExtraction.actors.aptGroups.map((g, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[9px] p-1.5 rounded bg-background/30 border border-border">
+                        <span>{g.flag}</span>
+                        <button onClick={() => onFetchDossier(g.name)} className="font-bold text-foreground hover:text-primary hover:underline transition-colors">{g.name}</button>
+                        <span className="text-muted-foreground">{g.country}</span>
+                        <span className="font-mono text-destructive ml-auto">{g.activeCampaigns} campaigns</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {subTab === "indicators" && !indicatorExtraction && (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <EyeOff className="h-8 w-8 mb-2 opacity-40" />
+              <span className="text-xs font-mono">No indicator extraction data available</span>
+            </div>
+          )}
+
+          {/* ═══ FORUM INTEL ═══ */}
+          {subTab === "forum" && (
+            <div className="space-y-2">
+              {forumAnalysis.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Hash className="h-8 w-8 mb-2 opacity-40" />
+                  <span className="text-xs font-mono">No forum intelligence available</span>
+                </div>
+              ) : forumAnalysis.map((post) => (
+                <div key={post.id} className="p-3 rounded border border-border bg-card/50 hover:bg-card/80 transition-colors">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[post.riskLevel]}`}>{post.riskLevel}</span>
+                    <span className="text-[7px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground font-mono">{post.category}</span>
+                    <span className="text-[7px] px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono">{post.forum}</span>
+                    <span className="text-[8px] font-mono text-muted-foreground">by <span className="text-foreground">{post.author}</span></span>
+                    <span className="text-[7px] font-mono text-muted-foreground/60 ml-auto">{post.language} · {post.timestamp?.split("T")[0]}</span>
+                  </div>
+                  <h4 className="text-[11px] font-bold text-foreground mb-1">{post.title}</h4>
+                  <p className="text-[9px] text-muted-foreground leading-relaxed">{post.snippet}</p>
+                  {post.relatedActors.length > 0 && (
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {post.relatedActors.map((actor, i) => (
+                        <button key={i} onClick={() => onFetchDossier(actor)} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-colors">
+                          <UserSearch className="h-2.5 w-2.5 inline mr-0.5" />{actor}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ RANSOMWARE ═══ */}
+          {subTab === "ransomware" && (
+            <div className="space-y-2">
+              {ransomwareLeaks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Lock className="h-8 w-8 mb-2 opacity-40" />
+                  <span className="text-xs font-mono">No ransomware leak data available</span>
+                </div>
+              ) : (
+                <div className="border border-border rounded overflow-hidden">
+                  <div className="grid grid-cols-[1fr_1.2fr_0.7fr_0.7fr_0.6fr_0.5fr_0.7fr] gap-1 px-3 py-1.5 bg-card/70 border-b border-border text-[7px] font-mono text-muted-foreground uppercase tracking-wider">
+                    <span>Group</span><span>Victim</span><span>Sector</span><span>Country</span><span>Data</span><span>Status</span><span>Deadline</span>
+                  </div>
+                  {ransomwareLeaks.map((leak) => {
+                    const isUrgent = leak.status === "countdown";
+                    return (
+                      <div key={leak.id} className={`grid grid-cols-[1fr_1.2fr_0.7fr_0.7fr_0.6fr_0.5fr_0.7fr] gap-1 px-3 py-2 border-b border-border text-[9px] hover:bg-card/50 transition-colors ${isUrgent ? "bg-destructive/5" : ""}`}>
+                        <span className="font-bold text-destructive truncate">{leak.group}</span>
+                        <span className="text-foreground truncate">{leak.victim}</span>
+                        <span className="text-muted-foreground truncate">{leak.sector}</span>
+                        <span className="truncate">{leak.flag} {leak.country}</span>
+                        <span className="font-mono text-muted-foreground">{leak.dataSize}</span>
+                        <span className={`text-[7px] font-mono font-bold ${leak.status === "published" ? "text-destructive" : leak.status === "countdown" ? "text-orange-400" : "text-yellow-400"}`}>{leak.status.toUpperCase()}</span>
+                        <span className="font-mono text-muted-foreground text-[8px]">{leak.deadline?.split("T")[0]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ CORRELATION ═══ */}
+          {subTab === "correlation" && (
+            <div className="space-y-3">
+              {threatCorrelation.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <Network className="h-8 w-8 mb-2 opacity-40" />
+                  <span className="text-xs font-mono">No threat correlation data available</span>
+                </div>
+              ) : threatCorrelation.map((corr) => (
+                <div key={corr.id} className={`p-3 rounded border ${corr.earlyWarning ? "border-destructive/30 bg-destructive/5" : "border-border bg-card/50"}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {corr.earlyWarning && <span className="text-[7px] px-1.5 py-0.5 rounded bg-destructive/20 text-destructive border border-destructive/30 font-mono font-bold animate-pulse">⚠ EARLY WARNING</span>}
+                    <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[corr.severity]}`}>{corr.severity}</span>
+                    <span className="text-[11px] font-bold text-foreground">{corr.title}</span>
+                  </div>
+                  <div className="flex items-center gap-1 mb-2 overflow-x-auto">
+                    {corr.stages.map((stage, i) => (
+                      <div key={i} className="flex items-center gap-1 flex-shrink-0">
+                        <div className="p-1.5 rounded bg-background/50 border border-border">
+                          <div className="text-[7px] font-mono text-primary font-bold mb-0.5">{stage.stage}</div>
+                          <div className="text-[8px] text-muted-foreground max-w-[150px]">{stage.detail}</div>
+                        </div>
+                        {i < corr.stages.length - 1 && <ChevronRight className="h-3 w-3 text-primary flex-shrink-0" />}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 text-[8px]">
+                    <span className="text-muted-foreground">Sectors:</span>
+                    {corr.affectedSectors.map((s, i) => (
+                      <span key={i} className="px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground font-mono">{s}</span>
+                    ))}
+                  </div>
+                  <div className="mt-1.5 text-[9px] text-green-400 flex items-center gap-1">
+                    <Shield className="h-3 w-3" /> {corr.recommendation}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ ENTRIES ═══ */}
+          {subTab === "entries" && (
+            <div className="space-y-2">
+              {entries.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <EyeOff className="h-8 w-8 mb-2 opacity-40" />
+                  <span className="text-xs font-mono">No dark web entries available</span>
+                </div>
+              ) : entries.map((entry) => {
+                const Icon = typeIcons[entry.type] || Eye;
+                return (
+                  <div key={entry.id} className="p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
+                    <div className="flex items-start gap-2">
+                      <div className={`p-1.5 rounded ${typeBg[entry.type] || typeBg.onion}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${typeBg[entry.type] || typeBg.onion}`}>{typeLabels[entry.type] || entry.type}</span>
+                          <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[entry.severity]}`}>{entry.severity}</span>
+                          {entry.category && <span className="text-[7px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground font-mono">{entry.category}</span>}
+                          <span className="text-[8px] font-mono text-muted-foreground ml-auto">{entry.timestamp?.split("T")[0]}</span>
+                        </div>
+                        <h4 className="text-[11px] font-bold text-foreground mb-1">{entry.title}</h4>
+                        <p className="text-[9px] text-muted-foreground leading-relaxed">{entry.detail}</p>
+                        {entry.torExitNodes && entry.torExitNodes.length > 0 && (
+                          <div className="flex gap-1 mt-1.5 flex-wrap">
+                            {entry.torExitNodes.map((node, i) => (
+                              <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 truncate max-w-[200px]">⊕ {node}</span>
+                            ))}
+                          </div>
+                        )}
+                        {entry.hiddenServiceFingerprint && (
+                          <div className="mt-1"><span className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400">🧅 {entry.hiddenServiceFingerprint}</span></div>
+                        )}
+                        {entry.indicators && entry.indicators.length > 0 && (
+                          <div className="flex gap-1 mt-1.5 flex-wrap">
+                            {entry.indicators.map((ioc, i) => (
+                              <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground truncate max-w-[200px]">{ioc}</span>
+                            ))}
+                          </div>
+                        )}
+                        {entry.relatedActors && entry.relatedActors.length > 0 && (
+                          <div className="flex gap-1 mt-1.5 flex-wrap">
+                            {entry.relatedActors.map((actor, i) => (
+                              <button key={i} onClick={() => onFetchDossier(actor)} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-colors cursor-pointer">
+                                <UserSearch className="h-2.5 w-2.5 inline mr-0.5" />{actor}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>
