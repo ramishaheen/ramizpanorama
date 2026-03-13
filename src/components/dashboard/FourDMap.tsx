@@ -961,9 +961,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   { label: "SAT", value: stats.sats, color: "#00d4ff" },
                   { label: "AIR", value: stats.aircraft, color: "#00d4ff" },
                   { label: "SEA", value: stats.vessels, color: "#22c55e" },
-                  { label: "EQ", value: stats.quakes, color: "#ef4444" },
-                  { label: "FIRE", value: stats.fires, color: "#ff4500" },
-                  { label: "INTEL", value: stats.fusion + emulatedEvents.length, color: "#eab308" },
+                  { label: "BLU", value: stats.blu, color: "#3b82f6" },
+                  { label: "RED", value: stats.red, color: "#ef4444" },
+                  { label: "TGT", value: stats.tgt, color: "#f97316" },
                 ].map(s => (
                   <div key={s.label} className="text-center py-1 rounded bg-[hsl(220,18%,8%)] border border-[hsl(220,15%,15%)]">
                     <div className="text-[9px] font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
