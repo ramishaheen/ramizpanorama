@@ -144,6 +144,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
   const [trackedAircraftId, setTrackedAircraftId] = useState<string | null>(null);
   const [flightSource, setFlightSource] = useState("");
+  const [tilesUsed, setTilesUsed] = useState(0);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(true);
   const flightIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1969,6 +1970,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       if (!error && data?.aircraft) {
         const newAircraft: Aircraft[] = data.aircraft;
         if (data.source) setFlightSource(data.source);
+        if (data.tiles_used != null) setTilesUsed(data.tiles_used);
 
         // --- ALERT: New military aircraft entering viewport ---
         const prevMilIds = new Set(aircraft.filter(a => a.is_military).map(a => a.icao24));
@@ -3009,6 +3011,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                     <span className="text-[8px] font-mono" style={{ color: "#ef4444" }}>MIL: {militaryCount}</span>
                   </div>
                   <span className="ml-auto text-[7px] font-mono text-muted-foreground/50">15s refresh</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-1">
+                  <span className="px-1.5 py-0.5 rounded bg-primary/20 text-[8px] font-mono text-primary">🛰 {aircraft.length} TOTAL</span>
+                  <span className="px-1.5 py-0.5 rounded bg-secondary/40 text-[8px] font-mono text-muted-foreground">📡 {tilesUsed} TILES</span>
                 </div>
               </div>
               <div className="divide-y divide-border/10 max-h-[38vh] overflow-y-auto">
