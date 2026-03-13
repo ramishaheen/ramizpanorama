@@ -317,25 +317,16 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
         </div>
       </div>
 
-      {/* Severity legend */}
-      <div className="absolute top-[72px] right-3 z-[450] pointer-events-none">
+      {/* Severity legend — bottom right */}
+      <div className="absolute bottom-3 right-3 z-[450] pointer-events-none">
         <div className="px-3 py-2.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(190,40%,25%)] border-l-2 border-l-primary rounded-sm">
           <div className="font-mono text-[9px] font-semibold tracking-[0.1em] text-[hsl(190,60%,40%)] mb-1.5">SEVERITY</div>
           {(["critical", "high", "medium", "low"] as const).map(sev => (
-            <div key={sev} className="flex items-center gap-2 mb-1">
+            <div key={sev} className="flex items-center gap-2 mb-1 last:mb-0">
               <div className="w-2.5 h-2.5 rounded-full" style={{ background: SEVERITY_COLORS[sev] }} />
               <span className="font-mono text-[9px] text-[hsl(0,0%,60%)] uppercase">{sev}</span>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Classification banner */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[450] pointer-events-none">
-        <div className="px-5 py-1 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(45,60%,30%)] rounded-sm">
-          <span className="font-mono text-[9px] font-semibold tracking-[0.15em] text-warning">
-            UNCLASSIFIED // OSINT DERIVED
-          </span>
         </div>
       </div>
 
