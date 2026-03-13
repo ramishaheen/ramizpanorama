@@ -904,6 +904,30 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     }
   }, []);
 
+  // Calculate coverage radius based on altitude and sensor type
+  const computeCoverageRadius = useCallback((sat: SatelliteData): number => {
+    const R = 6371; // Earth radius km
+    const h = sat.alt;
+    const cat = sat.category;
+    let halfFovDeg: number;
+    if (cat === "ISR" || cat === "Early Warning" || cat === "Earth Observation") halfFovDeg = 2;
+    else if (cat === "SAR Imaging") halfFovDeg = 6;
+    else if (cat === "SIGINT/ELINT") halfFovDeg = 10;
+    else if (cat === "Communication" || cat === "Data Relay") halfFovDeg = 17;
+    else if (cat === "Navigation") halfFovDeg = 12;
+    else if (cat === "Weather") halfFovDeg = 15;
+    else halfFovDeg = 8;
+    const fovRadius = h * Math.tan(halfFovDeg * Math.PI / 180);
+    const horizonRadius = R * Math.acos(R / (R + h)) * (180 / Math.PI) * 111;
+    return Math.min(fovRadius, horizonRadius);
+  }, []);
+
+  const updateCoverageRing = useCallback((sat: SatelliteData) => {
+    const radiusKm = computeCoverageRadius(sat);
+    const color = CATEGORY_COLORS[sat.category] || "#d4a843";
+    setCoverageRing({ lat: sat.lat, lng: sat.lng, radiusKm, color });
+  }, [computeCoverageRadius]);
+
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
