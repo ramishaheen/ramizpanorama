@@ -2174,15 +2174,15 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             <div className="relative" style={{ width: 150 }}>
               <button
                 onClick={() => setFlightsPanelExpanded(!flightsPanelExpanded)}
-                className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+                className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 gotham-orbital-btn ${flightsPanelExpanded ? 'gotham-orbital-btn-active' : ''}`}
               >
                 <Plane className="h-3 w-3 text-primary" />
-                <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">Flights</span>
-                <span className="text-[8px] font-mono text-white/50">{flights.length}</span>
-                {flightsPanelExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+                <span className="flex-1 text-left">Flights</span>
+                <span className="gotham-orbital-badge">{flights.length}</span>
+                {flightsPanelExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
               </button>
               {flightsPanelExpanded && (
-                <div className="absolute bottom-full mb-1 left-0 w-[220px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
+                <div className="absolute bottom-full mb-1 left-0 w-[220px] max-h-[60vh] overflow-hidden gotham-orbital-dropdown">
                   <FlightEmulationPanel
                     flights={flights}
                     trackedFlightId={trackedFlightId ?? null}
