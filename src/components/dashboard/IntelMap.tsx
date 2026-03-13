@@ -433,6 +433,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     const group = newsGroupRef.current;
     if (!group) return;
     group.clearLayers();
+    if (!layers.news) return;
 
     newsMarkers.forEach((update) => {
       if (!update.lat || !update.lng) return;
