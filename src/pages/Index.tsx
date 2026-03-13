@@ -320,19 +320,6 @@ const Index = () => {
                   fusionEvents={geoFusion.data?.events}
                 />
               </div>
-              <div className="flex flex-col sm:flex-row border-t border-border sm:h-[220px]">
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <CitizenSecurity
-                    data={citizenSecurity.data}
-                    loading={citizenSecurity.loading}
-                    error={citizenSecurity.error}
-                    onRefresh={citizenSecurity.refresh}
-                  />
-                </div>
-                <div className="flex-1 min-w-0 overflow-hidden border-t sm:border-t-0 sm:border-l border-border/50">
-                  <SectorPredictions />
-                </div>
-              </div>
             </div>
           )}
 
