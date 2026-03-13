@@ -324,7 +324,14 @@ const Index = () => {
           )}
 
           {mobileTab === "intel" && (
-            <div className="h-full overflow-y-auto p-3 space-y-3">
+            <div className="h-full overflow-y-auto p-2 space-y-2">
+              <CitizenSecurity
+                data={citizenSecurity.data}
+                loading={citizenSecurity.loading}
+                error={citizenSecurity.error}
+                onRefresh={citizenSecurity.refresh}
+              />
+              <SectorPredictions />
               {leftOrder.map((id) => (
                 <div key={id}>{leftWidgets[id]}</div>
               ))}
@@ -340,7 +347,7 @@ const Index = () => {
           )}
 
           {mobileTab === "layers" && (
-            <div className="h-full overflow-y-auto p-3 space-y-3">
+            <div className="h-full overflow-y-auto p-2 space-y-2">
               <LayerControls layers={layers} onToggle={toggleLayer} />
               <TimelineSlider events={timeline} />
             </div>

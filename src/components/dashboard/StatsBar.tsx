@@ -222,7 +222,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`grid grid-cols-3 sm:grid-cols-7 gap-1 px-2 sm:px-3 py-0.5 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`flex overflow-x-auto mobile-stats-scroll sm:grid sm:grid-cols-7 gap-1 px-2 sm:px-3 py-0.5 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <div className="flex items-center justify-center px-1">
           <div className="text-center">
             <div className="text-[9px] font-mono font-bold text-primary uppercase tracking-widest leading-none">TODAY</div>

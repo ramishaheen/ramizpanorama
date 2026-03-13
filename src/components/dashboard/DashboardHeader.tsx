@@ -35,14 +35,14 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
 
   return (
     <>
-      <header className={`flex items-center justify-between px-2 sm:px-4 py-2 border-b border-border bg-card/80 backdrop-blur transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_30px_hsl(190_100%_50%/0.08)] border-primary/40" : ""}`}>
-        <div className="flex items-center gap-3">
-          <img src={warosLogo} alt="War OS Logo" className="h-8 w-8" />
+      <header className={`flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 border-b border-border bg-card/80 backdrop-blur transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_30px_hsl(190_100%_50%/0.08)] border-primary/40" : ""}`}>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <img src={warosLogo} alt="War OS Logo" className="h-6 w-6 sm:h-8 sm:w-8" />
           <div>
-            <h1 className="text-sm font-bold tracking-wide text-foreground">
+            <h1 className="text-xs sm:text-sm font-bold tracking-wide text-foreground">
               WAR<span className="text-primary">OS</span>
             </h1>
-            <p className="text-[9px] text-muted-foreground tracking-widest uppercase">
+            <p className="text-[8px] sm:text-[9px] text-muted-foreground tracking-widest uppercase hidden sm:block">
               RamiZpanorama
             </p>
           </div>
