@@ -2198,15 +2198,15 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           <div className="relative" style={{ width: 150 }}>
             <button
               onClick={() => setVesselsPanelExpanded(!vesselsPanelExpanded)}
-              className="w-full flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 bg-black/80 backdrop-blur-md border border-white/15 hover:border-white/30 transition-all cursor-pointer"
+              className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 gotham-orbital-btn ${vesselsPanelExpanded ? 'gotham-orbital-btn-active' : ''}`}
             >
-              <Anchor className="h-3 w-3 text-cyan-400" />
-              <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider flex-1 text-left font-semibold">Vessels</span>
-              <span className="text-[8px] font-mono text-white/50">{aisVessels.data.length}</span>
-              {vesselsPanelExpanded ? <ChevronDown className="h-3 w-3 text-white/50" /> : <ChevronUp className="h-3 w-3 text-white/50" />}
+              <Anchor className="h-3 w-3 text-primary" />
+              <span className="flex-1 text-left">Vessels</span>
+              <span className="gotham-orbital-badge">{aisVessels.data.length}</span>
+              {vesselsPanelExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
             </button>
             {vesselsPanelExpanded && (
-              <div className="absolute bottom-full mb-1 left-0 w-[240px] max-h-[60vh] overflow-hidden rounded-lg bg-black/90 backdrop-blur-md border border-white/15">
+              <div className="absolute bottom-full mb-1 left-0 w-[240px] max-h-[60vh] overflow-hidden gotham-orbital-dropdown">
                 <div className="w-full pointer-events-auto">
                   {/* Vessel type checkboxes */}
                   <div className="px-3 py-2 space-y-1 border-b border-white/10">
