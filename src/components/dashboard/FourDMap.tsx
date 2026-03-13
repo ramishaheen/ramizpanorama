@@ -1295,6 +1295,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
               {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
               {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
+              {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
             </div>
           </div>
         )}

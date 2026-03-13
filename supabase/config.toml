@@ -107,3 +107,12 @@ verify_jwt = false
 
 [functions.sensor-ingest]
 verify_jwt = false
+
+[functions.sensor-adapt]
+verify_jwt = false
+
+[functions.stac-connector]
+verify_jwt = false
+
+[functions.gimbal-control]
+verify_jwt = false
