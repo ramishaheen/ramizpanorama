@@ -534,7 +534,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         group.addLayer(radius);
       }
     });
-  }, [telegramMarkers]);
+  }, [telegramMarkers, layers.telegram]);
 
   // Render Geo Fusion events on map
   useEffect(() => {
