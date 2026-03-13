@@ -16,7 +16,7 @@ import { type MapToolMode, type UserMapItem } from "./MapToolbar";
 import { MapCommandBar } from "./MapCommandBar";
 import { HolographicOverlay } from "./HolographicOverlay";
 import { TotalLaunchesWidget } from "./TotalLaunchesWidget";
-import { ImageryLayerPanel, DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
+import { DEFAULT_IMAGERY_LAYERS, type ImageryLayer } from "./ImageryLayerPanel";
 import { Satellite, Building2, Camera, ShieldAlert, Brain, Radar, Aperture, ChevronDown, ChevronUp, Smartphone, Crosshair } from "lucide-react";
 import { ScoutingModal } from "./ScoutingModal";
 import { MapBookmarks } from "./MapBookmarks";
