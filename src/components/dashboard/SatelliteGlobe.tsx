@@ -2795,7 +2795,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       {aiChatSat && (
         <div className="absolute top-16 right-36 z-[2005] w-80 pointer-events-auto animate-fade-in">
           <div
-            className="rounded-lg border border-white/20 bg-black/92 backdrop-blur-md shadow-2xl flex flex-col"
+            className="gotham-orbital-panel flex flex-col"
             style={{ maxHeight: "70vh" }}
           >
             {/* Header */}
