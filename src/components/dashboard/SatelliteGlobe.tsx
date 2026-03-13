@@ -1302,6 +1302,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             const newPath = computeOrbitPath(sel.inclination, sel.raan, sel.meanAnomaly, sel.meanMotion, sel.eccentricity, sel.epochYear, sel.epochDay, sel.alt, 180);
             setOrbitPath(newPath);
             setSelectedSat(prev => prev ? { ...prev, lat: sel.lat, lng: sel.lng } : null);
+            // Update coverage ring position to follow satellite
+            setCoverageRing(prev => prev ? { ...prev, lat: sel.lat, lng: sel.lng } : null);
           }
         }
       }
