@@ -2338,7 +2338,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             >
               <Anchor className="h-3 w-3 text-primary" />
               <span className="flex-1 text-left">Vessels</span>
-              <span className="gotham-orbital-badge">{aisVessels.data.length}</span>
+              <span className="gotham-orbital-badge">{sanitizeVesselsToWater(aisVessels.data).length}</span>
               {vesselsPanelExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
             </button>
             {vesselsPanelExpanded && (
