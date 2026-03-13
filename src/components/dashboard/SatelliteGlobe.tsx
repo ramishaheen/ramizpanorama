@@ -1947,7 +1947,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       CARGO: "🚢", TANKER: "⛽", MILITARY: "⚓", FISHING: "🎣", UNKNOWN: "🔹",
     };
 
-    const visibleVessels = aisVessels.data.filter(v => vesselTypeVisible[v.type]);
+    const waterVessels = sanitizeVesselsToWater(aisVessels.data);
+    const visibleVessels = waterVessels.filter(v => vesselTypeVisible[v.type]);
 
     // Store positions for interpolation
     const newPositions = new Map<string, { lat: number; lng: number }>();
