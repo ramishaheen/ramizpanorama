@@ -1647,7 +1647,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           .ringsData([])  // Rings managed by consolidated useEffect (OSINT + City + Coverage)
           .ringLat((d: any) => d.lat)
           .ringLng((d: any) => d.lng)
-          .arcsData(OSINT_ARCS)
+          .arcsData([])
           .arcStartLat((d: any) => d.startLat)
           .arcStartLng((d: any) => d.startLng)
           .arcEndLat((d: any) => d.endLat)
