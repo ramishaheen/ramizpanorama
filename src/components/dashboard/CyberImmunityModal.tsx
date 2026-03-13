@@ -5,9 +5,11 @@ import {
   Activity, Globe, AlertTriangle, Zap, Network,
   Target, Bug, Radio, ChevronRight, ExternalLink,
   Play, Pause, SkipBack, SkipForward, Clock, Copy, Check,
-  Eye, EyeOff, Skull, Link2, FileWarning, Hash
+  Eye, EyeOff, Skull, Link2, FileWarning, Hash,
+  UserSearch, Shield, Crosshair, Fingerprint, Server
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
+import { useDarkWebIntel, type ActorDossier, type DarkWebEntry, type TorAnalysis } from "@/hooks/useDarkWebIntel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 
