@@ -2230,7 +2230,26 @@ export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlig
       .ringRepeatPeriod((d: any) => d.repeatPeriod);
   }, [coverageRing, liveGeoAlerts, liveEarthquakes, liveWildfires]);
 
-  // Cleanup
+  // Render arcs — OSINT threat vectors + live rockets
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const rocketArcs = liveRockets
+      .filter((r: any) => r.status === "launched" || r.status === "in_flight")
+      .map((r: any) => ({
+        startLat: r.origin_lat,
+        startLng: r.origin_lng,
+        endLat: r.current_lat,
+        endLng: r.current_lng,
+        color: r.severity === "critical" ? "#ef4444" : r.severity === "high" ? "#ff6b00" : "#fbbf24",
+        label: r.name || "Missile",
+      }));
+
+    globe.arcsData([...OSINT_ARCS, ...rocketArcs]);
+  }, [liveRockets]);
+
+
   useEffect(() => {
     return () => {
       if (globeElRef.current) {
