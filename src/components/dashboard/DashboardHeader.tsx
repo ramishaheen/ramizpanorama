@@ -20,7 +20,7 @@ interface DashboardHeaderProps {
   geoAlerts?: GeoAlert[];
 }
 
-export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [] }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [], geoAlerts = [] }: DashboardHeaderProps) => {
   const now = new Date();
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
