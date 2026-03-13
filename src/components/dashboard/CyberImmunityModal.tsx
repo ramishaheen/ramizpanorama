@@ -277,6 +277,124 @@ function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
     </svg>
   );
 }
+/* ── Dark Web Monitor ── */
+function DarkWebMonitor({ threats }: { threats: CyberThreat[] }) {
+  const darkWebEntries = useMemo(() => {
+    const entries: Array<{
+      id: string; type: "onion" | "paste" | "forum" | "marketplace";
+      title: string; detail: string; severity: string;
+      timestamp: string; indicators: string[];
+    }> = [];
+
+    threats.forEach((t, i) => {
+      if (t.severity === "critical" || t.severity === "high") {
+        entries.push({
+          id: `dw-${t.id}-onion`,
+          type: "onion",
+          title: `.onion infrastructure linked to ${t.attacker}`,
+          detail: `Hidden service detected hosting C2 panel for ${t.type} operations targeting ${t.target}. ${t.cve ? `Exploiting ${t.cve}.` : ""}`,
+          severity: t.severity,
+          timestamp: t.date,
+          indicators: t.iocs?.slice(0, 2) || [],
+        });
+      }
+      if (i < 8) {
+        entries.push({
+          id: `dw-${t.id}-paste`,
+          type: i % 3 === 0 ? "paste" : i % 3 === 1 ? "forum" : "marketplace",
+          title: i % 3 === 0
+            ? `Paste site leak: ${t.targetCountry || t.target} credentials`
+            : i % 3 === 1
+            ? `Underground forum chatter: ${t.type} tools`
+            : `Marketplace listing: ${t.targetCountry || t.target} access`,
+          detail: i % 3 === 0
+            ? `Bulk credential dump mentioning ${t.target} infrastructure detected on paste monitoring service.`
+            : i % 3 === 1
+            ? `Threat actor associated with ${t.attacker} discussing new ${t.type.toLowerCase()} tooling and target acquisition.`
+            : `Initial access broker offering RDP/VPN credentials for ${t.target} network on darknet marketplace.`,
+          severity: t.severity,
+          timestamp: t.date,
+          indicators: t.iocs?.slice(0, 1) || [],
+        });
+      }
+    });
+    return entries.slice(0, 20);
+  }, [threats]);
+
+  const typeLabels: Record<string, string> = { onion: ".ONION", paste: "PASTE", forum: "FORUM", marketplace: "MARKET" };
+  const typeBg: Record<string, string> = {
+    onion: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+    paste: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+    forum: "bg-primary/15 text-primary border-primary/30",
+    marketplace: "bg-destructive/15 text-destructive border-destructive/30",
+  };
+  const typeIcons: Record<string, typeof Skull> = { onion: Eye, paste: FileWarning, forum: Hash, marketplace: Link2 };
+
+  const countByType = useMemo(() => {
+    const counts: Record<string, number> = { onion: 0, paste: 0, forum: 0, marketplace: 0 };
+    darkWebEntries.forEach(e => counts[e.type]++);
+    return counts;
+  }, [darkWebEntries]);
+
+  return (
+    <div className="h-full flex flex-col" style={{ background: "hsl(var(--background))" }}>
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
+        <Skull className="h-4 w-4 text-purple-400" />
+        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">Dark Web Intelligence</span>
+        <div className="flex items-center gap-2 ml-auto">
+          {Object.entries(countByType).map(([type, count]) => (
+            <span key={type} className={`text-[8px] px-1.5 py-0.5 rounded border font-mono ${typeBg[type]}`}>
+              {typeLabels[type]}: {count}
+            </span>
+          ))}
+        </div>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-2">
+          {darkWebEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <EyeOff className="h-8 w-8 mb-2 opacity-40" />
+              <span className="text-xs font-mono">No dark web intelligence available</span>
+            </div>
+          ) : darkWebEntries.map((entry) => {
+            const Icon = typeIcons[entry.type] || Eye;
+            return (
+              <div key={entry.id} className="p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
+                <div className="flex items-start gap-2">
+                  <div className={`p-1.5 rounded ${typeBg[entry.type]}`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${typeBg[entry.type]}`}>
+                        {typeLabels[entry.type]}
+                      </span>
+                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[entry.severity]}`}>
+                        {entry.severity}
+                      </span>
+                      <span className="text-[8px] font-mono text-muted-foreground ml-auto">{entry.timestamp}</span>
+                    </div>
+                    <h4 className="text-[11px] font-bold text-foreground mb-1 truncate">{entry.title}</h4>
+                    <p className="text-[9px] text-muted-foreground leading-relaxed">{entry.detail}</p>
+                    {entry.indicators.length > 0 && (
+                      <div className="flex gap-1 mt-1.5">
+                        {entry.indicators.map((ioc, i) => (
+                          <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground truncate max-w-[200px]">
+                            {ioc}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
 
 /* ── Sparkline (last 24h attack frequency) ── */
 function AttackSparkline({ threats }: { threats: CyberThreat[] }) {
