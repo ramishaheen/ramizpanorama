@@ -2860,7 +2860,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       {/* City Landmark Tooltip */}
       {selectedCity && (
         <div className="absolute top-16 right-3 z-[2003] pointer-events-auto w-[280px]">
-          <div className="bg-black/85 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden shadow-2xl">
+          <div className="gotham-orbital-panel overflow-hidden shadow-2xl">
             {/* Landmark Image */}
             <div className="relative h-[140px] overflow-hidden">
               <img
