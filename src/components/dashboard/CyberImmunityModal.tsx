@@ -78,7 +78,7 @@ function arcPath(x1: number, y1: number, x2: number, y2: number): string {
   return `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
 }
 
-/* ── Attack Corridor (intensity-based animated path) ── */
+/* ── Attack Corridor (intensity-based animated path with particles) ── */
 function AttackCorridor({ x1, y1, x2, y2, intensity, color, idx }: {
   x1: number; y1: number; x2: number; y2: number;
   intensity: number; color: string; idx: number;
@@ -86,39 +86,92 @@ function AttackCorridor({ x1, y1, x2, y2, intensity, color, idx }: {
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2 - Math.abs(x2 - x1) * 0.15 - 20;
   const d = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
-  const w = 2 + intensity * 6; // width 2–8 based on intensity
+  const w = 2 + intensity * 6;
   const gradId = `corridor-grad-${idx}`;
 
   return (
     <g className="pointer-events-none">
-      {/* Glow layer */}
-      <path d={d} fill="none" stroke={color} strokeWidth={w + 4} opacity={0.08}>
+      <path d={d} fill="none" stroke={color} strokeWidth={w + 8} opacity={0.04}>
+        <animate attributeName="opacity" values="0.02;0.08;0.02" dur={`${2 + idx * 0.2}s`} repeatCount="indefinite" />
+      </path>
+      <path d={d} fill="none" stroke={color} strokeWidth={w + 4} opacity={0.06}>
         <animate attributeName="opacity" values="0.04;0.12;0.04" dur={`${2 + idx * 0.2}s`} repeatCount="indefinite" />
       </path>
-      {/* Core corridor with gradient */}
       <defs>
         <linearGradient id={gradId} x1={x1} y1={y1} x2={x2} y2={y2} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={color} stopOpacity="0.1" />
-          <stop offset="50%" stopColor={color} stopOpacity={0.4 + intensity * 0.4} />
-          <stop offset="100%" stopColor={color} stopOpacity="0.1" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.05" />
+          <stop offset="30%" stopColor={color} stopOpacity={String(0.3 + intensity * 0.5)} />
+          <stop offset="70%" stopColor={color} stopOpacity={String(0.3 + intensity * 0.5)} />
+          <stop offset="100%" stopColor={color} stopOpacity="0.05" />
         </linearGradient>
       </defs>
       <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={w} strokeLinecap="round">
         <animate attributeName="stroke-width" values={`${w};${w + 2};${w}`} dur={`${1.5 + idx * 0.15}s`} repeatCount="indefinite" />
       </path>
-      {/* Animated particle dash */}
       <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,8" opacity={0.7}>
         <animate attributeName="stroke-dashoffset" from="0" to="-22" dur={`${0.8 + idx * 0.05}s`} repeatCount="indefinite" />
       </path>
-      {/* Second particle layer (opposite direction) */}
       <path d={d} fill="none" stroke={color} strokeWidth={0.8} strokeDasharray="2,12" opacity={0.4}>
         <animate attributeName="stroke-dashoffset" from="-30" to="0" dur={`${1.2 + idx * 0.08}s`} repeatCount="indefinite" />
       </path>
+      <circle r={2} fill={color} opacity={0.9}>
+        <animateMotion dur={`${1.5 + idx * 0.1}s`} repeatCount="indefinite" path={d} />
+        <animate attributeName="r" values="1.5;3;1.5" dur={`${1.5 + idx * 0.1}s`} repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.5;1;0.5" dur={`${1.5 + idx * 0.1}s`} repeatCount="indefinite" />
+      </circle>
+      <circle cx={x2} cy={y2} r={4} fill={color} opacity={0}>
+        <animate attributeName="r" values="2;12;2" dur={`${2 + idx * 0.3}s`} repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0;0.3;0" dur={`${2 + idx * 0.3}s`} repeatCount="indefinite" />
+      </circle>
     </g>
   );
 }
 
-/* ── Threat Map (SVG equirectangular with world outlines) ── */
+/* ── Targeting Reticle Node ── */
+function TargetingReticle({ x, y, severity, count, country, isHovered, onHover, onLeave }: {
+  x: number; y: number; severity: string; count: number; country: string;
+  isHovered: boolean; onHover: () => void; onLeave: () => void;
+}) {
+  const color = SEVERITY_COLORS[severity] || SEVERITY_COLORS.medium;
+  const r = Math.min(6 + count * 1.2, 20);
+  const isCritical = severity === "critical" || severity === "high";
+  const scale = isHovered ? 1.3 : 1;
+
+  return (
+    <g onMouseEnter={onHover} onMouseLeave={onLeave} className="cursor-pointer" transform={`translate(${x},${y}) scale(${scale})`}>
+      <circle cx={0} cy={0} r={r + 6} fill="none" stroke={color} strokeWidth={0.5} opacity={0.25} strokeDasharray="4,3">
+        <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="12s" repeatCount="indefinite" />
+      </circle>
+      <circle cx={0} cy={0} r={r + 10} fill="none" stroke={color} strokeWidth={0.4} opacity={0.15} strokeDasharray="2,5">
+        <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="8s" repeatCount="indefinite" />
+      </circle>
+      {isCritical && (
+        <polygon points={`0,${-r-3} ${r+3},0 0,${r+3} ${-r-3},0`} fill="none" stroke={color} strokeWidth={0.6} opacity={0.3}>
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="20s" repeatCount="indefinite" />
+        </polygon>
+      )}
+      <line x1={0} y1={-r-2} x2={0} y2={-r+3} stroke={color} strokeWidth={0.8} opacity={0.5} />
+      <line x1={0} y1={r-3} x2={0} y2={r+2} stroke={color} strokeWidth={0.8} opacity={0.5} />
+      <line x1={-r-2} y1={0} x2={-r+3} y2={0} stroke={color} strokeWidth={0.8} opacity={0.5} />
+      <line x1={r-3} y1={0} x2={r+2} y2={0} stroke={color} strokeWidth={0.8} opacity={0.5} />
+      <circle cx={0} cy={0} r={r} fill={color} opacity={0.08}>
+        <animate attributeName="r" values={`${r};${r+5};${r}`} dur="2.5s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.08;0.18;0.08" dur="2.5s" repeatCount="indefinite" />
+      </circle>
+      <circle cx={0} cy={0} r={3} fill={color} opacity={0.9}>
+        <animate attributeName="opacity" values="0.7;1;0.7" dur="1.5s" repeatCount="indefinite" />
+      </circle>
+      <circle cx={0} cy={0} r={1.5} fill="hsl(0 0% 100%)" opacity={0.7} />
+      <text x={0} y={-r-13} textAnchor="middle" fill={color} fontSize={7.5} fontWeight="bold" fontFamily="'JetBrains Mono', monospace" letterSpacing="0.05em">{country}</text>
+      <g transform={`translate(0, ${r+8})`}>
+        <rect x={-16} y={-5} width={32} height={11} rx={1} fill="hsl(220 25% 8%)" stroke={color} strokeWidth={0.5} opacity={0.85} />
+        <text x={0} y={3} textAnchor="middle" fill={color} fontSize={6.5} fontFamily="'JetBrains Mono', monospace" fontWeight="600">{count} INC</text>
+      </g>
+    </g>
+  );
+}
+
+/* ── Threat Map (SVG — Gotham/Palantir Style) ── */
 function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void; selectedId?: string }) {
   const W = 900, H = 450;
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
@@ -164,10 +217,7 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
       }
     });
     const maxCount = Math.max(...Array.from(pairMap.values()).map(v => v.count), 1);
-    return Array.from(pairMap.entries()).map(([, v]) => ({
-      ...v,
-      intensity: v.count / maxCount,
-    }));
+    return Array.from(pairMap.entries()).map(([, v]) => ({ ...v, intensity: v.count / maxCount }));
   }, [threats]);
 
   const arcs = useMemo(() => {
@@ -183,181 +233,157 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
     });
   }, [threats, selectedId]);
 
-  // Active country set for highlighting
   const activeCountries = useMemo(() => new Set(nodes.map(n => n.country)), [nodes]);
+  const hoveredData = useMemo(() => hoveredNode ? nodes.find(n => n.country === hoveredNode) || null : null, [hoveredNode, nodes]);
 
-  // Hovered node data
-  const hoveredData = useMemo(() => {
-    if (!hoveredNode) return null;
-    return nodes.find(n => n.country === hoveredNode) || null;
-  }, [hoveredNode, nodes]);
+  const totalAttacks = threats.length;
+  const activeCorridors = corridors.length;
+  const topAttacker = useMemo(() => {
+    const counts: Record<string, number> = {};
+    threats.forEach(t => { const a = t.attackerCountry || t.attacker || "Unknown"; counts[a] = (counts[a] || 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+  }, [threats]);
+
+  const fineLatLines = useMemo(() => { const l: number[] = []; for (let lat = -75; lat <= 75; lat += 15) l.push(lat); return l; }, []);
+  const fineLonLines = useMemo(() => { const l: number[] = []; for (let lon = -180; lon <= 180; lon += 15) l.push(lon); return l; }, []);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" style={{ background: "hsl(220 25% 6%)" }}>
-      {/* Ocean background */}
-      <rect x={0} y={0} width={W} height={H} fill="hsl(220 25% 6%)" />
+    <div className="relative w-full h-full">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" style={{ background: "hsl(220 30% 4%)" }}>
+        <defs>
+          <radialGradient id="continent-fill" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stopColor="hsl(220 15% 15%)" />
+            <stop offset="100%" stopColor="hsl(220 15% 9%)" />
+          </radialGradient>
+          <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+            <stop offset="0%" stopColor="transparent" />
+            <stop offset="100%" stopColor="hsl(220 30% 3%)" stopOpacity="0.7" />
+          </radialGradient>
+          <linearGradient id="scan-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="hsl(190 100% 50%)" stopOpacity="0" />
+            <stop offset="40%" stopColor="hsl(190 100% 50%)" stopOpacity="0.08" />
+            <stop offset="50%" stopColor="hsl(190 100% 50%)" stopOpacity="0.15" />
+            <stop offset="60%" stopColor="hsl(190 100% 50%)" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="hsl(190 100% 50%)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
 
-      {/* World continent outlines */}
-      {WORLD_REGIONS.map((region) => (
-        <path
-          key={region.name}
-          d={region.d}
-          fill="hsl(220 15% 13%)"
-          stroke="hsl(220 15% 22%)"
-          strokeWidth={0.6}
-          opacity={0.9}
-        />
-      ))}
+        <rect x={0} y={0} width={W} height={H} fill="hsl(220 30% 4%)" />
 
-      {/* Graticule grid lines */}
-      {GRATICULE_LATS.map((lat) => {
-        const y = ((90 - lat) / 180) * H;
-        return (
-          <g key={`glat-${lat}`}>
-            <line x1={0} y1={y} x2={W} y2={y} stroke="hsl(220 15% 20%)" strokeWidth={0.3} opacity={0.4} strokeDasharray="4,6" />
-            <text x={4} y={y - 3} fill="hsl(220 15% 35%)" fontSize={6} fontFamily="monospace">{lat}°</text>
-          </g>
-        );
-      })}
-      {GRATICULE_LONS.map((lon) => {
-        const x = ((lon + 180) / 360) * W;
-        return (
-          <g key={`glon-${lon}`}>
-            <line x1={x} y1={0} x2={x} y2={H} stroke="hsl(220 15% 20%)" strokeWidth={0.3} opacity={0.4} strokeDasharray="4,6" />
-            <text x={x + 2} y={H - 4} fill="hsl(220 15% 35%)" fontSize={6} fontFamily="monospace">{lon}°</text>
-          </g>
-        );
-      })}
+        {fineLatLines.map(lat => {
+          const y = ((90 - lat) / 180) * H;
+          return <line key={`flat-${lat}`} x1={0} y1={y} x2={W} y2={y} stroke="hsl(190 40% 20%)" strokeWidth={lat % 30 === 0 ? 0.35 : 0.15} opacity={lat % 30 === 0 ? 0.35 : 0.15} strokeDasharray="2,6" />;
+        })}
+        {fineLonLines.map(lon => {
+          const x = ((lon + 180) / 360) * W;
+          return <line key={`flon-${lon}`} x1={x} y1={0} x2={x} y2={H} stroke="hsl(190 40% 20%)" strokeWidth={lon % 30 === 0 ? 0.35 : 0.15} opacity={lon % 30 === 0 ? 0.35 : 0.15} strokeDasharray="2,6" />;
+        })}
 
-      {/* Country labels */}
-      {COUNTRY_LABELS.map((cl) => {
-        const [cx, cy] = lonLatToSvg(cl.lon, cl.lat, W, H);
-        const isActive = activeCountries.has(cl.name);
-        return (
-          <text
-            key={cl.name}
-            x={cx}
-            y={cy + 14}
-            textAnchor="middle"
-            fill={isActive ? "hsl(220 15% 65%)" : "hsl(220 15% 30%)"}
-            fontSize={7}
-            fontFamily="monospace"
-            fontWeight={isActive ? "bold" : "normal"}
-          >
-            {cl.name}
-          </text>
-        );
-      })}
-
-      {/* Pulsing attack corridors */}
-      {corridors.map((c, i) => (
-        <AttackCorridor
-          key={`corridor-${i}`}
-          x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2}
-          intensity={c.intensity}
-          color={SEVERITY_COLORS[c.maxSeverity] || SEVERITY_COLORS.medium}
-          idx={i}
-        />
-      ))}
-
-      {/* Attack arcs */}
-      {arcs.map((a) => (
-        <g key={a.id} onClick={() => onSelect(a.threat)} className="cursor-pointer">
-          <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} opacity={a.isSelected ? 0.9 : 0.5} />
-          <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} strokeDasharray="6,4" opacity={0.9}>
-            <animate attributeName="stroke-dashoffset" from="0" to="-20" dur={`${1.5 + a.i * 0.1}s`} repeatCount="indefinite" />
-          </path>
-        </g>
-      ))}
-
-      {/* Country nodes */}
-      {nodes.map((n) => (
-        <g
-          key={n.country}
-          onMouseEnter={() => setHoveredNode(n.country)}
-          onMouseLeave={() => setHoveredNode(null)}
-          className="cursor-pointer"
-        >
-          <circle cx={n.x} cy={n.y} r={Math.min(4 + n.count * 1.5, 18)} fill={SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium} opacity={0.2}>
-            <animate attributeName="r" values={`${Math.min(4 + n.count * 1.5, 18)};${Math.min(6 + n.count * 1.5, 22)};${Math.min(4 + n.count * 1.5, 18)}`} dur="2s" repeatCount="indefinite" />
-          </circle>
-          <circle cx={n.x} cy={n.y} r={3.5} fill={SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium} stroke="hsl(0 0% 100%)" strokeWidth={0.5} opacity={0.9} />
-          <text x={n.x} y={n.y - 10} textAnchor="middle" fill="hsl(0 0% 90%)" fontSize={8} fontWeight="bold" fontFamily="monospace">{n.country}</text>
-          <text x={n.x} y={n.y - 2} textAnchor="middle" fill="hsl(0 0% 60%)" fontSize={6} fontFamily="monospace">{n.count} incident{n.count !== 1 ? "s" : ""}</text>
-        </g>
-      ))}
-
-      {/* Hover tooltip */}
-      {hoveredData && (
-        <g>
-          <rect
-            x={Math.min(hoveredData.x + 12, W - 145)}
-            y={Math.max(hoveredData.y - 60, 5)}
-            width={135}
-            height={55 + Math.min(hoveredData.types.length, 3) * 10}
-            rx={4}
-            fill="hsl(220 20% 10%)"
-            stroke="hsl(220 15% 25%)"
-            strokeWidth={0.8}
-            opacity={0.95}
-          />
-          <text x={Math.min(hoveredData.x + 18, W - 139)} y={Math.max(hoveredData.y - 45, 20)} fill="hsl(0 0% 95%)" fontSize={9} fontWeight="bold" fontFamily="monospace">
-            {hoveredData.country}
-          </text>
-          <text x={Math.min(hoveredData.x + 18, W - 139)} y={Math.max(hoveredData.y - 33, 32)} fill="hsl(0 0% 60%)" fontSize={7} fontFamily="monospace">
-            Total: {hoveredData.count} incidents
-          </text>
-          {/* Severity breakdown */}
-          {Object.entries(hoveredData.severityCounts).slice(0, 4).map(([sev, cnt], i) => (
-            <g key={sev}>
-              <circle
-                cx={Math.min(hoveredData.x + 22, W - 135)}
-                cy={Math.max(hoveredData.y - 20 + i * 11, 43 + i * 11)}
-                r={3}
-                fill={SEVERITY_COLORS[sev] || SEVERITY_COLORS.medium}
-              />
-              <text
-                x={Math.min(hoveredData.x + 28, W - 129)}
-                y={Math.max(hoveredData.y - 17 + i * 11, 46 + i * 11)}
-                fill="hsl(0 0% 75%)"
-                fontSize={7}
-                fontFamily="monospace"
-              >
-                {sev}: {cnt}
-              </text>
-            </g>
-          ))}
-          {/* Top attack types */}
-          {hoveredData.types.slice(0, 2).map((type, i) => {
-            const yOff = Object.keys(hoveredData.severityCounts).length;
-            return (
-              <text
-                key={type}
-                x={Math.min(hoveredData.x + 18, W - 139)}
-                y={Math.max(hoveredData.y - 20 + (yOff + i) * 11, 43 + (yOff + i) * 11)}
-                fill="hsl(45 80% 55%)"
-                fontSize={6}
-                fontFamily="monospace"
-              >
-                ⚡ {type.substring(0, 22)}
-              </text>
-            );
-          })}
-        </g>
-      )}
-
-      {/* Severity legend */}
-      <g>
-        <rect x={W - 120} y={8} width={112} height={60} rx={4} fill="hsl(220 20% 10%)" stroke="hsl(220 15% 22%)" strokeWidth={0.5} opacity={0.9} />
-        <text x={W - 114} y={22} fill="hsl(0 0% 65%)" fontSize={7} fontWeight="bold" fontFamily="monospace">SEVERITY</text>
-        {(["critical", "high", "medium", "low"] as const).map((sev, i) => (
-          <g key={sev}>
-            <circle cx={W - 108} cy={34 + i * 9} r={3} fill={SEVERITY_COLORS[sev]} />
-            <text x={W - 101} y={37 + i * 9} fill="hsl(0 0% 70%)" fontSize={7} fontFamily="monospace" style={{ textTransform: "capitalize" }}>{sev}</text>
+        {WORLD_REGIONS.map(region => (
+          <g key={region.name}>
+            <path d={region.d} fill="none" stroke="hsl(190 60% 35%)" strokeWidth={2} opacity={0.08} />
+            <path d={region.d} fill="url(#continent-fill)" stroke="hsl(190 40% 28%)" strokeWidth={0.7} opacity={0.9} />
           </g>
         ))}
-      </g>
-    </svg>
+
+        {GRATICULE_LATS.map(lat => {
+          const y = ((90 - lat) / 180) * H;
+          return <text key={`gl-${lat}`} x={4} y={y - 3} fill="hsl(190 30% 30%)" fontSize={5.5} fontFamily="'JetBrains Mono', monospace" opacity={0.5}>{lat}°</text>;
+        })}
+        {GRATICULE_LONS.map(lon => {
+          const x = ((lon + 180) / 360) * W;
+          return <text key={`gl-${lon}`} x={x + 2} y={H - 4} fill="hsl(190 30% 30%)" fontSize={5.5} fontFamily="'JetBrains Mono', monospace" opacity={0.5}>{lon}°</text>;
+        })}
+
+        {COUNTRY_LABELS.map(cl => {
+          const [cx, cy] = lonLatToSvg(cl.lon, cl.lat, W, H);
+          const isActive = activeCountries.has(cl.name);
+          return <text key={cl.name} x={cx} y={cy + 14} textAnchor="middle" fill={isActive ? "hsl(190 30% 55%)" : "hsl(220 15% 25%)"} fontSize={6.5} fontFamily="'JetBrains Mono', monospace" fontWeight={isActive ? "600" : "normal"} letterSpacing="0.04em">{cl.name}</text>;
+        })}
+
+        {corridors.map((c, i) => (
+          <AttackCorridor key={`corridor-${i}`} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2} intensity={c.intensity} color={SEVERITY_COLORS[c.maxSeverity] || SEVERITY_COLORS.medium} idx={i} />
+        ))}
+
+        {arcs.map(a => (
+          <g key={a.id} onClick={() => onSelect(a.threat)} className="cursor-pointer">
+            {a.isSelected && <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={6} opacity={0.15} />}
+            <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 2.5 : 1.2} opacity={a.isSelected ? 0.8 : 0.4} />
+            <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 2.5 : 1.2} strokeDasharray="5,4" opacity={0.85}>
+              <animate attributeName="stroke-dashoffset" from="0" to="-18" dur={`${1.5 + a.i * 0.1}s`} repeatCount="indefinite" />
+            </path>
+          </g>
+        ))}
+
+        {nodes.map(n => (
+          <TargetingReticle key={n.country} x={n.x} y={n.y} severity={n.severity} count={n.count} country={n.country} isHovered={hoveredNode === n.country} onHover={() => setHoveredNode(n.country)} onLeave={() => setHoveredNode(null)} />
+        ))}
+
+        <rect x={0} y={0} width={W} height={40} fill="url(#scan-gradient)" className="cyber-scan-line" />
+        <rect x={0} y={0} width={W} height={H} fill="url(#vignette)" pointerEvents="none" />
+
+        {/* Corner brackets */}
+        <g stroke="hsl(190 60% 35%)" strokeWidth={1} opacity={0.4}>
+          <line x1={2} y1={2} x2={2} y2={20} /><line x1={2} y1={2} x2={20} y2={2} />
+          <line x1={W-2} y1={2} x2={W-2} y2={20} /><line x1={W-2} y1={2} x2={W-20} y2={2} />
+          <line x1={2} y1={H-2} x2={2} y2={H-20} /><line x1={2} y1={H-2} x2={20} y2={H-2} />
+          <line x1={W-2} y1={H-2} x2={W-2} y2={H-20} /><line x1={W-2} y1={H-2} x2={W-20} y2={H-2} />
+        </g>
+
+        {/* HUD Title */}
+        <g>
+          <rect x={6} y={6} width={200} height={16} fill="hsl(220 30% 6%)" stroke="hsl(190 40% 25%)" strokeWidth={0.5} opacity={0.85} rx={1} />
+          <text x={12} y={17} fill="hsl(190 100% 50%)" fontSize={7} fontFamily="'JetBrains Mono', monospace" fontWeight="700" letterSpacing="0.12em">CYBER THREAT OPERATIONS CENTER</text>
+        </g>
+
+        {/* HUD Live stats */}
+        <g>
+          <rect x={W-170} y={6} width={164} height={52} fill="hsl(220 30% 6%)" stroke="hsl(190 40% 25%)" strokeWidth={0.5} opacity={0.85} rx={1} />
+          <text x={W-164} y={18} fill="hsl(190 60% 40%)" fontSize={6} fontFamily="'JetBrains Mono', monospace" fontWeight="600" letterSpacing="0.1em">LIVE STATISTICS</text>
+          <text x={W-164} y={30} fill="hsl(0 0% 55%)" fontSize={6.5} fontFamily="'JetBrains Mono', monospace">ATTACKS: <tspan fill="hsl(0 80% 55%)" fontWeight="700">{totalAttacks}</tspan></text>
+          <text x={W-164} y={40} fill="hsl(0 0% 55%)" fontSize={6.5} fontFamily="'JetBrains Mono', monospace">CORRIDORS: <tspan fill="hsl(45 95% 55%)" fontWeight="700">{activeCorridors}</tspan></text>
+          <text x={W-164} y={50} fill="hsl(0 0% 55%)" fontSize={6.5} fontFamily="'JetBrains Mono', monospace">TOP THREAT: <tspan fill="hsl(190 80% 55%)" fontWeight="700">{topAttacker.substring(0, 12)}</tspan></text>
+        </g>
+
+        {/* Classification banner */}
+        <g>
+          <rect x={W/2-110} y={H-16} width={220} height={12} fill="hsl(220 30% 6%)" stroke="hsl(45 60% 30%)" strokeWidth={0.4} opacity={0.7} rx={1} />
+          <text x={W/2} y={H-7} textAnchor="middle" fill="hsl(45 80% 50%)" fontSize={6} fontFamily="'JetBrains Mono', monospace" fontWeight="600" letterSpacing="0.15em" opacity={0.7}>UNCLASSIFIED // OSINT DERIVED</text>
+        </g>
+
+        {/* Severity legend */}
+        <g>
+          <rect x={W-120} y={64} width={112} height={55} rx={2} fill="hsl(220 30% 6%)" stroke="hsl(190 40% 25%)" strokeWidth={0.5} opacity={0.85} />
+          <text x={W-114} y={76} fill="hsl(190 60% 40%)" fontSize={6} fontWeight="600" fontFamily="'JetBrains Mono', monospace" letterSpacing="0.1em">SEVERITY</text>
+          {(["critical","high","medium","low"] as const).map((sev, i) => (
+            <g key={sev}>
+              <circle cx={W-108} cy={87+i*10} r={2.5} fill={SEVERITY_COLORS[sev]} />
+              <text x={W-101} y={89.5+i*10} fill="hsl(0 0% 60%)" fontSize={6.5} fontFamily="'JetBrains Mono', monospace" style={{textTransform:"uppercase"}}>{sev}</text>
+            </g>
+          ))}
+        </g>
+
+        {/* Hover tooltip */}
+        {hoveredData && (
+          <g>
+            <rect x={Math.min(hoveredData.x+12,W-145)} y={Math.max(hoveredData.y-60,5)} width={140} height={55+Math.min(hoveredData.types.length,3)*10} rx={2} fill="hsl(220 30% 6%)" stroke="hsl(190 40% 30%)" strokeWidth={0.8} opacity={0.95} />
+            <rect x={Math.min(hoveredData.x+12,W-145)} y={Math.max(hoveredData.y-60,5)} width={2} height={55+Math.min(hoveredData.types.length,3)*10} fill={SEVERITY_COLORS[hoveredData.severity]} opacity={0.8} />
+            <text x={Math.min(hoveredData.x+20,W-137)} y={Math.max(hoveredData.y-45,20)} fill="hsl(190 100% 50%)" fontSize={8} fontWeight="bold" fontFamily="'JetBrains Mono', monospace">{hoveredData.country}</text>
+            <text x={Math.min(hoveredData.x+20,W-137)} y={Math.max(hoveredData.y-33,32)} fill="hsl(0 0% 50%)" fontSize={6.5} fontFamily="'JetBrains Mono', monospace">TOTAL: {hoveredData.count} INCIDENTS</text>
+            {Object.entries(hoveredData.severityCounts).slice(0,4).map(([sev,cnt],i) => (
+              <g key={sev}>
+                <rect x={Math.min(hoveredData.x+20,W-137)} y={Math.max(hoveredData.y-22+i*11,41+i*11)} width={4} height={4} rx={1} fill={SEVERITY_COLORS[sev]||SEVERITY_COLORS.medium} />
+                <text x={Math.min(hoveredData.x+28,W-129)} y={Math.max(hoveredData.y-17+i*11,46+i*11)} fill="hsl(0 0% 65%)" fontSize={6.5} fontFamily="'JetBrains Mono', monospace" style={{textTransform:"uppercase"}}>{sev}: {cnt}</text>
+              </g>
+            ))}
+            {hoveredData.types.slice(0,2).map((type,i) => {
+              const yOff = Object.keys(hoveredData.severityCounts).length;
+              return <text key={type} x={Math.min(hoveredData.x+20,W-137)} y={Math.max(hoveredData.y-20+(yOff+i)*11,43+(yOff+i)*11)} fill="hsl(45 80% 55%)" fontSize={6} fontFamily="'JetBrains Mono', monospace">⚡ {type.substring(0,22)}</text>;
+            })}
+          </g>
+        )}
+      </svg>
+    </div>
   );
 }
 
