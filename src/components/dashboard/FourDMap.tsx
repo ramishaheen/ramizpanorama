@@ -252,6 +252,25 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { data: aisVesselsRaw } = useAISVessels();
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
+  const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
+
+  // Fetch Google POIs for the focused region
+  useEffect(() => {
+    if (!layers.googlePOI) { setGooglePOIPoints([]); return; }
+    const fetchPOIs = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("google-places", {
+          body: { lat: 30, lng: 45, radius: 50000, categories: ["airport", "military", "embassy"] },
+        });
+        if (!error && data?.results) {
+          setGooglePOIPoints(data.results.map((p: any) => ({
+            lat: p.lat, lng: p.lng, name: p.name, category: p.category,
+          })));
+        }
+      } catch { /* silent */ }
+    };
+    fetchPOIs();
+  }, [layers.googlePOI]);
 
   // Merge real + emulated data — emulated fills gaps when APIs haven't loaded
   const earthquakes = useMemo(() => earthquakesRaw.length > 0 ? earthquakesRaw : EMULATED_EARTHQUAKES, [earthquakesRaw]);
