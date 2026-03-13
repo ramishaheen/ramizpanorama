@@ -77,6 +77,78 @@ const SPEEDS = [1, 2, 5] as const;
 const SPEED_INTERVALS: Record<number, number> = { 1: 1500, 2: 750, 5: 300 };
 const EXPECTED_SOURCES = ["CISA KEV", "AlienVault OTX", "abuse.ch URLhaus", "NIST NVD", "CERT-FR", "ThreatFox", "Feodo Tracker", "Ransomwatch", "Cisco Talos", "BleepingComputer"];
 
+const LOADING_MESSAGES = [
+  "Scanning OSINT feeds…",
+  "Decrypting threat corridors…",
+  "Parsing CVE databases…",
+  "Mapping attack vectors…",
+  "Correlating IOC signatures…",
+  "Indexing dark web chatter…",
+  "Syncing threat actor profiles…",
+  "Calibrating risk matrices…",
+];
+
+function CyberLoadingScreen({ sources }: { sources: string[] }) {
+  const [simulatedStep, setSimulatedStep] = useState(0);
+  const [msgIndex, setMsgIndex] = useState(0);
+  const dataArrived = sources.length > 0;
+
+  useEffect(() => {
+    if (dataArrived) {
+      setSimulatedStep(EXPECTED_SOURCES.length);
+      return;
+    }
+    const timer = setInterval(() => {
+      setSimulatedStep((prev) => (prev < EXPECTED_SOURCES.length ? prev + 1 : prev));
+    }, 800);
+    return () => clearInterval(timer);
+  }, [dataArrived]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setMsgIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const progress = dataArrived ? 100 : Math.min((simulatedStep / EXPECTED_SOURCES.length) * 100, 95);
+
+  return (
+    <div className="flex items-center justify-center h-full bg-background/95">
+      <div className="text-center space-y-5 max-w-xs">
+        <div className="relative mx-auto w-24 h-24">
+          <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-spin" style={{ animationDuration: '3s' }} />
+          <div className="absolute inset-1 rounded-full border border-dashed border-primary/40 animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }} />
+          <div className="absolute inset-3 flex items-center justify-center">
+            <img src={warosLogo} alt="WAROS" className="w-16 h-16 object-contain animate-pulse" />
+          </div>
+        </div>
+        <div>
+          <p className="text-xs text-primary font-mono font-bold tracking-[0.15em]">INITIALIZING THREAT INTELLIGENCE</p>
+          <p className="text-[9px] text-muted-foreground/60 mt-1 transition-opacity duration-500">{LOADING_MESSAGES[msgIndex]}</p>
+        </div>
+        <Progress value={progress} className="h-1.5 bg-muted/30" />
+        <div className="space-y-1 mt-2">
+          {EXPECTED_SOURCES.map((s, i) => {
+            const connected = dataArrived ? sources.includes(s) : simulatedStep > i;
+            return (
+              <div key={s} className="flex items-center gap-2 text-[8px]">
+                {connected ? (
+                  <Check className="h-2.5 w-2.5 text-green-500" />
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 animate-pulse" />
+                )}
+                <span className={connected ? "text-muted-foreground" : "text-muted-foreground/40"}>{s}</span>
+                {!connected && <span className="text-[7px] text-muted-foreground/30 italic">connecting…</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function lonLatToSvg(lon: number, lat: number, w: number, h: number): [number, number] {
   return [(lon + 180) / 360 * w, (90 - lat) / 180 * h];
 }
