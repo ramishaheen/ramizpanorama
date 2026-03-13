@@ -272,6 +272,21 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [shooterAssets, setShooterAssets] = useState<any[]>([]);
   const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S">("FEED");
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
+  const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
+  const { commitStrike } = useSensorToShooter();
+
+  const handleSlewSensor = useCallback(async (lat: number, lng: number) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sensor-to-shooter", {
+        body: { action: "slew_sensor", lat, lng },
+      });
+      if (!error && data?.success) {
+        toast.success(`📡 SLEWED ${data.slewed_asset.callsign} → ${lat.toFixed(2)}°, ${lng.toFixed(2)}° • ETA: ${data.slewed_asset.eta_min}min`);
+      } else {
+        toast.error(data?.error || "Slew failed");
+      }
+    } catch { toast.error("Slew sensor failed"); }
+  }, []);
 
 
   // Fetch Google POIs for the focused region
