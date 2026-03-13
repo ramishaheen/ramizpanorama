@@ -1846,8 +1846,8 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
       })()}
 
       {/* ── TIMELINE SLIDER ── */}
-      <div className="px-4 py-1.5 border-t border-border bg-card/60 flex items-center gap-3">
-        <div className="flex items-center gap-1">
+      <div className="px-2 sm:px-4 py-1.5 border-t border-border bg-card/60 flex items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
           <button onClick={() => setTimelinePos(Math.max(0, timelinePos - 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
             <SkipBack className="h-3 w-3" />
           </button>
@@ -1857,7 +1857,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <button onClick={() => setTimelinePos(Math.min(100, timelinePos + 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
             <SkipForward className="h-3 w-3" />
           </button>
-          <div className="flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
+          <div className="hidden sm:flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
             {SPEEDS.map((s) => (
               <button key={s} onClick={() => setSpeed(s)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${speed === s ? "bg-primary/20 text-primary border border-primary/40" : "text-muted-foreground/60 hover:text-foreground hover:bg-secondary/50 border border-transparent"}`}>
                 {s}×
@@ -1866,16 +1866,16 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           </div>
         </div>
 
-        <span className="text-[9px] font-mono text-muted-foreground w-12">-4w</span>
+        <span className="text-[9px] font-mono text-muted-foreground hidden sm:block w-12">-4w</span>
 
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <input
             type="range" min={0} max={100} step={0.5} value={timelinePos}
             onChange={(e) => { setTimelinePos(parseFloat(e.target.value)); setIsPlaying(false); }}
             className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
           />
           {/* Week ticks */}
-          <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
+          <div className="absolute top-3 left-0 right-0 hidden sm:flex justify-between pointer-events-none">
             {["4w", "·", "3w", "·", "2w", "·", "1w", "·", "NOW"].map((label, i) => (
               <span key={i} className="text-[7px] font-mono text-muted-foreground/40">
                 {label}
@@ -1884,17 +1884,17 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           </div>
         </div>
 
-        <span className={`text-[10px] font-mono font-bold w-16 text-right ${isLive ? "text-destructive" : "text-primary"}`}>
+        <span className={`text-[10px] font-mono font-bold w-10 sm:w-16 text-right flex-shrink-0 ${isLive ? "text-destructive" : "text-primary"}`}>
           {timelineLabel}
         </span>
 
-        <button onClick={() => { setTimelinePos(100); setIsPlaying(false); }} className={`text-[8px] px-2 py-0.5 rounded border font-mono font-bold transition-all ${isLive ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/40"}`}>
+        <button onClick={() => { setTimelinePos(100); setIsPlaying(false); }} className={`text-[8px] px-2 py-0.5 rounded border font-mono font-bold transition-all flex-shrink-0 ${isLive ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/40"}`}>
           LIVE
         </button>
       </div>
 
       {/* ── BOTTOM PANEL — Event Feed ── */}
-      <div className="h-[140px] border-t border-border bg-card/30 flex flex-col">
+      <div className="h-[100px] sm:h-[140px] border-t border-border bg-card/30 flex flex-col">
         <div className="flex items-center justify-between px-3 py-1 border-b border-border">
           <div className="flex items-center gap-2">
             <Radio className={`h-3 w-3 ${isLive ? "text-destructive animate-pulse" : "text-yellow-400"}`} />
