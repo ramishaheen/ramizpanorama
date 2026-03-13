@@ -936,7 +936,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
           {/* Search */}
           {!cleanUI && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-80">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-64 sm:w-80">
               <div className="relative">
                 <div className="flex items-center bg-[hsl(220,20%,7%)/0.92] backdrop-blur-md border border-[hsl(190,60%,20%)] rounded-md overflow-hidden">
                   <Search className="h-3.5 w-3.5 text-primary ml-3 flex-shrink-0" />
