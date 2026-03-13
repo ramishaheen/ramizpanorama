@@ -1388,7 +1388,9 @@ export type Database = {
           source_sensor: Database["public"]["Enums"]["sensor_type"]
           source_sensor_id: string | null
           status: Database["public"]["Enums"]["target_status"]
+          threat_level: number | null
           track_id: string
+          velocity_vector: Json | null
         }
         Insert: {
           ai_assessment?: string | null
@@ -1407,7 +1409,9 @@ export type Database = {
           source_sensor?: Database["public"]["Enums"]["sensor_type"]
           source_sensor_id?: string | null
           status?: Database["public"]["Enums"]["target_status"]
+          threat_level?: number | null
           track_id?: string
+          velocity_vector?: Json | null
         }
         Update: {
           ai_assessment?: string | null
@@ -1426,7 +1430,9 @@ export type Database = {
           source_sensor?: Database["public"]["Enums"]["sensor_type"]
           source_sensor_id?: string | null
           status?: Database["public"]["Enums"]["target_status"]
+          threat_level?: number | null
           track_id?: string
+          velocity_vector?: Json | null
         }
         Relationships: [
           {

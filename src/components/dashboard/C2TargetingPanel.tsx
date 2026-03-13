@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Target, CheckCircle, XCircle, ChevronDown, Loader2, Crosshair, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { TargetDetailModal } from "./TargetDetailModal";
+import { useSensorToShooter } from "@/hooks/useSensorToShooter";
 
 interface TargetTrack {
   id: string;
@@ -46,6 +48,8 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+  const { commitStrike } = useSensorToShooter();
 
   const fetchTargets = useCallback(async () => {
     const { data } = await supabase
@@ -156,6 +160,9 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
                       <button onClick={() => onLocate(t.lat, t.lng)} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono border border-primary/40 text-primary hover:bg-primary/10">
                         <Eye className="h-2.5 w-2.5" /> LOCATE
                       </button>
+                      <button onClick={() => setModalTargetId(t.id)} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono border border-[#06b6d4]/40 text-[#06b6d4] hover:bg-[#06b6d4]/10">
+                        <Target className="h-2.5 w-2.5" /> DEEP DIVE
+                      </button>
                       <button onClick={() => handleVerify(t.id, true)} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono border border-[#22c55e]/40 text-[#22c55e] hover:bg-[#22c55e]/10">
                         <CheckCircle className="h-2.5 w-2.5" /> VERIFY
                       </button>
@@ -180,6 +187,16 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
           })
         )}
       </div>
+
+      {/* Target Detail Modal */}
+      {modalTargetId && (
+        <TargetDetailModal
+          targetId={modalTargetId}
+          onClose={() => setModalTargetId(null)}
+          onLocate={onLocate}
+          onCommitStrike={commitStrike}
+        />
+      )}
     </div>
   );
 };

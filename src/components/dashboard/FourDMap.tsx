@@ -234,7 +234,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     conflicts: true, rockets: true, nuclear: true, airQuality: false, geoFusion: true,
     borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
     blueForce: true, redForce: true, targetTracks: true, killChain: false,
-    sensorCoverage: false, ontologyEntities: false,
+    sensorCoverage: false, ontologyEntities: false, shooterAssets: true,
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
@@ -266,6 +266,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
+  const [shooterAssets, setShooterAssets] = useState<any[]>([]);
   const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S">("FEED");
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
 
@@ -291,12 +292,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   // Fetch C2 force units and target tracks
   useEffect(() => {
     const fetchC2 = async () => {
-      const [{ data: fu }, { data: tt }] = await Promise.all([
+      const [{ data: fu }, { data: tt }, { data: sa }] = await Promise.all([
         supabase.from("force_units").select("*").limit(100),
         supabase.from("target_tracks").select("*").limit(50),
+        supabase.from("shooter_assets").select("*").limit(50),
       ]);
       if (fu) setForceUnits(fu);
       if (tt) setTargetTracks(tt);
+      if (sa) setShooterAssets(sa);
     };
     fetchC2();
     const iv = setInterval(fetchC2, 10000);
@@ -468,6 +471,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "killChain", label: "Kill Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
     { id: "sensorCoverage", label: "Sensor Coverage", icon: <Radar className="h-3.5 w-3.5" />, color: "#06b6d4", count: sensorFeeds.length },
     { id: "ontologyEntities", label: "Ontology Entities", icon: <Globe className="h-3.5 w-3.5" />, color: "#8b5cf6" },
+    { id: "shooterAssets", label: "Shooter Assets", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: shooterAssets.length },
   ];
 
   // Timeline
@@ -934,12 +938,30 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
+    // ========== SHOOTER ASSETS ==========
+    if (layers.shooterAssets && shooterAssets.length > 0) {
+      const SHOOTER_ICONS: Record<string, string> = {
+        mq9_reaper: "🛩️", mq1_predator: "🛩️", f35_lightning: "✈️", f16_falcon: "✈️",
+        ah64_apache: "🚁", artillery_m777: "💥", mlrs_himars: "🚀",
+        naval_destroyer: "🚢", naval_frigate: "⚓", missile_battery_patriot: "🛡️",
+      };
+      const TASKING_COL: Record<string, string> = { idle: "#22c55e", tasked: "#eab308", rtb: "#f97316", maintenance: "#6b7280", combat: "#ef4444" };
+      shooterAssets.forEach((s: any) => {
+        const col = TASKING_COL[s.current_tasking] || "#888";
+        const icon = SHOOTER_ICONS[s.asset_type] || "⚡";
+        points.push({
+          lat: s.lat, lng: s.lng, pointAlt: 0.04, color: col, radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,10,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${col}30"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> SHOOTER — ${s.callsign}</div><div style="font-size:9px;margin-top:2px">${s.asset_type.replace(/_/g," ").toUpperCase()} • ${s.current_tasking.toUpperCase()}</div><div style="color:#888;font-size:8px;margin-top:1px">⛽${s.fuel_remaining_pct?.toFixed(0)}% • ROE:${s.roe_zone?.toUpperCase()} • 📡${s.command_link_status?.toUpperCase()}</div><div style="color:#666;font-size:8px">${s.lat.toFixed(3)}°N ${s.lng.toFixed(3)}°E • ${s.speed_kts}kts HDG ${s.heading}°</div></div>`,
+        });
+      });
+    }
+
     if (layers.borders) {
       globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets]);
 
   const chipLayers = [
     { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
