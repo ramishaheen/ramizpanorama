@@ -108,22 +108,22 @@ export const MapCommandBar = ({
   const activeOverlays = overlayLayers.filter(l => l.enabled);
 
   const toolButtons: { mode: MapToolMode; icon: React.ReactNode; label: string }[] = [
-    { mode: "marker", icon: <MapPin className="w-3.5 h-3.5" />, label: "PIN" },
-    { mode: "danger", icon: <AlertTriangle className="w-3.5 h-3.5" />, label: "DANGER" },
-    { mode: "intel", icon: <FileText className="w-3.5 h-3.5" />, label: "INTEL" },
-    { mode: "troop", icon: <Shield className="w-3.5 h-3.5" />, label: "TROOP" },
+    { mode: "marker", icon: <MapPin className="w-3 h-3" />, label: "PIN" },
+    { mode: "danger", icon: <AlertTriangle className="w-3 h-3" />, label: "DANGER" },
+    { mode: "intel", icon: <FileText className="w-3 h-3" />, label: "INTEL" },
+    { mode: "troop", icon: <Shield className="w-3 h-3" />, label: "TROOP" },
   ];
 
   const intelTools = [
-    { onClick: onOpenOrbital, icon: <Satellite className="w-3.5 h-3.5" />, label: "ORBITAL" },
-    { onClick: onOpenUrban3D, icon: <Building2 className="w-3.5 h-3.5" />, label: "URBAN 3D" },
-    { onClick: onOpenCCTV, icon: <Camera className="w-3.5 h-3.5" />, label: "CCTV" },
-    { onClick: onToggleAllCCTV, icon: <Camera className="w-3.5 h-3.5" />, label: loadingCCTV ? "LOADING..." : "ALL CCTV", active: allCCTVActive, badge: allCCTVActive ? allCCTVCount : undefined },
-    { onClick: onOpenResponseMap, icon: <ShieldAlert className="w-3.5 h-3.5" />, label: "RESPONSE" },
-    { onClick: onOpenCrisisIntel, icon: <Brain className="w-3.5 h-3.5" />, label: "CRISIS" },
-    { onClick: onToggleIranFIR, icon: <Radar className="w-3.5 h-3.5" />, label: "IRAN FIR", active: iranFIRActive },
-    { onClick: onOpenSnapMe, icon: <Aperture className="w-3.5 h-3.5" />, label: "SNAP ME" },
-    { onClick: onOpenScouting, icon: <Crosshair className="w-3.5 h-3.5" />, label: "SCOUTING" },
+    { onClick: onOpenOrbital, icon: <Satellite className="w-3 h-3" />, label: "ORBITAL" },
+    { onClick: onOpenUrban3D, icon: <Building2 className="w-3 h-3" />, label: "URBAN 3D" },
+    { onClick: onOpenCCTV, icon: <Camera className="w-3 h-3" />, label: "CCTV" },
+    { onClick: onToggleAllCCTV, icon: <Camera className="w-3 h-3" />, label: loadingCCTV ? "..." : "ALL CCTV", active: allCCTVActive, badge: allCCTVActive ? allCCTVCount : undefined },
+    { onClick: onOpenResponseMap, icon: <ShieldAlert className="w-3 h-3" />, label: "RESPONSE" },
+    { onClick: onOpenCrisisIntel, icon: <Brain className="w-3 h-3" />, label: "CRISIS" },
+    { onClick: onToggleIranFIR, icon: <Radar className="w-3 h-3" />, label: "IRAN FIR", active: iranFIRActive },
+    { onClick: onOpenSnapMe, icon: <Aperture className="w-3 h-3" />, label: "SNAP ME" },
+    { onClick: onOpenScouting, icon: <Crosshair className="w-3 h-3" />, label: "SCOUTING" },
   ];
 
   return (
