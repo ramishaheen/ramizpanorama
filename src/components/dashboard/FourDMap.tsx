@@ -455,9 +455,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "borders", label: "Country Borders", icon: <MapPin className="h-3.5 w-3.5" />, color: "#00ffc8" },
     { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3.5 w-3.5" />, color: "#e879f9" },
     { id: "googlePOI", label: "Google POIs", icon: <MapPin className="h-3.5 w-3.5" />, color: "#a855f7" },
+    { id: "blueForce", label: "Blue Force (COP)", icon: <Users className="h-3.5 w-3.5" />, color: "#3b82f6", count: stats.blu },
+    { id: "redForce", label: "Red Force (COP)", icon: <Swords className="h-3.5 w-3.5" />, color: "#ef4444", count: stats.red },
+    { id: "targetTracks", label: "Target Tracks", icon: <Target className="h-3.5 w-3.5" />, color: "#f97316", count: stats.tgt },
+    { id: "killChain", label: "Kill Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
   ];
-
-  const totalActive = Object.values(layers).filter(Boolean).length;
 
   // Timeline
   const [playing, setPlaying] = useState(false);
