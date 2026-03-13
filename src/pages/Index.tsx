@@ -285,6 +285,7 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen overflow-hidden relative">
+        <RotateDeviceOverlay />
         <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
         <StatsBar
           airspaceCount={dailyCounts.airspaceCount}
