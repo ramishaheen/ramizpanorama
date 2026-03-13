@@ -2034,7 +2034,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
 
   useEffect(() => {
     fetchFlights();
-    const interval = liteMode ? 30000 : 15000;
+    const interval = liteMode ? 60000 : 15000;
     flightIntervalRef.current = setInterval(fetchFlights, interval);
     return () => { if (flightIntervalRef.current) clearInterval(flightIntervalRef.current); };
   }, [fetchFlights, liteMode]);
