@@ -1268,7 +1268,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: SEVERITY_COLORS[t.severity] }} />
                 <span className="text-muted-foreground font-mono w-16 flex-shrink-0">{t.date}</span>
                 <span className="flex-shrink-0">{t.attackerFlag}</span>
-                <span className="font-bold truncate w-28 flex-shrink-0">{t.attacker}</span>
+                <button onClick={(e) => { e.stopPropagation(); handleFetchDossier(t.attacker); }} className="font-bold truncate w-28 flex-shrink-0 text-left hover:text-primary hover:underline transition-colors cursor-pointer" title="View actor dossier">{t.attacker}</button>
                 <ChevronRight className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
                 <span className="flex-shrink-0">{t.targetFlag}</span>
                 <span className="truncate w-24 flex-shrink-0">{t.target}</span>
