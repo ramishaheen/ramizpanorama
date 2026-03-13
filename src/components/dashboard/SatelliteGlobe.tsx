@@ -8,6 +8,35 @@ import militarySatSprite from "@/assets/military-sat-sprite.png";
 import { FlightEmulationPanel } from "./FlightEmulationPanel";
 import { useAISVessels, type AISVessel } from "@/hooks/useAISVessels";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MARITIME_CORRIDORS } from "./urban3d/constants";
+
+// Water validation & sea region names
+function isLikelyWaterPosition(lat: number, lng: number): boolean {
+  return MARITIME_CORRIDORS.some((c) => lat >= c.latMin && lat <= c.latMax && lng >= c.lngMin && lng <= c.lngMax);
+}
+
+function sanitizeVesselsToWater<T extends { lat: number; lng: number }>(rows: T[]): T[] {
+  return rows.filter((v) => isLikelyWaterPosition(v.lat, v.lng));
+}
+
+const SEA_REGIONS: { name: string; latMin: number; latMax: number; lngMin: number; lngMax: number }[] = [
+  { name: "Persian Gulf", latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 },
+  { name: "Gulf of Oman", latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 },
+  { name: "Red Sea", latMin: 15.0, latMax: 30.8, lngMin: 32.0, lngMax: 43.8 },
+  { name: "Gulf of Aden", latMin: 10.0, latMax: 15.0, lngMin: 42.0, lngMax: 52.0 },
+  { name: "Suez Canal", latMin: 30.0, latMax: 33.6, lngMin: 31.8, lngMax: 33.2 },
+  { name: "Eastern Mediterranean", latMin: 31.0, latMax: 37.2, lngMin: 33.2, lngMax: 36.8 },
+  { name: "Mediterranean Sea", latMin: 33.0, latMax: 41.0, lngMin: 24.0, lngMax: 36.0 },
+  { name: "Caspian Sea", latMin: 36.3, latMax: 47.2, lngMin: 47.0, lngMax: 54.8 },
+  { name: "Arabian Sea", latMin: 20.0, latMax: 30.0, lngMin: 58.0, lngMax: 68.0 },
+];
+
+function getSeaRegionName(lat: number, lng: number): string {
+  for (const r of SEA_REGIONS) {
+    if (lat >= r.latMin && lat <= r.latMax && lng >= r.lngMin && lng <= r.lngMax) return r.name;
+  }
+  return `${lat.toFixed(2)}°N ${lng.toFixed(2)}°E`;
+}
 
 interface SatelliteData {
   name: string;
@@ -1918,7 +1947,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       CARGO: "🚢", TANKER: "⛽", MILITARY: "⚓", FISHING: "🎣", UNKNOWN: "🔹",
     };
 
-    const visibleVessels = aisVessels.data.filter(v => vesselTypeVisible[v.type]);
+    const waterVessels = sanitizeVesselsToWater(aisVessels.data);
+    const visibleVessels = waterVessels.filter(v => vesselTypeVisible[v.type]);
 
     // Store positions for interpolation
     const newPositions = new Map<string, { lat: number; lng: number }>();
@@ -1943,6 +1973,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       mmsi: v.mmsi,
       color: VESSEL_COLORS[v.type] || VESSEL_COLORS.UNKNOWN,
       icon: VESSEL_ICONS[v.type] || VESSEL_ICONS.UNKNOWN,
+      seaRegion: getSeaRegionName(v.lat, v.lng),
     }));
 
     globe.htmlElementsData([...osintAndCities, ...vesselElements]);
@@ -1986,6 +2017,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               margin-left:8px;
             ">${d.label || d.mmsi}</span>
             <span style="color:${color}88;font-size:6px;">${d.speed?.toFixed(1) || 0}kn</span>
+            <span style="color:${color}66;font-size:5px;margin-left:2px;">${d.seaRegion || ''}</span>
           </div>
         `;
         el.addEventListener("click", () => {
@@ -2306,7 +2338,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             >
               <Anchor className="h-3 w-3 text-primary" />
               <span className="flex-1 text-left">Vessels</span>
-              <span className="gotham-orbital-badge">{aisVessels.data.length}</span>
+              <span className="gotham-orbital-badge">{sanitizeVesselsToWater(aisVessels.data).length}</span>
               {vesselsPanelExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
             </button>
             {vesselsPanelExpanded && (
@@ -2317,7 +2349,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                     <div className="text-[7px] font-mono text-primary/40 uppercase tracking-widest mb-1">Globe Visibility</div>
                     {(["CARGO", "TANKER", "MILITARY", "FISHING", "UNKNOWN"] as const).map(t => {
                       const typeColors: Record<string, string> = { CARGO: "#3b82f6", TANKER: "#f97316", MILITARY: "#ef4444", FISHING: "#22c55e", UNKNOWN: "#9ca3af" };
-                      const count = aisVessels.data.filter(v => v.type === t).length;
+                      const count = sanitizeVesselsToWater(aisVessels.data).filter(v => v.type === t).length;
                       return (
                         <label key={t} className="flex items-center gap-2 cursor-pointer group">
                           <div
@@ -2361,7 +2393,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                   <ScrollArea className="h-48 border-t border-white/10">
                     <div className="divide-y divide-white/5">
                       {(() => {
-                        const filtered = vesselFilter === "ALL" ? aisVessels.data : aisVessels.data.filter(v => v.type === vesselFilter);
+                        const waterOnly = sanitizeVesselsToWater(aisVessels.data);
+                        const filtered = vesselFilter === "ALL" ? waterOnly : waterOnly.filter(v => v.type === vesselFilter);
                         const sorted = [...filtered].sort((a, b) => b.speed - a.speed).slice(0, 50);
                         if (sorted.length === 0) return (
                           <div className="px-3 py-4 text-center">
@@ -2399,8 +2432,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                                 <span className="text-[8px] font-mono text-white/40 tabular-nums">
                                   HDG {Math.round(v.heading)}°
                                 </span>
-                                <span className="text-[7px] font-mono text-white/25 truncate">
-                                  {v.destination || v.type}
+                                <span className="text-[7px] font-mono text-cyan-400/40 truncate">
+                                  📍 {getSeaRegionName(v.lat, v.lng)}
                                 </span>
                               </div>
                             </button>
