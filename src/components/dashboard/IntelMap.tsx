@@ -1093,14 +1093,14 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         const marker = L.marker([rocket.currentLat, rocket.currentLng], {
           icon: createRocketIcon(rocket.status),
         });
-        marker.bindPopup(`
+        bindHoverPopup(marker, `
           <div style="${popupStyle}">
             <div style="color:${color};font-weight:700;margin-bottom:4px;">🚀 ${rocket.name} [${rocket.type}]</div>
             <div>Status: <span style="color:${color};font-weight:600;">${rocket.status.toUpperCase()}</span></div>
             <div>Speed: ${rocket.speed} km/h | Alt: ${rocket.altitude} km</div>
             <div style="font-size:9px;opacity:0.6;margin-top:4px;">${new Date(rocket.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         marker.addTo(group);
       });
     }
