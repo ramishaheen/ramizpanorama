@@ -2155,9 +2155,9 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         }}
       />
 
-      {/* Lite Mode — Crosshair / Gun-Eye Reticle */}
-      {liteMode && (
-        <div className="absolute inset-0 z-[2002] pointer-events-none flex items-center justify-center" style={{ filter: "drop-shadow(0 0 6px hsl(190,100%,50%))" }}>
+      {/* Crosshair / Gun-Eye Reticle — always visible */}
+      {(
+        <div className="absolute inset-0 z-[2002] pointer-events-none flex items-center justify-center" style={{ filter: "drop-shadow(0 0 8px hsl(190,100%,50%)) drop-shadow(0 0 20px rgba(0,200,255,0.3))" }}>
           <svg width="260" height="260" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.85 }}>
             {/* Outer ring */}
             <circle cx="130" cy="130" r="120" stroke="hsl(190,100%,50%)" strokeWidth="1.2" strokeDasharray="6 4" />
