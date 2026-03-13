@@ -1095,41 +1095,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
         <div className="flex-1 flex flex-col min-w-0 relative">
           <div className="flex-1 min-h-0 relative">
             {loading && threats.length === 0 ? (
-              <div className="flex items-center justify-center h-full bg-background/95">
-                <div className="text-center space-y-5 max-w-xs">
-                  {/* WAROS Logo with spinning ring */}
-                  <div className="relative mx-auto w-24 h-24">
-                    <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-spin" style={{ animationDuration: '3s' }} />
-                    <div className="absolute inset-1 rounded-full border border-dashed border-primary/40 animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }} />
-                    <div className="absolute inset-3 flex items-center justify-center">
-                      <img src={warosLogo} alt="WAROS" className="w-16 h-16 object-contain animate-pulse" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-primary font-mono font-bold tracking-[0.15em]">INITIALIZING THREAT INTELLIGENCE</p>
-                    <p className="text-[9px] text-muted-foreground/60 mt-1">Connecting to OSINT feeds…</p>
-                  </div>
-                  {/* Progress bar */}
-                  <Progress value={Math.min((sources.length / EXPECTED_SOURCES.length) * 100, 95)} className="h-1.5 bg-muted/30" />
-                  {/* Source checklist */}
-                  <div className="space-y-1 mt-2">
-                    {EXPECTED_SOURCES.map((s, i) => {
-                      const connected = sources.includes(s);
-                      return (
-                        <div key={s} className="flex items-center gap-2 text-[8px]" style={{ animationDelay: `${i * 200}ms` }}>
-                          {connected ? (
-                            <Check className="h-2.5 w-2.5 text-green-500" />
-                          ) : (
-                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 animate-pulse" />
-                          )}
-                          <span className={connected ? "text-muted-foreground" : "text-muted-foreground/40"}>{s}</span>
-                          {!connected && <span className="text-[7px] text-muted-foreground/30 italic">connecting…</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              <CyberLoadingScreen sources={sources} />
             ) : threats.length === 0 && !loading ? (
               <div className="flex items-center justify-center h-full bg-background/95">
                 <div className="text-center space-y-4 max-w-sm">
