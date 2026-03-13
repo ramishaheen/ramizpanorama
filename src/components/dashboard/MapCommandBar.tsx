@@ -176,7 +176,7 @@ export const MapCommandBar = ({
     <div className="absolute bottom-0 left-0 right-0 z-[1000] gotham-cmd-bar">
       {/* Overlay layers expanded panel */}
       {overlayExpanded && (
-        <div className="gotham-expanded-panel absolute bottom-full left-0 mb-0 w-[320px] max-h-[50vh] overflow-y-auto">
+        <div className="gotham-expanded-panel absolute bottom-full left-0 mb-1.5 w-[320px] max-h-[50vh] overflow-y-auto">
           <div className="flex items-center justify-between px-3 py-2 border-b border-primary/20">
             <span className="text-[9px] font-mono font-bold text-primary uppercase tracking-wider">IMAGERY OVERLAYS</span>
             <button
