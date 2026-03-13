@@ -70,7 +70,7 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const handleVerify = async (id: string, verified: boolean) => {
     await supabase.from("target_tracks").update({
       analyst_verified: verified,
-      status: verified ? "confirmed" : "detected",
+      status: verified ? "confirmed" as const : "detected" as const,
     }).eq("id", id);
     fetchTargets();
   };
