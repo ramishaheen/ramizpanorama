@@ -5,6 +5,7 @@ import {
   ShieldAlert, Brain, Radar, Aperture, Crosshair, ChevronUp, ChevronDown,
   LayoutGrid
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ImageryLayer } from "./ImageryLayerPanel";
 import type { MapToolMode } from "./MapToolbar";
 
@@ -62,21 +63,28 @@ interface GothamBtnProps {
   onClick: () => void;
   disabled?: boolean;
   badge?: string | number;
+  tooltip?: string;
 }
 
-const GothamBtn = ({ label, icon, active, onClick, disabled, badge }: GothamBtnProps) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`gotham-cmd-btn ${active ? "gotham-cmd-btn-active" : ""}`}
-    title={label}
-  >
-    {icon}
-    <span>{label}</span>
-    {badge != null && (
-      <span className="gotham-cmd-badge">{badge}</span>
-    )}
-  </button>
+const GothamBtn = ({ label, icon, active, onClick, disabled, badge, tooltip }: GothamBtnProps) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`gotham-cmd-btn ${active ? "gotham-cmd-btn-active" : ""}`}
+      >
+        {icon}
+        <span>{label}</span>
+        {badge != null && (
+          <span className="gotham-cmd-badge">{badge}</span>
+        )}
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side="top" className="text-[10px] font-mono max-w-[200px]">
+      {tooltip || label}
+    </TooltipContent>
+  </Tooltip>
 );
 
 interface MapCommandBarProps {
@@ -144,26 +152,27 @@ export const MapCommandBar = ({
 
   const hiddenCount = Object.values(componentVisibility).filter(v => !v).length;
 
-  const toolButtons: { mode: MapToolMode; icon: React.ReactNode; label: string }[] = [
-    { mode: "marker", icon: <MapPin className="w-3 h-3" />, label: "PIN" },
-    { mode: "danger", icon: <AlertTriangle className="w-3 h-3" />, label: "DANGER" },
-    { mode: "intel", icon: <FileText className="w-3 h-3" />, label: "INTEL" },
-    { mode: "troop", icon: <Shield className="w-3 h-3" />, label: "TROOP" },
+  const toolButtons: { mode: MapToolMode; icon: React.ReactNode; label: string; tooltip: string }[] = [
+    { mode: "marker", icon: <MapPin className="w-3 h-3" />, label: "PIN", tooltip: "Drop a location pin on the map" },
+    { mode: "danger", icon: <AlertTriangle className="w-3 h-3" />, label: "DANGER", tooltip: "Mark a danger zone on the map" },
+    { mode: "intel", icon: <FileText className="w-3 h-3" />, label: "INTEL", tooltip: "Add an intelligence note to a location" },
+    { mode: "troop", icon: <Shield className="w-3 h-3" />, label: "TROOP", tooltip: "Place a troop movement marker" },
   ];
 
   const intelTools = [
-    { onClick: onOpenOrbital, icon: <Satellite className="w-3 h-3" />, label: "ORBITAL" },
-    { onClick: onOpenUrban3D, icon: <Building2 className="w-3 h-3" />, label: "URBAN 3D" },
-    { onClick: onOpenCCTV, icon: <Camera className="w-3 h-3" />, label: "CCTV" },
-    { onClick: onToggleAllCCTV, icon: <Camera className="w-3 h-3" />, label: loadingCCTV ? "..." : "ALL CCTV", active: allCCTVActive, badge: allCCTVActive ? allCCTVCount : undefined },
-    { onClick: onOpenResponseMap, icon: <ShieldAlert className="w-3 h-3" />, label: "RESPONSE" },
-    { onClick: onOpenCrisisIntel, icon: <Brain className="w-3 h-3" />, label: "CRISIS" },
-    { onClick: onToggleIranFIR, icon: <Radar className="w-3 h-3" />, label: "IRAN FIR", active: iranFIRActive },
-    { onClick: onOpenSnapMe, icon: <Aperture className="w-3 h-3" />, label: "SNAP ME" },
-    { onClick: onOpenScouting, icon: <Crosshair className="w-3 h-3" />, label: "SCOUTING" },
+    { onClick: onOpenOrbital, icon: <Satellite className="w-3 h-3" />, label: "ORBITAL", tooltip: "Launch satellite orbital tracker & globe view" },
+    { onClick: onOpenUrban3D, icon: <Building2 className="w-3 h-3" />, label: "URBAN 3D", tooltip: "Open 3D urban scene with live flights & Street View" },
+    { onClick: onOpenCCTV, icon: <Camera className="w-3 h-3" />, label: "CCTV", tooltip: "Browse live CCTV camera feeds" },
+    { onClick: onToggleAllCCTV, icon: <Camera className="w-3 h-3" />, label: loadingCCTV ? "..." : "ALL CCTV", active: allCCTVActive, badge: allCCTVActive ? allCCTVCount : undefined, tooltip: "Toggle all CCTV cameras on the map" },
+    { onClick: onOpenResponseMap, icon: <ShieldAlert className="w-3 h-3" />, label: "RESPONSE", tooltip: "View military response & defense map" },
+    { onClick: onOpenCrisisIntel, icon: <Brain className="w-3 h-3" />, label: "CRISIS", tooltip: "AI-powered crisis intelligence analysis" },
+    { onClick: onToggleIranFIR, icon: <Radar className="w-3 h-3" />, label: "IRAN FIR", active: iranFIRActive, tooltip: "Toggle Iran Flight Information Region overlay" },
+    { onClick: onOpenSnapMe, icon: <Aperture className="w-3 h-3" />, label: "SNAP ME", tooltip: "Street-level image capture & AI analysis" },
+    { onClick: onOpenScouting, icon: <Crosshair className="w-3 h-3" />, label: "SCOUTING", tooltip: "Tactical scouting & recon tool" },
   ];
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="absolute bottom-0 left-0 right-0 z-[1000] gotham-cmd-bar">
       {/* Overlay layers expanded panel */}
       {overlayExpanded && (
@@ -277,6 +286,7 @@ export const MapCommandBar = ({
               label={layer.shortName}
               active={layer.enabled}
               onClick={() => onBaseChange(layer.id)}
+              tooltip={`Switch to ${layer.name} base map`}
             />
           ))}
           <GothamBtn
@@ -285,6 +295,7 @@ export const MapCommandBar = ({
             active={activeOverlays.length > 0 || overlayExpanded}
             badge={activeOverlays.length > 0 ? activeOverlays.length : undefined}
             onClick={() => setOverlayExpanded(!overlayExpanded)}
+            tooltip="Toggle imagery overlay layers panel"
           />
         </CommandSection>
 
@@ -299,6 +310,7 @@ export const MapCommandBar = ({
               icon={t.icon}
               active={activeToolMode === t.mode}
               onClick={() => onToolModeChange(activeToolMode === t.mode ? null : t.mode)}
+              tooltip={t.tooltip}
             />
           ))}
         </CommandSection>
@@ -307,23 +319,25 @@ export const MapCommandBar = ({
 
         {/* ▎ANALYSIS */}
         <CommandSection label="DATA">
-          <GothamBtn label="UP42" icon={<Search className="w-3 h-3" />} active={up42Open} onClick={onToggleUP42} />
-          <GothamBtn label="LEGEND" icon={<Eye className="w-3 h-3" />} active={legendOpen} onClick={onToggleLegend} />
-          <GothamBtn label="HIST" icon={<Clock className="w-3 h-3" />} active={historyOpen} onClick={onToggleHistory} />
+          <GothamBtn label="UP42" icon={<Search className="w-3 h-3" />} active={up42Open} onClick={onToggleUP42} tooltip="Search UP42 satellite imagery catalog" />
+          <GothamBtn label="LEGEND" icon={<Eye className="w-3 h-3" />} active={legendOpen} onClick={onToggleLegend} tooltip="Show/hide map layer legend" />
+          <GothamBtn label="HIST" icon={<Clock className="w-3 h-3" />} active={historyOpen} onClick={onToggleHistory} tooltip="Open timeline history slider" />
           <GothamBtn
             label={currentMapStyle === "satellite" ? "SAT" : "DRK"}
             icon={currentMapStyle === "satellite" ? <Satellite className="w-3 h-3" /> : <Map className="w-3 h-3" />}
             onClick={() => onMapStyleChange(currentMapStyle === "satellite" ? "dark" : "satellite")}
+            tooltip={`Switch to ${currentMapStyle === "satellite" ? "dark" : "satellite"} map style`}
           />
-          <GothamBtn label="BKM" icon={<Bookmark className="w-3 h-3" />} active={bookmarksOpen} onClick={onToggleBookmarks} />
-          <GothamBtn label="CHOKE" icon={<Ship className="w-3 h-3" />} active={chokepointsOpen} onClick={onToggleChokepoints} />
-          <GothamBtn label="LAUNCH" icon={<Rocket className="w-3 h-3" />} active={launchesOpen} onClick={onToggleLaunches} />
+          <GothamBtn label="BKM" icon={<Bookmark className="w-3 h-3" />} active={bookmarksOpen} onClick={onToggleBookmarks} tooltip="Save & recall map bookmarks" />
+          <GothamBtn label="CHOKE" icon={<Ship className="w-3 h-3" />} active={chokepointsOpen} onClick={onToggleChokepoints} tooltip="Monitor maritime chokepoints" />
+          <GothamBtn label="LAUNCH" icon={<Rocket className="w-3 h-3" />} active={launchesOpen} onClick={onToggleLaunches} tooltip="View total rocket launch statistics" />
           <GothamBtn
             label="COMP"
             icon={<LayoutGrid className="w-3 h-3" />}
             active={componentsExpanded}
             badge={hiddenCount > 0 ? hiddenCount : undefined}
             onClick={() => setComponentsExpanded(!componentsExpanded)}
+            tooltip="Toggle dashboard component visibility"
           />
         </CommandSection>
 
@@ -332,16 +346,18 @@ export const MapCommandBar = ({
         {/* ▎INTEL */}
         <CommandSection label="INTEL">
           {intelTools.slice(0, 3).map((t, i) => (
-            <GothamBtn key={i} label={t.label} icon={t.icon} active={t.active} onClick={t.onClick} badge={t.badge} />
+            <GothamBtn key={i} label={t.label} icon={t.icon} active={t.active} onClick={t.onClick} badge={t.badge} tooltip={t.tooltip} />
           ))}
           <GothamBtn
             label={intelExpanded ? "−" : "+"}
             icon={intelExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
             active={intelExpanded}
             onClick={() => setIntelExpanded(!intelExpanded)}
+            tooltip="Expand full intel tools menu"
           />
         </CommandSection>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
