@@ -138,14 +138,30 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
         </div>
       </div>
 
-      <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)]">
+      <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)] space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <MapPin className="h-3 w-3 text-muted-foreground" />
+          <span className="text-[8px] font-mono text-muted-foreground tracking-wider">SCAN AREA</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {Object.keys(COUNTRY_COORDS).map(c => (
+            <button key={c} onClick={() => setSelectedCountry(c)}
+              className={`px-1.5 py-0.5 rounded text-[7px] font-mono border transition-colors ${
+                selectedCountry === c
+                  ? "border-[#ef4444]/50 bg-[#ef4444]/15 text-[#ef4444] font-bold"
+                  : "border-[hsl(220,15%,18%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,25%)]"
+              }`}>
+              {c}
+            </button>
+          ))}
+        </div>
         <button
           onClick={runATR}
           disabled={scanning}
           className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded text-[9px] font-mono font-bold border border-[#ef4444]/40 bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 disabled:opacity-50 transition-colors"
         >
           {scanning ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crosshair className="h-3 w-3" />}
-          {scanning ? "AI SCANNING..." : "RUN ATR SCAN"}
+          {scanning ? `SCANNING ${selectedCountry.toUpperCase()}...` : `ATR SCAN — ${selectedCountry.toUpperCase()}`}
         </button>
       </div>
 
