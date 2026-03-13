@@ -6,13 +6,19 @@ import {
   Target, Bug, Radio, ChevronRight, ExternalLink,
   Play, Pause, SkipBack, SkipForward, Clock, Copy, Check,
   Eye, EyeOff, Skull, Link2, FileWarning, Hash,
-  UserSearch, Shield, Crosshair, Fingerprint, Server
+  UserSearch, Shield, Crosshair, Fingerprint, Server,
+  Layers, Github
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
 import { useDarkWebIntel, type ActorDossier, type DarkWebEntry, type TorAnalysis } from "@/hooks/useDarkWebIntel";
 import { WORLD_REGIONS, COUNTRY_LABELS, GRATICULE_LATS, GRATICULE_LONS } from "@/data/worldMapPaths";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { MapLayersPanel, useMapLayers, filterByLayers } from "@/components/dashboard/cyber/MapLayersPanel";
+import { APTIntelPanel } from "@/components/dashboard/cyber/APTIntelPanel";
+import { IncidentTimeline } from "@/components/dashboard/cyber/IncidentTimeline";
+import { IntelEnginesPanel } from "@/components/dashboard/cyber/IntelEnginesPanel";
+import { CyberAlertBanner } from "@/components/dashboard/cyber/CyberAlertBanner";
 
 interface CyberImmunityModalProps {
   onClose: () => void;
@@ -938,9 +944,10 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("All");
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb">("map");
+  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline" | "engines">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
   const [showDossier, setShowDossier] = useState(false);
+  const { layers, toggleLayer } = useMapLayers();
 
   /* Auto-fetch dark web intel when switching to darkweb tab */
   useEffect(() => {
@@ -1119,7 +1126,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <span className="text-primary">LOW: {stats.severityCounts.low}</span>
           <span className="text-muted-foreground">TOTAL: {filtered.length}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <button onClick={() => setCenterView("map")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "map" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Globe className="h-3 w-3 inline mr-1" />MAP
           </button>
@@ -1129,8 +1136,20 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <button onClick={() => setCenterView("darkweb")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "darkweb" ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Skull className="h-3 w-3 inline mr-1" />DARK WEB
           </button>
+          <button onClick={() => setCenterView("apt")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "apt" ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Shield className="h-3 w-3 inline mr-1" />APT INTEL
+          </button>
+          <button onClick={() => setCenterView("timeline")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "timeline" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Clock className="h-3 w-3 inline mr-1" />TIMELINE
+          </button>
+          <button onClick={() => setCenterView("engines")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "engines" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Github className="h-3 w-3 inline mr-1" />ENGINES
+          </button>
         </div>
       </div>
+
+      {/* ── ALERT BANNERS ── */}
+      <CyberAlertBanner threats={filtered} />
 
       {/* ── MAIN CONTENT ── */}
       <div className="flex flex-1 min-h-0">
@@ -1143,6 +1162,13 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                   <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="IP, CVE, domain, actor..." className="h-7 pl-7 text-[10px] bg-background/50 border-border" />
+                </div>
+                <div className="flex gap-1 mt-1.5 flex-wrap">
+                  {["IP", "CVE", "Domain", "APT", "Malware", "Country"].map(chip => (
+                    <button key={chip} onClick={() => setSearch(chip === "CVE" ? "CVE-" : chip === "IP" ? "." : "")} className="text-[7px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors font-mono">
+                      {chip}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -1244,9 +1270,18 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 </div>
               </div>
             ) : centerView === "map" ? (
-              <ThreatMap threats={filtered} onSelect={handleSelect} selectedId={selectedThreat?.id} />
+              <div className="relative w-full h-full">
+                <ThreatMap threats={filterByLayers(filtered, layers)} onSelect={handleSelect} selectedId={selectedThreat?.id} />
+                <MapLayersPanel layers={layers} onToggle={toggleLayer} />
+              </div>
             ) : centerView === "graph" ? (
               <RelationshipGraph threats={filtered} />
+            ) : centerView === "apt" ? (
+              <APTIntelPanel />
+            ) : centerView === "timeline" ? (
+              <IncidentTimeline threats={filtered} onSelect={handleSelect} />
+            ) : centerView === "engines" ? (
+              <IntelEnginesPanel />
             ) : (
               <EnhancedDarkWebMonitor entries={darkWeb.entries} torAnalysis={darkWeb.torAnalysis} loading={darkWeb.loading} onFetchDossier={handleFetchDossier} />
             )}
@@ -1359,6 +1394,48 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                   )) : (
                     <span className="text-[9px] text-muted-foreground italic">No IOCs available</span>
                   )}
+                </div>
+              </div>
+
+              {/* Top Targeted Countries */}
+              <div>
+                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Most Targeted</label>
+                <div className="space-y-1">
+                  {Object.entries(
+                    filtered.reduce((acc: Record<string, number>, t) => {
+                      const tgt = t.targetCountry || t.target;
+                      acc[tgt] = (acc[tgt] || 0) + 1;
+                      return acc;
+                    }, {})
+                  ).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([country, count], i) => (
+                    <div key={country} className="flex items-center gap-2 text-[9px]">
+                      <span className="text-muted-foreground w-3">{i + 1}.</span>
+                      <span className="flex-1 truncate">{country}</span>
+                      <div className="w-16 bg-border/30 rounded-full h-1.5">
+                        <div className="bg-primary/60 h-full rounded-full" style={{ width: `${(count / Math.max(...Object.values(filtered.reduce((a: Record<string, number>, t) => { const tg = t.targetCountry || t.target; a[tg] = (a[tg] || 0) + 1; return a; }, {})), 1)) * 100}%` }} />
+                      </div>
+                      <span className="font-mono w-4 text-right text-primary">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Malware & Ransomware */}
+              <div>
+                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Bug className="h-3 w-3" /> Active Threat Categories
+                </label>
+                <div className="space-y-1">
+                  {["Ransomware", "Wiper Malware", "DDoS Attack", "Espionage", "Zero-Day Exploit", "Phishing Campaign"].map(cat => {
+                    const count = filtered.filter(t => t.type.includes(cat) || t.description.toLowerCase().includes(cat.toLowerCase())).length;
+                    if (count === 0) return null;
+                    return (
+                      <div key={cat} className="flex items-center justify-between text-[9px]">
+                        <span className="text-muted-foreground">{cat}</span>
+                        <span className="font-mono text-foreground font-bold">{count}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

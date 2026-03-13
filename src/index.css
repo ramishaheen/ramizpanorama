@@ -891,3 +891,23 @@
     overflow: hidden;
   }
 }
+
+/* Cyber Alert Banner slide-in */
+@keyframes cyber-alert-slide {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.cyber-alert-slide {
+  animation: cyber-alert-slide 0.5s ease-out;
+}
+
+/* Layer pulse */
+@keyframes layer-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.layer-pulse {
+  animation: layer-pulse 2s ease-in-out infinite;
+}
