@@ -448,7 +448,19 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="relative flex flex-col h-full min-h-0">
+      {/* F2T2EA Phase Review Modal */}
+      {selectedEventForModal && (
+        <KillChainEventModal
+          event={selectedEventForModal}
+          loading={initiatingTarget === selectedEventForModal.id}
+          onCancel={() => setSelectedEventForModal(null)}
+          onConfirm={async () => {
+            await initiateFromEvent(selectedEventForModal);
+            setSelectedEventForModal(null);
+          }}
+        />
+      )}
       <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
