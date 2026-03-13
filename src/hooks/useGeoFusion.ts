@@ -71,6 +71,10 @@ export function useGeoFusion() {
   const [data, setData] = useState<GeoFusionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const dataRef = useRef<GeoFusionData | null>(null);
+
+  // Keep ref in sync
+  useEffect(() => { dataRef.current = data; }, [data]);
 
   const normalizeEvents = (events: any[]): FusionEvent[] => {
     const typeMap: Record<string, string> = {
@@ -102,7 +106,7 @@ export function useGeoFusion() {
       const { data: fnData, error: fnError } = await supabase.functions.invoke("geo-fusion");
       if (fnError) throw fnError;
       if (fnData?.error) {
-        if (fnData.error === "Rate limit exceeded." && data) {
+        if (fnData.error === "Rate limit exceeded." && dataRef.current) {
           console.warn("[GeoFusion] Rate limited, keeping cached data");
           setLoading(false);
           return;
@@ -144,17 +148,17 @@ export function useGeoFusion() {
     } catch (e) {
       console.error("GeoFusion fetch error:", e);
       handleAIError(e, "Geo Fusion");
-      if (!data) setError(e instanceof Error ? e.message : "Failed to load");
+      if (!dataRef.current) setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [data]);
+  }, []);
 
   useEffect(() => {
     const initialDelay = setTimeout(fetchFusion, 6000);
     const interval = setInterval(fetchFusion, 86_400_000); // once per day
     return () => { clearTimeout(initialDelay); clearInterval(interval); };
-  }, []);
+  }, [fetchFusion]);
 
   return { data, loading, error, refresh: fetchFusion };
 }
