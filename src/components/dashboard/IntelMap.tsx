@@ -1016,13 +1016,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           weight: 1.5,
           dashArray: alert.type === "CLOSURE" ? undefined : "5 5",
         });
-        circle.bindPopup(`
+        bindHoverPopup(circle, `
           <div style="${popupStyle}">
             <div style="color:${severityColors[alert.severity]};font-weight:700;margin-bottom:4px;">${alert.type} — ${alert.region}</div>
             <div style="margin-bottom:4px;">${alert.description}</div>
             <div style="font-size:9px;opacity:0.6;">${new Date(alert.timestamp).toLocaleString()}</div>
           </div>
-        `, popupOptions);
+        `);
         circle.addTo(group);
       });
     }
