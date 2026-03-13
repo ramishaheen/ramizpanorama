@@ -299,6 +299,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => { clearInterval(iv); supabase.removeChannel(ch1); supabase.removeChannel(ch2); };
   }, []);
 
+  const totalActive = Object.values(layers).filter(Boolean).length;
 
   // Merge real + emulated data — emulated fills gaps when APIs haven't loaded
   const earthquakes = useMemo(() => earthquakesRaw.length > 0 ? earthquakesRaw : EMULATED_EARTHQUAKES, [earthquakesRaw]);
