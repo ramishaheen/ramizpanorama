@@ -1416,6 +1416,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
                 <span className="truncate w-24 flex-shrink-0">{t.target}</span>
                 <span className="text-muted-foreground truncate flex-1">{t.description}</span>
                 <span className={`px-1 py-0.5 rounded border text-[7px] uppercase font-mono flex-shrink-0 ${SEVERITY_BG[t.severity]}`}>{t.severity}</span>
+                {t.verified && <span className="px-1 py-0.5 rounded border text-[7px] uppercase font-mono flex-shrink-0 bg-green-500/15 text-green-400 border-green-500/25">✓</span>}
               </div>
             ))}
             {filtered.length === 0 && !loading && (
