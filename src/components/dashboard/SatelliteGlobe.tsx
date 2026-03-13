@@ -1671,64 +1671,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
           .arcDashLength(0.4)
           .arcDashGap(0.15)
           .arcDashAnimateTime(3000)
-          .htmlElementsData([
-            ...OSINT_MARKERS,
-            ...CITY_PRESETS.map(c => ({ lat: c.lat, lng: c.lng, label: c.name, type: "city", severity: "info", info: `${c.landmark} — ${c.country}`, cityData: c })),
-          ])
-          .htmlLat((d: any) => d.lat)
-          .htmlLng((d: any) => d.lng)
-          .htmlAltitude(0.005)
-          .htmlElement((d: any) => {
-            const el = document.createElement("div");
-
-            if (d.type === "city") {
-              const isLite = liteMode;
-              const dotSize = isLite ? 3 : 5;
-              el.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:0;transition:all 0.25s ease;position:relative;`;
-              // Dot only by default
-              const dot = document.createElement("span");
-              dot.style.cssText = `width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 ${isLite ? 4 : 6}px #00dcff;flex-shrink:0;`;
-              el.appendChild(dot);
-              // Label hidden by default
-              const label = document.createElement("span");
-              label.style.cssText = `font-family:monospace;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 8px rgba(0,0,0,0.9);color:#00dcff;background:rgba(0,20,40,0.85);border:1px solid rgba(0,220,255,0.3);padding:2px 5px;border-radius:4px;margin-left:4px;opacity:0;pointer-events:none;transition:opacity 0.2s ease;`;
-              label.textContent = d.label;
-              el.appendChild(label);
-              el.addEventListener("mouseenter", () => {
-                label.style.opacity = "1";
-                label.style.pointerEvents = "auto";
-                dot.style.boxShadow = `0 0 10px #00dcff, 0 0 20px rgba(0,220,255,0.3)`;
-                dot.style.transform = "scale(1.4)";
-              });
-              el.addEventListener("mouseleave", () => {
-                label.style.opacity = "0";
-                label.style.pointerEvents = "none";
-                dot.style.boxShadow = `0 0 ${isLite ? 4 : 6}px #00dcff`;
-                dot.style.transform = "scale(1)";
-              });
-              el.addEventListener("click", () => {
-                window.dispatchEvent(new CustomEvent("globe-city-click", { detail: d.cityData }));
-              });
-              return el;
-            }
-
-            el.style.cssText =
-              "pointer-events:none;font-family:monospace;font-size:7px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 6px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;";
-            const colors: Record<string, string> = {
-              conflict: "#ef4444",
-              military: "#fb923c",
-              naval: "#38bdf8",
-              radar: "#a855f7",
-            };
-            const c = colors[d.type] || "#fb923c";
-            el.style.color = c;
-            el.style.backgroundColor = "rgba(0,0,0,0.5)";
-            el.style.borderLeft = `2px solid ${c}`;
-            el.innerHTML = `<span style="opacity:0.7">▸</span> ${d.label}`;
-            return el;
-          })
-          // City markers as rings on the globe surface
-          .ringsData(CITY_PRESETS.map(c => ({ ...c, maxR: 2, propagationSpeed: 1.5 })))
+          .htmlElementsData([])  // HTML elements managed by consolidated useEffect
           .ringLat((d: any) => d.lat)
           .ringLng((d: any) => d.lng)
           .ringAltitude(0.001)
