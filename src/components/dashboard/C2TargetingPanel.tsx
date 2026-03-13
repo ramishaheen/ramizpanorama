@@ -95,7 +95,7 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const criticalCount = targets.filter(t => t.priority === "critical").length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />

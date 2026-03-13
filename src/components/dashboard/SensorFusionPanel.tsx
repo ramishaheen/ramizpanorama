@@ -47,7 +47,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -92,7 +92,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
       )}
 
       {/* Feed list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
         {catOrder.map(cat => {
           const catFeeds = cats[cat] || [];
           if (catFeeds.length === 0) return null;

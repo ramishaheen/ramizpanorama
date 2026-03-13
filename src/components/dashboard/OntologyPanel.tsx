@@ -55,7 +55,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
     : [];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -93,7 +93,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
       </div>
 
       {/* Entity detail or list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
         {selectedEntity ? (
           <div className="p-3 space-y-2">
             <button onClick={() => setSelectedEntity(null)} className="text-[8px] font-mono text-primary hover:underline">← BACK</button>
