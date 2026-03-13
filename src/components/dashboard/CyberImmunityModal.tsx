@@ -817,8 +817,10 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
               </div>
             ) : centerView === "map" ? (
               <ThreatMap threats={filtered} onSelect={handleSelect} selectedId={selectedThreat?.id} />
-            ) : (
+            ) : centerView === "graph" ? (
               <RelationshipGraph threats={filtered} />
+            ) : (
+              <DarkWebMonitor threats={filtered} />
             )}
 
             {/* Live stats HUD overlay (when no threat selected) */}
