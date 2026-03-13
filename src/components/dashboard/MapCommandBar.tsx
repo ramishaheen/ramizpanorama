@@ -2,10 +2,41 @@ import { useState } from "react";
 import {
   Map, Satellite, Layers, MapPin, AlertTriangle, FileText, Shield,
   Search, Clock, Bookmark, Ship, Rocket, Eye, Building2, Camera,
-  ShieldAlert, Brain, Radar, Aperture, Crosshair, ChevronUp, ChevronDown
+  ShieldAlert, Brain, Radar, Aperture, Crosshair, ChevronUp, ChevronDown,
+  LayoutGrid
 } from "lucide-react";
 import type { ImageryLayer } from "./ImageryLayerPanel";
 import type { MapToolMode } from "./MapToolbar";
+
+export interface ComponentVisibility {
+  header: boolean;
+  statsBar: boolean;
+  leftSidebar: boolean;
+  rightSidebar: boolean;
+  bottomRow: boolean;
+  holographic: boolean;
+  disclaimer: boolean;
+}
+
+export const DEFAULT_COMPONENT_VISIBILITY: ComponentVisibility = {
+  header: true,
+  statsBar: true,
+  leftSidebar: true,
+  rightSidebar: true,
+  bottomRow: true,
+  holographic: true,
+  disclaimer: true,
+};
+
+const COMPONENT_LABELS: Record<keyof ComponentVisibility, string> = {
+  header: "HEADER",
+  statsBar: "STATS BAR",
+  leftSidebar: "LEFT SIDEBAR",
+  rightSidebar: "RIGHT SIDEBAR",
+  bottomRow: "BOTTOM ROW",
+  holographic: "HUD OVERLAY",
+  disclaimer: "DISCLAIMER",
+};
 
 interface CommandSectionProps {
   label: string;
@@ -82,6 +113,8 @@ interface MapCommandBarProps {
   iranFIRActive: boolean;
   onOpenSnapMe: () => void;
   onOpenScouting: () => void;
+  componentVisibility: ComponentVisibility;
+  onToggleComponent: (key: keyof ComponentVisibility) => void;
 }
 
 export const MapCommandBar = ({
@@ -99,13 +132,17 @@ export const MapCommandBar = ({
   onOpenResponseMap, onOpenCrisisIntel,
   onToggleIranFIR, iranFIRActive,
   onOpenSnapMe, onOpenScouting,
+  componentVisibility, onToggleComponent,
 }: MapCommandBarProps) => {
   const [overlayExpanded, setOverlayExpanded] = useState(false);
   const [intelExpanded, setIntelExpanded] = useState(false);
+  const [componentsExpanded, setComponentsExpanded] = useState(false);
 
   const baseLayers = imageryLayers.filter(l => l.type === "base");
   const overlayLayers = imageryLayers.filter(l => l.type === "overlay");
   const activeOverlays = overlayLayers.filter(l => l.enabled);
+
+  const hiddenCount = Object.values(componentVisibility).filter(v => !v).length;
 
   const toolButtons: { mode: MapToolMode; icon: React.ReactNode; label: string }[] = [
     { mode: "marker", icon: <MapPin className="w-3 h-3" />, label: "PIN" },
@@ -192,6 +229,44 @@ export const MapCommandBar = ({
         </div>
       )}
 
+      {/* Components visibility toggle panel */}
+      {componentsExpanded && (
+        <div className="gotham-expanded-panel absolute bottom-full right-[60px] mb-0 w-[220px] z-[1002]">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-primary/20">
+            <span className="text-[9px] font-mono font-bold text-primary uppercase tracking-wider">COMPONENTS</span>
+            <button
+              onClick={() => {
+                const allVisible = Object.values(componentVisibility).every(v => v);
+                const keys = Object.keys(componentVisibility) as (keyof ComponentVisibility)[];
+                keys.forEach(k => {
+                  if (allVisible ? componentVisibility[k] : !componentVisibility[k]) {
+                    onToggleComponent(k);
+                  }
+                });
+              }}
+              className="text-[8px] font-mono text-muted-foreground hover:text-primary transition-colors"
+            >
+              {Object.values(componentVisibility).every(v => v) ? "HIDE ALL" : "SHOW ALL"}
+            </button>
+          </div>
+          <div className="p-1.5 space-y-0.5">
+            {(Object.keys(COMPONENT_LABELS) as (keyof ComponentVisibility)[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => onToggleComponent(key)}
+                className={`gotham-expanded-item ${componentVisibility[key] ? "gotham-expanded-item-active" : ""}`}
+              >
+                <Eye className={`w-3 h-3 transition-colors ${componentVisibility[key] ? "text-primary" : "text-muted-foreground/40"}`} />
+                <span>{COMPONENT_LABELS[key]}</span>
+                <span className={`ml-auto text-[7px] font-mono ${componentVisibility[key] ? "text-primary" : "text-muted-foreground/40"}`}>
+                  {componentVisibility[key] ? "ON" : "OFF"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main command strip */}
       <div className="flex items-center overflow-x-auto gotham-cmd-strip py-1">
         {/* ▎IMAGERY */}
@@ -243,6 +318,13 @@ export const MapCommandBar = ({
           <GothamBtn label="BKM" icon={<Bookmark className="w-3 h-3" />} active={bookmarksOpen} onClick={onToggleBookmarks} />
           <GothamBtn label="CHOKE" icon={<Ship className="w-3 h-3" />} active={chokepointsOpen} onClick={onToggleChokepoints} />
           <GothamBtn label="LAUNCH" icon={<Rocket className="w-3 h-3" />} active={launchesOpen} onClick={onToggleLaunches} />
+          <GothamBtn
+            label="COMP"
+            icon={<LayoutGrid className="w-3 h-3" />}
+            active={componentsExpanded}
+            badge={hiddenCount > 0 ? hiddenCount : undefined}
+            onClick={() => setComponentsExpanded(!componentsExpanded)}
+          />
         </CommandSection>
 
         <div className="gotham-section-divider" />

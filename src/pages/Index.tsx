@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
+import { DEFAULT_COMPONENT_VISIBILITY, type ComponentVisibility } from "@/components/dashboard/MapCommandBar";
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers, Lock, Unlock } from "lucide-react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -147,6 +148,11 @@ const Index = () => {
   const [mobileTab, setMobileTab] = useState<MobileTab>("map");
   const [layoutLocked, setLayoutLocked] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [componentVisibility, setComponentVisibility] = useState<ComponentVisibility>(DEFAULT_COMPONENT_VISIBILITY);
+
+  const toggleComponent = useCallback((key: keyof ComponentVisibility) => {
+    setComponentVisibility(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   // Persist layout changes
   useEffect(() => {
@@ -383,84 +389,92 @@ const Index = () => {
   // ─── DESKTOP LAYOUT ───
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
-      <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
-      <StatsBar
-        airspaceCount={dailyCounts.airspaceCount}
-        vesselCount={dailyCounts.vesselCount}
-        alertCount={dailyCounts.alertCount}
-        riskScore={riskScore.overall}
-        rocketCount={dailyCounts.rocketCount}
-        impactCount={dailyCounts.impactCount}
-        totalRockets={dailyCounts.totalRockets}
-        rockets={dailyCounts.todayRockets}
-        geoAlerts={dailyCounts.todayGeoAlerts}
-        airspaceAlerts={dailyCounts.todayAirspace}
-        dataFresh={dataFresh}
-      />
+      {componentVisibility.header && (
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
+      )}
+      {componentVisibility.statsBar && (
+        <StatsBar
+          airspaceCount={dailyCounts.airspaceCount}
+          vesselCount={dailyCounts.vesselCount}
+          alertCount={dailyCounts.alertCount}
+          riskScore={riskScore.overall}
+          rocketCount={dailyCounts.rocketCount}
+          impactCount={dailyCounts.impactCount}
+          totalRockets={dailyCounts.totalRockets}
+          rockets={dailyCounts.todayRockets}
+          geoAlerts={dailyCounts.todayGeoAlerts}
+          airspaceAlerts={dailyCounts.todayAirspace}
+          dataFresh={dataFresh}
+        />
+      )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <ResizablePanelGroup direction="vertical" className="flex-1">
           {/* Main 3-column row */}
-          <ResizablePanel defaultSize={75} minSize={30}>
+          <ResizablePanel defaultSize={componentVisibility.bottomRow ? 75 : 100} minSize={30}>
             <div className="flex h-full overflow-hidden" ref={containerRef}>
               {/* Left sidebar - resizable & collapsible */}
-              {!leftCollapsed ? (
-                <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
-                  <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
-                    <button
-                      onClick={() => setLayoutLocked(l => !l)}
-                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-                        layoutLocked
-                          ? "text-warning bg-warning/10 border border-warning/30"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                      }`}
-                      title={layoutLocked ? "Unlock widget reordering" : "Lock widget positions"}
-                    >
-                      {layoutLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                      {layoutLocked ? "Locked" : "Unlocked"}
-                    </button>
-                    <button
-                      onClick={() => setLeftCollapsed(true)}
-                      className="hover:bg-secondary/50 transition-colors rounded p-0.5"
-                      title="Collapse sidebar"
-                    >
-                      <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto">
-                    <div className="p-3 space-y-3">
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
-                        <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
-                          {leftOrder.map((id) => (
-                            <DraggableWidget key={id} id={id} disabled={layoutLocked}>
-                              {leftWidgets[id]}
-                            </DraggableWidget>
-                          ))}
-                        </SortableContext>
-                      </DndContext>
+              {componentVisibility.leftSidebar && (
+                <>
+                  {!leftCollapsed ? (
+                    <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
+                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+                        <button
+                          onClick={() => setLayoutLocked(l => !l)}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+                            layoutLocked
+                              ? "text-warning bg-warning/10 border border-warning/30"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                          }`}
+                          title={layoutLocked ? "Unlock widget reordering" : "Lock widget positions"}
+                        >
+                          {layoutLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                          {layoutLocked ? "Locked" : "Unlocked"}
+                        </button>
+                        <button
+                          onClick={() => setLeftCollapsed(true)}
+                          className="hover:bg-secondary/50 transition-colors rounded p-0.5"
+                          title="Collapse sidebar"
+                        >
+                          <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto">
+                        <div className="p-3 space-y-3">
+                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
+                            <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
+                              {leftOrder.map((id) => (
+                                <DraggableWidget key={id} id={id} disabled={layoutLocked}>
+                                  {leftWidgets[id]}
+                                </DraggableWidget>
+                              ))}
+                            </SortableContext>
+                          </DndContext>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
-                  <button
-                    onClick={() => setLeftCollapsed(false)}
-                    className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                    title="Expand sidebar"
-                  >
-                    <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
-              )}
+                  ) : (
+                    <div className="w-10 flex-shrink-0 border-r border-border flex flex-col">
+                      <button
+                        onClick={() => setLeftCollapsed(false)}
+                        className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                        title="Expand sidebar"
+                      >
+                        <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                  )}
 
-              {/* Left resize handle */}
-              {!leftCollapsed && (
-                <div
-                  onMouseDown={handleResizeLeft}
-                  className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
-                >
-                  <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
-                </div>
+                  {/* Left resize handle */}
+                  {!leftCollapsed && (
+                    <div
+                      onMouseDown={handleResizeLeft}
+                      className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
+                    >
+                      <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Map (center) */}
@@ -477,111 +491,119 @@ const Index = () => {
                   newsMarkers={warUpdates.data?.updates}
                   telegramMarkers={telegramIntel.markers}
                   fusionEvents={geoFusion.data?.events}
+                  componentVisibility={componentVisibility}
+                  onToggleComponent={toggleComponent}
                 />
               </div>
 
-              {/* Right resize handle */}
-              {!rightCollapsed && (
-                <div
-                  onMouseDown={handleResizeRight}
-                  className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
-                >
-                  <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
-                </div>
-              )}
-
-              {/* Right sidebar - resizable & collapsible */}
-              {!rightCollapsed ? (
-                <div className="flex-shrink-0 border-l border-border flex flex-col relative" style={{ width: rightWidth }}>
-                  {/* Full-height resize edge on left side */}
-                  <div
-                    onMouseDown={handleResizeRight}
-                    className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-10 hover:bg-primary/20 transition-colors"
-                    title="Drag to resize"
-                  />
-                  <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
-                    <button
-                      onClick={() => setLayoutLocked(l => !l)}
-                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
-                        layoutLocked
-                          ? "text-warning bg-warning/10 border border-warning/30"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                      }`}
-                      title={layoutLocked ? "Unlock widget reordering" : "Lock widget positions"}
+              {/* Right sidebar */}
+              {componentVisibility.rightSidebar && (
+                <>
+                  {/* Right resize handle */}
+                  {!rightCollapsed && (
+                    <div
+                      onMouseDown={handleResizeRight}
+                      className="w-1.5 flex-shrink-0 cursor-col-resize bg-border/30 hover:bg-primary/30 transition-colors flex items-center justify-center group"
                     >
-                      {layoutLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                      {layoutLocked ? "Locked" : "Unlocked"}
-                    </button>
-                    <button
-                      onClick={() => setRightCollapsed(true)}
-                      className="p-0.5 rounded hover:bg-secondary/50 transition-colors"
-                      title="Collapse sidebar"
-                    >
-                      <PanelRightClose className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
-                    <div className="direction-ltr">
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
-                        <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                          {rightOrder.map((id) => (
-                            <DraggableWidget key={id} id={id} disabled={layoutLocked}>
-                              {rightWidgets[id]}
-                            </DraggableWidget>
-                          ))}
-                        </SortableContext>
-                      </DndContext>
+                      <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/50" />
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
-                  <button
-                    onClick={() => setRightCollapsed(false)}
-                    className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
-                    title="Expand sidebar"
-                  >
-                    <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
+                  )}
+
+                  {!rightCollapsed ? (
+                    <div className="flex-shrink-0 border-l border-border flex flex-col relative" style={{ width: rightWidth }}>
+                      {/* Full-height resize edge on left side */}
+                      <div
+                        onMouseDown={handleResizeRight}
+                        className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-10 hover:bg-primary/20 transition-colors"
+                        title="Drag to resize"
+                      />
+                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+                        <button
+                          onClick={() => setLayoutLocked(l => !l)}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+                            layoutLocked
+                              ? "text-warning bg-warning/10 border border-warning/30"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                          }`}
+                          title={layoutLocked ? "Unlock widget reordering" : "Lock widget positions"}
+                        >
+                          {layoutLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                          {layoutLocked ? "Locked" : "Unlocked"}
+                        </button>
+                        <button
+                          onClick={() => setRightCollapsed(true)}
+                          className="p-0.5 rounded hover:bg-secondary/50 transition-colors"
+                          title="Collapse sidebar"
+                        >
+                          <PanelRightClose className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto intel-feed-scroll direction-rtl">
+                        <div className="direction-ltr">
+                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
+                            <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
+                              {rightOrder.map((id) => (
+                                <DraggableWidget key={id} id={id} disabled={layoutLocked}>
+                                  {rightWidgets[id]}
+                                </DraggableWidget>
+                              ))}
+                            </SortableContext>
+                          </DndContext>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
+                      <button
+                        onClick={() => setRightCollapsed(false)}
+                        className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                        title="Expand sidebar"
+                      >
+                        <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </ResizablePanel>
 
-          {/* Vertical resize handle between map and bottom row */}
-          <ResizableHandle withHandle />
-
-          {/* Bottom row — Citizen Security + Sector Predictions + Social Sentiment — resizable */}
-          <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={33} minSize={15}>
-                <div className="h-full overflow-hidden">
-                  <CitizenSecurity
-                    data={citizenSecurity.data}
-                    loading={citizenSecurity.loading}
-                    error={citizenSecurity.error}
-                    onRefresh={citizenSecurity.refresh}
-                  />
-                </div>
-              </ResizablePanel>
+          {/* Bottom row */}
+          {componentVisibility.bottomRow && (
+            <>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={34} minSize={15}>
-                <div className="h-full overflow-hidden">
-                  <SectorPredictions />
-                </div>
+              <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
+                <ResizablePanelGroup direction="horizontal" className="h-full">
+                  <ResizablePanel defaultSize={33} minSize={15}>
+                    <div className="h-full overflow-hidden">
+                      <CitizenSecurity
+                        data={citizenSecurity.data}
+                        loading={citizenSecurity.loading}
+                        error={citizenSecurity.error}
+                        onRefresh={citizenSecurity.refresh}
+                      />
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={34} minSize={15}>
+                    <div className="h-full overflow-hidden">
+                      <SectorPredictions />
+                    </div>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={33} minSize={15}>
+                    <div className="h-full overflow-hidden">
+                      <SocialSentimentBox />
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
               </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={33} minSize={15}>
-                <div className="h-full overflow-hidden">
-                  <SocialSentimentBox />
-                </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </ResizablePanel>
+            </>
+          )}
         </ResizablePanelGroup>
       </div>
 
-      <Disclaimer />
+      {componentVisibility.disclaimer && <Disclaimer />}
     </div>
   );
 };

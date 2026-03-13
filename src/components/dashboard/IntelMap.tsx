@@ -45,6 +45,8 @@ import { useGooglePlaces, getPOIColor, getPOIIcon, type GooglePlace } from "@/ho
 import { useGoogleGeocode } from "@/hooks/useGoogleGeocode";
 import { useGoogleDirections } from "@/hooks/useGoogleDirections";
 
+import type { ComponentVisibility } from "./MapCommandBar";
+
 interface IntelMapProps {
   airspaceAlerts: AirspaceAlert[];
   vessels: MaritimeVessel[];
@@ -57,6 +59,8 @@ interface IntelMapProps {
   newsMarkers?: WarUpdate[];
   telegramMarkers?: TelegramMarker[];
   fusionEvents?: FusionEvent[];
+  componentVisibility?: ComponentVisibility;
+  onToggleComponent?: (key: keyof ComponentVisibility) => void;
 }
 
 const severityColors: Record<AirspaceAlert["severity"], string> = {
@@ -260,7 +264,7 @@ const createNewsIcon = (severity: string, category: string, special: boolean) =>
   });
 };
 
-export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, onToggleLayer, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [] }: IntelMapProps) => {
+export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, onToggleLayer, safetyData, flyToTarget, newsMarkers = [], telegramMarkers = [], fusionEvents = [], componentVisibility, onToggleComponent }: IntelMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlayGroupRef = useRef<L.LayerGroup | null>(null);
@@ -2183,7 +2187,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
   return (
     <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
-      <HolographicOverlay alertCount={totalAlerts} />
+      {(componentVisibility?.holographic !== false) && <HolographicOverlay alertCount={totalAlerts} />}
 
       {/* Expanded sub-panels that pop up above command bar */}
       {cmdUp42Open && (
@@ -2265,6 +2269,8 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         iranFIRActive={showIranAirspace}
         onOpenSnapMe={() => setShowSnapMe(true)}
         onOpenScouting={() => setShowScouting(true)}
+        componentVisibility={componentVisibility || { header: true, statsBar: true, leftSidebar: true, rightSidebar: true, bottomRow: true, holographic: true, disclaimer: true }}
+        onToggleComponent={onToggleComponent || (() => {})}
       />
 
 
