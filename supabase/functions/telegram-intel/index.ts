@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CACHE_TTL_HOURS = 24;
+const CACHE_TTL_HOURS = 1; // Reduced from 24h for fresher data
 
 function getSupabase() {
   return createClient(
@@ -16,17 +16,48 @@ function getSupabase() {
 }
 
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+  // Try Lovable AI Gateway first (no API key needed), then fall back to direct Gemini
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
+    // Attempt 1: Lovable AI Gateway
+    if (lovableKey) {
+      try {
+        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${lovableKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
+          signal: controller.signal,
+        });
+        if (resp.status === 429) throw new Error("RATE_LIMIT");
+        if (resp.status === 402) throw new Error("PAYMENT_REQUIRED");
+        if (resp.ok) {
+          const data = await resp.json();
+          let content = data.choices?.[0]?.message?.content || "";
+          content = content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+          return content;
+        }
+        console.warn("Lovable AI failed, falling back to Gemini:", resp.status);
+      } catch (e) {
+        if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) throw e;
+        console.warn("Lovable AI error, falling back:", e);
+      }
+    }
+
+    // Attempt 2: Direct Gemini API
+    if (!geminiKey) throw new Error("No AI provider available");
+
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${geminiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ model: "gemini-2.5-flash", messages }),
@@ -94,23 +125,32 @@ serve(async (req) => {
   try {
     const sb = getSupabase();
 
-    // Check cache — return cached markers if less than 24h old
-    const { data: cached } = await sb
-      .from("telegram_intel_cache")
-      .select("markers, fetched_at")
-      .eq("region_focus", "middle_east")
-      .order("fetched_at", { ascending: false })
-      .limit(1)
-      .single();
+    // Check if force refresh requested
+    let force = false;
+    try {
+      const body = await req.json();
+      force = body?.force === true;
+    } catch { /* no body is fine */ }
 
-    if (cached) {
-      const age = Date.now() - new Date(cached.fetched_at).getTime();
-      const ttl = CACHE_TTL_HOURS * 60 * 60 * 1000;
-      if (age < ttl) {
-        console.log(`Returning cached markers (age: ${Math.round(age / 60000)}min)`);
-        return new Response(JSON.stringify({ markers: cached.markers, cached: true, age_minutes: Math.round(age / 60000) }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    // Check cache — return cached markers if less than TTL old
+    if (!force) {
+      const { data: cached } = await sb
+        .from("telegram_intel_cache")
+        .select("markers, fetched_at")
+        .eq("region_focus", "middle_east")
+        .order("fetched_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (cached) {
+        const age = Date.now() - new Date(cached.fetched_at).getTime();
+        const ttl = CACHE_TTL_HOURS * 60 * 60 * 1000;
+        if (age < ttl) {
+          console.log(`Returning cached markers (age: ${Math.round(age / 60000)}min)`);
+          return new Response(JSON.stringify({ markers: cached.markers, cached: true, age_minutes: Math.round(age / 60000) }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 
@@ -123,6 +163,7 @@ serve(async (req) => {
       });
     }
 
+    const now = new Date().toISOString().split("T")[0];
     const BATCH_SIZE = 20;
     const batches: Array<Array<{ id: number; text: string; date: string }>> = [];
     for (let i = 0; i < posts.length; i += BATCH_SIZE) {
@@ -132,9 +173,9 @@ serve(async (req) => {
     const allMarkers: any[] = [];
 
     for (const batch of batches) {
-      const postsSummary = batch.map((p, i) => `[${i}] ${p.text.slice(0, 300)}`).join("\n---\n");
+      const postsSummary = batch.map((p, i) => `[${i}] (posted: ${p.date || "unknown"}) ${p.text.slice(0, 300)}`).join("\n---\n");
 
-      const prompt = `You are a military intelligence geo-analyst. Analyze these WarsLeaks Telegram posts and extract ALL that mention specific military events, attacks, missile launches, drone strikes, troop movements, naval incidents, protests, airstrikes, explosions, or geopolitical events.
+      const prompt = `You are a military intelligence geo-analyst. Today's date is ${now}. Analyze these WarsLeaks Telegram posts and extract ALL that mention specific military events, attacks, missile launches, drone strikes, troop movements, naval incidents, protests, airstrikes, explosions, or geopolitical events.
 
 PRIORITY REGIONS (extract ALL events from these):
 - JORDAN: Amman, Aqaba, Zarqa, Mafraq, border areas, al-Tanf
@@ -218,7 +259,7 @@ ${postsSummary}`;
       fetched_at: new Date().toISOString(),
     });
 
-    console.log(`Cached ${allMarkers.length} markers for 24h`);
+    console.log(`Cached ${allMarkers.length} markers for ${CACHE_TTL_HOURS}h`);
 
     return new Response(JSON.stringify({ markers: allMarkers, cached: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

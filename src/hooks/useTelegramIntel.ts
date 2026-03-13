@@ -19,14 +19,23 @@ export function useTelegramIntel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch_ = useCallback(async () => {
+  const fetch_ = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("telegram-intel");
+      const { data, error: fnError } = await supabase.functions.invoke("telegram-intel", {
+        body: force ? { force: true } : undefined,
+      });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
-      setMarkers(data?.markers || []);
+      const incoming: TelegramMarker[] = data?.markers || [];
+
+      // Accumulate markers, deduplicate by ID
+      setMarkers(prev => {
+        const merged = new Map(prev.map(m => [m.id, m]));
+        incoming.forEach(m => merged.set(m.id, m));
+        return Array.from(merged.values());
+      });
     } catch (e) {
       console.error("Telegram intel error:", e);
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -37,9 +46,11 @@ export function useTelegramIntel() {
 
   useEffect(() => {
     fetch_();
-    const interval = setInterval(fetch_, 120000); // refresh every 2 min
+    const interval = setInterval(() => fetch_(), 90000); // 90s refresh
     return () => clearInterval(interval);
   }, [fetch_]);
 
-  return { markers, loading, error, refresh: fetch_ };
+  const refresh = useCallback(() => fetch_(true), [fetch_]);
+
+  return { markers, loading, error, refresh };
 }

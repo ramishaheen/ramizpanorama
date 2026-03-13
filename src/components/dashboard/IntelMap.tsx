@@ -485,37 +485,67 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       AIRSTRIKE: "💣", EXPLOSION: "💥", PROTEST: "✊", DIPLOMATIC: "🏛️", HUMANITARIAN: "🩺",
     };
 
+    const now = Date.now();
+
     telegramMarkers.forEach((tm) => {
       const emoji = categoryEmojis[tm.category] || "📡";
       const color = tm.special ? "#ff0040" : (newsSeverityColors[tm.severity] || "#a855f7");
-      const size = tm.special ? 36 : 28;
       const glowColor = tm.special ? "#ff0040" : "#a855f7";
+
+      // Freshness calculation
+      const eventTime = tm.timestamp ? new Date(tm.timestamp).getTime() : 0;
+      const ageMs = now - eventTime;
+      const ageHours = ageMs / (1000 * 60 * 60);
+      const isFresh = ageHours < 1;
+      const isRecent = ageHours < 2;
+
+      // Larger + more aggressive pulse for fresh events
+      const size = tm.special ? 38 : (isFresh ? 34 : 28);
+      const pulseSpeed = isFresh ? '0.8s' : (tm.special ? '1s' : '2.5s');
+      const borderWidth = isFresh ? 3 : (tm.special ? 3 : 2);
+
+      // Time ago label
+      let timeAgo = "";
+      if (eventTime > 0) {
+        if (ageHours < 1) {
+          const mins = Math.max(1, Math.round(ageMs / 60000));
+          timeAgo = `${mins}m ago`;
+        } else if (ageHours < 24) {
+          timeAgo = `${Math.round(ageHours)}h ago`;
+        } else {
+          timeAgo = `${Math.round(ageHours / 24)}d ago`;
+        }
+      }
 
       const icon = L.divIcon({
         className: "telegram-marker",
         html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
-          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;border:${tm.special ? 3 : 2}px solid ${color};box-shadow:0 0 ${tm.special ? 16 : 8}px ${glowColor};animation:pulse ${tm.special ? '1s' : '2.5s'} ease-in-out infinite;"></div>
-          <div style="position:absolute;width:${size - 10}px;height:${size - 10}px;border-radius:50%;background:${color};opacity:0.15;"></div>
-          <div style="font-size:${tm.special ? 18 : 14}px;filter:drop-shadow(0 0 ${tm.special ? 10 : 6}px ${glowColor});">${emoji}</div>
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;border:${borderWidth}px solid ${color};box-shadow:0 0 ${isFresh ? 20 : (tm.special ? 16 : 8)}px ${glowColor};animation:pulse ${pulseSpeed} ease-in-out infinite;"></div>
+          <div style="position:absolute;width:${size - 10}px;height:${size - 10}px;border-radius:50%;background:${color};opacity:${isFresh ? 0.25 : 0.15};"></div>
+          <div style="font-size:${tm.special ? 18 : (isFresh ? 16 : 14)}px;filter:drop-shadow(0 0 ${isFresh ? 12 : (tm.special ? 10 : 6)}px ${glowColor});">${emoji}</div>
+          ${isRecent ? `<div style="position:absolute;top:-8px;right:-12px;background:#00ff88;color:#000;font-size:7px;font-weight:800;padding:1px 4px;border-radius:3px;white-space:nowrap;letter-spacing:0.5px;box-shadow:0 0 6px #00ff88;">📡 LIVE</div>` : ""}
         </div>`,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2],
+        iconSize: [size + 24, size + 10],
+        iconAnchor: [(size + 24) / 2, (size + 10) / 2],
         popupAnchor: [0, -(size / 2 + 4)],
       });
 
       const badge = tm.special
         ? `<div style="background:#ff0040;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">⚠ WARSLEAKS SPECIAL</div>`
-        : `<div style="background:#a855f7;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">📡 WARSLEAKS</div>`;
+        : isRecent
+          ? `<div style="background:linear-gradient(90deg,#a855f7,#00ff88);color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">📡 WARSLEAKS LIVE</div>`
+          : `<div style="background:#a855f7;color:#fff;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;letter-spacing:1px;">📡 WARSLEAKS</div>`;
 
-      const marker = L.marker([tm.lat, tm.lng], { icon, zIndexOffset: tm.special ? 1200 : 500 });
+      const marker = L.marker([tm.lat, tm.lng], { icon, zIndexOffset: tm.special ? 1200 : (isFresh ? 1000 : 500) });
       bindHoverPopup(marker, `<div style="${popupStyle}">
           ${badge}
           <div style="color:${color};font-weight:700;font-size:12px;margin-bottom:4px;">${emoji} ${tm.headline}</div>
           <div style="color:#aaa;font-size:10px;margin-bottom:4px;">${tm.summary}</div>
-          <div style="display:flex;gap:8px;margin-top:4px;">
+          <div style="display:flex;gap:8px;margin-top:4px;align-items:center;">
             <span style="color:${color};font-size:9px;font-weight:600;">● ${tm.severity.toUpperCase()}</span>
             <span style="color:#888;font-size:9px;">${tm.category}</span>
             <span style="color:#a855f7;font-size:9px;">WarsLeaks</span>
+            ${timeAgo ? `<span style="color:${isFresh ? '#00ff88' : '#666'};font-size:9px;font-weight:${isFresh ? '700' : '400'};">${timeAgo}</span>` : ""}
           </div>
         </div>`);
       group.addLayer(marker);
