@@ -17,6 +17,9 @@ export interface LayerState {
   airQuality: boolean;
   aisVessels: boolean;
   cities: boolean;
+  googlePOI: boolean;
+  googleTraffic: boolean;
+  googleRoutes: boolean;
 }
 
 interface LayerControlsProps {

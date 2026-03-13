@@ -80,3 +80,12 @@ verify_jwt = false
 
 [functions.streetview-detect]
 verify_jwt = false
+
+[functions.google-places]
+verify_jwt = false
+
+[functions.google-geocode]
+verify_jwt = false
+
+[functions.google-directions]
+verify_jwt = false
