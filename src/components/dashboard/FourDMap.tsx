@@ -402,6 +402,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "geoFusion", label: "Geo-Fusion Events", icon: <Zap className="h-3.5 w-3.5" />, color: "#eab308", count: stats.fusion },
     { id: "borders", label: "Country Borders", icon: <MapPin className="h-3.5 w-3.5" />, color: "#00ffc8" },
     { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3.5 w-3.5" />, color: "#e879f9" },
+    { id: "googlePOI", label: "Google POIs", icon: <MapPin className="h-3.5 w-3.5" />, color: "#a855f7" },
   ];
 
   const totalActive = Object.values(layers).filter(Boolean).length;
