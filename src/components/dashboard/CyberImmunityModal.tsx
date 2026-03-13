@@ -1614,8 +1614,8 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           )}
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="w-[272px] border-l border-border bg-card/30 flex flex-col max-lg:hidden">
+        {/* RIGHT PANEL — hidden below lg */}
+        <div className="w-full lg:w-[272px] border-t lg:border-t-0 lg:border-l border-border bg-card/30 flex flex-col max-lg:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
               <div className="text-center p-3 rounded border border-border bg-background/50">
