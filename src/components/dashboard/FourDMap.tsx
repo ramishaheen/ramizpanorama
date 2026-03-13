@@ -931,6 +931,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         const cIcon = t.classification === "tank" ? "🪖" : t.classification === "sam_site" ? "🎯" : t.classification === "missile_launcher" ? "🚀" : t.classification === "radar" ? "📡" : t.classification === "artillery" ? "💥" : t.classification === "command_post" ? "🏛" : "⚠️";
         points.push({
           lat: t.lat, lng: t.lng, pointAlt: 0.035, color: pCol, radius: (t.priority === "critical" ? 0.4 : 0.3) * densityMult,
+          targetTrackId: t.id,
           label: `<div style="font-family:monospace;font-size:11px;background:rgba(15,5,5,0.96);border:1px solid ${pCol};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${pCol}40"><div style="color:${pCol};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> TARGET ${t.track_id}</div><div style="font-size:10px;margin-top:2px">${t.classification.toUpperCase().replace("_"," ")} — ${(t.confidence*100).toFixed(0)}%</div><div style="color:#888;font-size:8px;margin-top:1px">${t.priority.toUpperCase()} PRIORITY • ${t.source_sensor.toUpperCase()} • ${t.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${t.ai_assessment || ""}</div></div>`,
         });
       });
