@@ -29,6 +29,7 @@ import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
 import { WeatherTrafficPanel } from "@/components/dashboard/WeatherTrafficPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { RotateDeviceOverlay } from "@/components/RotateDeviceOverlay";
 import {
   DndContext,
   closestCenter,
@@ -284,6 +285,7 @@ const Index = () => {
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen overflow-hidden relative">
+        <RotateDeviceOverlay />
         <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} />
         <StatsBar
           airspaceCount={dailyCounts.airspaceCount}
@@ -318,24 +320,18 @@ const Index = () => {
                   fusionEvents={geoFusion.data?.events}
                 />
               </div>
-              <div className="flex flex-col sm:flex-row border-t border-border sm:h-[220px]">
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <CitizenSecurity
-                    data={citizenSecurity.data}
-                    loading={citizenSecurity.loading}
-                    error={citizenSecurity.error}
-                    onRefresh={citizenSecurity.refresh}
-                  />
-                </div>
-                <div className="flex-1 min-w-0 overflow-hidden border-t sm:border-t-0 sm:border-l border-border/50">
-                  <SectorPredictions />
-                </div>
-              </div>
             </div>
           )}
 
           {mobileTab === "intel" && (
-            <div className="h-full overflow-y-auto p-3 space-y-3">
+            <div className="h-full overflow-y-auto p-2 space-y-2">
+              <CitizenSecurity
+                data={citizenSecurity.data}
+                loading={citizenSecurity.loading}
+                error={citizenSecurity.error}
+                onRefresh={citizenSecurity.refresh}
+              />
+              <SectorPredictions />
               {leftOrder.map((id) => (
                 <div key={id}>{leftWidgets[id]}</div>
               ))}
@@ -351,7 +347,7 @@ const Index = () => {
           )}
 
           {mobileTab === "layers" && (
-            <div className="h-full overflow-y-auto p-3 space-y-3">
+            <div className="h-full overflow-y-auto p-2 space-y-2">
               <LayerControls layers={layers} onToggle={toggleLayer} />
               <TimelineSlider events={timeline} />
             </div>

@@ -821,3 +821,40 @@
   transform: scale(1.2);
   filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.5));
 }
+
+/* Rotate device animation */
+@keyframes rotate-phone {
+  0%, 30% { transform: rotate(0deg); }
+  50%, 80% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-rotate-phone {
+  animation: rotate-phone 3s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Mobile portrait optimizations */
+@media (max-width: 767px) and (orientation: portrait) {
+  .mobile-compact-header {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+  
+  .mobile-stats-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mobile-stats-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Mobile landscape optimizations */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .landscape-compact-header {
+    max-height: 32px;
+    overflow: hidden;
+  }
+}
