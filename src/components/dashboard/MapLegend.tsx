@@ -46,6 +46,8 @@ interface MapLegendProps {
 
 export const MapLegend = ({ layers, onToggleLayer }: MapLegendProps) => {
   const [expanded, setExpanded] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null);
 
   const isActive = (key: LegendLayerKey) => layers ? layers[key] : true;
 
@@ -55,9 +57,17 @@ export const MapLegend = ({ layers, onToggleLayer }: MapLegendProps) => {
     }
   };
 
+  useEffect(() => {
+    if (expanded && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ left: rect.left, bottom: window.innerHeight - rect.top + 4 });
+    }
+  }, [expanded]);
+
   return (
     <div className="relative">
       <button
+        ref={btnRef}
         onClick={() => setExpanded((v) => !v)}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/90 backdrop-blur-xl shadow-lg hover:bg-secondary/50 transition-all cursor-pointer"
       >
@@ -71,13 +81,14 @@ export const MapLegend = ({ layers, onToggleLayer }: MapLegendProps) => {
       </button>
 
       <AnimatePresence>
-        {expanded && (
+        {expanded && pos && createPortal(
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-full mb-1 left-0 z-[9999] rounded-lg border border-border/60 bg-card/95 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] w-[230px] max-h-[60vh] overflow-y-auto"
+            className="fixed rounded-lg border border-border/60 bg-card/95 backdrop-blur-xl shadow-[0_4px_24px_-4px_hsl(220_20%_5%/0.6)] w-[230px] max-h-[60vh] overflow-y-auto"
+            style={{ left: pos.left, bottom: pos.bottom, zIndex: 99999 }}
           >
             <div className="p-3">
               <div className="text-[8px] font-mono text-muted-foreground/60 uppercase tracking-[0.15em] mb-2 font-semibold">
@@ -141,7 +152,8 @@ export const MapLegend = ({ layers, onToggleLayer }: MapLegendProps) => {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
     </div>
