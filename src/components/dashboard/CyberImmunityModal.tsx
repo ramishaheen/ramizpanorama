@@ -1199,10 +1199,20 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
               <APTIntelPanel />
             ) : centerView === "timeline" ? (
               <IncidentTimeline threats={filtered} onSelect={handleSelect} />
-            ) : centerView === "engines" ? (
-              <IntelEnginesPanel />
             ) : (
-              <EnhancedDarkWebMonitor entries={darkWeb.entries} torAnalysis={darkWeb.torAnalysis} loading={darkWeb.loading} onFetchDossier={handleFetchDossier} />
+              <EnhancedDarkWebMonitor
+                entries={darkWeb.entries}
+                torAnalysis={darkWeb.torAnalysis}
+                indicatorExtraction={darkWeb.indicatorExtraction}
+                threatCorrelation={darkWeb.threatCorrelation}
+                forumAnalysis={darkWeb.forumAnalysis}
+                ransomwareLeaks={darkWeb.ransomwareLeaks}
+                alertRules={darkWeb.alertRules}
+                dashboardStats={darkWeb.dashboardStats}
+                temporalTrends={darkWeb.temporalTrends}
+                loading={darkWeb.loading}
+                onFetchDossier={handleFetchDossier}
+              />
             )}
 
             {/* Live stats HUD overlay (when no threat selected) */}
