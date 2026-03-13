@@ -2199,7 +2199,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       )}
       {cmdLegendOpen && (
         <div className="absolute bottom-[36px] left-3 z-[1001]">
-          <MapLegend />
+          <MapLegend layers={layers} onToggleLayer={onToggleLayer} />
         </div>
       )}
       {cmdHistoryOpen && (
