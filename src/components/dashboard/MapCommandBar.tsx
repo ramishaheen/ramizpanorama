@@ -217,7 +217,7 @@ export const MapCommandBar = ({
 
       {/* Intel expanded panel */}
       {intelExpanded && (
-        <div className="gotham-expanded-panel absolute bottom-full right-0 mb-0 w-[220px]">
+        <div className="gotham-expanded-panel absolute bottom-full right-0 mb-1.5 w-[220px]">
           <div className="px-3 py-2 border-b border-primary/20">
             <span className="text-[9px] font-mono font-bold text-primary uppercase tracking-wider">INTEL TOOLS</span>
           </div>
