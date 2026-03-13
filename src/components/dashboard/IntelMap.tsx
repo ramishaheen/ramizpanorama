@@ -1598,7 +1598,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       if (acMap.size > 0) {
         if (sources.length) setFlightSource(sources.join(" + "));
         const newAircraft: FlightAircraft[] = Array.from(acMap.values());
-        if (data.source) setFlightSource(data.source);
+        
         const now = Date.now();
         const history = { ...flightTrailsRef.current };
         const prevPos = { ...prevFlightPositions.current };
