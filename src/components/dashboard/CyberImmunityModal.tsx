@@ -1106,6 +1106,16 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           {selectedThreat && (
             <ThreatDetailCard threat={selectedThreat} onClose={() => setSelectedThreat(null)} />
           )}
+
+          {/* Actor Dossier overlay */}
+          {showDossier && (
+            <ThreatActorDossierPanel
+              dossier={dossier.dossier}
+              loading={dossier.loading}
+              error={dossier.error}
+              onClose={() => { setShowDossier(false); clearDossier(); }}
+            />
+          )}
         </div>
 
         {/* RIGHT PANEL */}
