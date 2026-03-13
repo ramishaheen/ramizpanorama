@@ -517,12 +517,9 @@
   flex: 1;
   overflow-y: auto;
   padding: 2px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
-.scouting-grid-row {
+.scouting-sortable-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-auto-rows: minmax(220px, auto);
@@ -530,10 +527,10 @@
 }
 
 @media (max-width: 1024px) {
-  .scouting-grid-row { grid-template-columns: repeat(2, 1fr); }
+  .scouting-sortable-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
-  .scouting-grid-row { grid-template-columns: 1fr; }
+  .scouting-sortable-grid { grid-template-columns: 1fr; }
 }
 
 .scouting-tile {
@@ -577,21 +574,6 @@
   letter-spacing: 0.15em;
   color: hsl(var(--primary));
   text-transform: uppercase;
-}
-
-.scouting-civil-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
-  border-top: 1px solid hsl(190 60% 18% / 0.3);
-  padding-top: 2px;
-}
-@media (max-width: 768px) {
-  .scouting-civil-row { grid-template-columns: 1fr; }
-}
-
-.scouting-civil-tile {
-  min-height: 180px;
 }
 
 /* ===== GOTHAM COMMAND BAR ===== */
