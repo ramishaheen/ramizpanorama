@@ -98,3 +98,9 @@ verify_jwt = false
 
 [functions.cyber-threats]
 verify_jwt = false
+
+[functions.c2-targeting]
+verify_jwt = false
+
+[functions.c2-assistant]
+verify_jwt = false
