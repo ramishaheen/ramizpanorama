@@ -643,26 +643,50 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     aiScrollRef.current?.scrollTo({ top: aiScrollRef.current.scrollHeight, behavior: "smooth" });
   }, [aiMessages]);
 
+  // Build satellite metadata for AI context
+  const buildSatContext = useCallback((sat: SatelliteData) => ({
+    name: sat.name,
+    noradId: sat.noradId,
+    category: sat.category,
+    country: sat.country,
+    operator: sat.operator,
+    lat: sat.lat,
+    lng: sat.lng,
+    alt: sat.alt,
+    orbitType: getOrbitType(sat.alt, sat.inclination, sat.eccentricity),
+    inclination: sat.inclination,
+    raan: sat.raan,
+    meanAnomaly: sat.meanAnomaly,
+    meanMotion: sat.meanMotion,
+    eccentricity: sat.eccentricity,
+    period: sat.period,
+    velocity: sat.velocity,
+    epochYear: sat.epochYear,
+    epochDay: sat.epochDay,
+    intlDesignator: sat.intlDesignator,
+    launchYear: sat.launchYear,
+    source: sat.source,
+  }), []);
+
   const openAiChat = useCallback((sat: SatelliteData) => {
     setAiChatSat(sat);
     setHoveredSat(null);
-    const initialQ = `Provide OSINT intelligence analysis on satellite "${sat.name}" (NORAD: ${sat.noradId || "N/A"}, Category: ${sat.category}, Country: ${sat.country || "Unknown"}, Operator: ${sat.operator || "Unknown"}, Alt: ${Math.round(sat.alt)}km, Orbit: ${getOrbitType(sat.alt, sat.inclination, sat.eccentricity)}, Inc: ${sat.inclination?.toFixed(1) || "N/A"}°, Source: ${sat.source || "CelesTrak"}). Include: mission purpose, military/intelligence significance, coverage area over Middle East, operator details, and any known OSINT about this satellite's recent activities or significance in current geopolitical context.`;
+    const initialQ = `Provide full intelligence analysis on satellite "${sat.name}". Include: mission purpose & payload sensors, military/intelligence significance, coverage capabilities (ground swath, revisit rate), operator details, constellation membership, and tactical relevance for Middle East coverage. Calculate the current coverage footprint radius.`;
     setAiMessages([{ role: "user", content: initialQ }]);
     setAiLoading(true);
 
-    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/war-chat`;
+    const chatUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/satellite-chat`;
     fetch(chatUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages: [{ role: "user", content: initialQ }] }),
+      body: JSON.stringify({ messages: [{ role: "user", content: initialQ }], satellite: buildSatContext(sat) }),
     }).then(async (resp) => {
       if (!resp.ok) {
         const status = resp.status;
         setAiLoading(false);
-        // Check if the response is JSON (error) vs SSE stream
         const contentType = resp.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
           try {
@@ -736,7 +760,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setAiLoading(false);
       setAiMessages(prev => [...prev, { role: "assistant", content: "⚠️ Connection failed. Try again." }]);
     });
-  }, []);
+  }, [buildSatContext]);
 
   const sendAiMessage = useCallback(async () => {
     const text = aiInput.trim();
