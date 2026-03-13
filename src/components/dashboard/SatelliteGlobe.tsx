@@ -468,6 +468,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [loading, setLoading] = useState(true);
   const [globeInitError, setGlobeInitError] = useState<string | null>(null);
   const [showLabels, setShowLabels] = useState(false);
+  const [liteMode, setLiteMode] = useState(false);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedSat, setSelectedSat] = useState<SatelliteData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -2404,6 +2405,19 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
       {/* Right sidebar controls */}
       <div className="absolute top-20 right-3 z-[2002] space-y-1.5 pointer-events-auto w-28">
+        <button
+          onClick={() => {
+            const next = !liteMode;
+            setLiteMode(next);
+            const renderer = globeRef.current?.renderer?.();
+            if (renderer) {
+              renderer.setPixelRatio(next ? 0.5 : window.devicePixelRatio);
+            }
+          }}
+          className={`w-full gotham-orbital-btn ${liteMode ? 'gotham-orbital-btn-active' : ''}`}
+        >
+          <Zap className="h-2.5 w-2.5" /> {liteMode ? "HD Mode" : "Lite Mode"}
+        </button>
         <button
           onClick={() => setShowLabels(!showLabels)}
           className={`w-full gotham-orbital-btn ${showLabels ? 'gotham-orbital-btn-active' : ''}`}
