@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle, Radio, X, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
