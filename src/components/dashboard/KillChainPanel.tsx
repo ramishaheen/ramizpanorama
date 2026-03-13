@@ -94,14 +94,20 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
       let weapon = "TBD";
       let platform = "TBD";
       try {
-        const { data: s2sData } = await supabase.functions.invoke("sensor-to-shooter", {
+        const { data: s2sData, error: s2sErr } = await supabase.functions.invoke("sensor-to-shooter", {
           body: { action: "recommend", target_id: target.id },
         });
-        if (s2sData?.recommendation) {
+        if (s2sErr) {
+          console.error("S2S recommend error:", s2sErr);
+          toast.warning("⚠ S2S engine unavailable — using defaults");
+        } else if (s2sData?.recommendation) {
           weapon = s2sData.recommendation.recommended_weapon || weapon;
           platform = s2sData.recommendation.callsign || platform;
         }
-      } catch { /* proceed without S2S */ }
+      } catch (e) {
+        console.error("S2S invoke failed:", e);
+        toast.warning("⚠ S2S engine unavailable — using defaults");
+      }
 
       await supabase.from("kill_chain_tasks").insert({
         target_track_id: target.id,
