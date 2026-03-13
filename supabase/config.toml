@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.google-directions]
 verify_jwt = false
+
+[functions.satellite-chat]
+verify_jwt = false
