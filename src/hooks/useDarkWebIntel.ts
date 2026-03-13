@@ -4,7 +4,7 @@ import type { CyberThreat } from "@/hooks/useCyberThreats";
 
 export interface DarkWebEntry {
   id: string;
-  type: "onion" | "paste" | "forum" | "marketplace" | "exit_node" | "hidden_service";
+  type: "onion" | "paste" | "forum" | "marketplace" | "exit_node" | "hidden_service" | "ransomware_leak" | "exploit_trade" | "credential_dump" | "botnet_c2";
   title: string;
   detail: string;
   severity: string;
@@ -36,6 +36,109 @@ export interface TorAnalysis {
   networkTrends: string;
 }
 
+/* ── Indicator Extraction ── */
+export interface NetworkIP { value: string; country: string; flag: string; reputation: string; activity: string; asn: string; }
+export interface NetworkDomain { value: string; registrar: string; reputation: string; activity: string; }
+export interface NetworkURL { value: string; category: string; }
+export interface NetworkASN { value: string; name: string; country: string; maliciousCount: number; }
+export interface NetworkPort { port: number; service: string; exposureCount: number; risk: string; }
+
+export interface VulnCVE { id: string; cvss: number; description: string; exploitAvailable: boolean; patchAvailable: boolean; discussedInForums: boolean; }
+export interface VulnExploit { name: string; targetCVE: string; availability: string; price: string; }
+export interface VulnPatch { cve: string; vendor: string; status: string; }
+
+export interface MalwareHash { value: string; family: string; type: string; firstSeen: string; }
+export interface MalwareFamily { name: string; type: string; activeC2Count: number; recentActivity: string; }
+export interface C2Server { ip: string; domain: string; malware: string; port: number; protocol: string; country: string; flag: string; status: string; }
+
+export interface APTGroup { name: string; country: string; flag: string; activeCampaigns: number; primaryTargets: string[]; }
+export interface RansomwareGang { name: string; activeLeaks: number; totalVictims: number; avgRansom: string; }
+export interface HacktivistGroup { name: string; motivation: string; recentTargets: string[]; }
+
+export interface CryptoWallet { address: string; currency: string; associatedGroup: string; estimatedValue: string; }
+
+export interface IndicatorExtraction {
+  network: { ips: NetworkIP[]; domains: NetworkDomain[]; urls: NetworkURL[]; asns: NetworkASN[]; ports: NetworkPort[]; };
+  vulnerability: { cves: VulnCVE[]; exploits: VulnExploit[]; patches: VulnPatch[]; };
+  malware: { hashes: MalwareHash[]; families: MalwareFamily[]; c2Servers: C2Server[]; };
+  actors: { aptGroups: APTGroup[]; ransomwareGangs: RansomwareGang[]; hacktivistGroups: HacktivistGroup[]; };
+  financial: { cryptoWallets: CryptoWallet[]; };
+}
+
+/* ── Threat Correlation ── */
+export interface CorrelationStage { stage: string; detail: string; timestamp: string; }
+export interface ThreatCorrelation {
+  id: string;
+  title: string;
+  stages: CorrelationStage[];
+  earlyWarning: boolean;
+  severity: string;
+  affectedSectors: string[];
+  recommendation: string;
+}
+
+/* ── Forum Analysis ── */
+export interface ForumPost {
+  id: string;
+  title: string;
+  forum: string;
+  author: string;
+  riskLevel: string;
+  category: string;
+  snippet: string;
+  timestamp: string;
+  language: string;
+  relatedActors: string[];
+}
+
+/* ── Ransomware Leaks ── */
+export interface RansomwareLeak {
+  id: string;
+  group: string;
+  victim: string;
+  sector: string;
+  country: string;
+  flag: string;
+  dataSize: string;
+  deadline: string;
+  status: string;
+  leakSiteOnion: string;
+}
+
+/* ── Alert Rules ── */
+export interface AlertRule {
+  id: string;
+  type: string;
+  message: string;
+  severity: string;
+  triggeredAt: string;
+  relatedIndicators: string[];
+}
+
+/* ── Dashboard Stats ── */
+export interface CountryStat { country: string; flag: string; count: number; }
+export interface RansomwareGroupStat { name: string; activeLeaks: number; }
+export interface CVEStat { id: string; mentions: number; severity: string; }
+export interface BotnetStat { name: string; estimatedSize: number; primaryMalware: string; }
+
+export interface DashboardStats {
+  topAttackingCountries: CountryStat[];
+  topTargetedCountries: CountryStat[];
+  activeRansomwareGroups: RansomwareGroupStat[];
+  mostDiscussedCVEs: CVEStat[];
+  largestBotnets: BotnetStat[];
+}
+
+/* ── Temporal Trends ── */
+export interface TemporalTrend {
+  period: string;
+  malwareIncidents: number;
+  ransomwareIncidents: number;
+  exploitDiscussions: number;
+  dataBreaches: number;
+  trend: string;
+}
+
 export interface ActorDossier {
   name: string;
   aliases: string[];
@@ -59,6 +162,13 @@ export interface ActorDossier {
 interface DarkWebState {
   entries: DarkWebEntry[];
   torAnalysis: TorAnalysis | null;
+  indicatorExtraction: IndicatorExtraction | null;
+  threatCorrelation: ThreatCorrelation[];
+  forumAnalysis: ForumPost[];
+  ransomwareLeaks: RansomwareLeak[];
+  alertRules: AlertRule[];
+  dashboardStats: DashboardStats | null;
+  temporalTrends: TemporalTrend[];
   loading: boolean;
   error: string | null;
 }
@@ -69,8 +179,15 @@ interface DossierState {
   error: string | null;
 }
 
+const EMPTY_STATE: DarkWebState = {
+  entries: [], torAnalysis: null, indicatorExtraction: null,
+  threatCorrelation: [], forumAnalysis: [], ransomwareLeaks: [],
+  alertRules: [], dashboardStats: null, temporalTrends: [],
+  loading: false, error: null,
+};
+
 export function useDarkWebIntel(threats: CyberThreat[]) {
-  const [darkWeb, setDarkWeb] = useState<DarkWebState>({ entries: [], torAnalysis: null, loading: false, error: null });
+  const [darkWeb, setDarkWeb] = useState<DarkWebState>(EMPTY_STATE);
   const [dossier, setDossier] = useState<DossierState>({ dossier: null, loading: false, error: null });
 
   const fetchDarkWeb = useCallback(async () => {
@@ -87,6 +204,13 @@ export function useDarkWebIntel(threats: CyberThreat[]) {
       setDarkWeb({
         entries: data?.entries || [],
         torAnalysis: data?.torAnalysis || null,
+        indicatorExtraction: data?.indicatorExtraction || null,
+        threatCorrelation: data?.threatCorrelation || [],
+        forumAnalysis: data?.forumAnalysis || [],
+        ransomwareLeaks: data?.ransomwareLeaks || [],
+        alertRules: data?.alertRules || [],
+        dashboardStats: data?.dashboardStats || null,
+        temporalTrends: data?.temporalTrends || [],
         loading: false,
         error: null,
       });
