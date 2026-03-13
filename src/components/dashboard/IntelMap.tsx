@@ -1526,14 +1526,13 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           </div>
         </div>`;
 
-      const marker = L.marker([city.lat, city.lng], { icon, zIndexOffset: 500 })
-        .bindPopup(popupContent, {
-          className: "city-landmark-popup",
-          maxWidth: 240,
-          minWidth: 220,
-      closeButton: true,
-          autoPan: false,
-        });
+      const marker = L.marker([city.lat, city.lng], { icon, zIndexOffset: 500 });
+      bindHoverPopup(marker, popupContent, {
+        className: "city-landmark-popup",
+        maxWidth: 240,
+        minWidth: 220,
+        closeButton: false,
+      });
       group.addLayer(marker);
     });
   }, [ME_CITY_LANDMARKS, layers.cities]);
