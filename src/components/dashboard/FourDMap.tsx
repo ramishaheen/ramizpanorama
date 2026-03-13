@@ -229,6 +229,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     satellites: true, flights: true, maritime: true, earthquakes: true, wildfires: true,
     conflicts: true, rockets: true, nuclear: true, airQuality: false, geoFusion: true,
     borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
+    blueForce: true, redForce: true, targetTracks: true, killChain: false,
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
