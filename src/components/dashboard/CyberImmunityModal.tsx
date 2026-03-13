@@ -1126,7 +1126,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <span className="text-primary">LOW: {stats.severityCounts.low}</span>
           <span className="text-muted-foreground">TOTAL: {filtered.length}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <button onClick={() => setCenterView("map")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "map" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Globe className="h-3 w-3 inline mr-1" />MAP
           </button>
@@ -1136,8 +1136,20 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <button onClick={() => setCenterView("darkweb")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "darkweb" ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Skull className="h-3 w-3 inline mr-1" />DARK WEB
           </button>
+          <button onClick={() => setCenterView("apt")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "apt" ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Shield className="h-3 w-3 inline mr-1" />APT INTEL
+          </button>
+          <button onClick={() => setCenterView("timeline")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "timeline" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Clock className="h-3 w-3 inline mr-1" />TIMELINE
+          </button>
+          <button onClick={() => setCenterView("engines")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "engines" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Github className="h-3 w-3 inline mr-1" />ENGINES
+          </button>
         </div>
       </div>
+
+      {/* ── ALERT BANNERS ── */}
+      <CyberAlertBanner threats={filtered} />
 
       {/* ── MAIN CONTENT ── */}
       <div className="flex flex-1 min-h-0">
