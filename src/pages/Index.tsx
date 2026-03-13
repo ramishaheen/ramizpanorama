@@ -330,11 +330,6 @@ const Index = () => {
                   telegramMarkers={telegramIntel.markers}
                   fusionEvents={geoFusion.data?.events}
                 />
-                <LiveDataFeedIndicator
-                  lastPollAt={lastPollAt}
-                  activeSources={Object.values(layers).filter(Boolean).length}
-                  dataFresh={dataFresh}
-                />
               </div>
             </div>
           )}
