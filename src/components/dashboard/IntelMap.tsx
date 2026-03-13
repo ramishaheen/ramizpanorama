@@ -933,7 +933,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         icon: createUserItemIcon(item.type || "marker"),
       });
 
-      marker.bindPopup(`
+      bindHoverPopup(marker, `
         <div style="${popupStyle}">
           <div style="color:${config.color};font-weight:700;margin-bottom:4px;">${item.label}</div>
           <div style="font-size:9px;text-transform:uppercase;opacity:0.5;margin-bottom:4px;">${item.type}</div>
@@ -941,7 +941,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
           ${item.severity ? `<div>Severity: <span style="color:${severityColors[(item.severity as AirspaceAlert["severity"]) || "medium"]}">${item.severity}</span></div>` : ""}
           ${item.radius ? `<div>Radius: ${item.radius} km</div>` : ""}
         </div>
-      `, popupOptions);
+      `);
 
       marker.addTo(group);
     });
