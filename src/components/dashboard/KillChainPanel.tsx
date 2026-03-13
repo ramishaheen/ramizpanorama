@@ -85,7 +85,7 @@ export const KillChainPanel = () => {
   }, {} as Record<string, number>);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div className="px-3 py-2 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
