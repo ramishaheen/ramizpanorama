@@ -2037,37 +2037,55 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Render coverage ring on globe
+  // Render ALL rings on globe — OSINT + City + Coverage (consolidated to prevent overwrites)
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
 
-    const cityRings = CITY_PRESETS.map(c => ({ ...c, maxR: 2, propagationSpeed: 1.5, isCoverage: false }));
+    // OSINT marker rings (conflict zones, military bases, naval, radar)
+    const osintRings = OSINT_MARKERS.map(m => ({
+      ...m,
+      maxR: m.type === "conflict" ? 3 : m.type === "naval" ? 2.5 : 1.5,
+      propagationSpeed: m.severity === "critical" ? 4 : m.severity === "high" ? 2.5 : 1.5,
+      repeatPeriod: m.severity === "critical" ? 600 : m.severity === "high" ? 900 : 1200,
+      ringType: "osint" as const,
+    }));
+
+    // City pulse rings
+    const cityRings = CITY_PRESETS.map(c => ({
+      ...c,
+      maxR: 2,
+      propagationSpeed: 1.5,
+      repeatPeriod: 2000,
+      ringType: "city" as const,
+      type: "city",
+      severity: "info",
+    }));
+
+    // Coverage ring (from selected satellite)
+    const allRings: any[] = [...osintRings, ...cityRings];
 
     if (coverageRing) {
-      // Convert km radius to globe ring maxRadius (degrees approx)
-      const maxRDeg = coverageRing.radiusKm / 111; // rough km to degrees
-      cityRings.push({
+      const maxRDeg = coverageRing.radiusKm / 111;
+      allRings.push({
         lat: coverageRing.lat,
         lng: coverageRing.lng,
         maxR: Math.min(maxRDeg, 30),
         propagationSpeed: 2,
-        isCoverage: true,
-        name: "coverage",
-        country: "",
-        landmark: "",
-        description: "",
-        image: "",
-      } as any);
+        repeatPeriod: 1500,
+        ringType: "coverage" as const,
+        type: "coverage",
+        severity: "info",
+      });
     }
 
     globe
-      .ringsData(cityRings)
+      .ringsData(allRings)
       .ringLat((d: any) => d.lat)
       .ringLng((d: any) => d.lng)
-      .ringAltitude(0.001)
+      .ringAltitude((d: any) => d.ringType === "osint" ? 0.002 : 0.001)
       .ringColor((d: any) => {
-        if (d.isCoverage && coverageRing) {
+        if (d.ringType === "coverage" && coverageRing) {
           const c = coverageRing.color;
           return (t: number) => {
             const r = parseInt(c.slice(1, 3), 16) || 0;
@@ -2076,11 +2094,20 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             return `rgba(${r},${g},${b},${0.35 - t * 0.35})`;
           };
         }
+        if (d.ringType === "osint") {
+          const colors: Record<string, (t: number) => string> = {
+            conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
+            military: (t: number) => `rgba(251,146,60,${0.8 - t * 0.8})`,
+            naval: (t: number) => `rgba(56,189,248,${0.9 - t * 0.9})`,
+            radar: (t: number) => `rgba(168,85,247,${0.8 - t * 0.8})`,
+          };
+          return colors[d.type] || colors.military;
+        }
         return (t: number) => `rgba(0,220,255,${0.6 - t * 0.6})`;
       })
       .ringMaxRadius((d: any) => d.maxR)
-      .ringPropagationSpeed((d: any) => d.isCoverage ? 2 : d.propagationSpeed)
-      .ringRepeatPeriod((d: any) => d.isCoverage ? 1500 : 2000);
+      .ringPropagationSpeed((d: any) => d.propagationSpeed)
+      .ringRepeatPeriod((d: any) => d.repeatPeriod);
   }, [coverageRing]);
 
   // Cleanup
