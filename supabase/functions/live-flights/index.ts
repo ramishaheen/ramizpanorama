@@ -258,7 +258,13 @@ serve(async (req) => {
   }
 
   try {
-    const { lamin, lamax, lomin, lomax } = await req.json();
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+    const { lamin = 10, lamax = 45, lomin = 25, lomax = 65 } = body;
 
     if (lamin == null || lamax == null || lomin == null || lomax == null) {
       return new Response(JSON.stringify({ error: "Missing bounding box parameters" }), {
