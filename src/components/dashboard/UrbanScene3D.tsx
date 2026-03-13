@@ -3012,6 +3012,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                   </div>
                   <span className="ml-auto text-[7px] font-mono text-muted-foreground/50">15s refresh</span>
                 </div>
+                <div className="flex items-center gap-1.5 px-1">
+                  <span className="px-1.5 py-0.5 rounded bg-primary/20 text-[8px] font-mono text-primary">🛰 {aircraft.length} TOTAL</span>
+                  <span className="px-1.5 py-0.5 rounded bg-secondary/40 text-[8px] font-mono text-muted-foreground">📡 {tilesUsed} TILES</span>
+                </div>
               </div>
               <div className="divide-y divide-border/10 max-h-[38vh] overflow-y-auto">
                 {interpolatedAircraft
