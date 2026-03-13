@@ -562,8 +562,8 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
                     return (
                       <button
                         key={`${ev.source}-${ev.id}`}
-                        onClick={() => initiateFromEvent(ev)}
-                        disabled={initiatingTarget === ev.id}
+                        onClick={() => setSelectedEventForModal(ev)}
+                        disabled={initiatingTarget === ev.id || !!selectedEventForModal}
                         className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors flex items-center gap-2"
                       >
                         <span className="text-[10px] flex-shrink-0">{typeEmoji}</span>
