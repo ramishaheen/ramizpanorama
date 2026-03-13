@@ -12,6 +12,10 @@ import { useGeoFusion } from "@/hooks/useGeoFusion";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import type { Rocket as RocketType } from "@/data/mockData";
+import { C2TargetingPanel } from "./C2TargetingPanel";
+import { KillChainPanel } from "./KillChainPanel";
+import { C2ChatTab } from "./C2ChatTab";
+
 
 interface FourDMapProps { onClose: () => void; rockets?: RocketType[]; }
 interface LayerConfig { id: string; label: string; icon: React.ReactNode; color: string; count?: number; }
