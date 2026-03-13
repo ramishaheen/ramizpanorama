@@ -1170,23 +1170,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               onCommitStrike={commitStrike}
             />
           )}
-          {/* 3D Realistic View overlay triggered by feed clicks */}
-          {urban3DTarget && (
-            <Suspense fallback={null}>
-              <UrbanScene3D
-                key={`${urban3DTarget.lat}-${urban3DTarget.lng}`}
-                onClose={() => setUrban3DTarget(null)}
-                initialCoords={{ lat: urban3DTarget.lat, lng: urban3DTarget.lng }}
-                initialEvent={{
-                  title: "FEED TARGET",
-                  lat: urban3DTarget.lat,
-                  lng: urban3DTarget.lng,
-                  severity: "high",
-                  source: "GOTHAM 4D",
-                }}
-              />
-            </Suspense>
-          )}
         </div>
 
         {/* RIGHT PANEL — Attributes + Feed */}
