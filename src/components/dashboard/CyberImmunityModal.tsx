@@ -24,8 +24,20 @@ import { useIOCLookup, type IOCResult } from "@/hooks/useIOCLookup";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
+interface OsintGeoAlert {
+  id: string;
+  type: string;
+  region: string;
+  title: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  timestamp: string;
+}
+
 interface CyberImmunityModalProps {
   onClose: () => void;
+  geoAlerts?: OsintGeoAlert[];
 }
 
 /* ── country coordinates (kept for RelationshipGraph) ── */
