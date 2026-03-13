@@ -2244,10 +2244,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                       <button
                         key={f}
                         onClick={() => setVesselFilter(f)}
-                        className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                          vesselFilter === f
-                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                            : "bg-white/5 text-white/40 border border-transparent hover:bg-white/10"
+                        className={`gotham-orbital-btn text-[8px] h-5 px-2 ${
+                          vesselFilter === f ? 'gotham-orbital-btn-active' : ''
                         }`}
                       >
                         {f}
