@@ -1386,7 +1386,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           </div>
         </div>
 
-        <span className="text-[9px] font-mono text-muted-foreground w-12">-24h</span>
+        <span className="text-[9px] font-mono text-muted-foreground w-12">-4w</span>
 
         <div className="flex-1 relative">
           <input
@@ -1394,11 +1394,11 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
             onChange={(e) => { setTimelinePos(parseFloat(e.target.value)); setIsPlaying(false); }}
             className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
           />
-          {/* Hour ticks */}
+          {/* Week ticks */}
           <div className="absolute top-3 left-0 right-0 flex justify-between pointer-events-none">
-            {Array.from({ length: 13 }, (_, i) => (
+            {["4w", "·", "3w", "·", "2w", "·", "1w", "·", "NOW"].map((label, i) => (
               <span key={i} className="text-[7px] font-mono text-muted-foreground/40">
-                {i % 3 === 0 ? `${i * 2}h` : "·"}
+                {label}
               </span>
             ))}
           </div>
