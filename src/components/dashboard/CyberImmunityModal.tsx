@@ -1301,7 +1301,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
               {/* 24h attack frequency chart */}
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <Activity className="h-3 w-3" /> 24h Attack Frequency
+                  <Activity className="h-3 w-3" /> 4-Week Attack Frequency
                 </label>
                 <AttackSparkline threats={threats} />
               </div>
