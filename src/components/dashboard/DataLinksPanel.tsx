@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSensorFeeds, SensorFeed } from "@/hooks/useSensorFeeds";
 import { supabase } from "@/integrations/supabase/client";
-import { Wifi, WifiOff, Radio, Satellite, Eye, Activity, Plus, Search, RefreshCw } from "lucide-react";
+import { Wifi, WifiOff, Radio, Satellite, Eye, Activity, Plus, Search, RefreshCw, Link2, Globe } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const PROTOCOL_ICONS: Record<string, typeof Wifi> = {
@@ -12,7 +12,26 @@ const PROTOCOL_ICONS: Record<string, typeof Wifi> = {
   stac_api: Satellite,
   ais_nmea: Activity,
   api_rest: Wifi,
+  api_ws: Wifi,
+  hls_stream: Eye,
+  mqtt: Activity,
+  webhook: Globe,
+  manual: Link2,
 };
+
+const FEED_TYPES = [
+  "satellite_eo", "satellite_sar", "satellite_ir",
+  "drone_fmv", "drone_lidar",
+  "cctv",
+  "sigint_rf", "sigint_comint", "sigint_elint",
+  "osint_social", "osint_news", "osint_adsb", "osint_ais",
+  "ground_radar", "ground_acoustic",
+  "iot_scada", "iot_edge",
+];
+
+const PROTOCOLS = ["api_rest", "api_ws", "hls_stream", "rtsp", "mqtt", "webhook", "manual", "mavlink", "stanag_4586", "srt", "stac_api", "ais_nmea"];
+
+const CLASSIFICATION_LEVELS = ["unclassified", "restricted", "confidential", "secret", "top_secret"];
 
 const ADAPTERS = ["dji", "mavlink", "adsb", "generic_cv", "stanag_4586"];
 
@@ -21,7 +40,19 @@ export default function DataLinksPanel({ onLocate }: { onLocate?: (lat: number, 
   const [stacSearching, setStacSearching] = useState(false);
   const [stacResults, setStacResults] = useState<any[]>([]);
   const [showRegForm, setShowRegForm] = useState(false);
-  const [regForm, setRegForm] = useState({ source_name: "", feed_type: "osint_feed", protocol: "api_rest", lat: "0", lng: "0" });
+  const [showCustomLink, setShowCustomLink] = useState(false);
+  const [regForm, setRegForm] = useState({
+    source_name: "",
+    feed_type: "osint_news",
+    protocol: "api_rest",
+    lat: "0",
+    lng: "0",
+    endpoint_url: "",
+    coverage_radius_km: "50",
+    data_rate_hz: "0.1",
+    classification_level: "unclassified",
+  });
+  const [customLink, setCustomLink] = useState({ name: "", url: "" });
 
   const byProtocol: Record<string, SensorFeed[]> = {};
   feeds.forEach(f => {
@@ -40,12 +71,43 @@ export default function DataLinksPanel({ onLocate }: { onLocate?: (lat: number, 
           protocol: regForm.protocol,
           lat: parseFloat(regForm.lat),
           lng: parseFloat(regForm.lng),
+          endpoint_url: regForm.endpoint_url || undefined,
+          coverage_radius_km: parseFloat(regForm.coverage_radius_km) || 50,
+          data_rate_hz: parseFloat(regForm.data_rate_hz) || 0.1,
+          classification_level: regForm.classification_level,
         },
       });
       if (error) throw error;
       toast({ title: "Feed registered" });
       setShowRegForm(false);
-      setRegForm({ source_name: "", feed_type: "osint_feed", protocol: "api_rest", lat: "0", lng: "0" });
+      setRegForm({ source_name: "", feed_type: "osint_news", protocol: "api_rest", lat: "0", lng: "0", endpoint_url: "", coverage_radius_km: "50", data_rate_hz: "0.1", classification_level: "unclassified" });
+      fetchFeeds();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleAddCustomLink = async () => {
+    if (!customLink.name || !customLink.url) return;
+    try {
+      const { error } = await supabase.functions.invoke("sensor-adapt", {
+        body: {
+          action: "register_feed",
+          source_name: customLink.name,
+          feed_type: "osint_news",
+          protocol: customLink.url.startsWith("ws") ? "api_ws" : customLink.url.includes(".m3u8") ? "hls_stream" : "api_rest",
+          lat: 0,
+          lng: 0,
+          endpoint_url: customLink.url,
+          coverage_radius_km: 0,
+          data_rate_hz: 0.01,
+          classification_level: "unclassified",
+        },
+      });
+      if (error) throw error;
+      toast({ title: `Link added: ${customLink.name}` });
+      setCustomLink({ name: "", url: "" });
+      setShowCustomLink(false);
       fetchFeeds();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -105,9 +167,13 @@ export default function DataLinksPanel({ onLocate }: { onLocate?: (lat: number, 
 
       {/* Quick actions */}
       <div className="px-2 py-1.5 border-b border-border/20 flex gap-1 flex-wrap">
-        <button onClick={() => setShowRegForm(!showRegForm)}
+        <button onClick={() => { setShowRegForm(!showRegForm); setShowCustomLink(false); }}
           className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
           <Plus className="h-2.5 w-2.5" /> REGISTER
+        </button>
+        <button onClick={() => { setShowCustomLink(!showCustomLink); setShowRegForm(false); }}
+          className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+          <Link2 className="h-2.5 w-2.5" /> ADD LINK
         </button>
         <button onClick={handleStacSearch} disabled={stacSearching}
           className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-mono border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40">
@@ -115,21 +181,53 @@ export default function DataLinksPanel({ onLocate }: { onLocate?: (lat: number, 
         </button>
       </div>
 
-      {/* Register form */}
+      {/* Quick custom link form */}
+      {showCustomLink && (
+        <div className="px-2 py-1.5 border-b border-border/20 bg-card/20 space-y-1">
+          <div className="text-[7px] font-mono text-muted-foreground tracking-wider mb-1">ADD ANY DATA LINK</div>
+          <input value={customLink.name} onChange={e => setCustomLink(p => ({ ...p, name: e.target.value }))}
+            placeholder="Link name (e.g. My RSS Feed)" className="w-full bg-background/50 border border-border/30 rounded px-1.5 py-0.5 text-[8px] font-mono text-foreground placeholder:text-muted-foreground" />
+          <input value={customLink.url} onChange={e => setCustomLink(p => ({ ...p, url: e.target.value }))}
+            placeholder="URL (https://, ws://, rtsp://...)" className="w-full bg-background/50 border border-border/30 rounded px-1.5 py-0.5 text-[8px] font-mono text-foreground placeholder:text-muted-foreground" />
+          <button onClick={handleAddCustomLink} disabled={!customLink.name || !customLink.url}
+            className="w-full py-0.5 rounded text-[8px] font-mono font-bold bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-30">
+            ADD LINK
+          </button>
+        </div>
+      )}
+
+      {/* Full register form */}
       {showRegForm && (
         <div className="px-2 py-1.5 border-b border-border/20 bg-card/20 space-y-1">
+          <div className="text-[7px] font-mono text-muted-foreground tracking-wider mb-1">REGISTER SENSOR FEED</div>
           <input value={regForm.source_name} onChange={e => setRegForm(p => ({ ...p, source_name: e.target.value }))}
             placeholder="Source name" className="w-full bg-background/50 border border-border/30 rounded px-1.5 py-0.5 text-[8px] font-mono text-foreground placeholder:text-muted-foreground" />
+          <input value={regForm.endpoint_url} onChange={e => setRegForm(p => ({ ...p, endpoint_url: e.target.value }))}
+            placeholder="Endpoint URL (optional)" className="w-full bg-background/50 border border-border/30 rounded px-1.5 py-0.5 text-[8px] font-mono text-foreground placeholder:text-muted-foreground" />
           <div className="flex gap-1">
+            <select value={regForm.feed_type} onChange={e => setRegForm(p => ({ ...p, feed_type: e.target.value }))}
+              className="flex-1 bg-background/50 border border-border/30 rounded px-1 py-0.5 text-[8px] font-mono text-foreground">
+              {FEED_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, " ").toUpperCase()}</option>)}
+            </select>
             <select value={regForm.protocol} onChange={e => setRegForm(p => ({ ...p, protocol: e.target.value }))}
               className="flex-1 bg-background/50 border border-border/30 rounded px-1 py-0.5 text-[8px] font-mono text-foreground">
-              {["mavlink", "stanag_4586", "rtsp", "srt", "stac_api", "ais_nmea", "api_rest"].map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+              {PROTOCOLS.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
             </select>
+          </div>
+          <div className="flex gap-1">
             <input value={regForm.lat} onChange={e => setRegForm(p => ({ ...p, lat: e.target.value }))}
               placeholder="Lat" className="w-14 bg-background/50 border border-border/30 rounded px-1 py-0.5 text-[8px] font-mono text-foreground" />
             <input value={regForm.lng} onChange={e => setRegForm(p => ({ ...p, lng: e.target.value }))}
               placeholder="Lng" className="w-14 bg-background/50 border border-border/30 rounded px-1 py-0.5 text-[8px] font-mono text-foreground" />
+            <input value={regForm.coverage_radius_km} onChange={e => setRegForm(p => ({ ...p, coverage_radius_km: e.target.value }))}
+              placeholder="Radius km" className="w-14 bg-background/50 border border-border/30 rounded px-1 py-0.5 text-[8px] font-mono text-foreground" title="Coverage radius (km)" />
+            <input value={regForm.data_rate_hz} onChange={e => setRegForm(p => ({ ...p, data_rate_hz: e.target.value }))}
+              placeholder="Hz" className="w-12 bg-background/50 border border-border/30 rounded px-1 py-0.5 text-[8px] font-mono text-foreground" title="Data rate (Hz)" />
           </div>
+          <select value={regForm.classification_level} onChange={e => setRegForm(p => ({ ...p, classification_level: e.target.value }))}
+            className="w-full bg-background/50 border border-border/30 rounded px-1 py-0.5 text-[8px] font-mono text-foreground">
+            {CLASSIFICATION_LEVELS.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+          </select>
           <button onClick={handleRegister} disabled={!regForm.source_name}
             className="w-full py-0.5 rounded text-[8px] font-mono font-bold bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors disabled:opacity-30">
             REGISTER FEED
@@ -176,7 +274,7 @@ export default function DataLinksPanel({ onLocate }: { onLocate?: (lat: number, 
         {feeds.length === 0 && !loading && (
           <div className="px-3 py-6 text-center text-[9px] font-mono text-muted-foreground">
             No sensor feeds registered<br />
-            <span className="text-primary/60">Use REGISTER to add a data link</span>
+            <span className="text-primary/60">Use REGISTER or ADD LINK to add a data source</span>
           </div>
         )}
 

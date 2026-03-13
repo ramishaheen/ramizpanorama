@@ -120,8 +120,10 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Update feed last_data_at
-      await sb.from("sensor_feeds").update({ last_data_at: new Date().toISOString() }).eq("id", feed_id);
+      // Update feed last_data_at if feed_id provided
+      if (feed_id) {
+        await sb.from("sensor_feeds").update({ last_data_at: new Date().toISOString() }).eq("id", feed_id);
+      }
 
       return new Response(JSON.stringify({ results, count: results.length }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

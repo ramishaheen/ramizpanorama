@@ -120,6 +120,10 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
             <span className="text-[8px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">SENSOR FUSION</span>
           </div>
           <div className="flex items-center gap-1">
+            <button onClick={handlePulse} disabled={pulsing} className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="Pulse all active feeds">
+              <Activity className={`h-2.5 w-2.5 ${pulsing ? "animate-pulse" : ""}`} />
+              PULSE
+            </button>
             <button onClick={fetchFeeds} className="p-1 rounded hover:bg-primary/10 transition-colors" title="Refresh">
               <RefreshCw className={`h-3 w-3 text-primary ${loading ? "animate-spin" : ""}`} />
             </button>

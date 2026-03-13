@@ -394,10 +394,10 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
                         <span className="text-[6px] font-mono text-muted-foreground tracking-wider">CREATED</span>
                         <div className="text-[8px] font-mono text-foreground">{new Date(task.created_at).toISOString().slice(0, 16).replace("T", " ")}</div>
                       </div>
-                      {task.target?.confidence && (
+                      {task.target?.confidence != null && (
                         <div>
                           <span className="text-[6px] font-mono text-muted-foreground tracking-wider">CONFIDENCE</span>
-                          <div className="text-[8px] font-mono text-foreground">{task.target.confidence}%</div>
+                          <div className="text-[8px] font-mono text-foreground">{task.target.confidence < 1 ? (task.target.confidence * 100).toFixed(0) : task.target.confidence}%</div>
                         </div>
                       )}
                     </div>
