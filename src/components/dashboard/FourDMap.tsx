@@ -1006,20 +1006,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <span className="text-[9px] text-muted-foreground font-mono tracking-wider">{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto scrollbar-thin py-1 min-h-0">
-              {layerConfigs.map(layer => (
-                <button key={layer.id} onClick={() => toggleLayer(layer.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
-                  <Checkbox checked={layers[layer.id]} onCheckedChange={() => toggleLayer(layer.id)} className="h-3 w-3 pointer-events-none rounded-sm" />
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
-                  <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${layers[layer.id] ? "text-foreground" : "text-muted-foreground"}`}>
-                    {layer.icon} {layer.label}
-                  </span>
-                  {layer.count !== undefined && layer.count > 0 && (
-                    <span className="ml-auto text-[8px] font-mono px-1.5 py-0.5 rounded text-muted-foreground" style={{ backgroundColor: layers[layer.id] ? `${layer.color}15` : "transparent", color: layers[layer.id] ? layer.color : undefined }}>{layer.count}</span>
-                  )}
-                </button>
-              ))}
+            <div className="flex-1 overflow-y-scroll scrollbar-thin py-1 min-h-0 direction-rtl">
+              <div className="direction-ltr">
+                {layerConfigs.map(layer => (
+                  <button key={layer.id} onClick={() => toggleLayer(layer.id)}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
+                    <Checkbox checked={layers[layer.id]} onCheckedChange={() => toggleLayer(layer.id)} className="h-3 w-3 pointer-events-none rounded-sm" />
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
+                    <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${layers[layer.id] ? "text-foreground" : "text-muted-foreground"}`}>
+                      {layer.icon} {layer.label}
+                    </span>
+                    {layer.count !== undefined && layer.count > 0 && (
+                      <span className="ml-auto text-[8px] font-mono px-1.5 py-0.5 rounded text-muted-foreground" style={{ backgroundColor: layers[layer.id] ? `${layer.color}15` : "transparent", color: layers[layer.id] ? layer.color : undefined }}>{layer.count}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="px-3 py-2 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)]">
