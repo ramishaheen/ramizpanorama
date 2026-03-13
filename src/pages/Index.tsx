@@ -26,6 +26,7 @@ import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
 import { RocketEntryPanel } from "@/components/dashboard/RocketEntryPanel";
+import { RansomwareTracker } from "@/components/dashboard/RansomwareTracker";
 import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
 import { WeatherTrafficPanel } from "@/components/dashboard/WeatherTrafficPanel";
