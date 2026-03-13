@@ -104,10 +104,18 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const runATR = async () => {
     setScanning(true);
     try {
+      const country = COUNTRY_COORDS[selectedCountry];
+      const lat = country.lat + (Math.random() - 0.5) * country.latRange;
+      const lng = country.lng + (Math.random() - 0.5) * country.lngRange;
       const { data, error } = await supabase.functions.invoke("c2-targeting", {
-        body: { lat: 33.5 + Math.random() * 4, lng: 36 + Math.random() * 15, source_sensor: "satellite" },
+        body: { lat, lng, source_sensor: "satellite" },
       });
-      if (!error) fetchTargets();
+      if (!error) {
+        fetchTargets();
+        toast.success(`ATR scan complete — ${selectedCountry}`, {
+          description: `${data?.detections?.length || 0} targets detected at ${lat.toFixed(2)}°N ${lng.toFixed(2)}°E`,
+        });
+      }
     } catch { /* silent */ }
     setScanning(false);
   };
