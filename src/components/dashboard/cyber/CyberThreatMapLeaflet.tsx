@@ -184,7 +184,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
   const handleLeave = useCallback(() => setHoveredNode(null), []);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full" style={{ minHeight: 300 }}>
       {/* Leaflet Map */}
       <MapContainer
         center={[25, 45]}
