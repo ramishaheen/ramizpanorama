@@ -2695,7 +2695,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
                 </span>
               </div>
               <button
-                onClick={() => { setSelectedSat(null); setOrbitPath(null); }}
+                onClick={() => { setSelectedSat(null); setOrbitPath(null); setCoverageRing(null); }}
                 className="w-4 h-4 flex items-center justify-center rounded hover:bg-white/10"
               >
                 <X className="h-2.5 w-2.5 text-muted-foreground" />
