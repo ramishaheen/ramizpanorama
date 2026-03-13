@@ -701,8 +701,152 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
       nuclearGroupRef.current = null;
       airQualityGroupRef.current = null;
       aisGroupRef.current = null;
+      googlePOIGroupRef.current?.clearLayers();
+      googlePOIGroupRef.current = null;
+      googleRouteGroupRef.current?.clearLayers();
+      googleRouteGroupRef.current = null;
+      if (googleTrafficTileRef.current) map.removeLayer(googleTrafficTileRef.current);
+      googleTrafficTileRef.current = null;
       weatherTileRef.current = null;
     };
+  }, []);
+
+  // === Google POI Layer ===
+  useEffect(() => {
+    const group = googlePOIGroupRef.current;
+    const map = mapRef.current;
+    if (!group || !map || !layers.googlePOI) {
+      group?.clearLayers();
+      return;
+    }
+    const center = map.getCenter();
+    googlePlaces.fetchPlaces(center.lat, center.lng, 50000).then(places => {
+      group.clearLayers();
+      places.forEach((place: GooglePlace) => {
+        const color = getPOIColor(place.category);
+        const emoji = getPOIIcon(place.category);
+        const icon = L.divIcon({
+          className: "google-poi-icon",
+          html: `<div style="position:relative;display:flex;align-items:center;justify-content:center;">
+            <div style="width:22px;height:22px;border-radius:50%;background:${color}22;border:1.5px solid ${color};display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;">${emoji}</span>
+            </div>
+          </div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+          popupAnchor: [0, -14],
+        });
+        const marker = L.marker([place.lat, place.lng], { icon });
+        const ratingHtml = place.rating ? `<span style="color:#fbbf24;font-size:9px;">★ ${place.rating} (${place.user_ratings_total || 0})</span>` : "";
+        bindHoverPopup(marker, `<div style="${popupStyle}">
+          <div style="color:${color};font-weight:700;font-size:11px;margin-bottom:3px;">${emoji} ${place.name}</div>
+          <div style="color:#aaa;font-size:10px;">${place.address || ""}</div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <span style="color:${color};font-size:9px;font-weight:600;">● ${place.category.toUpperCase()}</span>
+            ${ratingHtml}
+            ${place.open_now !== undefined ? `<span style="color:${place.open_now ? '#22c55e' : '#ef4444'};font-size:9px;">${place.open_now ? 'OPEN' : 'CLOSED'}</span>` : ""}
+          </div>
+        </div>`);
+        group.addLayer(marker);
+      });
+    });
+  }, [layers.googlePOI, mapBounds]);
+
+  // === Google Traffic Tile Layer ===
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (layers.googleTraffic) {
+      if (!googleTrafficTileRef.current) {
+        googleTrafficTileRef.current = L.tileLayer(
+          "https://mt1.google.com/vt/lyrs=h,traffic&x={x}&y={y}&z={z}",
+          { attribution: "&copy; Google Traffic", maxZoom: 20, opacity: 0.7 }
+        ).addTo(map);
+      }
+    } else {
+      if (googleTrafficTileRef.current) {
+        map.removeLayer(googleTrafficTileRef.current);
+        googleTrafficTileRef.current = null;
+      }
+    }
+  }, [layers.googleTraffic]);
+
+  // === Google Directions (Route mode) ===
+  useEffect(() => {
+    const map = mapRef.current;
+    const group = googleRouteGroupRef.current;
+    if (!map || !group) return;
+
+    if (!layers.googleRoutes) {
+      group.clearLayers();
+      setRouteOrigin(null);
+      setRouteDestination(null);
+      return;
+    }
+
+    const handleRouteClick = (e: L.LeafletMouseEvent) => {
+      if (!layers.googleRoutes) return;
+      if (!routeOrigin) {
+        setRouteOrigin({ lat: e.latlng.lat, lng: e.latlng.lng });
+        const m = L.circleMarker([e.latlng.lat, e.latlng.lng], { radius: 6, color: "#22c55e", fillColor: "#22c55e", fillOpacity: 0.8, weight: 2 });
+        m.bindPopup(`<div style="${popupStyle}"><span style="color:#22c55e;font-weight:700;">ROUTE ORIGIN</span><br/>${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}</div>`, { className: "intel-popup" });
+        group.addLayer(m);
+      } else if (!routeDestination) {
+        setRouteDestination({ lat: e.latlng.lat, lng: e.latlng.lng });
+      }
+    };
+    map.on("click", handleRouteClick);
+    return () => { map.off("click", handleRouteClick); };
+  }, [layers.googleRoutes, routeOrigin, routeDestination]);
+
+  // Fetch and draw route when both points are set
+  useEffect(() => {
+    if (!routeOrigin || !routeDestination || !layers.googleRoutes) return;
+    const group = googleRouteGroupRef.current;
+    if (!group) return;
+
+    googleDirections.getDirections(routeOrigin, routeDestination).then(result => {
+      if (!result) return;
+      group.clearLayers();
+      // Origin marker
+      group.addLayer(L.circleMarker([routeOrigin.lat, routeOrigin.lng], { radius: 6, color: "#22c55e", fillColor: "#22c55e", fillOpacity: 0.8, weight: 2 }));
+      // Destination marker
+      group.addLayer(L.circleMarker([routeDestination.lat, routeDestination.lng], { radius: 6, color: "#ef4444", fillColor: "#ef4444", fillOpacity: 0.8, weight: 2 }));
+      // Route polyline
+      const latlngs = result.polyline.map(p => [p.lat, p.lng] as [number, number]);
+      const line = L.polyline(latlngs, { color: "hsl(190, 100%, 50%)", weight: 3, opacity: 0.8, dashArray: "8 4" });
+      line.bindPopup(`<div style="${popupStyle}">
+        <div style="color:hsl(190,100%,50%);font-weight:700;font-size:12px;margin-bottom:3px;">📍 ROUTE</div>
+        <div style="color:#fff;font-size:11px;">${result.distance?.text || "N/A"} • ${result.duration?.text || "N/A"}</div>
+        <div style="color:#aaa;font-size:9px;margin-top:2px;">${result.start_address || ""} → ${result.end_address || ""}</div>
+      </div>`, { className: "intel-popup" });
+      group.addLayer(line);
+      // Reset for next route
+      setRouteOrigin(null);
+      setRouteDestination(null);
+    });
+  }, [routeOrigin, routeDestination, layers.googleRoutes]);
+
+  // === Right-click to Reverse Geocode ===
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const handleContext = (e: L.LeafletMouseEvent) => {
+      googleGeocode.reverseGeocode(e.latlng.lat, e.latlng.lng).then(result => {
+        if (result) {
+          L.popup({ className: "intel-popup" })
+            .setLatLng(e.latlng)
+            .setContent(`<div style="${popupStyle}">
+              <div style="color:hsl(190,100%,50%);font-weight:700;font-size:11px;margin-bottom:3px;">📍 GEOCODE</div>
+              <div style="color:#fff;font-size:10px;">${result.formatted_address}</div>
+              <div style="color:#888;font-size:9px;margin-top:2px;">${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}</div>
+            </div>`)
+            .openOn(map);
+        }
+      });
+    };
+    map.on("contextmenu", handleContext);
+    return () => { map.off("contextmenu", handleContext); };
   }, []);
 
   // Click handler for placing items
