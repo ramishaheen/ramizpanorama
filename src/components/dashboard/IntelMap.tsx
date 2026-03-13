@@ -1916,7 +1916,12 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
   const [showIranAirspace, setShowIranAirspace] = useState(false);
   const [showSnapMe, setShowSnapMe] = useState(false);
   const [showScouting, setShowScouting] = useState(false);
-  const [toolsExpanded, setToolsExpanded] = useState(false);
+  const [cmdUp42Open, setCmdUp42Open] = useState(false);
+  const [cmdLegendOpen, setCmdLegendOpen] = useState(false);
+  const [cmdHistoryOpen, setCmdHistoryOpen] = useState(false);
+  const [cmdBookmarksOpen, setCmdBookmarksOpen] = useState(false);
+  const [cmdChokepointsOpen, setCmdChokepointsOpen] = useState(false);
+  const [cmdLaunchesOpen, setCmdLaunchesOpen] = useState(false);
   const snapMeGroupRef = useRef<L.LayerGroup>(L.layerGroup());
   const [urbanScene3DTarget, setUrbanScene3DTarget] = useState<{ lat: number; lng: number; label: string; severity?: string; source?: string; type?: string; summary?: string } | null>(null);
   const handleCloseSatGlobe = useCallback(() => setShowSatGlobe(false), []);
