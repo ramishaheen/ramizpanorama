@@ -48,6 +48,8 @@ export const C2TargetingPanel = ({ onLocate }: C2TargetingPanelProps) => {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+  const { commitStrike } = useSensorToShooter();
 
   const fetchTargets = useCallback(async () => {
     const { data } = await supabase
