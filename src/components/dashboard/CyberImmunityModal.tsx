@@ -853,20 +853,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
         <div className="w-[272px] border-r border-border bg-card/30 flex flex-col max-md:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">IOC / Threat Search</label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="IP, CVE, domain, actor..." className="h-7 pl-7 text-[10px] bg-background/50 border-border" />
-                </div>
-                <div className="flex gap-1 mt-1.5 flex-wrap">
-                  {["IP", "CVE", "Domain", "APT", "Malware", "Country"].map(chip => (
-                    <button key={chip} onClick={() => setSearch(chip === "CVE" ? "CVE-" : chip === "IP" ? "." : "")} className="text-[7px] px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors font-mono">
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <IOCSearchSection search={search} setSearch={setSearch} />
 
               <div>
                 <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Country Filter</label>
