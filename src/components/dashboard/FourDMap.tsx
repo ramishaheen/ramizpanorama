@@ -1255,17 +1255,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   </div>
                   <div ref={feedRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
                     {unifiedFeed.map(ev => (
-                      <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
-                        className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
-                            <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
-                          </span>
-                          <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                      <div key={ev.id} className={`border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
+                        <button onClick={() => handleFeedClick(ev.lat, ev.lng)} className="w-full text-left px-2 py-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
+                              <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
+                            </span>
+                            <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                          </div>
+                          <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
+                          <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
+                        </button>
+                        <div className="px-2 pb-1">
+                          <button onClick={() => handleSlewSensor(ev.lat, ev.lng)}
+                            className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#06b6d4]/30 text-[#06b6d4] hover:bg-[#06b6d4]/10 transition-colors">
+                            📡 SLEW
+                          </button>
                         </div>
-                        <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
-                        <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
-                      </button>
+                      </div>
                     ))}
                     {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
                   </div>
