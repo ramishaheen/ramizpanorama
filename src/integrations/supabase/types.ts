@@ -284,9 +284,11 @@ export type Database = {
         Row: {
           affiliation: Database["public"]["Enums"]["affiliation"]
           echelon: Database["public"]["Enums"]["echelon"]
+          event_time: string | null
           heading: number
           icon_sidc: string | null
           id: string
+          ingestion_time: string | null
           last_updated: string
           lat: number
           lng: number
@@ -300,9 +302,11 @@ export type Database = {
         Insert: {
           affiliation?: Database["public"]["Enums"]["affiliation"]
           echelon?: Database["public"]["Enums"]["echelon"]
+          event_time?: string | null
           heading?: number
           icon_sidc?: string | null
           id?: string
+          ingestion_time?: string | null
           last_updated?: string
           lat?: number
           lng?: number
@@ -316,9 +320,11 @@ export type Database = {
         Update: {
           affiliation?: Database["public"]["Enums"]["affiliation"]
           echelon?: Database["public"]["Enums"]["echelon"]
+          event_time?: string | null
           heading?: number
           icon_sidc?: string | null
           id?: string
+          ingestion_time?: string | null
           last_updated?: string
           lat?: number
           lng?: number
@@ -721,6 +727,132 @@ export type Database = {
         }
         Relationships: []
       }
+      ontology_entities: {
+        Row: {
+          affiliation: Database["public"]["Enums"]["affiliation"]
+          attributes: Json
+          confidence: number
+          created_at: string
+          description: string | null
+          designation: string | null
+          entity_type: Database["public"]["Enums"]["entity_type"]
+          event_time: string
+          id: string
+          ingestion_time: string
+          last_known_at: string
+          lat: number
+          lng: number
+          name: string
+          source_sensor_id: string | null
+          status: string
+        }
+        Insert: {
+          affiliation?: Database["public"]["Enums"]["affiliation"]
+          attributes?: Json
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          designation?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          event_time?: string
+          id?: string
+          ingestion_time?: string
+          last_known_at?: string
+          lat?: number
+          lng?: number
+          name: string
+          source_sensor_id?: string | null
+          status?: string
+        }
+        Update: {
+          affiliation?: Database["public"]["Enums"]["affiliation"]
+          attributes?: Json
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          designation?: string | null
+          entity_type?: Database["public"]["Enums"]["entity_type"]
+          event_time?: string
+          id?: string
+          ingestion_time?: string
+          last_known_at?: string
+          lat?: number
+          lng?: number
+          name?: string
+          source_sensor_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ontology_entities_source_sensor_id_fkey"
+            columns: ["source_sensor_id"]
+            isOneToOne: false
+            referencedRelation: "sensor_feeds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ontology_relationships: {
+        Row: {
+          confidence: number
+          created_at: string
+          id: string
+          metadata: Json
+          relationship_type: Database["public"]["Enums"]["relationship_type"]
+          source_entity_id: string
+          source_sensor_id: string | null
+          target_entity_id: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          relationship_type: Database["public"]["Enums"]["relationship_type"]
+          source_entity_id: string
+          source_sensor_id?: string | null
+          target_entity_id: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          relationship_type?: Database["public"]["Enums"]["relationship_type"]
+          source_entity_id?: string
+          source_sensor_id?: string | null
+          target_entity_id?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ontology_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "ontology_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ontology_relationships_source_sensor_id_fkey"
+            columns: ["source_sensor_id"]
+            isOneToOne: false
+            referencedRelation: "sensor_feeds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ontology_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "ontology_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -831,6 +963,81 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      sensor_feeds: {
+        Row: {
+          classification_level: Database["public"]["Enums"]["classification_level"]
+          config: Json
+          coverage_radius_km: number
+          created_at: string
+          data_rate_hz: number
+          feed_type: Database["public"]["Enums"]["feed_type"]
+          health_score: number
+          id: string
+          last_data_at: string | null
+          lat: number
+          linked_camera_id: string | null
+          linked_unit_id: string | null
+          lng: number
+          protocol: Database["public"]["Enums"]["feed_protocol"]
+          source_name: string
+          status: Database["public"]["Enums"]["feed_status"]
+          updated_at: string
+        }
+        Insert: {
+          classification_level?: Database["public"]["Enums"]["classification_level"]
+          config?: Json
+          coverage_radius_km?: number
+          created_at?: string
+          data_rate_hz?: number
+          feed_type: Database["public"]["Enums"]["feed_type"]
+          health_score?: number
+          id?: string
+          last_data_at?: string | null
+          lat?: number
+          linked_camera_id?: string | null
+          linked_unit_id?: string | null
+          lng?: number
+          protocol?: Database["public"]["Enums"]["feed_protocol"]
+          source_name: string
+          status?: Database["public"]["Enums"]["feed_status"]
+          updated_at?: string
+        }
+        Update: {
+          classification_level?: Database["public"]["Enums"]["classification_level"]
+          config?: Json
+          coverage_radius_km?: number
+          created_at?: string
+          data_rate_hz?: number
+          feed_type?: Database["public"]["Enums"]["feed_type"]
+          health_score?: number
+          id?: string
+          last_data_at?: string | null
+          lat?: number
+          linked_camera_id?: string | null
+          linked_unit_id?: string | null
+          lng?: number
+          protocol?: Database["public"]["Enums"]["feed_protocol"]
+          source_name?: string
+          status?: Database["public"]["Enums"]["feed_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sensor_feeds_linked_camera_id_fkey"
+            columns: ["linked_camera_id"]
+            isOneToOne: false
+            referencedRelation: "cameras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sensor_feeds_linked_unit_id_fkey"
+            columns: ["linked_unit_id"]
+            isOneToOne: false
+            referencedRelation: "force_units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       snapshot_analysis: {
         Row: {
@@ -969,12 +1176,15 @@ export type Database = {
           classification: Database["public"]["Enums"]["target_classification"]
           confidence: number
           detected_at: string
+          event_time: string | null
           id: string
           image_url: string | null
+          ingestion_time: string | null
           lat: number
           lng: number
           priority: Database["public"]["Enums"]["target_priority"]
           source_sensor: Database["public"]["Enums"]["sensor_type"]
+          source_sensor_id: string | null
           status: Database["public"]["Enums"]["target_status"]
           track_id: string
         }
@@ -985,12 +1195,15 @@ export type Database = {
           classification?: Database["public"]["Enums"]["target_classification"]
           confidence?: number
           detected_at?: string
+          event_time?: string | null
           id?: string
           image_url?: string | null
+          ingestion_time?: string | null
           lat?: number
           lng?: number
           priority?: Database["public"]["Enums"]["target_priority"]
           source_sensor?: Database["public"]["Enums"]["sensor_type"]
+          source_sensor_id?: string | null
           status?: Database["public"]["Enums"]["target_status"]
           track_id?: string
         }
@@ -1001,16 +1214,27 @@ export type Database = {
           classification?: Database["public"]["Enums"]["target_classification"]
           confidence?: number
           detected_at?: string
+          event_time?: string | null
           id?: string
           image_url?: string | null
+          ingestion_time?: string | null
           lat?: number
           lng?: number
           priority?: Database["public"]["Enums"]["target_priority"]
           source_sensor?: Database["public"]["Enums"]["sensor_type"]
+          source_sensor_id?: string | null
           status?: Database["public"]["Enums"]["target_status"]
           track_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "target_tracks_source_sensor_id_fkey"
+            columns: ["source_sensor_id"]
+            isOneToOne: false
+            referencedRelation: "sensor_feeds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       telegram_intel_cache: {
         Row: {
@@ -1308,6 +1532,7 @@ export type Database = {
       camera_category: "traffic" | "tourism" | "ports" | "weather" | "public"
       camera_source_type: "hls" | "snapshot" | "embed_page"
       camera_status: "active" | "inactive" | "error" | "unknown"
+      classification_level: "unclassified" | "cui" | "secret" | "top_secret"
       congestion_level:
         | "free_flow"
         | "light"
@@ -1331,12 +1556,46 @@ export type Database = {
         | "battalion"
         | "brigade"
         | "division"
+      entity_type:
+        | "equipment"
+        | "facility"
+        | "unit"
+        | "person"
+        | "vehicle"
+        | "infrastructure"
+        | "weapon_system"
       event_severity: "info" | "low" | "medium" | "high" | "critical"
       event_verification:
         | "unverified"
         | "verified"
         | "dismissed"
         | "auto_detected"
+      feed_protocol:
+        | "api_rest"
+        | "api_ws"
+        | "hls_stream"
+        | "rtsp"
+        | "mqtt"
+        | "manual"
+        | "webhook"
+      feed_status: "active" | "degraded" | "offline" | "maintenance"
+      feed_type:
+        | "satellite_eo"
+        | "satellite_sar"
+        | "satellite_ir"
+        | "drone_fmv"
+        | "drone_lidar"
+        | "cctv"
+        | "sigint_rf"
+        | "sigint_comms"
+        | "osint_social"
+        | "osint_news"
+        | "osint_flight"
+        | "osint_maritime"
+        | "ground_radar"
+        | "ground_acoustic"
+        | "iot_scada"
+        | "iot_edge"
       geo_alert_type: "DIPLOMATIC" | "MILITARY" | "ECONOMIC" | "HUMANITARIAN"
       health_status: "online" | "intermittent" | "offline" | "unknown"
       incident_status:
@@ -1367,6 +1626,15 @@ export type Database = {
         | "partner_approved"
         | "pending_review"
         | "denied"
+      relationship_type:
+        | "occupies"
+        | "commands"
+        | "observes"
+        | "targets"
+        | "transports"
+        | "supplies"
+        | "defends"
+        | "attacks"
       review_status:
         | "pending"
         | "approved"
@@ -1576,6 +1844,7 @@ export const Constants = {
       camera_category: ["traffic", "tourism", "ports", "weather", "public"],
       camera_source_type: ["hls", "snapshot", "embed_page"],
       camera_status: ["active", "inactive", "error", "unknown"],
+      classification_level: ["unclassified", "cui", "secret", "top_secret"],
       congestion_level: [
         "free_flow",
         "light",
@@ -1602,12 +1871,49 @@ export const Constants = {
         "brigade",
         "division",
       ],
+      entity_type: [
+        "equipment",
+        "facility",
+        "unit",
+        "person",
+        "vehicle",
+        "infrastructure",
+        "weapon_system",
+      ],
       event_severity: ["info", "low", "medium", "high", "critical"],
       event_verification: [
         "unverified",
         "verified",
         "dismissed",
         "auto_detected",
+      ],
+      feed_protocol: [
+        "api_rest",
+        "api_ws",
+        "hls_stream",
+        "rtsp",
+        "mqtt",
+        "manual",
+        "webhook",
+      ],
+      feed_status: ["active", "degraded", "offline", "maintenance"],
+      feed_type: [
+        "satellite_eo",
+        "satellite_sar",
+        "satellite_ir",
+        "drone_fmv",
+        "drone_lidar",
+        "cctv",
+        "sigint_rf",
+        "sigint_comms",
+        "osint_social",
+        "osint_news",
+        "osint_flight",
+        "osint_maritime",
+        "ground_radar",
+        "ground_acoustic",
+        "iot_scada",
+        "iot_edge",
       ],
       geo_alert_type: ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"],
       health_status: ["online", "intermittent", "offline", "unknown"],
@@ -1636,6 +1942,16 @@ export const Constants = {
         "partner_approved",
         "pending_review",
         "denied",
+      ],
+      relationship_type: [
+        "occupies",
+        "commands",
+        "observes",
+        "targets",
+        "transports",
+        "supplies",
+        "defends",
+        "attacks",
       ],
       review_status: [
         "pending",

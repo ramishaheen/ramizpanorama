@@ -15,6 +15,9 @@ import type { Rocket as RocketType } from "@/data/mockData";
 import { C2TargetingPanel } from "./C2TargetingPanel";
 import { KillChainPanel } from "./KillChainPanel";
 import { C2ChatTab } from "./C2ChatTab";
+import { SensorFusionPanel } from "./SensorFusionPanel";
+import { OntologyPanel } from "./OntologyPanel";
+import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 
 
 interface FourDMapProps { onClose: () => void; rockets?: RocketType[]; }
@@ -230,6 +233,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     conflicts: true, rockets: true, nuclear: true, airQuality: false, geoFusion: true,
     borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
     blueForce: true, redForce: true, targetTracks: true, killChain: false,
+    sensorCoverage: false, ontologyEntities: false,
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
@@ -261,7 +265,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
-  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL">("FEED");
+  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY">("FEED");
+  const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
 
 
   // Fetch Google POIs for the focused region
@@ -460,6 +465,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "redForce", label: "Red Force (COP)", icon: <Swords className="h-3.5 w-3.5" />, color: "#ef4444", count: stats.red },
     { id: "targetTracks", label: "Target Tracks", icon: <Target className="h-3.5 w-3.5" />, color: "#f97316", count: stats.tgt },
     { id: "killChain", label: "Kill Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
+    { id: "sensorCoverage", label: "Sensor Coverage", icon: <Radar className="h-3.5 w-3.5" />, color: "#06b6d4", count: sensorFeeds.length },
+    { id: "ontologyEntities", label: "Ontology Entities", icon: <Globe className="h-3.5 w-3.5" />, color: "#8b5cf6" },
   ];
 
   // Timeline
@@ -904,12 +911,34 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
+    // ========== SENSOR COVERAGE CIRCLES ==========
+    if (layers.sensorCoverage && sensorFeeds.length > 0) {
+      const coverageColors: Record<string, string> = {
+        satellite: "rgba(0,212,255,0.12)", drone: "rgba(249,115,22,0.15)", cctv: "rgba(34,197,94,0.15)",
+        sigint: "rgba(168,85,247,0.12)", osint: "rgba(234,179,8,0.08)", ground: "rgba(239,68,68,0.12)", iot: "rgba(6,182,212,0.1)",
+      };
+      const coverageBorders: Record<string, string> = {
+        satellite: "#00d4ff", drone: "#f97316", cctv: "#22c55e",
+        sigint: "#a855f7", osint: "#eab308", ground: "#ef4444", iot: "#06b6d4",
+      };
+      sensorFeeds.forEach((sf: any) => {
+        if (sf.status === "offline") return;
+        const cat = sf.feed_type.split("_")[0];
+        const col = coverageBorders[cat] || "#00d4ff";
+        const sIcon = cat === "satellite" ? "🛰" : cat === "drone" ? "👁" : cat === "cctv" ? "📹" : cat === "sigint" ? "📡" : cat === "ground" ? "📡" : "📊";
+        points.push({
+          lat: sf.lat, lng: sf.lng, pointAlt: 0.005, color: col, radius: Math.min(sf.coverage_radius_km / 200, 1.5) * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sIcon}</span> SENSOR</div><div style="font-size:10px;margin-top:2px">${sf.source_name}</div><div style="color:#888;font-size:8px;margin-top:1px">${sf.feed_type} • ${sf.status.toUpperCase()} • HP:${sf.health_score}%</div><div style="color:#666;font-size:8px">${sf.coverage_radius_km}km range • ${sf.data_rate_hz}Hz</div></div>`,
+        });
+      });
+    }
+
     if (layers.borders) {
       globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds]);
 
   const chipLayers = [
     { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
@@ -1149,9 +1178,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
             <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-0.5">
-                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL"] as const).map(tab => (
+                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL", "SENSORS", "ONTOLOGY"] as const).map(tab => (
                   <button key={tab} onClick={() => setC2RightTab(tab)}
-                    className={`flex-1 px-1 py-1 rounded text-[8px] font-mono font-bold border transition-colors ${c2RightTab === tab ? "border-primary/50 bg-primary/15 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                    className={`flex-1 px-0.5 py-1 rounded text-[7px] font-mono font-bold border transition-colors ${c2RightTab === tab ? "border-primary/50 bg-primary/15 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                     {tab}
                   </button>
                 ))}
@@ -1188,6 +1217,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
               {c2RightTab === "KILLCHAIN" && <KillChainPanel />}
               {c2RightTab === "C2 INTEL" && <C2ChatTab />}
+              {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
+              {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
             </div>
           </div>
         )}
@@ -1235,6 +1266,21 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 {chip.icon} {chip.label}
               </button>
             ))}
+            <div className="w-px h-3 bg-[hsl(220,15%,15%)] mx-0.5" />
+            {(() => {
+              const cats = sensorCats();
+              const chips = [
+                { key: "satellite", label: "SAT", count: cats.satellite?.length || 0, active: cats.satellite?.filter(f => f.status === "active").length || 0 },
+                { key: "drone", label: "UAV", count: cats.drone?.length || 0, active: cats.drone?.filter(f => f.status === "active").length || 0 },
+                { key: "cctv", label: "CCTV", count: cats.cctv?.length || 0, active: cats.cctv?.filter(f => f.status === "active").length || 0 },
+                { key: "sigint", label: "SIGINT", count: cats.sigint?.length || 0, active: cats.sigint?.filter(f => f.status === "active").length || 0 },
+              ];
+              return chips.filter(c => c.count > 0).map(c => (
+                <span key={c.key} className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-[hsl(220,15%,15%)]" style={{ color: c.active === c.count ? "#22c55e" : "#eab308" }}>
+                  {c.label}:{c.active} {c.active === c.count ? "✓" : "⚠"}
+                </span>
+              ));
+            })()}
           </div>
         </div>
       )}

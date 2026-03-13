@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.c2-assistant]
 verify_jwt = false
+
+[functions.sensor-ingest]
+verify_jwt = false
