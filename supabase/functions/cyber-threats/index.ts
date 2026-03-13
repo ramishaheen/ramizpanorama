@@ -23,6 +23,7 @@ const fallbackCyberThreats = {
       sourceName: "Fallback Intelligence",
       cve: "",
       iocs: [],
+      verified: false,
     },
   ],
   lastUpdated: new Date().toISOString(),
@@ -77,8 +78,17 @@ Deno.serve(async (req) => {
       const raw = await callAI([
         {
           role: 'system',
-          content: `You are a cybersecurity intelligence analyst specializing in Middle East and global cyber warfare.
-Given OSINT data from multiple credible cybersecurity sources, generate a structured JSON array of the latest cyber operations and threats.
+          content: `You are a cybersecurity intelligence analyst. You MUST ONLY report incidents that are directly supported by the OSINT data provided below. Do NOT fabricate, speculate, or invent incidents. Every report must be traceable to specific data points in the input.
+
+Given OSINT data from multiple credible cybersecurity sources, generate a structured JSON array of cyber incidents.
+
+STRICT RULES:
+1. Every incident MUST reference real data from the provided feeds (CVEs, IOCs, malware names, URLs, or news headlines)
+2. Cross-reference: Match CVEs from NIST/CISA with threat actor attribution from OTX pulses
+3. Map IOCs from ThreatFox/Feodo to specific campaigns when possible
+4. Use Talos/BleepingComputer RSS headlines for real-world incident context
+5. Set "verified": true ONLY when the incident directly matches a specific feed entry (CVE, IOC, or news article)
+6. Set "verified": false for AI-correlated intelligence that combines multiple weak signals
 
 Each entry MUST have ALL these fields:
 - id: unique string like "cy-live-001"  
@@ -92,13 +102,14 @@ Each entry MUST have ALL these fields:
 - type: one of "SCADA/ICS Attack", "Signal Intelligence", "Electronic Warfare", "Network Disruption", "Financial Disruption", "Information Operations", "Critical Infrastructure", "Espionage", "Wiper Malware", "Offensive Cyber", "Counter-Intelligence", "Defensive", "Ransomware", "Supply Chain", "Zero-Day Exploit", "DDoS Attack", "Phishing Campaign"
 - severity: one of "critical", "high", "medium", "low"
 - description: one-line summary (under 150 chars)
-- details: 3-4 sentence detailed analysis with technical specifics (CVEs, malware names, TTPs)
+- details: 3-4 sentence detailed analysis with technical specifics (CVEs, malware names, TTPs). Reference the source feed.
 - source: URL to a real news source if available, empty string if not
-- sourceName: short name like "CISA", "BleepingComputer", "The Record", etc.
+- sourceName: short name like "CISA", "BleepingComputer", "The Record", "ThreatFox", "Feodo Tracker", etc.
 - cve: relevant CVE ID if applicable, empty string if not
-- iocs: array of up to 3 indicators of compromise (IPs, domains, hashes) - can be empty array
+- iocs: array of up to 3 indicators of compromise (IPs, domains, hashes) from the feed data - can be empty array
+- verified: boolean - true if directly from a feed entry, false if AI-correlated
 
-Generate 12-18 realistic, technically detailed cyber incidents. Cover:
+Generate 12-18 incidents strictly based on the provided data. Cover these regions/actors as supported by the data:
 - Iran-Israel cyber front (APT33, APT34, Unit 8200, MuddyWater)
 - US Cyber Command operations
 - Gulf state operations (UAE, Saudi Arabia, Qatar, Bahrain, Oman, Jordan)
@@ -112,7 +123,7 @@ Return ONLY the JSON array, no markdown.`
         },
         {
           role: 'user',
-          content: `Here is the latest OSINT intelligence from multiple credible cybersecurity sources:\n\n${JSON.stringify(osintData, null, 2)}\n\nGenerate comprehensive structured cyber incident reports.`
+          content: `Here is the latest OSINT intelligence from multiple credible cybersecurity sources:\n\n${JSON.stringify(osintData, null, 2)}\n\nGenerate comprehensive structured cyber incident reports STRICTLY based on this data.`
         }
       ]);
 
@@ -120,7 +131,6 @@ Return ONLY the JSON array, no markdown.`
       threats = JSON.parse(cleaned);
     } catch (aiErr) {
       console.error('AI analysis failed:', aiErr);
-      // Return enriched fallback with OSINT data directly
       return new Response(JSON.stringify({
         ...fallbackCyberThreats,
         lastUpdated: new Date().toISOString(),
@@ -155,6 +165,11 @@ async function fetchAllOSINTData() {
     abuseChThreats: any[];
     nistCves: any[];
     certAlerts: any[];
+    threatFoxIocs: any[];
+    feodoC2s: any[];
+    ransomwatchGroups: any[];
+    talosNews: any[];
+    bleepingNews: any[];
     sources: string[];
   } = {
     cisaAlerts: [],
@@ -162,11 +177,15 @@ async function fetchAllOSINTData() {
     abuseChThreats: [],
     nistCves: [],
     certAlerts: [],
+    threatFoxIocs: [],
+    feodoC2s: [],
+    ransomwatchGroups: [],
+    talosNews: [],
+    bleepingNews: [],
     sources: [],
   };
 
-  // All fetches run in parallel
-  const fetches = await Promise.allSettled([
+  await Promise.allSettled([
     // 1. CISA Known Exploited Vulnerabilities
     fetch('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', {
       signal: AbortSignal.timeout(8000),
@@ -203,7 +222,7 @@ async function fetchAllOSINTData() {
       results.sources.push('AlienVault OTX');
     }),
 
-    // 3. abuse.ch Recent Threats (URLhaus)
+    // 3. abuse.ch URLhaus Recent Threats
     fetch('https://urlhaus-api.abuse.ch/v1/urls/recent/limit/15/', {
       method: 'POST',
       signal: AbortSignal.timeout(8000),
@@ -236,17 +255,96 @@ async function fetchAllOSINTData() {
       results.sources.push('NIST NVD');
     }),
 
-    // 5. CERT-FR Alerts RSS (via JSON proxy)
+    // 5. CERT-FR Alerts RSS
     fetch('https://www.cert.ssi.gouv.fr/feed/', {
       signal: AbortSignal.timeout(8000),
     }).then(async (res) => {
       if (!res.ok) return;
       const text = await res.text();
-      // Extract titles from RSS
       const titles = [...text.matchAll(/<title><!\[CDATA\[(.*?)\]\]><\/title>/g)].slice(0, 8).map(m => m[1]);
       const dates = [...text.matchAll(/<pubDate>(.*?)<\/pubDate>/g)].slice(0, 8).map(m => m[1]);
       results.certAlerts = titles.map((t, i) => ({ title: t, date: dates[i] || '' }));
       if (titles.length > 0) results.sources.push('CERT-FR');
+    }),
+
+    // 6. abuse.ch ThreatFox — Live malware IOCs
+    fetch('https://threatfox-api.abuse.ch/api/v1/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'get_iocs', days: 3 }),
+      signal: AbortSignal.timeout(8000),
+    }).then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      results.threatFoxIocs = (data.data || []).slice(0, 20).map((ioc: any) => ({
+        ioc: ioc.ioc, iocType: ioc.ioc_type,
+        threatType: ioc.threat_type, malware: ioc.malware_printable,
+        confidence: ioc.confidence_level,
+        firstSeen: ioc.first_seen_utc, lastSeen: ioc.last_seen_utc,
+        tags: ioc.tags,
+        reporter: ioc.reporter,
+      }));
+      results.sources.push('ThreatFox');
+    }),
+
+    // 7. abuse.ch Feodo Tracker — Active botnet C2 servers
+    fetch('https://feodotracker.abuse.ch/downloads/ipblocklist_recent.json', {
+      signal: AbortSignal.timeout(8000),
+    }).then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      results.feodoC2s = (data || []).slice(0, 15).map((c2: any) => ({
+        ip: c2.ip_address, port: c2.port,
+        status: c2.status, malware: c2.malware,
+        firstSeen: c2.first_seen, lastOnline: c2.last_online,
+        asName: c2.as_name, country: c2.country,
+      }));
+      results.sources.push('Feodo Tracker');
+    }),
+
+    // 8. Ransomwatch — Active ransomware groups
+    fetch('https://raw.githubusercontent.com/joshhighet/ransomwatch/main/posts.json', {
+      signal: AbortSignal.timeout(8000),
+    }).then(async (res) => {
+      if (!res.ok) return;
+      const data = await res.json();
+      results.ransomwatchGroups = (data || []).slice(0, 20).map((p: any) => ({
+        groupName: p.group_name, title: p.post_title,
+        discovered: p.discovered, url: p.post_url,
+      }));
+      results.sources.push('Ransomwatch');
+    }),
+
+    // 9. Cisco Talos Blog RSS
+    fetch('https://blog.talosintelligence.com/rss/', {
+      signal: AbortSignal.timeout(8000),
+    }).then(async (res) => {
+      if (!res.ok) return;
+      const text = await res.text();
+      const titles = [...text.matchAll(/<title>(.*?)<\/title>/g)].slice(1, 9).map(m => m[1]);
+      const descriptions = [...text.matchAll(/<description>(.*?)<\/description>/gs)].slice(1, 9).map(m => m[1].replace(/<[^>]*>/g, '').substring(0, 200));
+      const pubDates = [...text.matchAll(/<pubDate>(.*?)<\/pubDate>/g)].slice(0, 8).map(m => m[1]);
+      const links = [...text.matchAll(/<link>(.*?)<\/link>/g)].slice(1, 9).map(m => m[1]);
+      results.talosNews = titles.map((t, i) => ({
+        title: t, description: descriptions[i] || '', date: pubDates[i] || '', link: links[i] || '',
+      }));
+      if (titles.length > 0) results.sources.push('Cisco Talos');
+    }),
+
+    // 10. BleepingComputer RSS — Breaking cybersecurity news
+    fetch('https://www.bleepingcomputer.com/feed/', {
+      signal: AbortSignal.timeout(8000),
+    }).then(async (res) => {
+      if (!res.ok) return;
+      const text = await res.text();
+      const titles = [...text.matchAll(/<title><!\[CDATA\[(.*?)\]\]><\/title>/g)].slice(0, 10).map(m => m[1]);
+      const descriptions = [...text.matchAll(/<description><!\[CDATA\[(.*?)\]\]><\/description>/gs)].slice(0, 10).map(m => m[1].replace(/<[^>]*>/g, '').substring(0, 200));
+      const pubDates = [...text.matchAll(/<pubDate>(.*?)<\/pubDate>/g)].slice(0, 10).map(m => m[1]);
+      const links = [...text.matchAll(/<link>(.*?)<\/link>/g)].slice(1, 11).map(m => m[1]);
+      results.bleepingNews = titles.map((t, i) => ({
+        title: t, description: descriptions[i] || '', date: pubDates[i] || '', link: links[i] || '',
+      }));
+      if (titles.length > 0) results.sources.push('BleepingComputer');
     }),
   ]);
 
@@ -259,6 +357,10 @@ async function fetchAllOSINTData() {
       'US Cyber Command', 'US NSA TAO',
       'UAE DarkMatter/Edge Group',
       'Saudi NCA (National Cybersecurity Authority)',
+      'Jordan NCSC (National Cyber Security Center)',
+      'Bahrain NSSA (National Space Science Agency)',
+      'Oman ITA (Information Technology Authority)',
+      'Qatar NCSA (National Cyber Security Agency)',
       'Russia Fancy Bear/APT28', 'Russia Sandworm',
       'China APT41', 'China Volt Typhoon',
     ],

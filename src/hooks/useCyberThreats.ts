@@ -18,6 +18,7 @@ export interface CyberThreat {
   sourceName?: string;
   cve?: string;
   iocs?: string[];
+  verified?: boolean;
 }
 
 interface CyberThreatsState {
@@ -86,6 +87,7 @@ export function useCyberThreats(): CyberThreatsState {
         sourceName: t.sourceName || '',
         cve: t.cve || '',
         iocs: Array.isArray(t.iocs) ? t.iocs : [],
+        verified: typeof t.verified === 'boolean' ? t.verified : false,
       }));
 
       setThreats(fetchedThreats);
