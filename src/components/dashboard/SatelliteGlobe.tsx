@@ -2016,6 +2016,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               margin-left:8px;
             ">${d.label || d.mmsi}</span>
             <span style="color:${color}88;font-size:6px;">${d.speed?.toFixed(1) || 0}kn</span>
+            <span style="color:${color}66;font-size:5px;margin-left:2px;">${d.seaRegion || ''}</span>
           </div>
         `;
         el.addEventListener("click", () => {
