@@ -1179,6 +1179,40 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           <div ref={globeContainerRef} className="absolute inset-0" />
 
           {/* Inline 3D Realistic View */}
+          {/* AI SCAN HUD — appears when zoomed in */}
+          {showScanHUD && (
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+              <style>{`@keyframes scanPulse { 0%,100% { box-shadow: 0 0 8px rgba(0,212,255,0.3); } 50% { box-shadow: 0 0 20px rgba(0,212,255,0.6); } }`}</style>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[hsl(220,20%,7%)/0.95] backdrop-blur-md border border-[hsl(190,60%,25%)]" style={{ animation: aiScanning !== "idle" ? "scanPulse 1s ease-in-out infinite" : "none" }}>
+                <div className="flex items-center gap-1.5 mr-2">
+                  <Crosshair className="h-3.5 w-3.5 text-primary animate-pulse" />
+                  <span className="text-[9px] font-mono font-bold text-primary tracking-wider">AI SCAN</span>
+                  {scanCount > 0 && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">{scanCount}</span>}
+                </div>
+                <div className="w-px h-5 bg-[hsl(190,60%,20%)]" />
+                <button onClick={handleATRScan} disabled={aiScanning !== "idle"}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-mono font-bold border border-[#f97316]/40 text-[#f97316] hover:bg-[#f97316]/15 disabled:opacity-40 transition-colors">
+                  <Target className="h-3 w-3" />
+                  {aiScanning === "atr" ? "SCANNING…" : "🎯 ATR"}
+                </button>
+                {showStreetAI && (
+                  <button onClick={handleStreetAIScan} disabled={aiScanning !== "idle"}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-mono font-bold border border-[#3b82f6]/40 text-[#3b82f6] hover:bg-[#3b82f6]/15 disabled:opacity-40 transition-colors">
+                    <Eye className="h-3 w-3" />
+                    {aiScanning === "street" ? "SCANNING…" : "👁 STREET AI"}
+                  </button>
+                )}
+                {aiScanResults.length > 0 && (
+                  <button onClick={() => setAiScanResults([])} className="text-[8px] font-mono text-muted-foreground hover:text-destructive transition-colors px-1">CLR</button>
+                )}
+              </div>
+              <div className="px-2 py-1.5 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,18%)]">
+                <div className="text-[7px] font-mono text-muted-foreground">ALT {viewAlt.toFixed(2)}</div>
+                <div className="text-[7px] font-mono text-primary">{viewCenter.lat.toFixed(2)}°N {viewCenter.lng.toFixed(2)}°E</div>
+              </div>
+            </div>
+          )}
+
           {inline3DTarget && (
             <Inline3DView
               lat={inline3DTarget.lat}
