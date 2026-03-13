@@ -277,6 +277,76 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const { commitStrike } = useSensorToShooter();
 
+  // ========== AI SCAN ON ZOOM ==========
+  const [viewAlt, setViewAlt] = useState(2.2);
+  const [viewCenter, setViewCenter] = useState<{ lat: number; lng: number }>({ lat: 30, lng: 45 });
+  const [aiScanning, setAiScanning] = useState<"idle" | "atr" | "street">("idle");
+  const [aiScanResults, setAiScanResults] = useState<any[]>([]);
+  const [scanCount, setScanCount] = useState(0);
+  const showScanHUD = viewAlt < 0.5 && !cleanUI;
+  const showStreetAI = viewAlt < 0.15;
+
+  // Poll globe POV for zoom level
+  useEffect(() => {
+    if (!globeReady) return;
+    const iv = setInterval(() => {
+      const globe = globeRef.current;
+      if (!globe) return;
+      const pov = globe.pointOfView();
+      if (pov) {
+        setViewAlt(pov.altitude);
+        setViewCenter({ lat: pov.lat, lng: pov.lng });
+      }
+    }, 500);
+    return () => clearInterval(iv);
+  }, [globeReady]);
+
+  const handleATRScan = useCallback(async () => {
+    if (aiScanning !== "idle") return;
+    setAiScanning("atr");
+    try {
+      const { data, error } = await supabase.functions.invoke("c2-targeting", {
+        body: { lat: viewCenter.lat, lng: viewCenter.lng, source_sensor: "satellite" },
+      });
+      if (!error && data?.detections?.length) {
+        setAiScanResults(prev => [...prev, ...data.detections.map((d: any) => ({ ...d, scanType: "ATR", scannedAt: Date.now() }))]);
+        setScanCount(c => c + 1);
+        toast.success(`🎯 ATR: ${data.detections.length} targets at ${viewCenter.lat.toFixed(2)}°N, ${viewCenter.lng.toFixed(2)}°E`);
+      } else {
+        toast.info("ATR scan complete — no targets detected");
+      }
+    } catch { toast.error("ATR scan failed"); }
+    setAiScanning("idle");
+  }, [viewCenter, aiScanning]);
+
+  const handleStreetAIScan = useCallback(async () => {
+    if (aiScanning !== "idle") return;
+    setAiScanning("street");
+    try {
+      const { data, error } = await supabase.functions.invoke("streetview-detect", {
+        body: { lat: viewCenter.lat, lng: viewCenter.lng, heading: 0, pitch: 0, fov: 90 },
+      });
+      if (!error && data?.detections?.length) {
+        const mapped = data.detections.map((d: any, i: number) => ({
+          id: d.id || `sv-${Date.now()}-${i}`,
+          lat: viewCenter.lat + (Math.random() - 0.5) * 0.005,
+          lng: viewCenter.lng + (Math.random() - 0.5) * 0.005,
+          classification: d.label,
+          confidence: d.confidence,
+          color: d.color || "#94a3b8",
+          scanType: "STREET",
+          scannedAt: Date.now(),
+        }));
+        setAiScanResults(prev => [...prev, ...mapped]);
+        setScanCount(c => c + 1);
+        toast.success(`👁 Street AI: ${data.detections.length} objects — ${data.scene_summary || ""}`);
+      } else {
+        toast.info("Street AI scan complete — no objects detected");
+      }
+    } catch { toast.error("Street AI scan failed"); }
+    setAiScanning("idle");
+  }, [viewCenter, aiScanning]);
+
   const handleSlewSensor = useCallback(async (lat: number, lng: number) => {
     try {
       const { data, error } = await supabase.functions.invoke("sensor-to-shooter", {
@@ -975,20 +1045,16 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // ========== SHOOTER ASSETS ==========
-    if (layers.shooterAssets && shooterAssets.length > 0) {
-      const SHOOTER_ICONS: Record<string, string> = {
-        mq9_reaper: "🛩️", mq1_predator: "🛩️", f35_lightning: "✈️", f16_falcon: "✈️",
-        ah64_apache: "🚁", artillery_m777: "💥", mlrs_himars: "🚀",
-        naval_destroyer: "🚢", naval_frigate: "⚓", missile_battery_patriot: "🛡️",
-      };
-      const TASKING_COL: Record<string, string> = { idle: "#22c55e", tasked: "#eab308", rtb: "#f97316", maintenance: "#6b7280", combat: "#ef4444" };
-      shooterAssets.forEach((s: any) => {
-        const col = TASKING_COL[s.current_tasking] || "#888";
-        const icon = SHOOTER_ICONS[s.asset_type] || "⚡";
+    // ========== AI SCAN DETECTIONS ==========
+    if (aiScanResults.length > 0) {
+      aiScanResults.forEach((d: any) => {
+        const isATR = d.scanType === "ATR";
+        const col = isATR ? (d.priority === "critical" ? "#dc2626" : d.priority === "high" ? "#f97316" : "#eab308") : (d.color || "#3b82f6");
+        const icon = isATR ? "🎯" : "👁";
+        const age = Math.round((Date.now() - d.scannedAt) / 60000);
         points.push({
-          lat: s.lat, lng: s.lng, pointAlt: 0.04, color: col, radius: 0.35 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,10,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${col}30"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> SHOOTER — ${s.callsign}</div><div style="font-size:9px;margin-top:2px">${s.asset_type.replace(/_/g," ").toUpperCase()} • ${s.current_tasking.toUpperCase()}</div><div style="color:#888;font-size:8px;margin-top:1px">⛽${s.fuel_remaining_pct?.toFixed(0)}% • ROE:${s.roe_zone?.toUpperCase()} • 📡${s.command_link_status?.toUpperCase()}</div><div style="color:#666;font-size:8px">${s.lat.toFixed(3)}°N ${s.lng.toFixed(3)}°E • ${s.speed_kts}kts HDG ${s.heading}°</div></div>`,
+          lat: d.lat, lng: d.lng, pointAlt: 0.045, color: col, radius: 0.35 * densityMult,
+          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 14px ${col}40"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> AI ${d.scanType} DETECTION</div><div style="font-size:10px;margin-top:2px">${(d.classification || "unknown").toUpperCase().replace(/_/g," ")} — ${((d.confidence || 0) * 100).toFixed(0)}%</div><div style="color:#888;font-size:8px;margin-top:1px">${d.ai_assessment || d.label || ""}</div><div style="color:#666;font-size:8px">${age}m ago • ${d.lat?.toFixed(4)}°N ${d.lng?.toFixed(4)}°E</div></div>`,
         });
       });
     }
@@ -998,7 +1064,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets, aiScanResults]);
 
   const chipLayers = [
     { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
@@ -1113,6 +1179,40 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           <div ref={globeContainerRef} className="absolute inset-0" />
 
           {/* Inline 3D Realistic View */}
+          {/* AI SCAN HUD — appears when zoomed in */}
+          {showScanHUD && (
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+              <style>{`@keyframes scanPulse { 0%,100% { box-shadow: 0 0 8px rgba(0,212,255,0.3); } 50% { box-shadow: 0 0 20px rgba(0,212,255,0.6); } }`}</style>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[hsl(220,20%,7%)/0.95] backdrop-blur-md border border-[hsl(190,60%,25%)]" style={{ animation: aiScanning !== "idle" ? "scanPulse 1s ease-in-out infinite" : "none" }}>
+                <div className="flex items-center gap-1.5 mr-2">
+                  <Crosshair className="h-3.5 w-3.5 text-primary animate-pulse" />
+                  <span className="text-[9px] font-mono font-bold text-primary tracking-wider">AI SCAN</span>
+                  {scanCount > 0 && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">{scanCount}</span>}
+                </div>
+                <div className="w-px h-5 bg-[hsl(190,60%,20%)]" />
+                <button onClick={handleATRScan} disabled={aiScanning !== "idle"}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-mono font-bold border border-[#f97316]/40 text-[#f97316] hover:bg-[#f97316]/15 disabled:opacity-40 transition-colors">
+                  <Target className="h-3 w-3" />
+                  {aiScanning === "atr" ? "SCANNING…" : "🎯 ATR"}
+                </button>
+                {showStreetAI && (
+                  <button onClick={handleStreetAIScan} disabled={aiScanning !== "idle"}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-mono font-bold border border-[#3b82f6]/40 text-[#3b82f6] hover:bg-[#3b82f6]/15 disabled:opacity-40 transition-colors">
+                    <Eye className="h-3 w-3" />
+                    {aiScanning === "street" ? "SCANNING…" : "👁 STREET AI"}
+                  </button>
+                )}
+                {aiScanResults.length > 0 && (
+                  <button onClick={() => setAiScanResults([])} className="text-[8px] font-mono text-muted-foreground hover:text-destructive transition-colors px-1">CLR</button>
+                )}
+              </div>
+              <div className="px-2 py-1.5 rounded bg-[hsl(220,20%,7%)/0.85] backdrop-blur border border-[hsl(220,15%,18%)]">
+                <div className="text-[7px] font-mono text-muted-foreground">ALT {viewAlt.toFixed(2)}</div>
+                <div className="text-[7px] font-mono text-primary">{viewCenter.lat.toFixed(2)}°N {viewCenter.lng.toFixed(2)}°E</div>
+              </div>
+            </div>
+          )}
+
           {inline3DTarget && (
             <Inline3DView
               lat={inline3DTarget.lat}
