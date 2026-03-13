@@ -207,12 +207,12 @@ const popupOptions: L.PopupOptions = {
 
 const popupStyle = `font-family:'JetBrains Mono',monospace;font-size:11px;color:#ccc;background:#1a1d27;padding:8px;border-radius:4px;min-width:200px;`;
 
-/** Bind popup that opens on hover instead of click */
-function bindHoverPopup(marker: L.Marker, content: string, opts?: L.PopupOptions) {
-  marker.bindPopup(content, { ...popupOptions, ...opts, className: "intel-popup" });
-  marker.on("mouseover", function (this: L.Marker) { this.openPopup(); });
-  marker.on("mouseout", function (this: L.Marker) { this.closePopup(); });
-  return marker;
+/** Bind popup that opens on hover instead of click — works with any Leaflet layer */
+function bindHoverPopup<T extends L.Layer>(layer: T, content: string, opts?: L.PopupOptions): T {
+  (layer as any).bindPopup(content, { ...popupOptions, ...opts, className: "intel-popup" });
+  layer.on("mouseover", function () { (layer as any).openPopup(); });
+  layer.on("mouseout", function () { (layer as any).closePopup(); });
+  return layer;
 }
 
 const newsSeverityColors: Record<string, string> = {
