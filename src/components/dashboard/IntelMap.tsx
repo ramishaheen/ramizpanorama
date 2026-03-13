@@ -2187,7 +2187,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
 
   return (
     <div className={`relative h-full w-full ${activeBase?.id === "esri-imagery" ? "satellite-mode" : ""}`}>
-      <HolographicOverlay alertCount={totalAlerts} />
+      {(componentVisibility?.holographic !== false) && <HolographicOverlay alertCount={totalAlerts} />}
 
       {/* Expanded sub-panels that pop up above command bar */}
       {cmdUp42Open && (
