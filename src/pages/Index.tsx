@@ -26,6 +26,7 @@ import { DraggableWidget } from "@/components/dashboard/DraggableWidget";
 import { TelegramFeed } from "@/components/dashboard/TelegramFeed";
 import { WarEscalationEngine } from "@/components/dashboard/WarEscalationEngine";
 import { RocketEntryPanel } from "@/components/dashboard/RocketEntryPanel";
+import { RansomwareTracker } from "@/components/dashboard/RansomwareTracker";
 import { CountryStatusPanel } from "@/components/dashboard/CountryStatusPanel";
 import { SocialSentimentBox } from "@/components/dashboard/SocialSentimentBox";
 import { WeatherTrafficPanel } from "@/components/dashboard/WeatherTrafficPanel";
@@ -48,7 +49,7 @@ import {
 } from "@dnd-kit/sortable";
 
 const STORAGE_KEY = "waros-layout";
-const DEFAULT_LEFT_ORDER = ["rockets", "risk", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
+const DEFAULT_LEFT_ORDER = ["rockets", "risk", "ransomware", "geo-fusion", "weather", "escalation", "commodities", "news", "predictions", "telegram"];
 const DEFAULT_RIGHT_ORDER = ["notifications", "war-updates", "layers", "timeline", "cyber"];
 
 interface LayoutState {
@@ -242,6 +243,7 @@ const Index = () => {
     news: <LiveNewsFeed />,
     predictions: <AIPredictions />,
     telegram: <TelegramFeed />,
+    ransomware: <RansomwareTracker />,
   };
 
   const rightWidgets: Record<string, ReactNode> = {
