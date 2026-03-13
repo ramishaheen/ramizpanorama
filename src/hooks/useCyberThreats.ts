@@ -18,6 +18,7 @@ export interface CyberThreat {
   sourceName?: string;
   cve?: string;
   iocs?: string[];
+  verified?: boolean;
 }
 
 interface CyberThreatsState {
