@@ -246,6 +246,46 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showTrafficParticles, setShowTrafficParticles] = useState(false);
   const [opacityTrafficParticles, setOpacityTrafficParticles] = useState(0.85);
 
+  // Lite Mode — performance optimization
+  const [liteMode, setLiteMode] = useState(false);
+  const savedLayersRef = useRef<Record<string, boolean> | null>(null);
+
+  const toggleLiteMode = useCallback(() => {
+    setLiteMode(prev => {
+      const next = !prev;
+      if (next) {
+        // Save current heavy layer states then disable them
+        savedLayersRef.current = {
+          showTrafficParticles, showWeatherRadar, showIncidents,
+          showNrtModis, showNrtViirs, showNrtNoaa20, showNrtFires, showNrtNightLights, showHeatmap,
+        };
+        setShowTrafficParticles(false);
+        setShowWeatherRadar(false);
+        setShowIncidents(false);
+        setShowNrtModis(false);
+        setShowNrtViirs(false);
+        setShowNrtNoaa20(false);
+        setShowNrtFires(false);
+        setShowNrtNightLights(false);
+        setShowHeatmap(false);
+      } else if (savedLayersRef.current) {
+        // Restore previous states
+        const s = savedLayersRef.current;
+        setShowTrafficParticles(s.showTrafficParticles);
+        setShowWeatherRadar(s.showWeatherRadar);
+        setShowIncidents(s.showIncidents);
+        setShowNrtModis(s.showNrtModis);
+        setShowNrtViirs(s.showNrtViirs);
+        setShowNrtNoaa20(s.showNrtNoaa20);
+        setShowNrtFires(s.showNrtFires);
+        setShowNrtNightLights(s.showNrtNightLights);
+        setShowHeatmap(s.showHeatmap);
+        savedLayersRef.current = null;
+      }
+      return next;
+    });
+  }, [showTrafficParticles, showWeatherRadar, showIncidents, showNrtModis, showNrtViirs, showNrtNoaa20, showNrtFires, showNrtNightLights, showHeatmap]);
+
   useEffect(() => {
     const fetchNearby = async () => {
       const radius = 5;
