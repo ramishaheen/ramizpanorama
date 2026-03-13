@@ -1960,7 +1960,12 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
 
       if (d.type === "city") {
         const isLite = liteMode;
-        const dotSize = isLite ? 3 : 5;
+        // In lite mode, skip city labels entirely for performance — just show dot
+        if (isLite) {
+          el.style.cssText = `width:3px;height:3px;border-radius:50%;background:#00dcff;box-shadow:0 0 4px #00dcff;`;
+          return el;
+        }
+        const dotSize = 5;
         el.style.cssText = `cursor:pointer;display:flex;align-items:center;gap:0;transition:all 0.25s ease;position:relative;`;
         const dot = document.createElement("span");
         dot.style.cssText = `width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:#00dcff;display:inline-block;box-shadow:0 0 ${isLite ? 4 : 6}px #00dcff;flex-shrink:0;`;
@@ -2132,35 +2137,56 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         }}
       />
 
+      {/* Lite Mode — Radial Blur (clear center, blurred edges) */}
+      {liteMode && (
+        <div
+          className="absolute inset-0 z-[2001] pointer-events-none"
+          style={{
+            backdropFilter: "blur(5px)",
+            WebkitBackdropFilter: "blur(5px)",
+            maskImage: "radial-gradient(circle at center, transparent 12%, rgba(0,0,0,0.4) 25%, rgba(0,0,0,0.85) 45%)",
+            WebkitMaskImage: "radial-gradient(circle at center, transparent 12%, rgba(0,0,0,0.4) 25%, rgba(0,0,0,0.85) 45%)",
+          }}
+        />
+      )}
+
       {/* Lite Mode — Crosshair / Gun-Eye Reticle */}
       {liteMode && (
-        <div className="absolute inset-0 z-[2002] pointer-events-none flex items-center justify-center">
-          <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.5 }}>
+        <div className="absolute inset-0 z-[2002] pointer-events-none flex items-center justify-center" style={{ filter: "drop-shadow(0 0 6px hsl(190,100%,50%))" }}>
+          <svg width="260" height="260" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.85 }}>
             {/* Outer ring */}
-            <circle cx="100" cy="100" r="90" stroke="hsl(190,100%,50%)" strokeWidth="0.75" strokeDasharray="4 4" />
+            <circle cx="130" cy="130" r="120" stroke="hsl(190,100%,50%)" strokeWidth="1.2" strokeDasharray="6 4" />
             {/* Middle ring */}
-            <circle cx="100" cy="100" r="60" stroke="hsl(190,100%,50%)" strokeWidth="0.5" strokeDasharray="2 3" />
-            {/* Inner ring */}
-            <circle cx="100" cy="100" r="30" stroke="hsl(190,100%,50%)" strokeWidth="0.75" />
+            <circle cx="130" cy="130" r="80" stroke="hsl(190,100%,50%)" strokeWidth="0.8" strokeDasharray="3 3" />
+            {/* Inner ring — focus zone boundary */}
+            <circle cx="130" cy="130" r="40" stroke="hsl(190,100%,50%)" strokeWidth="1.5" />
             {/* Center dot */}
-            <circle cx="100" cy="100" r="2" fill="hsl(190,100%,50%)" />
+            <circle cx="130" cy="130" r="3" fill="hsl(190,100%,50%)" />
+            <circle cx="130" cy="130" r="6" fill="none" stroke="hsl(190,100%,50%)" strokeWidth="0.6" />
             {/* Cross lines */}
-            <line x1="100" y1="5" x2="100" y2="70" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
-            <line x1="100" y1="130" x2="100" y2="195" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
-            <line x1="5" y1="100" x2="70" y2="100" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
-            <line x1="130" y1="100" x2="195" y2="100" stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            <line x1="130" y1="5" x2="130" y2="90" stroke="hsl(190,100%,50%)" strokeWidth="1" />
+            <line x1="130" y1="170" x2="130" y2="255" stroke="hsl(190,100%,50%)" strokeWidth="1" />
+            <line x1="5" y1="130" x2="90" y2="130" stroke="hsl(190,100%,50%)" strokeWidth="1" />
+            <line x1="170" y1="130" x2="255" y2="130" stroke="hsl(190,100%,50%)" strokeWidth="1" />
             {/* Range tick marks */}
-            {[45, 75].map(r => (
+            {[55, 100].map(r => (
               <g key={r}>
-                <line x1={100} y1={100 - r} x2={100} y2={100 - r + 4} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
-                <line x1={100} y1={100 + r} x2={100} y2={100 + r - 4} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
-                <line x1={100 - r} y1={100} x2={100 - r + 4} y2={100} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
-                <line x1={100 + r} y1={100} x2={100 + r - 4} y2={100} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+                <line x1={130} y1={130 - r} x2={130} y2={130 - r + 6} stroke="hsl(190,100%,50%)" strokeWidth="0.8" />
+                <line x1={130} y1={130 + r} x2={130} y2={130 + r - 6} stroke="hsl(190,100%,50%)" strokeWidth="0.8" />
+                <line x1={130 - r} y1={130} x2={130 - r + 6} y2={130} stroke="hsl(190,100%,50%)" strokeWidth="0.8" />
+                <line x1={130 + r} y1={130} x2={130 + r - 6} y2={130} stroke="hsl(190,100%,50%)" strokeWidth="0.8" />
               </g>
             ))}
             {/* Diagonal tick marks */}
-            {[{x:35,y:35},{x:165,y:35},{x:35,y:165},{x:165,y:165}].map((p,i) => (
-              <line key={i} x1={p.x} y1={p.y} x2={p.x + (p.x < 100 ? 6 : -6)} y2={p.y + (p.y < 100 ? 6 : -6)} stroke="hsl(190,100%,50%)" strokeWidth="0.5" />
+            {[{x:45,y:45},{x:215,y:45},{x:45,y:215},{x:215,y:215}].map((p,i) => (
+              <line key={i} x1={p.x} y1={p.y} x2={p.x + (p.x < 130 ? 8 : -8)} y2={p.y + (p.y < 130 ? 8 : -8)} stroke="hsl(190,100%,50%)" strokeWidth="0.8" />
+            ))}
+            {/* Mil-dot range markers on vertical axis */}
+            {[60, 70, 80, 90].map(d => (
+              <g key={`md${d}`}>
+                <circle cx="130" cy={130 + d} r="1.2" fill="hsl(190,100%,50%)" opacity="0.6" />
+                <circle cx="130" cy={130 - d} r="1.2" fill="hsl(190,100%,50%)" opacity="0.6" />
+              </g>
             ))}
           </svg>
         </div>
