@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_logs: {
+        Row: {
+          bda_image_url: string | null
+          bda_summary: string | null
+          created_at: string
+          decision_time_sec: number
+          effect: Database["public"]["Enums"]["effect_achieved"]
+          evidence_link: string | null
+          id: string
+          lat: number
+          lng: number
+          operator_id: string | null
+          strike_recommendation_id: string | null
+          target_track_id: string | null
+        }
+        Insert: {
+          bda_image_url?: string | null
+          bda_summary?: string | null
+          created_at?: string
+          decision_time_sec?: number
+          effect?: Database["public"]["Enums"]["effect_achieved"]
+          evidence_link?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          operator_id?: string | null
+          strike_recommendation_id?: string | null
+          target_track_id?: string | null
+        }
+        Update: {
+          bda_image_url?: string | null
+          bda_summary?: string | null
+          created_at?: string
+          decision_time_sec?: number
+          effect?: Database["public"]["Enums"]["effect_achieved"]
+          evidence_link?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          operator_id?: string | null
+          strike_recommendation_id?: string | null
+          target_track_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_logs_strike_recommendation_id_fkey"
+            columns: ["strike_recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "strike_recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_logs_target_track_id_fkey"
+            columns: ["target_track_id"]
+            isOneToOne: false
+            referencedRelation: "target_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_detections: {
         Row: {
           created_at: string
@@ -1039,6 +1099,66 @@ export type Database = {
           },
         ]
       }
+      shooter_assets: {
+        Row: {
+          altitude_ft: number
+          asset_type: Database["public"]["Enums"]["asset_type"]
+          callsign: string
+          command_link_status: string
+          created_at: string
+          current_tasking: Database["public"]["Enums"]["tasking_status"]
+          fuel_range_nm: number
+          fuel_remaining_pct: number
+          heading: number
+          id: string
+          last_updated: string
+          lat: number
+          lng: number
+          parent_unit: string | null
+          payload: Json
+          roe_zone: Database["public"]["Enums"]["roe_zone"]
+          speed_kts: number
+        }
+        Insert: {
+          altitude_ft?: number
+          asset_type: Database["public"]["Enums"]["asset_type"]
+          callsign: string
+          command_link_status?: string
+          created_at?: string
+          current_tasking?: Database["public"]["Enums"]["tasking_status"]
+          fuel_range_nm?: number
+          fuel_remaining_pct?: number
+          heading?: number
+          id?: string
+          last_updated?: string
+          lat?: number
+          lng?: number
+          parent_unit?: string | null
+          payload?: Json
+          roe_zone?: Database["public"]["Enums"]["roe_zone"]
+          speed_kts?: number
+        }
+        Update: {
+          altitude_ft?: number
+          asset_type?: Database["public"]["Enums"]["asset_type"]
+          callsign?: string
+          command_link_status?: string
+          created_at?: string
+          current_tasking?: Database["public"]["Enums"]["tasking_status"]
+          fuel_range_nm?: number
+          fuel_remaining_pct?: number
+          heading?: number
+          id?: string
+          last_updated?: string
+          lat?: number
+          lng?: number
+          parent_unit?: string | null
+          payload?: Json
+          roe_zone?: Database["public"]["Enums"]["roe_zone"]
+          speed_kts?: number
+        }
+        Relationships: []
+      }
       snapshot_analysis: {
         Row: {
           analyzed_at: string
@@ -1164,6 +1284,88 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "intel_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strike_recommendations: {
+        Row: {
+          ai_reasoning: string | null
+          collateral_risk: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["strike_decision"]
+          id: string
+          kill_chain_task_id: string | null
+          payload_match_score: number
+          probability_of_kill: number
+          proximity_km: number
+          recommended_weapon: string
+          roe_status: string
+          shooter_asset_id: string
+          target_track_id: string
+          time_to_target_min: number
+          updated_at: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          collateral_risk?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["strike_decision"]
+          id?: string
+          kill_chain_task_id?: string | null
+          payload_match_score?: number
+          probability_of_kill?: number
+          proximity_km?: number
+          recommended_weapon?: string
+          roe_status?: string
+          shooter_asset_id: string
+          target_track_id: string
+          time_to_target_min?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          collateral_risk?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["strike_decision"]
+          id?: string
+          kill_chain_task_id?: string | null
+          payload_match_score?: number
+          probability_of_kill?: number
+          proximity_km?: number
+          recommended_weapon?: string
+          roe_status?: string
+          shooter_asset_id?: string
+          target_track_id?: string
+          time_to_target_min?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strike_recommendations_kill_chain_task_id_fkey"
+            columns: ["kill_chain_task_id"]
+            isOneToOne: false
+            referencedRelation: "kill_chain_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strike_recommendations_shooter_asset_id_fkey"
+            columns: ["shooter_asset_id"]
+            isOneToOne: false
+            referencedRelation: "shooter_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strike_recommendations_target_track_id_fkey"
+            columns: ["target_track_id"]
+            isOneToOne: false
+            referencedRelation: "target_tracks"
             referencedColumns: ["id"]
           },
         ]
@@ -1529,6 +1731,17 @@ export type Database = {
       affiliation: "blue" | "red" | "neutral" | "unknown"
       airspace_alert_type: "NOTAM" | "TFR" | "CLOSURE"
       app_role: "admin" | "analyst" | "viewer" | "partner"
+      asset_type:
+        | "mq9_reaper"
+        | "mq1_predator"
+        | "f35_lightning"
+        | "f16_falcon"
+        | "ah64_apache"
+        | "artillery_m777"
+        | "mlrs_himars"
+        | "naval_destroyer"
+        | "naval_frigate"
+        | "missile_battery_patriot"
       camera_category: "traffic" | "tourism" | "ports" | "weather" | "public"
       camera_source_type: "hls" | "snapshot" | "embed_page"
       camera_status: "active" | "inactive" | "error" | "unknown"
@@ -1556,6 +1769,12 @@ export type Database = {
         | "battalion"
         | "brigade"
         | "division"
+      effect_achieved:
+        | "destroyed"
+        | "damaged"
+        | "missed"
+        | "unknown"
+        | "bda_pending"
       entity_type:
         | "equipment"
         | "facility"
@@ -1644,6 +1863,7 @@ export type Database = {
         | "external_link_only"
       risk_trend: "rising" | "falling" | "stable"
       rocket_status: "launched" | "in_flight" | "intercepted" | "impact"
+      roe_zone: "free_fire" | "restricted" | "no_strike" | "weapons_hold"
       sensor_type: "satellite" | "drone" | "sigint"
       severity_level: "low" | "medium" | "high" | "critical"
       source_category:
@@ -1675,6 +1895,13 @@ export type Database = {
         | "embed"
         | "rtsp"
         | "unknown"
+      strike_decision:
+        | "pending"
+        | "committed"
+        | "discarded"
+        | "executing"
+        | "complete"
+        | "aborted"
       target_classification:
         | "tank"
         | "truck"
@@ -1692,6 +1919,7 @@ export type Database = {
         | "engaged"
         | "destroyed"
         | "bda_pending"
+      tasking_status: "idle" | "tasked" | "rtb" | "maintenance" | "combat"
       timeline_event_type: "airspace" | "maritime" | "alert" | "diplomatic"
       unit_status: "active" | "destroyed" | "retreating" | "unknown"
       unit_type:
@@ -1841,6 +2069,18 @@ export const Constants = {
       affiliation: ["blue", "red", "neutral", "unknown"],
       airspace_alert_type: ["NOTAM", "TFR", "CLOSURE"],
       app_role: ["admin", "analyst", "viewer", "partner"],
+      asset_type: [
+        "mq9_reaper",
+        "mq1_predator",
+        "f35_lightning",
+        "f16_falcon",
+        "ah64_apache",
+        "artillery_m777",
+        "mlrs_himars",
+        "naval_destroyer",
+        "naval_frigate",
+        "missile_battery_patriot",
+      ],
       camera_category: ["traffic", "tourism", "ports", "weather", "public"],
       camera_source_type: ["hls", "snapshot", "embed_page"],
       camera_status: ["active", "inactive", "error", "unknown"],
@@ -1870,6 +2110,13 @@ export const Constants = {
         "battalion",
         "brigade",
         "division",
+      ],
+      effect_achieved: [
+        "destroyed",
+        "damaged",
+        "missed",
+        "unknown",
+        "bda_pending",
       ],
       entity_type: [
         "equipment",
@@ -1963,6 +2210,7 @@ export const Constants = {
       ],
       risk_trend: ["rising", "falling", "stable"],
       rocket_status: ["launched", "in_flight", "intercepted", "impact"],
+      roe_zone: ["free_fire", "restricted", "no_strike", "weapons_hold"],
       sensor_type: ["satellite", "drone", "sigint"],
       severity_level: ["low", "medium", "high", "critical"],
       source_category: [
@@ -1997,6 +2245,14 @@ export const Constants = {
         "rtsp",
         "unknown",
       ],
+      strike_decision: [
+        "pending",
+        "committed",
+        "discarded",
+        "executing",
+        "complete",
+        "aborted",
+      ],
       target_classification: [
         "tank",
         "truck",
@@ -2016,6 +2272,7 @@ export const Constants = {
         "destroyed",
         "bda_pending",
       ],
+      tasking_status: ["idle", "tasked", "rtb", "maintenance", "combat"],
       timeline_event_type: ["airspace", "maritime", "alert", "diplomatic"],
       unit_status: ["active", "destroyed", "retreating", "unknown"],
       unit_type: [

@@ -17,6 +17,7 @@ import { KillChainPanel } from "./KillChainPanel";
 import { C2ChatTab } from "./C2ChatTab";
 import { SensorFusionPanel } from "./SensorFusionPanel";
 import { OntologyPanel } from "./OntologyPanel";
+import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 
 
@@ -265,7 +266,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
-  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY">("FEED");
+  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S">("FEED");
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
 
 
@@ -1182,7 +1183,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
             <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)] flex-shrink-0">
               <div className="flex items-center gap-0.5">
-                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL", "SENSORS", "ONTOLOGY"] as const).map(tab => (
+                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL", "SENSORS", "ONTOLOGY", "S2S"] as const).map(tab => (
                   <button key={tab} onClick={() => setC2RightTab(tab)}
                     className={`flex-1 px-0.5 py-1 rounded text-[7px] font-mono font-bold border transition-colors ${c2RightTab === tab ? "border-primary/50 bg-primary/15 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                     {tab}
@@ -1223,6 +1224,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {c2RightTab === "C2 INTEL" && <C2ChatTab />}
               {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
               {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
+              {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
             </div>
           </div>
         )}
