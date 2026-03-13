@@ -1008,6 +1008,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     setActiveCity(city.name);
     setSelectedSat(null);
     setOrbitPath(null);
+    setCoverageRing(null);
     setSelectedCity(city);
 
     // Find satellites within ~2500km radius of the country center
