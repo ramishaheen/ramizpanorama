@@ -1200,7 +1200,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                       <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
                     </div>
                   </div>
-                  <div ref={feedRef} className="flex-1 overflow-y-auto">
+                  <div ref={feedRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
                     {unifiedFeed.map(ev => (
                       <button key={ev.id} onClick={() => handleFeedClick(ev.lat, ev.lng)}
                         className={`w-full text-left px-2 py-1.5 border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
