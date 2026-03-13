@@ -1178,8 +1178,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)]">
               <button onClick={() => setCleanUI(true)} className="w-full px-2 py-1.5 rounded text-[9px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors text-center">CLEAN UI</button>
             </div>
+            </div>
 
-            <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)]">
+            <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)] flex-shrink-0">
               <div className="flex items-center gap-0.5">
                 {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL", "SENSORS", "ONTOLOGY"] as const).map(tab => (
                   <button key={tab} onClick={() => setC2RightTab(tab)}
