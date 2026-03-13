@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle, Radio } from "lucide-react";
+import { Crosshair, ArrowRight, CheckCircle, Loader2, Zap, MapPin, ChevronDown, ChevronUp, Scan, FileText, AlertTriangle, Radio, X, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
