@@ -2767,7 +2767,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             top: Math.max(hoverPos.y - 40, 10),
           }}
         >
-          <div className="bg-black/90 backdrop-blur-md border border-white/20 rounded-lg px-3 py-2 min-w-[200px] shadow-xl">
+          <div className="gotham-orbital-panel px-3 py-2 min-w-[200px]">
             <div className="flex items-center gap-2 mb-1">
               <span
                 className="w-2 h-2 rounded-full animate-pulse"
