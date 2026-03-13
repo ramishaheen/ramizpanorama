@@ -193,9 +193,9 @@ export const MapCommandBar = ({
       )}
 
       {/* Main command strip */}
-      <div className="flex items-stretch overflow-x-auto gotham-cmd-strip">
+      <div className="flex items-center overflow-x-auto gotham-cmd-strip py-1">
         {/* ▎IMAGERY */}
-        <CommandSection label="IMAGERY">
+        <CommandSection label="IMG">
           {baseLayers.slice(0, 5).map(layer => (
             <GothamBtn
               key={layer.id}
@@ -205,8 +205,8 @@ export const MapCommandBar = ({
             />
           ))}
           <GothamBtn
-            label={`LAYERS`}
-            icon={<Layers className="w-3.5 h-3.5" />}
+            label="LYR"
+            icon={<Layers className="w-3 h-3" />}
             active={activeOverlays.length > 0 || overlayExpanded}
             badge={activeOverlays.length > 0 ? activeOverlays.length : undefined}
             onClick={() => setOverlayExpanded(!overlayExpanded)}
@@ -216,7 +216,7 @@ export const MapCommandBar = ({
         <div className="gotham-section-divider" />
 
         {/* ▎MAP TOOLS */}
-        <CommandSection label="MAP TOOLS">
+        <CommandSection label="TOOLS">
           {toolButtons.map(t => (
             <GothamBtn
               key={t.mode}
@@ -231,18 +231,18 @@ export const MapCommandBar = ({
         <div className="gotham-section-divider" />
 
         {/* ▎ANALYSIS */}
-        <CommandSection label="ANALYSIS">
-          <GothamBtn label="UP42" icon={<Search className="w-3.5 h-3.5" />} active={up42Open} onClick={onToggleUP42} />
-          <GothamBtn label="LEGEND" icon={<Eye className="w-3.5 h-3.5" />} active={legendOpen} onClick={onToggleLegend} />
-          <GothamBtn label="HISTORY" icon={<Clock className="w-3.5 h-3.5" />} active={historyOpen} onClick={onToggleHistory} />
+        <CommandSection label="DATA">
+          <GothamBtn label="UP42" icon={<Search className="w-3 h-3" />} active={up42Open} onClick={onToggleUP42} />
+          <GothamBtn label="LEGEND" icon={<Eye className="w-3 h-3" />} active={legendOpen} onClick={onToggleLegend} />
+          <GothamBtn label="HIST" icon={<Clock className="w-3 h-3" />} active={historyOpen} onClick={onToggleHistory} />
           <GothamBtn
-            label={currentMapStyle === "satellite" ? "SAT" : "DARK"}
-            icon={currentMapStyle === "satellite" ? <Satellite className="w-3.5 h-3.5" /> : <Map className="w-3.5 h-3.5" />}
+            label={currentMapStyle === "satellite" ? "SAT" : "DRK"}
+            icon={currentMapStyle === "satellite" ? <Satellite className="w-3 h-3" /> : <Map className="w-3 h-3" />}
             onClick={() => onMapStyleChange(currentMapStyle === "satellite" ? "dark" : "satellite")}
           />
-          <GothamBtn label="MARKS" icon={<Bookmark className="w-3.5 h-3.5" />} active={bookmarksOpen} onClick={onToggleBookmarks} />
-          <GothamBtn label="CHOKE" icon={<Ship className="w-3.5 h-3.5" />} active={chokepointsOpen} onClick={onToggleChokepoints} />
-          <GothamBtn label="LAUNCHES" icon={<Rocket className="w-3.5 h-3.5" />} active={launchesOpen} onClick={onToggleLaunches} />
+          <GothamBtn label="BKM" icon={<Bookmark className="w-3 h-3" />} active={bookmarksOpen} onClick={onToggleBookmarks} />
+          <GothamBtn label="CHOKE" icon={<Ship className="w-3 h-3" />} active={chokepointsOpen} onClick={onToggleChokepoints} />
+          <GothamBtn label="LAUNCH" icon={<Rocket className="w-3 h-3" />} active={launchesOpen} onClick={onToggleLaunches} />
         </CommandSection>
 
         <div className="gotham-section-divider" />
@@ -253,8 +253,8 @@ export const MapCommandBar = ({
             <GothamBtn key={i} label={t.label} icon={t.icon} active={t.active} onClick={t.onClick} badge={t.badge} />
           ))}
           <GothamBtn
-            label={intelExpanded ? "LESS" : "MORE"}
-            icon={intelExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            label={intelExpanded ? "−" : "+"}
+            icon={intelExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
             active={intelExpanded}
             onClick={() => setIntelExpanded(!intelExpanded)}
           />
