@@ -277,6 +277,76 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const { commitStrike } = useSensorToShooter();
 
+  // ========== AI SCAN ON ZOOM ==========
+  const [viewAlt, setViewAlt] = useState(2.2);
+  const [viewCenter, setViewCenter] = useState<{ lat: number; lng: number }>({ lat: 30, lng: 45 });
+  const [aiScanning, setAiScanning] = useState<"idle" | "atr" | "street">("idle");
+  const [aiScanResults, setAiScanResults] = useState<any[]>([]);
+  const [scanCount, setScanCount] = useState(0);
+  const showScanHUD = viewAlt < 0.5 && !cleanUI;
+  const showStreetAI = viewAlt < 0.15;
+
+  // Poll globe POV for zoom level
+  useEffect(() => {
+    if (!globeReady) return;
+    const iv = setInterval(() => {
+      const globe = globeRef.current;
+      if (!globe) return;
+      const pov = globe.pointOfView();
+      if (pov) {
+        setViewAlt(pov.altitude);
+        setViewCenter({ lat: pov.lat, lng: pov.lng });
+      }
+    }, 500);
+    return () => clearInterval(iv);
+  }, [globeReady]);
+
+  const handleATRScan = useCallback(async () => {
+    if (aiScanning !== "idle") return;
+    setAiScanning("atr");
+    try {
+      const { data, error } = await supabase.functions.invoke("c2-targeting", {
+        body: { lat: viewCenter.lat, lng: viewCenter.lng, source_sensor: "satellite" },
+      });
+      if (!error && data?.detections?.length) {
+        setAiScanResults(prev => [...prev, ...data.detections.map((d: any) => ({ ...d, scanType: "ATR", scannedAt: Date.now() }))]);
+        setScanCount(c => c + 1);
+        toast.success(`🎯 ATR: ${data.detections.length} targets at ${viewCenter.lat.toFixed(2)}°N, ${viewCenter.lng.toFixed(2)}°E`);
+      } else {
+        toast.info("ATR scan complete — no targets detected");
+      }
+    } catch { toast.error("ATR scan failed"); }
+    setAiScanning("idle");
+  }, [viewCenter, aiScanning]);
+
+  const handleStreetAIScan = useCallback(async () => {
+    if (aiScanning !== "idle") return;
+    setAiScanning("street");
+    try {
+      const { data, error } = await supabase.functions.invoke("streetview-detect", {
+        body: { lat: viewCenter.lat, lng: viewCenter.lng, heading: 0, pitch: 0, fov: 90 },
+      });
+      if (!error && data?.detections?.length) {
+        const mapped = data.detections.map((d: any, i: number) => ({
+          id: d.id || `sv-${Date.now()}-${i}`,
+          lat: viewCenter.lat + (Math.random() - 0.5) * 0.005,
+          lng: viewCenter.lng + (Math.random() - 0.5) * 0.005,
+          classification: d.label,
+          confidence: d.confidence,
+          color: d.color || "#94a3b8",
+          scanType: "STREET",
+          scannedAt: Date.now(),
+        }));
+        setAiScanResults(prev => [...prev, ...mapped]);
+        setScanCount(c => c + 1);
+        toast.success(`👁 Street AI: ${data.detections.length} objects — ${data.scene_summary || ""}`);
+      } else {
+        toast.info("Street AI scan complete — no objects detected");
+      }
+    } catch { toast.error("Street AI scan failed"); }
+    setAiScanning("idle");
+  }, [viewCenter, aiScanning]);
+
   const handleSlewSensor = useCallback(async (lat: number, lng: number) => {
     try {
       const { data, error } = await supabase.functions.invoke("sensor-to-shooter", {
