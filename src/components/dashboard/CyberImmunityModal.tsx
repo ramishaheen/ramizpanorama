@@ -4,7 +4,8 @@ import {
   X, RefreshCw, ShieldAlert, Search,
   Activity, Globe, AlertTriangle, Zap, Network,
   Target, Bug, Radio, ChevronRight, ExternalLink,
-  Play, Pause, SkipBack, SkipForward, Clock, Copy, Check
+  Play, Pause, SkipBack, SkipForward, Clock, Copy, Check,
+  Eye, EyeOff, Skull, Link2, FileWarning, Hash
 } from "lucide-react";
 import { useCyberThreats, type CyberThreat } from "@/hooks/useCyberThreats";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -74,6 +75,46 @@ function arcPath(x1: number, y1: number, x2: number, y2: number): string {
   return `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
 }
 
+/* ── Attack Corridor (intensity-based animated path) ── */
+function AttackCorridor({ x1, y1, x2, y2, intensity, color, idx }: {
+  x1: number; y1: number; x2: number; y2: number;
+  intensity: number; color: string; idx: number;
+}) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2 - Math.abs(x2 - x1) * 0.15 - 20;
+  const d = `M${x1},${y1} Q${mx},${my} ${x2},${y2}`;
+  const w = 2 + intensity * 6; // width 2–8 based on intensity
+  const gradId = `corridor-grad-${idx}`;
+
+  return (
+    <g className="pointer-events-none">
+      {/* Glow layer */}
+      <path d={d} fill="none" stroke={color} strokeWidth={w + 4} opacity={0.08}>
+        <animate attributeName="opacity" values="0.04;0.12;0.04" dur={`${2 + idx * 0.2}s`} repeatCount="indefinite" />
+      </path>
+      {/* Core corridor with gradient */}
+      <defs>
+        <linearGradient id={gradId} x1={x1} y1={y1} x2={x2} y2={y2} gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={color} stopOpacity="0.1" />
+          <stop offset="50%" stopColor={color} stopOpacity={0.4 + intensity * 0.4} />
+          <stop offset="100%" stopColor={color} stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+      <path d={d} fill="none" stroke={`url(#${gradId})`} strokeWidth={w} strokeLinecap="round">
+        <animate attributeName="stroke-width" values={`${w};${w + 2};${w}`} dur={`${1.5 + idx * 0.15}s`} repeatCount="indefinite" />
+      </path>
+      {/* Animated particle dash */}
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3,8" opacity={0.7}>
+        <animate attributeName="stroke-dashoffset" from="0" to="-22" dur={`${0.8 + idx * 0.05}s`} repeatCount="indefinite" />
+      </path>
+      {/* Second particle layer (opposite direction) */}
+      <path d={d} fill="none" stroke={color} strokeWidth={0.8} strokeDasharray="2,12" opacity={0.4}>
+        <animate attributeName="stroke-dashoffset" from="-30" to="0" dur={`${1.2 + idx * 0.08}s`} repeatCount="indefinite" />
+      </path>
+    </g>
+  );
+}
+
 /* ── Threat Map (SVG equirectangular) ── */
 function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void; selectedId?: string }) {
   const W = 900, H = 450;
@@ -97,6 +138,33 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
     return Array.from(map.values());
   }, [threats]);
 
+  /* Compute attack corridors — aggregate by country pair */
+  const corridors = useMemo(() => {
+    const pairMap = new Map<string, { count: number; maxSeverity: string; x1: number; y1: number; x2: number; y2: number }>();
+    threats.forEach((t) => {
+      const ac = t.attackerCountry || t.attacker || "Unknown";
+      const tc = t.targetCountry || t.target || "Unknown";
+      const key = `${ac}→${tc}`;
+      const a = getCountryCoords(ac);
+      const b = getCountryCoords(tc);
+      const [x1, y1] = lonLatToSvg(a[0], a[1], W, H);
+      const [x2, y2] = lonLatToSvg(b[0], b[1], W, H);
+      const existing = pairMap.get(key);
+      if (existing) {
+        existing.count++;
+        if (t.severity === "critical") existing.maxSeverity = "critical";
+        else if (t.severity === "high" && existing.maxSeverity !== "critical") existing.maxSeverity = "high";
+      } else {
+        pairMap.set(key, { count: 1, maxSeverity: t.severity, x1, y1, x2, y2 });
+      }
+    });
+    const maxCount = Math.max(...Array.from(pairMap.values()).map(v => v.count), 1);
+    return Array.from(pairMap.entries()).map(([, v]) => ({
+      ...v,
+      intensity: v.count / maxCount,
+    }));
+  }, [threats]);
+
   const arcs = useMemo(() => {
     return threats.slice(0, 30).map((t, i) => {
       const ac = t.attackerCountry || t.attacker || "Unknown";
@@ -106,7 +174,7 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
       const [x1, y1] = lonLatToSvg(a[0], a[1], W, H);
       const [x2, y2] = lonLatToSvg(b[0], b[1], W, H);
       const isSelected = t.id === selectedId;
-      return { id: t.id, d: arcPath(x1, y1, x2, y2), color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium, threat: t, i, isSelected };
+      return { id: t.id, x1, y1, x2, y2, color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium, threat: t, i, isSelected };
     });
   }, [threats, selectedId]);
 
@@ -118,10 +186,20 @@ function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; 
       {Array.from({ length: 13 }, (_, i) => (
         <line key={`v${i}`} x1={i * (W / 12)} y1={0} x2={i * (W / 12)} y2={H} stroke="hsl(var(--border))" strokeWidth={0.5} opacity={0.3} />
       ))}
+      {/* Pulsing attack corridors (rendered behind arcs) */}
+      {corridors.map((c, i) => (
+        <AttackCorridor
+          key={`corridor-${i}`}
+          x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2}
+          intensity={c.intensity}
+          color={SEVERITY_COLORS[c.maxSeverity] || SEVERITY_COLORS.medium}
+          idx={i}
+        />
+      ))}
       {arcs.map((a) => (
         <g key={a.id} onClick={() => onSelect(a.threat)} className="cursor-pointer">
-          <path d={a.d} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} opacity={a.isSelected ? 0.9 : 0.5} />
-          <path d={a.d} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} strokeDasharray="6,4" opacity={0.9}>
+          <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} opacity={a.isSelected ? 0.9 : 0.5} />
+          <path d={arcPath(a.x1, a.y1, a.x2, a.y2)} fill="none" stroke={a.color} strokeWidth={a.isSelected ? 3 : 1.5} strokeDasharray="6,4" opacity={0.9}>
             <animate attributeName="stroke-dashoffset" from="0" to="-20" dur={`${1.5 + a.i * 0.1}s`} repeatCount="indefinite" />
           </path>
         </g>
@@ -197,6 +275,124 @@ function RelationshipGraph({ threats }: { threats: CyberThreat[] }) {
         </g>
       ))}
     </svg>
+  );
+}
+/* ── Dark Web Monitor ── */
+function DarkWebMonitor({ threats }: { threats: CyberThreat[] }) {
+  const darkWebEntries = useMemo(() => {
+    const entries: Array<{
+      id: string; type: "onion" | "paste" | "forum" | "marketplace";
+      title: string; detail: string; severity: string;
+      timestamp: string; indicators: string[];
+    }> = [];
+
+    threats.forEach((t, i) => {
+      if (t.severity === "critical" || t.severity === "high") {
+        entries.push({
+          id: `dw-${t.id}-onion`,
+          type: "onion",
+          title: `.onion infrastructure linked to ${t.attacker}`,
+          detail: `Hidden service detected hosting C2 panel for ${t.type} operations targeting ${t.target}. ${t.cve ? `Exploiting ${t.cve}.` : ""}`,
+          severity: t.severity,
+          timestamp: t.date,
+          indicators: t.iocs?.slice(0, 2) || [],
+        });
+      }
+      if (i < 8) {
+        entries.push({
+          id: `dw-${t.id}-paste`,
+          type: i % 3 === 0 ? "paste" : i % 3 === 1 ? "forum" : "marketplace",
+          title: i % 3 === 0
+            ? `Paste site leak: ${t.targetCountry || t.target} credentials`
+            : i % 3 === 1
+            ? `Underground forum chatter: ${t.type} tools`
+            : `Marketplace listing: ${t.targetCountry || t.target} access`,
+          detail: i % 3 === 0
+            ? `Bulk credential dump mentioning ${t.target} infrastructure detected on paste monitoring service.`
+            : i % 3 === 1
+            ? `Threat actor associated with ${t.attacker} discussing new ${t.type.toLowerCase()} tooling and target acquisition.`
+            : `Initial access broker offering RDP/VPN credentials for ${t.target} network on darknet marketplace.`,
+          severity: t.severity,
+          timestamp: t.date,
+          indicators: t.iocs?.slice(0, 1) || [],
+        });
+      }
+    });
+    return entries.slice(0, 20);
+  }, [threats]);
+
+  const typeLabels: Record<string, string> = { onion: ".ONION", paste: "PASTE", forum: "FORUM", marketplace: "MARKET" };
+  const typeBg: Record<string, string> = {
+    onion: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+    paste: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+    forum: "bg-primary/15 text-primary border-primary/30",
+    marketplace: "bg-destructive/15 text-destructive border-destructive/30",
+  };
+  const typeIcons: Record<string, typeof Skull> = { onion: Eye, paste: FileWarning, forum: Hash, marketplace: Link2 };
+
+  const countByType = useMemo(() => {
+    const counts: Record<string, number> = { onion: 0, paste: 0, forum: 0, marketplace: 0 };
+    darkWebEntries.forEach(e => counts[e.type]++);
+    return counts;
+  }, [darkWebEntries]);
+
+  return (
+    <div className="h-full flex flex-col" style={{ background: "hsl(var(--background))" }}>
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
+        <Skull className="h-4 w-4 text-purple-400" />
+        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-foreground">Dark Web Intelligence</span>
+        <div className="flex items-center gap-2 ml-auto">
+          {Object.entries(countByType).map(([type, count]) => (
+            <span key={type} className={`text-[8px] px-1.5 py-0.5 rounded border font-mono ${typeBg[type]}`}>
+              {typeLabels[type]}: {count}
+            </span>
+          ))}
+        </div>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-2">
+          {darkWebEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <EyeOff className="h-8 w-8 mb-2 opacity-40" />
+              <span className="text-xs font-mono">No dark web intelligence available</span>
+            </div>
+          ) : darkWebEntries.map((entry) => {
+            const Icon = typeIcons[entry.type] || Eye;
+            return (
+              <div key={entry.id} className="p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
+                <div className="flex items-start gap-2">
+                  <div className={`p-1.5 rounded ${typeBg[entry.type]}`}>
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${typeBg[entry.type]}`}>
+                        {typeLabels[entry.type]}
+                      </span>
+                      <span className={`text-[7px] px-1.5 py-0.5 rounded border font-mono uppercase font-bold ${SEVERITY_BG[entry.severity]}`}>
+                        {entry.severity}
+                      </span>
+                      <span className="text-[8px] font-mono text-muted-foreground ml-auto">{entry.timestamp}</span>
+                    </div>
+                    <h4 className="text-[11px] font-bold text-foreground mb-1 truncate">{entry.title}</h4>
+                    <p className="text-[9px] text-muted-foreground leading-relaxed">{entry.detail}</p>
+                    {entry.indicators.length > 0 && (
+                      <div className="flex gap-1 mt-1.5">
+                        {entry.indicators.map((ioc, i) => (
+                          <span key={i} className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-muted/30 border border-border text-muted-foreground truncate max-w-[200px]">
+                            {ioc}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
@@ -327,7 +523,7 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("All");
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [centerView, setCenterView] = useState<"map" | "graph">("map");
+  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
 
   /* ── Timeline state ── */
@@ -502,6 +698,9 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
           <button onClick={() => setCenterView("graph")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "graph" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Network className="h-3 w-3 inline mr-1" />GRAPH
           </button>
+          <button onClick={() => setCenterView("darkweb")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "darkweb" ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Skull className="h-3 w-3 inline mr-1" />DARK WEB
+          </button>
         </div>
       </div>
 
@@ -618,8 +817,10 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
               </div>
             ) : centerView === "map" ? (
               <ThreatMap threats={filtered} onSelect={handleSelect} selectedId={selectedThreat?.id} />
-            ) : (
+            ) : centerView === "graph" ? (
               <RelationshipGraph threats={filtered} />
+            ) : (
+              <DarkWebMonitor threats={filtered} />
             )}
 
             {/* Live stats HUD overlay (when no threat selected) */}
