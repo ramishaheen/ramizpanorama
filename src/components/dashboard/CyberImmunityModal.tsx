@@ -1008,15 +1008,17 @@ export const CyberImmunityModal = ({ onClose }: CyberImmunityModalProps) => {
   const timelineLabel = useMemo(() => {
     if (isLive) return "NOW";
     const now = Date.now();
-    const windowMs = 24 * 60 * 60 * 1000;
+    const windowMs = 28 * 24 * 60 * 60 * 1000;
     const ts = now - windowMs + (timelinePos / 100) * windowMs;
-    return new Date(ts).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" }) + " UTC";
+    return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }, [timelinePos, isLive]);
 
   const hoursAgoLabel = useMemo(() => {
     if (isLive) return "";
-    const hoursAgo = ((100 - timelinePos) / 100) * 24;
-    return `${hoursAgo.toFixed(1)}h ago`;
+    const daysAgo = ((100 - timelinePos) / 100) * 28;
+    if (daysAgo < 1) return `${(daysAgo * 24).toFixed(0)}h ago`;
+    if (daysAgo < 7) return `${daysAgo.toFixed(1)}d ago`;
+    return `${(daysAgo / 7).toFixed(1)}w ago`;
   }, [timelinePos, isLive]);
 
   return createPortal(
