@@ -167,8 +167,12 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [showTraffic, setShowTraffic] = useState(true);
   const [vessels, setVessels] = useState<any[]>([]);
   const [earthquakes, setEarthquakes] = useState<any[]>([]);
+  const [wildfires, setWildfires] = useState<any[]>([]);
+  const [showWildfires, setShowWildfires] = useState(true);
+  const [opacityWildfires, setOpacityWildfires] = useState(1);
   const vesselMarkersRef = useRef<any[]>([]);
   const earthquakeMarkersRef = useRef<any[]>([]);
+  const wildfireMarkersRef = useRef<any[]>([]);
   const trafficLayerRef = useRef<any>(null);
   const weatherOverlayRef = useRef<any>(null);
   const weatherMarkersRef = useRef<any[]>([]);
@@ -1099,6 +1103,76 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       earthquakeMarkersRef.current.push(marker);
     });
   }, [earthquakes, showEarthquakes]);
+
+  // ===== REAL-TIME WILDFIRE LAYER =====
+  useEffect(() => {
+    const fetchFires = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("nasa-wildfires");
+        if (!error && data?.fires) setWildfires(data.fires);
+      } catch (e) { console.error("Wildfire fetch error:", e); }
+    };
+    fetchFires();
+    const iv = setInterval(fetchFires, 300_000); // 5 min
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+
+    wildfireMarkersRef.current.forEach(m => m.setMap(null));
+    wildfireMarkersRef.current = [];
+
+    if (!showWildfires || wildfires.length === 0) return;
+
+    wildfires.forEach((fire: any) => {
+      const frp = fire.frp || 0;
+      const size = Math.max(12, Math.min(frp / 3, 36));
+      const color = frp >= 100 ? "#ef4444" : frp >= 50 ? "#f97316" : "#fbbf24";
+      const pulseSize = size + 8;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${pulseSize}" height="${pulseSize}" viewBox="0 0 ${pulseSize} ${pulseSize}">
+        <circle cx="${pulseSize/2}" cy="${pulseSize/2}" r="${size/2}" fill="${color}40" stroke="${color}" stroke-width="1.5">
+          <animate attributeName="r" values="${size/2};${pulseSize/2};${size/2}" dur="2.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;0.2;0.9" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="${pulseSize/2}" cy="${pulseSize/2}" r="${size/4}" fill="${color}"/>
+      </svg>`;
+
+      const marker = new google.maps.Marker({
+        position: { lat: fire.lat, lng: fire.lng },
+        map,
+        icon: {
+          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg),
+          scaledSize: new google.maps.Size(pulseSize, pulseSize),
+          anchor: new google.maps.Point(pulseSize / 2, pulseSize / 2),
+        },
+        title: `🔥 FRP ${frp.toFixed(0)} — ${fire.confidence || "nominal"}`,
+        zIndex: 55,
+      });
+
+      const infoContent = `
+        <div style="background:#0d1117;color:#e6edf3;padding:10px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:180px;border:1px solid ${color}40;box-shadow:0 4px 24px rgba(0,0,0,0.5);">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-weight:700;font-size:14px;color:${color};">🔥 WILDFIRE</span>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:10px;">
+            <span style="color:#7d8590;">FRP</span><span>${frp.toFixed(1)} MW</span>
+            <span style="color:#7d8590;">BRIGHTNESS</span><span>${fire.brightness?.toFixed(0) || "?"} K</span>
+            <span style="color:#7d8590;">CONFIDENCE</span><span>${fire.confidence || "nominal"}</span>
+            <span style="color:#7d8590;">DATE</span><span>${fire.date || "—"} ${fire.time || ""}</span>
+            <span style="color:#7d8590;">REGION</span><span>${fire.region || `${fire.lat.toFixed(2)}°, ${fire.lng.toFixed(2)}°`}</span>
+          </div>
+        </div>
+      `;
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("mouseover", () => infoWindow.open(map, marker));
+      marker.addListener("mouseout", () => infoWindow.close());
+
+      wildfireMarkersRef.current.push(marker);
+    });
+  }, [wildfires, showWildfires]);
 
   // ===== TRAFFIC LAYER =====
   useEffect(() => {
@@ -2143,6 +2217,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
       trailLinesRef.current.forEach(l => l.setMap(null));
       vesselMarkersRef.current.forEach(m => m.setMap(null));
       earthquakeMarkersRef.current.forEach(m => m.setMap(null));
+      wildfireMarkersRef.current.forEach(m => m.setMap(null));
       weatherMarkersRef.current.forEach(m => m.setMap(null));
       rocketMarkersRef.current.forEach(m => m.setMap(null));
       rocketLinesRef.current.forEach(l => l.setMap(null));
@@ -2247,6 +2322,10 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
             <button onClick={() => setShowEarthquakes(!showEarthquakes)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showEarthquakes ? "border-yellow-500/60 bg-yellow-500/20 text-white shadow-[0_0_8px_rgba(234,179,8,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
               <Activity className="h-3 w-3" /> Quakes
               {earthquakes.length > 0 && <span className="bg-yellow-500/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5">{earthquakes.length}</span>}
+            </button>
+            <button onClick={() => setShowWildfires(!showWildfires)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showWildfires ? "border-orange-400/60 bg-orange-400/20 text-white shadow-[0_0_8px_rgba(251,146,60,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
+              <Flame className="h-3 w-3" /> Fires
+              {wildfires.length > 0 && <span className="bg-orange-400/30 text-white text-[8px] px-1 rounded-full font-bold ml-0.5">{wildfires.length}</span>}
             </button>
             <button onClick={() => setShowWeather(!showWeather)} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase border transition-all duration-200 ${showWeather ? "border-cyan-500/60 bg-cyan-500/20 text-white shadow-[0_0_8px_rgba(6,182,212,0.25)]" : "border-border/40 text-white/70 hover:bg-white/10"}`}>
               <CloudRain className="h-3 w-3" /> Weather
@@ -2366,6 +2445,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <div className="border-t border-border/20 my-2" />
 
                 <LayerControl icon={<Activity className="h-3 w-3" />} label="Earthquakes" color="#eab308" active={showEarthquakes} onToggle={() => setShowEarthquakes(!showEarthquakes)} count={earthquakes.length} opacity={opacityEarthquakes} onOpacity={setOpacityEarthquakes} source="USGS" />
+                <LayerControl icon={<Flame className="h-3 w-3" />} label="Wildfires" color="#fb923c" active={showWildfires} onToggle={() => setShowWildfires(!showWildfires)} count={wildfires.length} opacity={opacityWildfires} onOpacity={setOpacityWildfires} source="NASA FIRMS" />
                 <LayerControl icon={<Flame className="h-3 w-3" />} label="Heatmap" color="#f97316" active={showHeatmap} onToggle={() => setShowHeatmap(!showHeatmap)} opacity={opacityHeatmap} onOpacity={setOpacityHeatmap} source="Conflict data" />
 
                 <div className="border-t border-border/20 my-2" />
@@ -3194,7 +3274,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         <div className="w-px h-4 bg-border/40" />
         <span className="text-[8px] font-mono text-muted-foreground uppercase truncate">
           SRC: OSINT • {flightSource || "—"}
-          {showVessels ? ` • ${vessels.length} vessels` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showTraffic ? " • Traffic" : ""}
+          {showVessels ? ` • ${vessels.length} vessels` : ""}{showEarthquakes ? ` • ${earthquakes.length} quakes` : ""}{showWildfires ? ` • ${wildfires.length} fires` : ""}{showTraffic ? " • Traffic" : ""}
         </span>
         <span className="ml-auto text-[8px] font-mono text-muted-foreground/50 flex-shrink-0">
           {showFlights ? `${interpolatedAircraft.length} aircraft · ${militaryCount} mil` : "Flights OFF"}

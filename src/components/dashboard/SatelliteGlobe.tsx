@@ -488,7 +488,7 @@ interface RawSatTLE {
 
 const SATELLITE_CACHE_KEY = "waros-orbital-cache-v1";
 
-export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, onTrackFlight, flightSource = "" }: SatelliteGlobeProps) => {
+export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlightId = null, onTrackFlight, flightSource: propFlightSource = "" }: SatelliteGlobeProps) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeElRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<any>(null);
@@ -544,6 +544,96 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
   const [globeStyle, setGlobeStyle] = useState<string>("normal");
   const [selectedCity, setSelectedCity] = useState<CityPreset | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+
+  // ===== INDEPENDENT LIVE DATA FEEDS =====
+  const [liveFlights, setLiveFlights] = useState<FlightAircraft[]>([]);
+  const [liveFlightSource, setLiveFlightSource] = useState("");
+  const [liveGeoAlerts, setLiveGeoAlerts] = useState<any[]>([]);
+  const [liveRockets, setLiveRockets] = useState<any[]>([]);
+  const [liveEarthquakes, setLiveEarthquakes] = useState<any[]>([]);
+  const [liveWildfires, setLiveWildfires] = useState<any[]>([]);
+
+  // Independent flight fetching — dual bbox ME+SA, 15s
+  useEffect(() => {
+    const fetchFlights = async () => {
+      try {
+        const bboxME = { lamin: 10, lamax: 42, lomin: 20, lomax: 70 };
+        const bboxSA = { lamin: -35, lamax: -22, lomin: 16, lomax: 34 };
+        const [resME, resSA] = await Promise.all([
+          supabase.functions.invoke("live-flights", { body: bboxME }),
+          supabase.functions.invoke("live-flights", { body: bboxSA }),
+        ]);
+        const acMap = new Map<string, FlightAircraft>();
+        [resME, resSA].forEach(res => {
+          (res.data?.aircraft || []).forEach((ac: FlightAircraft) => {
+            if (ac.icao24 && ac.lat && ac.lng) acMap.set(ac.icao24, ac);
+          });
+        });
+        setLiveFlights(Array.from(acMap.values()));
+        const sources = [resME.data?.source, resSA.data?.source].filter(Boolean).join("+");
+        setLiveFlightSource(sources || "OSINT");
+      } catch (e) { console.error("[GLOBE] Flight fetch error:", e); }
+    };
+    fetchFlights();
+    const iv = setInterval(fetchFlights, 15_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live geo-alerts from DB — 30s
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const { data } = await supabase.from("geo_alerts").select("*");
+        if (data) setLiveGeoAlerts(data);
+      } catch (e) { console.error("[GLOBE] GeoAlerts fetch error:", e); }
+    };
+    fetchAlerts();
+    const iv = setInterval(fetchAlerts, 30_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live rockets from DB — 10s
+  useEffect(() => {
+    const fetchRockets = async () => {
+      try {
+        const { data } = await supabase.from("rockets").select("*");
+        if (data) setLiveRockets(data);
+      } catch (e) { console.error("[GLOBE] Rockets fetch error:", e); }
+    };
+    fetchRockets();
+    const iv = setInterval(fetchRockets, 10_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live earthquakes via edge function — 5min
+  useEffect(() => {
+    const fetchQuakes = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("usgs-earthquakes");
+        if (!error && data?.earthquakes) setLiveEarthquakes(data.earthquakes);
+      } catch (e) { console.error("[GLOBE] Earthquake fetch error:", e); }
+    };
+    fetchQuakes();
+    const iv = setInterval(fetchQuakes, 300_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Live wildfires via edge function — 5min
+  useEffect(() => {
+    const fetchFires = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("nasa-wildfires");
+        if (!error && data?.fires) setLiveWildfires(data.fires);
+      } catch (e) { console.error("[GLOBE] Wildfire fetch error:", e); }
+    };
+    fetchFires();
+    const iv = setInterval(fetchFires, 300_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Merged flights: prefer independent fetch, fall back to props
+  const flights = liveFlights.length > 0 ? liveFlights : propFlights;
+  const flightSource = liveFlights.length > 0 ? liveFlightSource : propFlightSource;
 
   // Globe style presets — change texture, atmosphere, lighting
   const GLOBE_STYLES = [
@@ -2022,7 +2112,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Render ALL rings on globe — OSINT + City + Coverage (consolidated to prevent overwrites)
+  // Render ALL rings on globe — OSINT + City + Coverage + Live GeoAlerts + Earthquakes + Wildfires (consolidated to prevent overwrites)
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -2047,8 +2137,41 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       severity: "info",
     }));
 
+    // Live geo-alerts rings
+    const alertRings = liveGeoAlerts.map(a => ({
+      lat: a.lat, lng: a.lng, label: a.title,
+      type: "geoalert",
+      severity: a.severity || "medium",
+      maxR: a.severity === "critical" ? 4 : a.severity === "high" ? 3 : 2,
+      propagationSpeed: a.severity === "critical" ? 5 : a.severity === "high" ? 3 : 2,
+      repeatPeriod: a.severity === "critical" ? 500 : a.severity === "high" ? 800 : 1100,
+      ringType: "geoalert" as const,
+    }));
+
+    // Live earthquake rings — sized by magnitude
+    const quakeRings = liveEarthquakes.filter((q: any) => q.magnitude >= 2.5).slice(0, 200).map((q: any) => ({
+      lat: q.lat, lng: q.lng, label: `M${q.magnitude}`,
+      type: "earthquake",
+      severity: q.magnitude >= 6 ? "critical" : q.magnitude >= 4.5 ? "high" : "medium",
+      maxR: Math.max(1.5, Math.min(q.magnitude * 0.8, 6)),
+      propagationSpeed: q.magnitude >= 6 ? 6 : q.magnitude >= 4.5 ? 4 : 2.5,
+      repeatPeriod: q.magnitude >= 6 ? 400 : q.magnitude >= 4.5 ? 700 : 1000,
+      ringType: "earthquake" as const,
+    }));
+
+    // Live wildfire rings — high FRP fires
+    const fireRings = liveWildfires.filter((f: any) => f.frp >= 20).slice(0, 150).map((f: any) => ({
+      lat: f.lat, lng: f.lng, label: `🔥 FRP ${f.frp}`,
+      type: "wildfire",
+      severity: f.frp >= 100 ? "critical" : f.frp >= 50 ? "high" : "medium",
+      maxR: Math.max(1, Math.min(f.frp / 30, 4)),
+      propagationSpeed: f.frp >= 100 ? 4 : 2.5,
+      repeatPeriod: f.frp >= 100 ? 600 : 900,
+      ringType: "wildfire" as const,
+    }));
+
     // Coverage ring (from selected satellite)
-    const allRings: any[] = [...osintRings, ...cityRings];
+    const allRings: any[] = [...osintRings, ...cityRings, ...alertRings, ...quakeRings, ...fireRings];
 
     if (coverageRing) {
       const maxRDeg = coverageRing.radiusKm / 111;
@@ -2079,6 +2202,18 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
             return `rgba(${r},${g},${b},${0.35 - t * 0.35})`;
           };
         }
+        if (d.ringType === "geoalert") {
+          return (t: number) => `rgba(255,100,50,${0.9 - t * 0.9})`;
+        }
+        if (d.ringType === "earthquake") {
+          const isStrong = d.severity === "critical";
+          return (t: number) => isStrong
+            ? `rgba(239,68,68,${1 - t})`
+            : `rgba(234,179,8,${0.9 - t * 0.9})`;
+        }
+        if (d.ringType === "wildfire") {
+          return (t: number) => `rgba(255,140,0,${0.85 - t * 0.85})`;
+        }
         if (d.ringType === "osint") {
           const colors: Record<string, (t: number) => string> = {
             conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
@@ -2093,9 +2228,28 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       .ringMaxRadius((d: any) => d.maxR)
       .ringPropagationSpeed((d: any) => d.propagationSpeed)
       .ringRepeatPeriod((d: any) => d.repeatPeriod);
-  }, [coverageRing]);
+  }, [coverageRing, liveGeoAlerts, liveEarthquakes, liveWildfires]);
 
-  // Cleanup
+  // Render arcs — OSINT threat vectors + live rockets
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe) return;
+
+    const rocketArcs = liveRockets
+      .filter((r: any) => r.status === "launched" || r.status === "in_flight")
+      .map((r: any) => ({
+        startLat: r.origin_lat,
+        startLng: r.origin_lng,
+        endLat: r.current_lat,
+        endLng: r.current_lng,
+        color: r.severity === "critical" ? "#ef4444" : r.severity === "high" ? "#ff6b00" : "#fbbf24",
+        label: r.name || "Missile",
+      }));
+
+    globe.arcsData([...OSINT_ARCS, ...rocketArcs]);
+  }, [liveRockets]);
+
+
   useEffect(() => {
     return () => {
       if (globeElRef.current) {
@@ -2265,7 +2419,10 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
               ▸ VLEO: {vleo} • LEO: {leo} • MEO: {meo} • GEO: {geo}
             </div>
             <div>
-              ▸ OSINT: {OSINT_MARKERS.length} INTEL MARKERS • {OSINT_ARCS.length} THREAT VECTORS
+              ▸ OSINT: {OSINT_MARKERS.length} MARKERS • {OSINT_ARCS.length + liveRockets.length} ARCS • {liveGeoAlerts.length} ALERTS
+            </div>
+            <div>
+              ▸ FLIGHTS: {flights.length} • QUAKES: {liveEarthquakes.length} • FIRES: {liveWildfires.length}
             </div>
             <div className="flex items-center gap-1">
               {loading && !isLive ? (
