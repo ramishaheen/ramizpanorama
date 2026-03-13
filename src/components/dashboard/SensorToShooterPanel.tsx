@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Crosshair, Zap, CheckCircle, XCircle, Loader2, Ship, Radar, ArrowRight, Target, Shield, Anchor, AlertTriangle } from "lucide-react";
+import { Crosshair, Zap, CheckCircle, XCircle, Loader2, Ship, Radar, Target, Shield, AlertTriangle } from "lucide-react";
 import { useSensorToShooter, type StrikeRecommendation, type ShooterAsset } from "@/hooks/useSensorToShooter";
+import { ConfirmSlider } from "./ConfirmSlider";
+import { TargetDetailModal } from "./TargetDetailModal";
 
 const ASSET_ICONS: Record<string, string> = {
   mq9_reaper: "🛩️", mq1_predator: "🛩️", f35_lightning: "✈️", f16_falcon: "✈️",
@@ -24,13 +26,19 @@ export const SensorToShooterPanel = ({ onLocate }: SensorToShooterPanelProps) =>
   const {
     shooters, recommendations, actionLogs, loading, matching,
     pendingCount, committedCount, idleShooters, darkVesselResult,
+    newTargetId, alertCount,
     matchShooters, commitStrike, discardStrike, detectDarkVessel, fetchAll,
+    clearNewTarget, clearAlertCount,
   } = useSensorToShooter();
 
   const [subTab, setSubTab] = useState<"RECS" | "ASSETS" | "BDA" | "DARK">("RECS");
   const [matchResult, setMatchResult] = useState<any>(null);
   const [selectedTarget, setSelectedTarget] = useState<string>("");
   const [scanRegion, setScanRegion] = useState<string>("bab_el_mandeb");
+  const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+
+  // Open modal for realtime alert
+  const activeModalId = modalTargetId || newTargetId;
 
   const handleMatch = async () => {
     if (!selectedTarget) return;
@@ -52,6 +60,9 @@ export const SensorToShooterPanel = ({ onLocate }: SensorToShooterPanelProps) =>
             <span className="text-[10px] font-mono font-bold tracking-[0.15em] text-foreground uppercase">S2S ENGINE</span>
           </div>
           <div className="flex items-center gap-1.5">
+            {alertCount > 0 && (
+              <button onClick={clearAlertCount} className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#ef4444]/20 text-[#ef4444] animate-pulse">{alertCount} NEW</button>
+            )}
             {pendingCount > 0 && (
               <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[#eab308]/20 text-[#eab308] animate-pulse">{pendingCount} PENDING</span>
             )}
@@ -76,7 +87,6 @@ export const SensorToShooterPanel = ({ onLocate }: SensorToShooterPanelProps) =>
           <div className="flex items-center justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
         ) : subTab === "RECS" ? (
           <>
-            {/* Match trigger */}
             <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)] space-y-1.5">
               <div className="text-[8px] font-mono text-muted-foreground tracking-wider">F2T2EA WEAPONEERING</div>
               <input
@@ -92,7 +102,6 @@ export const SensorToShooterPanel = ({ onLocate }: SensorToShooterPanelProps) =>
               </button>
             </div>
 
-            {/* AI result summary */}
             {matchResult && (
               <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)] bg-[hsl(220,20%,5%)]">
                 {matchResult.error ? (
@@ -109,18 +118,17 @@ export const SensorToShooterPanel = ({ onLocate }: SensorToShooterPanelProps) =>
                         {matchResult.ai_reasoning}
                       </div>
                     )}
-                    <div className="text-[7px] font-mono text-muted-foreground">{matchResult.matches?.length || 0} shooters matched</div>
+                    <div className="text-[7px] font-mono text-muted-foreground">{matchResult.matches?.length || 0} shooters matched • ETI: {matchResult.estimated_time_to_intercept || "—"} min</div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Pending strike recommendations */}
             {recommendations.length === 0 ? (
               <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">No strike recommendations</div>
             ) : (
               recommendations.map(rec => (
-                <StrikeRecCard key={rec.id} rec={rec} onCommit={commitStrike} onDiscard={discardStrike} onLocate={onLocate} />
+                <StrikeRecCard key={rec.id} rec={rec} onCommit={commitStrike} onDiscard={discardStrike} onLocate={onLocate} onViewTarget={setModalTargetId} />
               ))
             )}
           </>
@@ -187,7 +195,6 @@ export const SensorToShooterPanel = ({ onLocate }: SensorToShooterPanelProps) =>
             )}
           </>
         ) : (
-          /* DARK VESSEL tab */
           <>
             <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)] space-y-1.5">
               <div className="flex items-center gap-1.5">
@@ -261,18 +268,29 @@ export const SensorToShooterPanel = ({ onLocate }: SensorToShooterPanelProps) =>
           </>
         )}
       </div>
+
+      {/* Target Detail Modal */}
+      {activeModalId && (
+        <TargetDetailModal
+          targetId={activeModalId}
+          onClose={() => { setModalTargetId(null); clearNewTarget(); }}
+          onLocate={onLocate}
+          onCommitStrike={commitStrike}
+        />
+      )}
     </div>
   );
 };
 
 // ============================================
-// Strike Recommendation Card
+// Strike Recommendation Card — now with ConfirmSlider for HITL
 // ============================================
-function StrikeRecCard({ rec, onCommit, onDiscard, onLocate }: {
+function StrikeRecCard({ rec, onCommit, onDiscard, onLocate, onViewTarget }: {
   rec: StrikeRecommendation;
   onCommit: (id: string) => void;
   onDiscard: (id: string) => void;
   onLocate?: (lat: number, lng: number) => void;
+  onViewTarget?: (targetId: string) => void;
 }) {
   const isPending = rec.decision === "pending";
   const col = DECISION_COLORS[rec.decision] || "#888";
@@ -291,17 +309,16 @@ function StrikeRecCard({ rec, onCommit, onDiscard, onLocate }: {
         <span className="text-[7px] font-mono text-muted-foreground">{new Date(rec.created_at).toISOString().slice(11, 19)}</span>
       </div>
 
-      {/* Target info */}
       {target && (
         <div className="flex items-center gap-1 mt-1">
           <Target className="h-2.5 w-2.5 text-[#ef4444]" />
           <span className="text-[8px] font-mono text-[#ef4444]">{target.classification?.toUpperCase().replace("_", " ")}</span>
           <span className="text-[7px] font-mono text-muted-foreground">• {(target.confidence * 100).toFixed(0)}%</span>
-          <button onClick={() => onLocate?.(target.lat, target.lng)} className="text-[7px] font-mono text-primary hover:underline ml-auto">LOCATE</button>
+          <button onClick={() => onViewTarget?.(target.id)} className="text-[7px] font-mono text-[#06b6d4] hover:underline ml-auto">DEEP DIVE</button>
+          <button onClick={() => onLocate?.(target.lat, target.lng)} className="text-[7px] font-mono text-primary hover:underline">LOCATE</button>
         </div>
       )}
 
-      {/* Shooter info */}
       {shooter && (
         <div className="flex items-center gap-1 mt-0.5">
           <span className="text-[10px]">{ASSET_ICONS[shooter.asset_type] || "⚡"}</span>
@@ -310,7 +327,6 @@ function StrikeRecCard({ rec, onCommit, onDiscard, onLocate }: {
         </div>
       )}
 
-      {/* Metrics */}
       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
         <span className="text-[7px] font-mono px-1 py-0.5 rounded bg-muted/30 text-foreground">🎯 {rec.recommended_weapon.toUpperCase()}</span>
         <span className="text-[7px] font-mono px-1 py-0.5 rounded bg-muted/30 text-foreground">Pk:{(rec.probability_of_kill * 100).toFixed(0)}%</span>
@@ -318,7 +334,6 @@ function StrikeRecCard({ rec, onCommit, onDiscard, onLocate }: {
         <span className="text-[7px] font-mono px-1 py-0.5 rounded bg-muted/30 text-foreground">{rec.proximity_km}km</span>
       </div>
 
-      {/* ROE */}
       <div className="flex items-center gap-1 mt-1">
         <span className={`text-[7px] font-mono px-1 py-0.5 rounded ${rec.roe_status === "CLEAR" ? "bg-[#22c55e]/20 text-[#22c55e]" : rec.roe_status.includes("DENIED") ? "bg-[#ef4444]/20 text-[#ef4444]" : "bg-[#eab308]/20 text-[#eab308]"}`}>
           ROE: {rec.roe_status}
@@ -328,22 +343,17 @@ function StrikeRecCard({ rec, onCommit, onDiscard, onLocate }: {
         </span>
       </div>
 
-      {/* AI reasoning */}
       {rec.ai_reasoning && (
         <div className="text-[7px] font-mono text-foreground/70 mt-1 bg-[hsl(220,18%,8%)] rounded p-1 border border-[hsl(220,15%,12%)]">
           {rec.ai_reasoning}
         </div>
       )}
 
-      {/* Actions */}
       {isPending && (
-        <div className="flex items-center gap-1 mt-1.5">
-          <button onClick={() => onCommit(rec.id)}
-            className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded text-[8px] font-mono font-bold border border-[#22c55e]/50 bg-[#22c55e]/10 text-[#22c55e] hover:bg-[#22c55e]/20 transition-colors">
-            <CheckCircle className="h-3 w-3" /> COMMIT
-          </button>
+        <div className="mt-2 space-y-1">
+          <ConfirmSlider onConfirm={() => onCommit(rec.id)} label="SLIDE TO COMMIT STRIKE" />
           <button onClick={() => onDiscard(rec.id)}
-            className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 rounded text-[8px] font-mono font-bold border border-[#ef4444]/50 bg-[#ef4444]/10 text-[#ef4444] hover:bg-[#ef4444]/20 transition-colors">
+            className="w-full flex items-center justify-center gap-1 px-1.5 py-1 rounded text-[8px] font-mono font-bold border border-[#ef4444]/30 text-[#ef4444]/70 hover:bg-[#ef4444]/10 transition-colors">
             <XCircle className="h-3 w-3" /> DISCARD
           </button>
         </div>
