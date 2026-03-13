@@ -470,7 +470,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
         group.addLayer(radius);
       }
     });
-  }, [newsMarkers]);
+  }, [newsMarkers, layers.news]);
 
 
   // Render WarsLeaks Telegram markers on map
@@ -478,6 +478,7 @@ export const IntelMap = ({ airspaceAlerts, vessels, geoAlerts, rockets, layers, 
     const group = telegramGroupRef.current;
     if (!group) return;
     group.clearLayers();
+    if (!layers.telegram) return;
 
     const categoryEmojis: Record<string, string> = {
       MISSILE: "🚀", MILITARY: "⚔️", NAVAL: "⚓", DRONE: "🛩️",

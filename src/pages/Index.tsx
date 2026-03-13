@@ -136,6 +136,8 @@ const Index = () => {
     googlePOI: false,
     googleTraffic: false,
     googleRoutes: false,
+    news: true,
+    telegram: true,
   });
 
   const initialLayout = loadLayout();
