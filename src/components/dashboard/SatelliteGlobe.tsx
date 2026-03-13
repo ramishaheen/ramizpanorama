@@ -966,6 +966,8 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
       setOrbitPath(path);
       setOrbitColor(CATEGORY_COLORS[sat.category] || "#d4a843");
     }
+    // Set holographic coverage ring
+    updateCoverageRing(sat);
     if (globeRef.current) {
       const zoomAlt = sat.alt < 2000 ? 0.6 : sat.alt < 25000 ? 0.9 : 1.2;
       globeRef.current.pointOfView(
@@ -973,7 +975,7 @@ export const SatelliteGlobe = ({ onClose, flights = [], trackedFlightId = null, 
         1000
       );
     }
-  }, []);
+  }, [updateCoverageRing]);
 
   // Real-time badge updates every 10 seconds
   useEffect(() => {
