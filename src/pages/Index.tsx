@@ -5,7 +5,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
 import { IntelMap } from "@/components/dashboard/IntelMap";
-import { LiveDataFeedIndicator } from "@/components/dashboard/LiveDataFeedIndicator";
+
 import { RiskScoreGauge } from "@/components/dashboard/RiskScoreGauge";
 import { NotificationPanel } from "@/components/dashboard/NotificationPanel";
 import { TimelineSlider } from "@/components/dashboard/TimelineSlider";
@@ -297,7 +297,7 @@ const Index = () => {
     return (
       <div className="flex flex-col h-screen overflow-hidden relative">
         <RotateDeviceOverlay />
-        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} />
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} />
         <StatsBar
           airspaceCount={dailyCounts.airspaceCount}
           vesselCount={dailyCounts.vesselCount}
@@ -329,11 +329,6 @@ const Index = () => {
                   newsMarkers={warUpdates.data?.updates}
                   telegramMarkers={telegramIntel.markers}
                   fusionEvents={geoFusion.data?.events}
-                />
-                <LiveDataFeedIndicator
-                  lastPollAt={lastPollAt}
-                  activeSources={Object.values(layers).filter(Boolean).length}
-                  dataFresh={dataFresh}
                 />
               </div>
             </div>
@@ -400,7 +395,7 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
       {componentVisibility.header && (
-        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} />
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} />
       )}
       {componentVisibility.statsBar && (
         <StatsBar
@@ -503,11 +498,6 @@ const Index = () => {
                   fusionEvents={geoFusion.data?.events}
                   componentVisibility={componentVisibility}
                   onToggleComponent={toggleComponent}
-                />
-                <LiveDataFeedIndicator
-                  lastPollAt={lastPollAt}
-                  activeSources={Object.values(layers).filter(Boolean).length}
-                  dataFresh={dataFresh}
                 />
               </div>
 
