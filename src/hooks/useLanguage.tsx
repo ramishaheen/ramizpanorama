@@ -93,6 +93,9 @@ export const translations: Record<string, { en: string; ar: string }> = {
   "layer.airQuality": { en: "Air Quality", ar: "جودة الهواء" },
   "layer.aisVessels": { en: "Live AIS Ships", ar: "سفن AIS مباشرة" },
   "layer.cities": { en: "City Landmarks", ar: "معالم المدن" },
+  "layer.googlePOI": { en: "Google POIs", ar: "نقاط اهتمام جوجل" },
+  "layer.googleTraffic": { en: "Google Traffic", ar: "حركة مرور جوجل" },
+  "layer.googleRoutes": { en: "Google Routes", ar: "مسارات جوجل" },
 
   // Risk levels
   "risk.critical": { en: "CRITICAL", ar: "حرج" },

@@ -223,7 +223,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [layers, setLayers] = useState<Record<string, boolean>>({
     satellites: true, flights: true, maritime: true, earthquakes: true, wildfires: true,
     conflicts: true, rockets: true, nuclear: true, airQuality: false, geoFusion: true,
-    borders: true, gpsJamming: true, militaryFlights: true,
+    borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
@@ -252,6 +252,25 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { data: aisVesselsRaw } = useAISVessels();
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
+  const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
+
+  // Fetch Google POIs for the focused region
+  useEffect(() => {
+    if (!layers.googlePOI) { setGooglePOIPoints([]); return; }
+    const fetchPOIs = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("google-places", {
+          body: { lat: 30, lng: 45, radius: 50000, categories: ["airport", "military", "embassy"] },
+        });
+        if (!error && data?.results) {
+          setGooglePOIPoints(data.results.map((p: any) => ({
+            lat: p.lat, lng: p.lng, name: p.name, category: p.category,
+          })));
+        }
+      } catch { /* silent */ }
+    };
+    fetchPOIs();
+  }, [layers.googlePOI]);
 
   // Merge real + emulated data — emulated fills gaps when APIs haven't loaded
   const earthquakes = useMemo(() => earthquakesRaw.length > 0 ? earthquakesRaw : EMULATED_EARTHQUAKES, [earthquakesRaw]);
@@ -402,6 +421,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     { id: "geoFusion", label: "Geo-Fusion Events", icon: <Zap className="h-3.5 w-3.5" />, color: "#eab308", count: stats.fusion },
     { id: "borders", label: "Country Borders", icon: <MapPin className="h-3.5 w-3.5" />, color: "#00ffc8" },
     { id: "gpsJamming", label: "GPS Jamming", icon: <Lock className="h-3.5 w-3.5" />, color: "#e879f9" },
+    { id: "googlePOI", label: "Google POIs", icon: <MapPin className="h-3.5 w-3.5" />, color: "#a855f7" },
   ];
 
   const totalActive = Object.values(layers).filter(Boolean).length;

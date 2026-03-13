@@ -131,6 +131,9 @@ const Index = () => {
     airQuality: false,
     aisVessels: true,
     cities: true,
+    googlePOI: false,
+    googleTraffic: false,
+    googleRoutes: false,
   });
 
   const initialLayout = loadLayout();

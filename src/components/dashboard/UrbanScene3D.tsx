@@ -1079,6 +1079,80 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
     }
   }, [showTraffic]);
 
+  // ===== GOOGLE PLACES POI LAYER =====
+  const [showGooglePOI, setShowGooglePOI] = useState(false);
+  const googlePOIMarkersRef = useRef<any[]>([]);
+  const [googlePOIData, setGooglePOIData] = useState<any[]>([]);
+  
+  useEffect(() => {
+    if (!showGooglePOI) {
+      googlePOIMarkersRef.current.forEach(m => m.setMap?.(null));
+      googlePOIMarkersRef.current = [];
+      return;
+    }
+    const fetchPOIs = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("google-places", {
+          body: { lat, lng, radius: 30000, categories: ["airport", "embassy", "hospital", "military", "government", "police"] },
+        });
+        if (!error && data?.results) setGooglePOIData(data.results);
+      } catch (e) { console.error("Google Places fetch:", e); }
+    };
+    fetchPOIs();
+  }, [showGooglePOI, lat, lng]);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const google = (window as any).google;
+    if (!map || !google?.maps) return;
+    googlePOIMarkersRef.current.forEach(m => m.setMap(null));
+    googlePOIMarkersRef.current = [];
+    if (!showGooglePOI || googlePOIData.length === 0) return;
+
+    const poiColors: Record<string, string> = { airport: "#3b82f6", embassy: "#a855f7", hospital: "#ef4444", military: "#dc2626", government: "#f59e0b", police: "#2563eb", fire_station: "#f97316" };
+    const poiEmojis: Record<string, string> = { airport: "✈️", embassy: "🏛️", hospital: "🏥", military: "🎖️", government: "🏢", police: "🚔", fire_station: "🚒" };
+
+    googlePOIData.forEach((place: any) => {
+      const color = poiColors[place.category] || "#6b7280";
+      const emoji = poiEmojis[place.category] || "📍";
+      
+      const pinEl = document.createElement("div");
+      pinEl.innerHTML = `<div style="width:28px;height:28px;border-radius:50%;background:${color}33;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 8px ${color}66;">${emoji}</div>`;
+
+      if (google.maps.marker?.AdvancedMarkerElement) {
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          map, position: { lat: place.lat, lng: place.lng }, content: pinEl, title: place.name,
+        });
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<div style="font-family:monospace;font-size:11px;max-width:200px;"><b style="color:${color};">${emoji} ${place.name}</b><br/><span style="color:#888;">${place.address || ""}</span>${place.rating ? `<br/>★ ${place.rating}` : ""}</div>`,
+        });
+        marker.addListener("click", () => infoWindow.open({ anchor: marker, map }));
+        googlePOIMarkersRef.current.push(marker);
+      } else {
+        const marker = new google.maps.Marker({
+          map, position: { lat: place.lat, lng: place.lng }, title: place.name,
+          icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 1, strokeColor: "#fff", strokeWeight: 1.5, scale: 8 },
+        });
+        googlePOIMarkersRef.current.push(marker);
+      }
+    });
+  }, [googlePOIData, showGooglePOI]);
+
+  // ===== GOOGLE GEOCODE HUD =====
+  const [geocodeAddress, setGeocodeAddress] = useState<string>("");
+  useEffect(() => {
+    const fetchGeocode = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("google-geocode", { body: { lat, lng } });
+        if (!error && data?.results?.[0]) {
+          setGeocodeAddress(data.results[0].formatted_address);
+        }
+      } catch { /* silent */ }
+    };
+    const timer = setTimeout(fetchGeocode, 800);
+    return () => clearTimeout(timer);
+  }, [lat, lng]);
+
   // ===== LIVE CAMERA LAYER =====
   useEffect(() => {
     const fetchCameras = async () => {
@@ -2266,6 +2340,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
                 <div className="border-t border-border/20 my-2" />
 
                 <LayerControl icon={<MapPin className="h-3 w-3" />} label="City Landmarks" color="#00dcff" active={showCities} onToggle={() => setShowCities(!showCities)} count={CITY_LANDMARKS_3D.length} opacity={1} onOpacity={() => {}} source={`${CITY_LANDMARKS_3D.length} cities`} />
+                <LayerControl icon={<MapPin className="h-3 w-3" />} label="Google POIs" color="#a855f7" active={showGooglePOI} onToggle={() => setShowGooglePOI(!showGooglePOI)} count={googlePOIData.length} opacity={1} onOpacity={() => {}} source="Places API" />
                 <LayerControl icon={<Video className="h-3 w-3" />} label="Live Cameras" color="#f59e0b" active={showCameras} onToggle={() => setShowCameras(!showCameras)} count={cameras.length} opacity={1} onOpacity={() => {}} source={`${cameras.length} feeds`} />
 
                 <div className="border-t border-border/20 my-2" />
@@ -2549,6 +2624,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               </div>
               <div className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 bg-black/80 text-center">
                 <span className="text-[7px] font-mono text-emerald-400/80">📍 {lat.toFixed(4)}°, {lng.toFixed(4)}°</span>
+                {geocodeAddress && <span className="text-[6px] font-mono text-muted-foreground/60 block truncate">{geocodeAddress}</span>}
               </div>
             </div>
 
