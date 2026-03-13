@@ -75,7 +75,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     const { data } = await supabase
       .from("target_tracks")
       .select("id, track_id, classification, priority, lat, lng, confidence, status")
-      .in("status", ["detected", "tracking"])
+      .in("status", ["detected", "confirmed"])
       .order("confidence", { ascending: false })
       .limit(20);
     setAvailableTargets(data || []);
