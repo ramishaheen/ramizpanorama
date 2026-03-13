@@ -51,6 +51,140 @@ interface KillChainPanelProps {
   onLocate?: (lat: number, lng: number) => void;
 }
 
+const F2T2EA_ACTIONS: Record<string, (ev: EventOption) => string[]> = {
+  find: (ev) => [
+    `Correlate OSINT at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`,
+    "Cross-reference SIGINT / IMINT / HUMINT sources",
+    "Assign ISR asset for persistent surveillance",
+    `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`,
+  ],
+  fix: (ev) => [
+    "Confirm position via multi-sensor fusion",
+    `Validate classification from event type: ${ev.event_type}`,
+    "Establish geo-lock with ≤10m CEP",
+  ],
+  track: () => [
+    "Maintain track custody via assigned ISR",
+    "Monitor for repositioning or dispersal",
+    "Update velocity vector every 30s",
+  ],
+  target: () => [
+    "Match optimal shooter via S2S engine",
+    "Calculate Pk (probability of kill) & collateral estimate",
+    "Verify ROE compliance for engagement zone",
+  ],
+  engage: () => [
+    "⚠ HITL authorization REQUIRED",
+    "ROE compliance check — confirm weapons-free",
+    "Execute strike via assigned platform",
+  ],
+  assess: () => [
+    "Generate BDA via AEGIS AI",
+    "Confirm functional kill or re-strike requirement",
+    "Update ontology & close kill chain",
+  ],
+};
+
+const KillChainEventModal = ({
+  event,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  event: EventOption;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) => {
+  const sevColor = event.severity === "critical" ? "#ef4444" : event.severity === "high" ? "#f97316" : event.severity === "medium" ? "#eab308" : "#22c55e";
+  const typeEmoji = event.event_type.includes("strike") || event.event_type.includes("explosion") ? "💥" :
+    event.event_type.includes("missile") ? "🚀" :
+    event.event_type.includes("conflict") || event.event_type.includes("military") ? "⚔️" :
+    event.event_type.includes("cyber") ? "🔓" : "📡";
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className="w-[95%] max-h-[90%] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-2 px-3 py-2.5 border-b border-border bg-card">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-sm">{typeEmoji}</span>
+              <span className="text-[10px] font-mono font-bold text-foreground truncate">{event.title}</span>
+              <span className="text-[7px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${sevColor}20`, color: sevColor, border: `1px solid ${sevColor}40` }}>
+                {event.severity.toUpperCase()}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-1 text-[7px] font-mono text-muted-foreground">
+              <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{event.lat.toFixed(3)}°N, {event.lng.toFixed(3)}°E</span>
+              <span>{event.source.toUpperCase()}</span>
+              <span>{new Date(event.created_at).toISOString().slice(0, 16).replace("T", " ")} UTC</span>
+            </div>
+          </div>
+          <button onClick={onCancel} className="p-0.5 rounded hover:bg-accent transition-colors flex-shrink-0">
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* F2T2EA Vertical Stepper */}
+        <div className="px-3 py-2 space-y-0">
+          <div className="text-[7px] font-mono text-muted-foreground tracking-[0.2em] mb-2 flex items-center gap-1">
+            <Shield className="h-2.5 w-2.5" /> F2T2EA PHASE REVIEW
+          </div>
+          {PHASES.map((phase, i) => {
+            const color = PHASE_COLORS[phase];
+            const actions = F2T2EA_ACTIONS[phase](event);
+            return (
+              <div key={phase} className="flex gap-2">
+                {/* Timeline line */}
+                <div className="flex flex-col items-center w-5 flex-shrink-0">
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px]" style={{ backgroundColor: `${color}20`, border: `1.5px solid ${color}` }}>
+                    {PHASE_ICONS[phase]}
+                  </div>
+                  {i < PHASES.length - 1 && <div className="w-px flex-1 min-h-[12px]" style={{ backgroundColor: `${color}30` }} />}
+                </div>
+                {/* Content */}
+                <div className="pb-2 flex-1 min-w-0">
+                  <span className="text-[8px] font-mono font-bold tracking-[0.15em]" style={{ color }}>{phase.toUpperCase()}</span>
+                  <ul className="mt-0.5 space-y-0.5">
+                    {actions.map((action, j) => (
+                      <li key={j} className="text-[7px] font-mono text-foreground/70 flex items-start gap-1">
+                        <span className="text-[5px] mt-[3px] flex-shrink-0" style={{ color }}>●</span>
+                        <span>{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Actions */}
+        <div className="sticky bottom-0 flex items-center justify-end gap-2 px-3 py-2 border-t border-border bg-card">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 rounded text-[8px] font-mono font-bold border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="px-3 py-1.5 rounded text-[8px] font-mono font-bold border text-[#f97316] border-[#f97316]/50 hover:bg-[#f97316]/10 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+            INITIATE CHAIN
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   const [tasks, setTasks] = useState<KCTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +196,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   const [generatingBDA, setGeneratingBDA] = useState<string | null>(null);
   const [initiatingTarget, setInitiatingTarget] = useState<string | null>(null);
   const [pickerTab, setPickerTab] = useState<"targets" | "events">("targets");
+  const [selectedEventForModal, setSelectedEventForModal] = useState<EventOption | null>(null);
 
   const fetchTasks = useCallback(async () => {
     const { data } = await supabase
