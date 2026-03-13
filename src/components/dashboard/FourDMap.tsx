@@ -973,7 +973,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       <div className="flex flex-1 min-h-0">
         {/* LEFT PANEL — hidden on mobile by default, togglable */}
         {!cleanUI && (
-          <div className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-0 z-[10001]' : 'hidden'} md:relative md:block w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex flex-col overflow-y-auto overflow-x-hidden scrollbar-thin`}>
+          <div className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-0 z-[10001]' : 'hidden'} md:relative md:flex w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex-col overflow-hidden`}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <div className="relative"><Radar className="h-4 w-4 text-primary" /><div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" /></div>
@@ -1006,7 +1006,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <span className="text-[9px] text-muted-foreground font-mono tracking-wider">{totalActive}/{layerConfigs.length} LAYERS ACTIVE</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-1">
+            <div className="flex-1 overflow-y-auto scrollbar-thin py-1 min-h-0">
               {layerConfigs.map(layer => (
                 <button key={layer.id} onClick={() => toggleLayer(layer.id)}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
