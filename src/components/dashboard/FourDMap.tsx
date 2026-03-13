@@ -1004,9 +1004,12 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     switch (sev) { case "critical": return "border-l-[#dc2626]"; case "high": return "border-l-[#f97316]"; case "medium": return "border-l-[#eab308]"; default: return "border-l-[#00d4ff]"; }
   };
 
+  const [urban3DTarget, setUrban3DTarget] = useState<{lat: number; lng: number} | null>(null);
+
   const handleFeedClick = useCallback((lat: number, lng: number) => {
     const globe = globeRef.current;
     if (globe) globe.pointOfView({ lat, lng, altitude: 1.0 }, 1200);
+    setTimeout(() => setUrban3DTarget({ lat, lng }), 1300);
   }, []);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
