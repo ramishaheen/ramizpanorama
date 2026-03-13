@@ -2112,7 +2112,7 @@ export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlig
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Render ALL rings on globe — OSINT + City + Coverage (consolidated to prevent overwrites)
+  // Render ALL rings on globe — OSINT + City + Coverage + Live GeoAlerts + Earthquakes + Wildfires (consolidated to prevent overwrites)
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -2137,8 +2137,41 @@ export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlig
       severity: "info",
     }));
 
+    // Live geo-alerts rings
+    const alertRings = liveGeoAlerts.map(a => ({
+      lat: a.lat, lng: a.lng, label: a.title,
+      type: "geoalert",
+      severity: a.severity || "medium",
+      maxR: a.severity === "critical" ? 4 : a.severity === "high" ? 3 : 2,
+      propagationSpeed: a.severity === "critical" ? 5 : a.severity === "high" ? 3 : 2,
+      repeatPeriod: a.severity === "critical" ? 500 : a.severity === "high" ? 800 : 1100,
+      ringType: "geoalert" as const,
+    }));
+
+    // Live earthquake rings — sized by magnitude
+    const quakeRings = liveEarthquakes.filter((q: any) => q.magnitude >= 2.5).slice(0, 200).map((q: any) => ({
+      lat: q.lat, lng: q.lng, label: `M${q.magnitude}`,
+      type: "earthquake",
+      severity: q.magnitude >= 6 ? "critical" : q.magnitude >= 4.5 ? "high" : "medium",
+      maxR: Math.max(1.5, Math.min(q.magnitude * 0.8, 6)),
+      propagationSpeed: q.magnitude >= 6 ? 6 : q.magnitude >= 4.5 ? 4 : 2.5,
+      repeatPeriod: q.magnitude >= 6 ? 400 : q.magnitude >= 4.5 ? 700 : 1000,
+      ringType: "earthquake" as const,
+    }));
+
+    // Live wildfire rings — high FRP fires
+    const fireRings = liveWildfires.filter((f: any) => f.frp >= 20).slice(0, 150).map((f: any) => ({
+      lat: f.lat, lng: f.lng, label: `🔥 FRP ${f.frp}`,
+      type: "wildfire",
+      severity: f.frp >= 100 ? "critical" : f.frp >= 50 ? "high" : "medium",
+      maxR: Math.max(1, Math.min(f.frp / 30, 4)),
+      propagationSpeed: f.frp >= 100 ? 4 : 2.5,
+      repeatPeriod: f.frp >= 100 ? 600 : 900,
+      ringType: "wildfire" as const,
+    }));
+
     // Coverage ring (from selected satellite)
-    const allRings: any[] = [...osintRings, ...cityRings];
+    const allRings: any[] = [...osintRings, ...cityRings, ...alertRings, ...quakeRings, ...fireRings];
 
     if (coverageRing) {
       const maxRDeg = coverageRing.radiusKm / 111;
@@ -2169,6 +2202,18 @@ export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlig
             return `rgba(${r},${g},${b},${0.35 - t * 0.35})`;
           };
         }
+        if (d.ringType === "geoalert") {
+          return (t: number) => `rgba(255,100,50,${0.9 - t * 0.9})`;
+        }
+        if (d.ringType === "earthquake") {
+          const isStrong = d.severity === "critical";
+          return (t: number) => isStrong
+            ? `rgba(239,68,68,${1 - t})`
+            : `rgba(234,179,8,${0.9 - t * 0.9})`;
+        }
+        if (d.ringType === "wildfire") {
+          return (t: number) => `rgba(255,140,0,${0.85 - t * 0.85})`;
+        }
         if (d.ringType === "osint") {
           const colors: Record<string, (t: number) => string> = {
             conflict: (t: number) => `rgba(239,68,68,${1 - t})`,
@@ -2183,7 +2228,7 @@ export const SatelliteGlobe = ({ onClose, flights: propFlights = [], trackedFlig
       .ringMaxRadius((d: any) => d.maxR)
       .ringPropagationSpeed((d: any) => d.propagationSpeed)
       .ringRepeatPeriod((d: any) => d.repeatPeriod);
-  }, [coverageRing]);
+  }, [coverageRing, liveGeoAlerts, liveEarthquakes, liveWildfires]);
 
   // Cleanup
   useEffect(() => {
