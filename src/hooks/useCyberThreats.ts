@@ -90,7 +90,12 @@ export function useCyberThreats(): CyberThreatsState {
         verified: typeof t.verified === 'boolean' ? t.verified : false,
       }));
 
-      setThreats(fetchedThreats);
+      // Accumulate threats across refreshes (deduplicate by ID)
+      setThreats(prev => {
+        const merged = new Map(prev.map(t => [t.id, t]));
+        fetchedThreats.forEach(t => merged.set(t.id, t));
+        return Array.from(merged.values());
+      });
       setLastUpdated(data.lastUpdated);
       setSources(data.sources || []);
       setCache(fetchedThreats, data.lastUpdated, data.sources || []);
