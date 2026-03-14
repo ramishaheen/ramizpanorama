@@ -130,7 +130,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
     // Optimistic update
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, phase, status, updated_at: new Date().toISOString() } : t));
 
-    await supabase.from("kill_chain_tasks").update({ phase, status, updated_at: new Date().toISOString() }).eq("id", task.id);
+    await supabase.from("kill_chain_tasks").update({ phase: phase as any, status: status as any, updated_at: new Date().toISOString() }).eq("id", task.id);
 
     // Column-specific AI triggers
     if (columnId === "pending_pairing") {
