@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
 import { DEFAULT_COMPONENT_VISIBILITY, type ComponentVisibility } from "@/components/dashboard/MapCommandBar";
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers, Lock, Unlock } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers, Lock, Unlock, Shield, Crosshair, Brain } from "lucide-react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
@@ -445,14 +445,31 @@ const Index = () => {
                         </button>
                       </div>
                       <div className="flex-1 overflow-y-auto">
-                        <div className="p-3 space-y-3">
+                        <div className="p-3 space-y-1">
                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
                             <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
-                              {leftOrder.map((id) => (
-                                <DraggableWidget key={id} id={id} disabled={layoutLocked}>
-                                  {leftWidgets[id]}
-                                </DraggableWidget>
-                              ))}
+                              {leftOrder.map((id) => {
+                                const sectionMap: Record<string, { label: string; icon: any; color: string }> = {
+                                  rockets: { label: "THREAT STATUS", icon: Shield, color: "text-critical" },
+                                  "geo-fusion": { label: "SITUATIONAL AWARENESS", icon: Crosshair, color: "text-primary" },
+                                  commodities: { label: "INTELLIGENCE", icon: Brain, color: "text-accent" },
+                                };
+                                const section = sectionMap[id];
+                                return (
+                                  <div key={id}>
+                                    {section && (
+                                      <div className="flex items-center gap-1.5 pt-3 pb-1 px-1">
+                                        <section.icon className={`h-2.5 w-2.5 ${section.color}`} />
+                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${section.color} font-bold`}>{section.label}</span>
+                                        <div className="flex-1 h-px bg-border/40" />
+                                      </div>
+                                    )}
+                                    <DraggableWidget id={id} disabled={layoutLocked}>
+                                      {leftWidgets[id]}
+                                    </DraggableWidget>
+                                  </div>
+                                );
+                              })}
                             </SortableContext>
                           </DndContext>
                         </div>
@@ -547,11 +564,34 @@ const Index = () => {
                         <div className="direction-ltr">
                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
                             <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                              {rightOrder.map((id) => (
-                                <DraggableWidget key={id} id={id} disabled={layoutLocked}>
-                                  {rightWidgets[id]}
-                                </DraggableWidget>
-                              ))}
+                              {rightOrder.map((id) => {
+                                const accentMap: Record<string, string> = {
+                                  notifications: "border-l-2 border-l-destructive",
+                                  "war-updates": "border-l-2 border-l-warning",
+                                  layers: "border-l-2 border-l-primary",
+                                  timeline: "border-l-2 border-l-primary",
+                                  cyber: "border-l-2 border-l-accent",
+                                };
+                                const labelMap: Record<string, string> = {
+                                  notifications: "ALERTS",
+                                  "war-updates": "WAR UPDATES",
+                                  layers: "MAP LAYERS",
+                                  timeline: "TIMELINE",
+                                  cyber: "CYBER",
+                                };
+                                return (
+                                  <div key={id} className={accentMap[id] || ""}>
+                                    {labelMap[id] && (
+                                      <div className="px-2 pt-2 pb-0.5">
+                                        <span className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground font-semibold">{labelMap[id]}</span>
+                                      </div>
+                                    )}
+                                    <DraggableWidget id={id} disabled={layoutLocked}>
+                                      {rightWidgets[id]}
+                                    </DraggableWidget>
+                                  </div>
+                                );
+                              })}
                             </SortableContext>
                           </DndContext>
                         </div>

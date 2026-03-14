@@ -1,4 +1,4 @@
-import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info, Crosshair, Bomb } from "lucide-react";
+import { Plane, Ship, AlertTriangle, Activity, Fuel, CircleDollarSign, Bitcoin, TrendingUp, TrendingDown, Rocket, Target, DollarSign, Building2, PlaneTakeoff, Anchor, HardHat, Shield, Info, Crosshair, Bomb, ChevronDown } from "lucide-react";
 import { motion, useSpring, useTransform } from "framer-motion";
 import { useCommodityPrices } from "@/hooks/useCommodityPrices";
 import { useWarCosts } from "@/hooks/useWarCosts";
@@ -48,7 +48,7 @@ const AnimatedNumber = ({ value, color }: { value: number | string; color: strin
 
   return (
     <motion.div
-      className={`text-[10px] font-mono font-bold ${color} transition-colors duration-300 leading-none`}
+      className={`text-[11px] font-mono font-bold ${color} transition-colors duration-300 leading-none`}
       animate={flash ? { scale: [1, 1.2, 1] } : {}}
       transition={{ duration: 0.4 }}
     >
@@ -73,19 +73,19 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-0.5 px-1 py-px bg-card border rounded transition-all duration-500 relative flex-shrink-0 min-w-[80px] sm:min-w-0 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
+      className={`flex items-center gap-1 px-1.5 py-0.5 bg-card border rounded transition-all duration-500 relative flex-shrink-0 min-w-[85px] sm:min-w-0 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
     >
-      <Icon className={`h-2 w-2 ${color} ${pulse ? "animate-pulse" : ""} flex-shrink-0`} />
+      <Icon className={`h-2.5 w-2.5 ${color} ${pulse ? "animate-pulse" : ""} flex-shrink-0`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-0.5">
           {liveContent ? liveContent : (
             <>
-              {prefix && <span className={`text-[10px] font-mono font-bold ${color}`}>{prefix}</span>}
+              {prefix && <span className={`text-[11px] font-mono font-bold ${color}`}>{prefix}</span>}
               {value !== undefined && <AnimatedNumber value={value} color={color} />}
             </>
           )}
         </div>
-        <div className="text-[7px] text-muted-foreground uppercase tracking-wider leading-none">{label}</div>
+        <div className="text-[8px] text-muted-foreground uppercase tracking-wider leading-none">{label}</div>
       </div>
       <StatusDot status={liveModifier} />
       {tooltip && <Info className="h-2 w-2 text-muted-foreground/40 flex-shrink-0" />}
@@ -219,14 +219,16 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
 
   const timestamp = warCosts.data?.timestamp || new Date().toISOString();
 
+  const [warCostOpen, setWarCostOpen] = useState(false);
+
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`flex overflow-x-auto mobile-stats-scroll sm:grid sm:grid-cols-7 gap-1 px-2 sm:px-3 py-0.5 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`flex overflow-x-auto mobile-stats-scroll sm:grid sm:grid-cols-7 gap-1 px-2 sm:px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
         <div className="flex items-center justify-center px-1">
           <div className="text-center">
-            <div className="text-[9px] font-mono font-bold text-primary uppercase tracking-widest leading-none">TODAY</div>
-            <div className="text-[7px] font-mono text-muted-foreground leading-none mt-0.5">{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+            <div className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest leading-none">TODAY</div>
+            <div className="text-[8px] font-mono text-muted-foreground leading-none mt-0.5">{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
           </div>
         </div>
         <StatCard icon={Plane} label={t(tr["stat.airspace"].en, tr["stat.airspace"].ar)} value={airspaceCount} color="text-primary" pulse={dataFresh} />
@@ -258,14 +260,27 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
         <StatCard icon={Activity} label={t(tr["stat.risk"].en, tr["stat.risk"].ar)} value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
       </div>
 
-      {/* War cost cards - LIVE TICKING */}
+      {/* War cost cards - COLLAPSIBLE */}
       {warCosts.data && !warCosts.error && (
         <div className="border-t border-border/50 bg-card/30">
-          <div className="flex items-center justify-between px-2 py-0">
-            <span className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider leading-none">War Cost Estimate</span>
-            <ScenarioToggle active={scenario} onChange={setScenario} />
-          </div>
-          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-0.5 px-1.5 sm:px-2 py-px transition-shadow duration-500`}>
+          <button
+            onClick={() => setWarCostOpen(o => !o)}
+            className="w-full flex items-center justify-between px-2.5 py-1 hover:bg-secondary/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider leading-none">War Cost Estimate</span>
+              <span className="text-[10px] font-mono font-bold text-critical">
+                ${(warCosts.data.total_daily_cost_billions * scenarioMultiplier).toFixed(2)}B/day — ${scenarioCumulative.toFixed(1)}B total
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ScenarioToggle active={scenario} onChange={(s) => { s !== scenario && setScenario(s); }} />
+              <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${warCostOpen ? "rotate-180" : ""}`} />
+            </div>
+          </button>
+          {warCostOpen && (
+          <>
+          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-0.5 px-1.5 sm:px-2 py-1 transition-shadow duration-500`}>
             <StatCard
               icon={DollarSign}
               label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}
@@ -337,6 +352,8 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
               scenarioMultiplier={scenarioMultiplier}
               scenario={scenario}
             />
+          )}
+          </>
           )}
         </div>
       )}
