@@ -924,11 +924,20 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
 
   return (
     <div className="flex flex-col h-full w-full bg-background/95 backdrop-blur-md border-r border-border/40" style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.4)" }}>
-      <Tabs defaultValue="tools" className="flex flex-col h-full">
+      <Tabs defaultValue="sources" className="flex flex-col h-full">
         <TabsList className="rounded-none bg-muted/40 border-b border-border/30 h-9 px-1 shrink-0">
-          <TabsTrigger value="layers" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Map layers</TabsTrigger>
-          <TabsTrigger value="sources" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Data sources</TabsTrigger>
-          <TabsTrigger value="tools" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Tools</TabsTrigger>
+          <TabsTrigger value="layers" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            Map layers
+            {activeIntelLayers.size > 0 && <span className="ml-1 text-[7px] px-1 py-0.5 rounded-full bg-primary/20 text-primary">{activeIntelLayers.size}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="sources" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            Data sources
+            <span className="ml-1 text-[7px] px-1 py-0.5 rounded-full bg-primary/20 text-primary">{dataSources.filter(s => s.status === "active").length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            Tools
+            {activeTools.size > 0 && <span className="ml-1 text-[7px] px-1 py-0.5 rounded-full bg-primary/20 text-primary">{activeTools.size}</span>}
+          </TabsTrigger>
         </TabsList>
 
         {/* ===== MAP LAYERS TAB ===== */}
