@@ -183,7 +183,7 @@ const KillChainEventModal = ({
           </div>
           {PHASES.map((phase, i) => {
             const color = PHASE_COLORS[phase];
-            const actions = F2T2EA_ACTIONS[phase](event);
+            const actions = adaptiveActions[phase](event);
             return (
               <div key={phase} className="flex gap-2">
                 {/* Timeline line */}
