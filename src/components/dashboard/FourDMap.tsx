@@ -1468,7 +1468,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           <Inline3DView
             lat={inline3DTarget.lat}
             lng={inline3DTarget.lng}
-            onClose={() => setInline3DTarget(null)} />
+            onClose={() => setInline3DTarget(null)}
+            onOpenKillChain={() => { setInline3DTarget(null); setShowKanban(true); }}
+            onOpenAIMetrics={() => { setInline3DTarget(null); setShowOptimizer(true); }} />
 
           }
 
