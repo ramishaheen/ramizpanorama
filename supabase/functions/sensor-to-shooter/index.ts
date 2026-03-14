@@ -459,7 +459,85 @@ Be concise and military-professional.`,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action. Use: recommend, match_shooters, commit_strike, discard_strike, slew_sensor, dark_vessel_detect" }), {
+    // ============================================
+    // ACTION: optimize_match — weighted re-ranking of pending recommendations
+    // ============================================
+    if (action === "optimize_match") {
+      const { weights } = body;
+      if (!weights || typeof weights !== "object") throw new Error("weights object required");
+
+      const { data: recs } = await supabase
+        .from("strike_recommendations")
+        .select("*, target_tracks(*), shooter_assets(*)")
+        .eq("decision", "pending")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (!recs?.length) {
+        return new Response(JSON.stringify({ ranked_recommendations: [], message: "No pending recommendations" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const w = {
+        agm_match: weights.agm_match ?? 30,
+        time_to_target: weights.time_to_target ?? 50,
+        distance: weights.distance ?? 10,
+        fuel: weights.fuel ?? 40,
+        pk: weights.pk ?? 60,
+        collateral_risk: weights.collateral_risk ?? 80,
+        munitions: weights.munitions ?? 10,
+        time_on_station: weights.time_on_station ?? 20,
+      };
+      const totalWeight = Object.values(w).reduce((s, v) => s + v, 0) || 1;
+
+      const ranked = recs.map((rec: any) => {
+        const maxDist = 500;
+        const maxTTT = 60;
+        const distNorm = Math.max(0, 1 - (rec.proximity_km / maxDist));
+        const tttNorm = Math.max(0, 1 - (rec.time_to_target_min / maxTTT));
+        const pkNorm = rec.probability_of_kill || 0;
+        const payloadNorm = rec.payload_match_score || 0;
+        const fuelNorm = rec.shooter_assets?.fuel_remaining_pct ? rec.shooter_assets.fuel_remaining_pct / 100 : 0.5;
+        const collateralMap: Record<string, number> = { low: 1, medium: 0.5, high: 0.1 };
+        const collateralNorm = collateralMap[rec.collateral_risk] ?? 0.5;
+
+        const score = (
+          w.agm_match * payloadNorm +
+          w.time_to_target * tttNorm +
+          w.distance * distNorm +
+          w.fuel * fuelNorm +
+          w.pk * pkNorm +
+          w.collateral_risk * collateralNorm +
+          w.munitions * payloadNorm +
+          w.time_on_station * fuelNorm
+        ) / totalWeight;
+
+        return {
+          id: rec.id,
+          shooter_callsign: rec.shooter_assets?.callsign || "UNKNOWN",
+          shooter_type: rec.shooter_assets?.asset_type || "unknown",
+          recommended_weapon: rec.recommended_weapon,
+          distance_km: rec.proximity_km,
+          time_to_target_min: rec.time_to_target_min,
+          probability_of_kill: rec.probability_of_kill,
+          collateral_risk: rec.collateral_risk,
+          cost_estimate_usd: rec.cost_estimate_usd,
+          weighted_score: Math.round(score * 1000) / 1000,
+          target_lat: rec.target_tracks?.lat || 0,
+          target_lng: rec.target_tracks?.lng || 0,
+          target_classification: rec.target_tracks?.classification || "unknown",
+        };
+      });
+
+      ranked.sort((a: any, b: any) => b.weighted_score - a.weighted_score);
+
+      return new Response(JSON.stringify({ ranked_recommendations: ranked, weights_applied: w }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Unknown action. Use: recommend, match_shooters, commit_strike, discard_strike, slew_sensor, dark_vessel_detect, optimize_match" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
