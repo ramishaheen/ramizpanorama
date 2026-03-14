@@ -240,7 +240,43 @@ Deno.serve(async (req) => {
     actions.push(`Inserted timeline event for ${cityName}`);
   }
 
-  // 3. Generate airspace alerts (1-2 per poll)
+  // 2b. Generate intel_events (2-3 per cycle) for Events Feed + Kill Chain
+  const numIntelEvents = 2 + Math.floor(Math.random() * 2);
+  const intelCities = [...cityNames].sort(() => Math.random() - 0.5).slice(0, numIntelEvents);
+
+  for (const cityName of intelCities) {
+    const coords = CITY_COORDS[cityName];
+    const geoType = pick(geoTypes);
+    const lat = coords.lat + (Math.random() - 0.5) * 0.15;
+    const lng = coords.lng + (Math.random() - 0.5) * 0.15;
+
+    // 80% use geo-mapped types, 20% use cyber/sigint/nuclear for Kill Chain variety
+    const eventType = Math.random() < 0.8
+      ? pick(EVENT_TYPES_BY_GEO[geoType])
+      : pick(CYBER_SIGINT_NUCLEAR_TYPES);
+
+    const title = `[${cityName}] ${pick(titles[geoType])}`;
+    const confidence = Math.round((0.4 + Math.random() * 0.55) * 100) / 100;
+    const severity = pick(eventSeverities);
+    const verification = pick(verificationStatuses);
+
+    await supabase.from("intel_events").insert({
+      title,
+      event_type: eventType,
+      city: cityName,
+      country: CITY_COUNTRY[cityName] || "Unknown",
+      lat, lng,
+      severity,
+      confidence,
+      verification_status: verification,
+      summary: `Automated intel: ${eventType.replace(/_/g, " ")} activity detected near ${cityName}. Confidence ${Math.round(confidence * 100)}%.`,
+      created_at: now,
+      updated_at: now,
+    });
+    actions.push(`Inserted intel_event (${eventType}) for ${cityName}`);
+  }
+
+
   const numAirspace = 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < numAirspace; i++) {
     const city = pick(cityNames);
