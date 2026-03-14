@@ -88,7 +88,7 @@ const CYBER_SIGINT_NUCLEAR_TYPES = [
   "nuclear_activity", "centrifuge_anomaly", "electronic_warfare",
 ];
 
-const verificationStatuses = ["unverified", "pending", "confirmed"] as const;
+const verificationStatuses = ["unverified", "auto_detected", "verified"] as const;
 const eventSeverities = ["info", "low", "medium", "high", "critical"] as const;
 
 const titles: Record<string, string[]> = {
