@@ -282,6 +282,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [showKanban, setShowKanban] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const { commitStrike } = useSensorToShooter();
+  const { entities: ontologyEntities } = useOntology();
 
   // ========== LIVE DB EVENTS ==========
   const [dbIntelEvents, setDbIntelEvents] = useState<any[]>([]);
