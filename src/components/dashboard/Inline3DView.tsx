@@ -126,7 +126,8 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
   };
 
   return (
-    <div className="absolute inset-0 z-10 bg-background">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] bg-background">
       {/* Map container */}
       <div ref={mapContainerRef} className="absolute inset-0" />
 
