@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose, Brain, Cloud } from "lucide-react";
+import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose, Brain, Cloud, Swords, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
-import { Inline3DSidebar } from "./urban3d/Inline3DSidebar";
+import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
 import { AISourceCollector } from "./AISourceCollector";
 import { WeatherTrafficPanel } from "./WeatherTrafficPanel";
 
@@ -12,9 +12,11 @@ interface Inline3DViewProps {
   lat: number;
   lng: number;
   onClose: () => void;
+  onOpenKillChain?: () => void;
+  onOpenAIMetrics?: () => void;
 }
 
-export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
+export const Inline3DView = ({ lat, lng, onClose, onOpenKillChain, onOpenAIMetrics }: Inline3DViewProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -142,24 +144,49 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         </div>
       )}
 
-      {/* Left Sidebar */}
+      {/* Left Sidebar — Full GeoAnalysisToolsPanel */}
       {toolsPanelOpen && (
-        <div className="absolute top-0 left-0 z-30 w-[252px] h-full">
-          <Inline3DSidebar
-            mapRef={mapRef}
-            lat={lat}
-            lng={lng}
-            onClose={onClose}
-            weatherEnabled={weatherEnabled}
-            incidentsEnabled={incidentsEnabled}
-            onToggleWeather={() => setWeatherEnabled((v) => !v)}
-            onToggleIncidents={() => setIncidentsEnabled((v) => !v)}
-          />
+        <div className="absolute top-0 left-0 z-30 w-[272px] h-full flex flex-col">
+          {/* Main tools panel */}
+          <div className="flex-1 min-h-0">
+            <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
+          </div>
+
+          {/* Mission Panels quick actions */}
+          <div className="shrink-0 border-t border-border/30 bg-background/95 backdrop-blur-md p-2 space-y-1.5">
+            {onOpenKillChain && (
+              <button
+                onClick={() => { onOpenKillChain(); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-sm border border-border/30 bg-muted/15 text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/10 transition-all"
+              >
+                <Swords className="h-3.5 w-3.5" />
+                <span>Kill Chain Board</span>
+              </button>
+            )}
+            {onOpenAIMetrics && (
+              <button
+                onClick={() => { onOpenAIMetrics(); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-sm border border-border/30 bg-muted/15 text-[9px] font-mono font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/10 transition-all"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>AI Metrics Prioritizer</span>
+              </button>
+            )}
+
+            {/* Back to Globe */}
+            <button
+              onClick={onClose}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-all"
+            >
+              <Globe className="h-4 w-4" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Panel toggle + hide tools */}
-      <div className={`absolute top-4 z-30 flex items-center gap-2 ${toolsPanelOpen ? "left-[268px]" : "left-4"} transition-all`}>
+      <div className={`absolute top-4 z-30 flex items-center gap-2 ${toolsPanelOpen ? "left-[288px]" : "left-4"} transition-all`}>
         <button
           onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
           className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
@@ -167,7 +194,6 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         >
           {toolsPanelOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
         </button>
-        {/* Back to Globe when sidebar is closed */}
         {!toolsPanelOpen && (
           <button
             onClick={onClose}
@@ -249,7 +275,7 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       </div>
 
       {/* Bottom info bar */}
-      <div className={`absolute bottom-4 z-20 ${toolsPanelOpen ? "left-[268px]" : "left-4"} transition-all`}>
+      <div className={`absolute bottom-4 z-20 ${toolsPanelOpen ? "left-[288px]" : "left-4"} transition-all`}>
         <div className="flex items-center gap-3 px-3 py-1.5 rounded-sm bg-background/80 backdrop-blur-md border border-border/30">
           <div className="flex items-center gap-1.5 text-[8px] font-mono">
             <span className="text-muted-foreground">BEARING</span>
