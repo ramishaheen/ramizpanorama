@@ -295,6 +295,67 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     setAvailableEvents(mapped);
   };
 
+  // ===== AUTO-PROGRESSION ENGINE =====
+  const PHASE_DELAYS: Record<string, number> = { find: 0, fix: 3000, track: 5000, target: 8000 };
+  const PHASE_TOASTS: Record<string, string> = {
+    find: "🔍 Correlating OSINT sources...",
+    fix: "📌 Geo-locking target — S2S matching...",
+    track: "👁 Track custody established",
+    target: "🎯 Weaponeering complete — HITL APPROVAL REQUIRED",
+    engage: "💥 Strike committed",
+    assess: "📋 Generating BDA via AEGIS...",
+  };
+
+  const runKillChainAutomation = useCallback(async (taskId: string, targetTrackId: string) => {
+    setAutomatingId(taskId);
+    const autoPhases = ["fix", "track", "target"] as const;
+    let cumulativeDelay = 0;
+
+    for (const phase of autoPhases) {
+      cumulativeDelay += PHASE_DELAYS[phase];
+      await new Promise(resolve => setTimeout(resolve, PHASE_DELAYS[phase]));
+
+      // At FIX phase, try S2S matching for best shooter
+      if (phase === "fix") {
+        toast.info(PHASE_TOASTS.fix);
+        try {
+          const { data: s2sData } = await supabase.functions.invoke("sensor-to-shooter", {
+            body: { action: "match_shooters", target_track_id: targetTrackId },
+          });
+          if (s2sData?.recommendations?.[0]) {
+            const best = s2sData.recommendations[0];
+            await supabase.from("kill_chain_tasks").update({
+              assigned_platform: best.shooter?.callsign || best.callsign || "AUTO-MATCHED",
+              recommended_weapon: best.recommended_weapon || "AUTO-SELECTED",
+              updated_at: new Date().toISOString(),
+            }).eq("id", taskId);
+          }
+        } catch {
+          console.warn("S2S auto-match unavailable during FIX phase");
+        }
+      } else {
+        toast.info(PHASE_TOASTS[phase]);
+      }
+
+      // Advance the phase in DB
+      const status = phase === "target" ? "pending" : "in_progress";
+      await supabase.from("kill_chain_tasks").update({
+        phase: phase as any,
+        status: status as any,
+        updated_at: new Date().toISOString(),
+      }).eq("id", taskId);
+
+      await fetchTasks();
+
+      // At TARGET, pause for HITL
+      if (phase === "target") {
+        toast.warning("⚠ HITL APPROVAL REQUIRED — review & approve to proceed to ENGAGE", { duration: 10000 });
+        break;
+      }
+    }
+    setAutomatingId(null);
+  }, [fetchTasks]);
+
   const handleOpenPicker = () => {
     setShowPicker(true);
     setPickerTab("targets");
