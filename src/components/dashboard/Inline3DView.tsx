@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
 import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
-import { TelemetryPanel } from "./TelemetryPanel";
 import { AISourceCollector } from "./AISourceCollector";
 import { WeatherTrafficPanel } from "./WeatherTrafficPanel";
 
@@ -146,15 +145,11 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       {/* Left Sidebar — tools + back to globe */}
       {toolsPanelOpen && (
         <div className="absolute top-0 left-0 z-30 w-[252px] h-full flex flex-col bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20">
-          {/* GeoAnalysisToolsPanel takes available space with its own internal scroll */}
+          {/* Dedicated tools area (full-height for tabs content) */}
           <div className="flex-1 min-h-0">
             <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
           </div>
-          {/* Telemetry + Weather below tools — scrollable if needed */}
-          <div className="flex-shrink-0 max-h-[40%] overflow-y-auto border-t border-border/20 p-2 space-y-2 scrollbar-thin">
-            <TelemetryPanel lat={lat} lng={lng} heading={heading} tilt={tilt} zoom={zoom} />
-            {weatherEnabled && <WeatherTrafficPanel />}
-          </div>
+
           {/* Pinned footer — Back to Globe */}
           <div className="flex-shrink-0 border-t border-border/30 p-2">
             <button
@@ -209,7 +204,7 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         <button onClick={resetView} className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Reset view">
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
-        <button onClick={() => { setWeatherEnabled(!weatherEnabled); if (!toolsPanelOpen && !weatherEnabled) setToolsPanelOpen(true); }} className={`h-8 flex items-center gap-1.5 px-2.5 rounded-sm backdrop-blur border transition-all text-[9px] font-mono font-bold uppercase tracking-wider ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather & Conditions">
+        <button onClick={() => setWeatherEnabled(!weatherEnabled)} className={`h-8 flex items-center gap-1.5 px-2.5 rounded-sm backdrop-blur border transition-all text-[9px] font-mono font-bold uppercase tracking-wider ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather & Conditions">
           <Cloud className="h-3.5 w-3.5" />
           <span>Weather</span>
         </button>
@@ -217,6 +212,13 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
           <span className="text-[10px]">⚠️</span>
         </button>
       </div>
+
+      {/* Weather details panel */}
+      {weatherEnabled && (
+        <div className="absolute top-14 right-4 z-20 w-[min(360px,calc(100vw-1rem))] max-h-[calc(100vh-7rem)] overflow-y-auto scrollbar-thin">
+          <WeatherTrafficPanel />
+        </div>
+      )}
 
       {/* Coordinate HUD */}
       <div className="absolute bottom-4 right-4 z-20">
