@@ -352,6 +352,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
               scenario={scenario}
             />
           )}
+          )}
         </div>
       )}
       {warCosts.loading && (
