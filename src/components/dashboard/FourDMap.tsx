@@ -277,6 +277,25 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const { commitStrike } = useSensorToShooter();
 
+  // ========== LIVE DB EVENTS ==========
+  const [dbIntelEvents, setDbIntelEvents] = useState<any[]>([]);
+  const [dbGeoAlerts, setDbGeoAlerts] = useState<any[]>([]);
+
+  const fetchDbEvents = useCallback(async () => {
+    const [{ data: ie }, { data: ga }] = await Promise.all([
+      supabase.from("intel_events").select("id, title, event_type, severity, lat, lng, confidence, created_at, city, country").order("created_at", { ascending: false }).limit(50),
+      supabase.from("geo_alerts").select("id, title, type, severity, lat, lng, timestamp, source, summary").order("timestamp", { ascending: false }).limit(50),
+    ]);
+    if (ie) setDbIntelEvents(ie);
+    if (ga) setDbGeoAlerts(ga);
+  }, []);
+
+  useEffect(() => {
+    fetchDbEvents();
+    const iv = setInterval(fetchDbEvents, 30000);
+    return () => clearInterval(iv);
+  }, [fetchDbEvents]);
+
   // ========== AI SCAN ON ZOOM ==========
   const [viewAlt, setViewAlt] = useState(2.2);
   const [viewCenter, setViewCenter] = useState<{ lat: number; lng: number }>({ lat: 30, lng: 45 });
@@ -695,31 +714,55 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const unifiedFeed = useMemo(() => {
     const cutoff = timelineTimestamp;
     const feed: { id: string; ts: number; type: string; label: string; lat: number; lng: number; severity: string; color: string; source: string; icon: string }[] = [];
-    emulatedEvents.forEach((ev, i) => { if (ev.ts <= cutoff) feed.push({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT", icon: ev.icon }); });
+    const seen = new Set<string>();
+    const addUnique = (item: typeof feed[0]) => {
+      const key = `${item.lat.toFixed(2)}_${item.lng.toFixed(2)}_${Math.round(item.ts / 60000)}`;
+      if (!seen.has(key)) { seen.add(key); feed.push(item); }
+    };
+
+    // DB intel_events — highest priority
+    dbIntelEvents.forEach(ev => {
+      const evTs = new Date(ev.created_at).getTime();
+      if (evTs > cutoff) return;
+      const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : ev.severity === "medium" ? "#eab308" : "#22c55e";
+      addUnique({ id: `ie-${ev.id}`, ts: evTs, type: ev.event_type, label: `${ev.title}${ev.city ? ` — ${ev.city}` : ""}${ev.country ? `, ${ev.country}` : ""}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "INTEL-DB", icon: getEventIcon(ev.event_type) });
+    });
+
+    // DB geo_alerts
+    dbGeoAlerts.forEach(ev => {
+      const evTs = new Date(ev.timestamp).getTime();
+      if (evTs > cutoff) return;
+      const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : ev.severity === "medium" ? "#eab308" : "#22c55e";
+      addUnique({ id: `ga-${ev.id}`, ts: evTs, type: ev.type, label: `${ev.title}${ev.summary ? ` — ${ev.summary.slice(0, 60)}` : ""}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "GEO-ALERT", icon: getEventIcon(ev.type) });
+    });
+
+    // Emulated fallback
+    emulatedEvents.forEach((ev, i) => { if (ev.ts <= cutoff) addUnique({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT", icon: ev.icon }); });
+
     if (geoFusionData?.events) {
       geoFusionData.events.forEach((ev, i) => {
         const evTs = new Date(ev.timestamp).getTime();
         const sev = ev.severity >= 4 ? "critical" : ev.severity >= 3 ? "high" : ev.severity >= 2 ? "medium" : "low";
         const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
-        feed.push({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION", icon: getEventIcon(ev.event_type) });
+        addUnique({ id: `geo-${i}`, ts: isNaN(evTs) ? Date.now() - i * 600000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}, ${ev.country}`, lat: ev.lat, lng: ev.lng, severity: sev, color: col, source: "GEO-FUSION", icon: getEventIcon(ev.event_type) });
       });
     }
     conflictEvents.forEach((ev, i) => {
       const evTs = new Date(ev.event_date).getTime();
       const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
-      feed.push({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED", icon: getEventIcon(ev.event_type) });
+      addUnique({ id: `con-${i}`, ts: isNaN(evTs) ? Date.now() - i * 300000 : evTs, type: ev.event_type, label: `${ev.event_type} — ${ev.location}`, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: col, source: "ACLED", icon: getEventIcon(ev.event_type) });
     });
     earthquakes.forEach((eq, i) => {
       const eqTs = (eq as any).time || Date.now() - i * 600000;
       const sev = eq.magnitude >= 6 ? "critical" : eq.magnitude >= 5 ? "high" : eq.magnitude >= 3 ? "medium" : "low";
-      feed.push({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS", icon: "🌍" });
+      addUnique({ id: `eq-${i}`, ts: eqTs, type: "Earthquake", label: `M${eq.magnitude} — ${eq.place}`, lat: eq.lat, lng: eq.lng, severity: sev, color: eq.magnitude >= 5 ? "#ef4444" : "#fbbf24", source: "USGS", icon: "🌍" });
     });
     gpsJammingZones.forEach((z, i) => {
-      if (z.ts <= cutoff) feed.push({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT", icon: "📡" });
+      if (z.ts <= cutoff) addUnique({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT", icon: "📡" });
     });
     feed.sort((a, b) => b.ts - a.ts);
-    return feed.slice(0, 60);
-  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, gpsJammingZones]);
+    return feed.slice(0, 80);
+  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, gpsJammingZones, dbIntelEvents, dbGeoAlerts]);
 
   useEffect(() => { if (feedRef.current && playing) feedRef.current.scrollTop = 0; }, [unifiedFeed.length, playing]);
 
@@ -1469,10 +1512,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                           <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
                           <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
                         </button>
-                        <div className="px-2 pb-1">
+                        <div className="px-2 pb-1 flex items-center gap-1">
                           <button onClick={() => handleSlewSensor(ev.lat, ev.lng)}
                             className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#06b6d4]/30 text-[#06b6d4] hover:bg-[#06b6d4]/10 transition-colors">
                             📡 SLEW
+                          </button>
+                          <button onClick={() => { setC2RightTab("KILLCHAIN"); }}
+                            className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/30 text-[#f97316] hover:bg-[#f97316]/10 transition-colors">
+                            ⚡ CHAIN
                           </button>
                         </div>
                       </div>

@@ -52,38 +52,82 @@ interface KillChainPanelProps {
   onLocate?: (lat: number, lng: number) => void;
 }
 
-const F2T2EA_ACTIONS: Record<string, (ev: EventOption) => string[]> = {
-  find: (ev) => [
-    `Correlate OSINT at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`,
-    "Cross-reference SIGINT / IMINT / HUMINT sources",
-    "Assign ISR asset for persistent surveillance",
-    `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`,
-  ],
-  fix: (ev) => [
-    "Confirm position via multi-sensor fusion",
-    `Validate classification from event type: ${ev.event_type}`,
-    "Establish geo-lock with ≤10m CEP",
-  ],
-  track: () => [
-    "Maintain track custody via assigned ISR",
-    "Monitor for repositioning or dispersal",
-    "Update velocity vector every 30s",
-  ],
-  target: () => [
-    "Match optimal shooter via S2S engine",
-    "Calculate Pk (probability of kill) & collateral estimate",
-    "Verify ROE compliance for engagement zone",
-  ],
-  engage: () => [
-    "⚠ HITL authorization REQUIRED",
-    "ROE compliance check — confirm weapons-free",
-    "Execute strike via assigned platform",
-  ],
-  assess: () => [
-    "Generate BDA via AEGIS AI",
-    "Confirm functional kill or re-strike requirement",
-    "Update ontology & close kill chain",
-  ],
+// ===== SITUATION-ADAPTIVE F2T2EA ACTIONS =====
+type SituationCategory = "KINETIC" | "MARITIME" | "CYBER" | "NUCLEAR" | "SIGINT" | "CIVIL" | "DEFAULT";
+
+const classifyEvent = (ev: EventOption): SituationCategory => {
+  const t = (ev.event_type + " " + ev.title).toLowerCase();
+  if (t.match(/strike|explosion|rocket|missile|artillery|bomb|ied|barrage|intercept/)) return "KINETIC";
+  if (t.match(/naval|vessel|maritime|interdiction|boarding|ship|tanker|fleet|submarine/)) return "MARITIME";
+  if (t.match(/cyber|hack|breach|malware|ransomware|ddos|phishing/)) return "CYBER";
+  if (t.match(/nuclear|centrifuge|wmd|chemical|biological|cbrn|radiological|fordow|natanz|dimona/)) return "NUCLEAR";
+  if (t.match(/gps|jamming|sigint|ew|electronic|spectrum|radar|signal/)) return "SIGINT";
+  if (t.match(/protest|gathering|civil|crowd|riot|demonstration|unrest/)) return "CIVIL";
+  return "DEFAULT";
+};
+
+const ADAPTIVE_ACTIONS: Record<SituationCategory, Record<string, (ev: EventOption) => string[]>> = {
+  KINETIC: {
+    find: (ev) => [`Correlate strike OSINT at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`, "Cross-ref IMINT/SIGINT for launch origin", "Task ISR for crater analysis & BDA imagery", `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`],
+    fix: (ev) => ["Confirm launch site via SAR/EO overlay", `Classify ordnance from event: ${ev.event_type}`, "Establish TEL/artillery geo-lock ≤10m CEP"],
+    track: () => ["Track launcher reposition via persistent ISR", "Monitor for reload/rearm indicators", "Maintain track custody — velocity vector ΔT 30s"],
+    target: () => ["Match counter-battery platform via S2S", "Calculate Pk & collateral damage estimate (CDE)", "Verify ROE for kinetic response in engagement zone"],
+    engage: () => ["⚠ HITL authorization REQUIRED — kinetic strike", "Confirm weapons-free / collateral deconfliction", "Execute counter-fire via assigned platform"],
+    assess: () => ["Generate BDA via AEGIS — crater/damage analysis", "Assess functional kill vs re-strike requirement", "Update ontology — log ordnance type & effect achieved"],
+  },
+  MARITIME: {
+    find: (ev) => [`Correlate AIS/EO at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`, "Cross-ref vessel registry & flag state", "Task P-8/MQ-9B for maritime ISR overwatch", `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`],
+    fix: (ev) => ["Confirm vessel ID via AIS transponder + visual", `Validate threat type: ${ev.event_type}`, "Establish track lock — heading/speed/destination"],
+    track: () => ["Maintain AIS track + SAR backup", "Monitor for course deviation or rendezvous", "Coordinate with coast guard / naval assets"],
+    target: () => ["Assign nearest surface combatant or MPA", "Calculate intercept course & time-to-target", "Verify UNCLOS / maritime ROE compliance"],
+    engage: () => ["⚠ HITL authorization — boarding party / warning shot", "ROE: graduated response protocol", "Deploy VBSS team or execute maritime interdiction"],
+    assess: () => ["Confirm vessel status — stopped/boarded/diverted", "Document cargo manifest & crew disposition", "Update maritime COP — log interdiction outcome"],
+  },
+  CYBER: {
+    find: (ev) => [`Correlate IOCs at infrastructure: ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`, "Query threat intel feeds — VirusTotal/MISP/OTX", "Identify attack vector & initial access point", `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`],
+    fix: (ev) => ["Isolate affected network segment", `Classify threat type: ${ev.event_type}`, "Forensic snapshot — preserve volatile artifacts"],
+    track: () => ["Monitor lateral movement via EDR/SIEM", "Track C2 beacons & exfiltration channels", "Map kill chain stage (MITRE ATT&CK)"],
+    target: () => ["Identify threat actor attribution (APT group)", "Prepare countermeasures — block IOCs/IPs", "Coordinate with CERT / national CSIRT"],
+    engage: () => ["⚠ Authorization REQUIRED — active defense", "Execute network containment & C2 sinkhole", "Deploy countermeasures — quarantine & patch"],
+    assess: () => ["Generate incident report — TTPs & IOCs", "Confirm threat neutralized — no persistence", "Update threat intel database & share with allies"],
+  },
+  NUCLEAR: {
+    find: (ev) => [`Detect anomaly at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`, "Cross-ref IAEA monitoring & seismic data", "Task dedicated ISR for facility overwatch", `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`],
+    fix: (ev) => ["Confirm via multi-INT — thermal/gas sampling", `Classify activity: ${ev.event_type}`, "Establish baseline deviation — ΔT from normal ops"],
+    track: () => ["Monitor facility 24/7 — cascade status", "Track personnel & vehicle movement patterns", "Detect effluent/exhaust anomalies via EO/IR"],
+    target: () => ["Assess CBRN contamination radius", "Model strike scenarios — bunker penetration Pk", "Coordinate IAEA notification & diplomatic channels"],
+    engage: () => ["⚠ NATIONAL COMMAND AUTHORITY required", "CBRN protocols — fallout modeling mandatory", "Engage only with authorized strategic assets"],
+    assess: () => ["CBRN survey — contamination radius mapping", "Confirm functional destruction of enrichment capability", "Coordinate international inspection & monitoring"],
+  },
+  SIGINT: {
+    find: (ev) => [`Detect emission at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`, "Direction-finding — triangulate source", "Spectrum analysis — identify waveform & protocol", `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`],
+    fix: (ev) => ["Confirm emitter location via multi-bearing", `Classify signal type: ${ev.event_type}`, "Geo-locate to ≤50m CEP"],
+    track: () => ["Monitor emission pattern — on/off cycles", "Track mobile emitter if repositioning", "Correlate with known threat ELINT database"],
+    target: () => ["Match EW asset for soft-kill / hard-kill", "Calculate jamming effectiveness radius", "Verify counter-EW ROE & frequency deconfliction"],
+    engage: () => ["⚠ EW authorization REQUIRED", "Execute EA — jamming / spoofing / cyber", "Deploy counter-EW via assigned platform"],
+    assess: () => ["Confirm signal suppression / emitter neutralized", "Assess impact on own-force navigation/comms", "Update ELINT database & threat library"],
+  },
+  CIVIL: {
+    find: (ev) => [`Monitor gathering at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`, "Cross-ref social media & OSINT feeds", "Assess crowd size & movement pattern", `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`],
+    fix: (ev) => ["Confirm location via CCTV / aerial ISR", `Classify situation: ${ev.event_type}`, "Identify key leadership & organizers"],
+    track: () => ["Monitor crowd trajectory & growth rate", "Track social media escalation indicators", "Coordinate with local law enforcement"],
+    target: () => ["Identify de-escalation opportunities", "Position QRF for force protection", "Prepare non-lethal response options"],
+    engage: () => ["⚠ MINIMUM FORCE — ROE: non-lethal only", "Deploy crowd management measures", "Coordinate with civil authorities"],
+    assess: () => ["Confirm crowd dispersal / situation stable", "Document incidents & use-of-force reports", "Update civil situation awareness map"],
+  },
+  DEFAULT: {
+    find: (ev) => [`Correlate OSINT at ${ev.lat.toFixed(3)}°N, ${ev.lng.toFixed(3)}°E`, "Cross-reference SIGINT / IMINT / HUMINT sources", "Assign ISR asset for persistent surveillance", `Source: ${ev.source.toUpperCase()} • Confidence ${(ev.confidence * 100).toFixed(0)}%`],
+    fix: (ev) => ["Confirm position via multi-sensor fusion", `Validate classification from event type: ${ev.event_type}`, "Establish geo-lock with ≤10m CEP"],
+    track: () => ["Maintain track custody via assigned ISR", "Monitor for repositioning or dispersal", "Update velocity vector every 30s"],
+    target: () => ["Match optimal shooter via S2S engine", "Calculate Pk (probability of kill) & collateral estimate", "Verify ROE compliance for engagement zone"],
+    engage: () => ["⚠ HITL authorization REQUIRED", "ROE compliance check — confirm weapons-free", "Execute strike via assigned platform"],
+    assess: () => ["Generate BDA via AEGIS AI", "Confirm functional kill or re-strike requirement", "Update ontology & close kill chain"],
+  },
+};
+
+const getAdaptiveActions = (ev: EventOption): Record<string, (ev: EventOption) => string[]> => {
+  const category = classifyEvent(ev);
+  return ADAPTIVE_ACTIONS[category];
 };
 
 const KillChainEventModal = ({
@@ -102,6 +146,8 @@ const KillChainEventModal = ({
     event.event_type.includes("missile") ? "🚀" :
     event.event_type.includes("conflict") || event.event_type.includes("military") ? "⚔️" :
     event.event_type.includes("cyber") ? "🔓" : "📡";
+  const situationCategory = classifyEvent(event);
+  const adaptiveActions = ADAPTIVE_ACTIONS[situationCategory];
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={onCancel}>
@@ -117,6 +163,9 @@ const KillChainEventModal = ({
               <span className="text-[10px] font-mono font-bold text-foreground truncate">{event.title}</span>
               <span className="text-[7px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${sevColor}20`, color: sevColor, border: `1px solid ${sevColor}40` }}>
                 {event.severity.toUpperCase()}
+              </span>
+              <span className="text-[7px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/30">
+                {situationCategory}
               </span>
             </div>
             <div className="flex items-center gap-2 mt-1 text-[7px] font-mono text-muted-foreground">
@@ -137,7 +186,7 @@ const KillChainEventModal = ({
           </div>
           {PHASES.map((phase, i) => {
             const color = PHASE_COLORS[phase];
-            const actions = F2T2EA_ACTIONS[phase](event);
+            const actions = adaptiveActions[phase](event);
             return (
               <div key={phase} className="flex gap-2">
                 {/* Timeline line */}
