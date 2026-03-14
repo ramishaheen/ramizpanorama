@@ -746,6 +746,16 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     // Emulated fallback
     emulatedEvents.forEach((ev, i) => {if (ev.ts <= cutoff) addUnique({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT", icon: ev.icon });});
 
+    // WarsLeaks Telegram OSINT — live intelligence for target countries
+    if (layers.telegramOSINT) {
+      telegramMarkers.forEach((m) => {
+        const mTs = new Date(m.timestamp).getTime();
+        if (isNaN(mTs) || mTs > cutoff) return;
+        const col = m.severity === "critical" ? "#dc2626" : m.severity === "high" ? "#f97316" : m.severity === "medium" ? "#eab308" : "#22c55e";
+        addUnique({ id: `tg-${m.id}`, ts: mTs, type: m.category, label: `${m.headline}${m.summary ? ` — ${m.summary}` : ""}`, lat: m.lat, lng: m.lng, severity: m.severity, color: col, source: "WARLEAKS", icon: getEventIcon(m.category) });
+      });
+    }
+
     if (geoFusionData?.events) {
       geoFusionData.events.forEach((ev, i) => {
         const evTs = new Date(ev.timestamp).getTime();
@@ -768,8 +778,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       if (z.ts <= cutoff) addUnique({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT", icon: "📡" });
     });
     feed.sort((a, b) => b.ts - a.ts);
-    return feed.slice(0, 80);
-  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, gpsJammingZones, dbIntelEvents, dbGeoAlerts]);
+    return feed.slice(0, 120);
+  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, gpsJammingZones, dbIntelEvents, dbGeoAlerts, telegramMarkers, layers.telegramOSINT]);
 
   useEffect(() => {if (feedRef.current && playing) feedRef.current.scrollTop = 0;}, [unifiedFeed.length, playing]);
 
