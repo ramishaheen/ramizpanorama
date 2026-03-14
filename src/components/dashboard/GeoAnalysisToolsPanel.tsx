@@ -159,6 +159,8 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
   const [activeOverlays, setActiveOverlays] = useState<Set<string>>(new Set());
   const [overlayLayers, setOverlayLayers] = useState<any[]>([]);
   const [dataSources, setDataSources] = useState<DataSourceDef[]>([]);
+  const [activeIntelLayers, setActiveIntelLayers] = useState<Set<string>>(new Set());
+  const [intelMarkers, setIntelMarkers] = useState<Record<string, any[]>>({});
 
   // Fetch data sources from sensor_feeds
   useEffect(() => {
