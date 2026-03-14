@@ -410,6 +410,16 @@ Deno.serve(async (req) => {
     actions.push(`Pruned ${toDelete.length} old rockets`);
   }
 
+  // Intel events — keep last 100
+  const { data: oldIntelEvents } = await supabase
+    .from("intel_events").select("id")
+    .order("created_at", { ascending: false });
+  if (oldIntelEvents && oldIntelEvents.length > 100) {
+    const toDelete = oldIntelEvents.slice(100).map((e) => e.id);
+    await supabase.from("intel_events").delete().in("id", toDelete);
+    actions.push(`Pruned ${toDelete.length} old intel events`);
+  }
+
   return new Response(JSON.stringify({ ok: true, actions }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
