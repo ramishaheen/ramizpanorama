@@ -101,6 +101,9 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
             <span className="text-[7px] font-mono text-muted-foreground">({entities.length})</span>
           </div>
           <div className="flex items-center gap-1">
+            <button onClick={() => setShowManager(true)} className="p-1 rounded hover:bg-primary/10 transition-colors" title="Open Ontology Manager">
+              <Maximize2 className="h-3 w-3 text-primary" />
+            </button>
             <button onClick={handleCorrelate} disabled={correlating} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="AI Correlate">
               <Zap className={`h-2.5 w-2.5 ${correlating ? "animate-pulse" : ""}`} />
               CORRELATE
