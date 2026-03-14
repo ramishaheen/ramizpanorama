@@ -21,6 +21,8 @@ import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
 import { TargetingWorkbench } from "./TargetingWorkbench";
 import { Inline3DView } from "./Inline3DView";
+import { KillChainKanban } from "./KillChainKanban";
+import { AIMetricsPrioritizer } from "./AIMetricsPrioritizer";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 import { useSensorToShooter } from "@/hooks/useSensorToShooter";
 import { toast } from "sonner";
