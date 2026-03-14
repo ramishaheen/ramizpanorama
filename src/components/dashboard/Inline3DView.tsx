@@ -4,7 +4,7 @@ import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftC
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
-import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
+import { Inline3DSidebar } from "./urban3d/Inline3DSidebar";
 import { AISourceCollector } from "./AISourceCollector";
 import { WeatherTrafficPanel } from "./WeatherTrafficPanel";
 
