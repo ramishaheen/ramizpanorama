@@ -58,11 +58,38 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
 
 const cityNames = Object.keys(CITY_COORDS);
 
+// Country lookup for cities
+const CITY_COUNTRY: Record<string, string> = {
+  Baghdad: "Iraq", Tehran: "Iran", Beirut: "Lebanon", Damascus: "Syria",
+  Amman: "Jordan", Gaza: "Palestine", Jerusalem: "Israel", "Tel Aviv": "Israel",
+  Mosul: "Iraq", Aleppo: "Syria", Erbil: "Iraq", Riyadh: "Saudi Arabia",
+  Dubai: "UAE", "Abu Dhabi": "UAE", Doha: "Qatar", "Kuwait City": "Kuwait",
+  Muscat: "Oman", Manama: "Bahrain", Cairo: "Egypt", Algiers: "Algeria",
+  Tunis: "Tunisia", Rabat: "Morocco", Tripoli: "Libya", Sanaa: "Yemen",
+  Aden: "Yemen", Khartoum: "Sudan", Mogadishu: "Somalia", Djibouti: "Djibouti",
+};
+
 const geoTypes = ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"] as const;
 const severities = ["low", "medium", "high", "critical"] as const;
 const airspaceTypes = ["NOTAM", "TFR", "CLOSURE"] as const;
 const rocketTypes = ["Ballistic", "Cruise", "SRBM", "MRBM", "Drone"] as const;
 const rocketStatuses = ["launched", "in_flight"] as const;
+
+// Event types mapped to Kill Chain categories
+const EVENT_TYPES_BY_GEO: Record<string, string[]> = {
+  MILITARY: ["airstrike", "explosion", "missile_launch", "drone_incursion", "artillery_barrage"],
+  DIPLOMATIC: ["diplomatic_incident", "sanctions_update", "ceasefire_violation", "embassy_alert"],
+  ECONOMIC: ["naval_movement", "vessel_interdiction", "port_closure", "trade_disruption"],
+  HUMANITARIAN: ["mass_gathering", "protest", "refugee_flow", "humanitarian_crisis"],
+};
+
+const CYBER_SIGINT_NUCLEAR_TYPES = [
+  "cyber_intrusion", "network_breach", "gps_jamming", "sigint_intercept",
+  "nuclear_activity", "centrifuge_anomaly", "electronic_warfare",
+];
+
+const verificationStatuses = ["unverified", "auto_detected", "verified"] as const;
+const eventSeverities = ["info", "low", "medium", "high", "critical"] as const;
 
 const titles: Record<string, string[]> = {
   MILITARY: [
@@ -213,7 +240,43 @@ Deno.serve(async (req) => {
     actions.push(`Inserted timeline event for ${cityName}`);
   }
 
-  // 3. Generate airspace alerts (1-2 per poll)
+  // 2b. Generate intel_events (2-3 per cycle) for Events Feed + Kill Chain
+  const numIntelEvents = 2 + Math.floor(Math.random() * 2);
+  const intelCities = [...cityNames].sort(() => Math.random() - 0.5).slice(0, numIntelEvents);
+
+  for (const cityName of intelCities) {
+    const coords = CITY_COORDS[cityName];
+    const geoType = pick(geoTypes);
+    const lat = coords.lat + (Math.random() - 0.5) * 0.15;
+    const lng = coords.lng + (Math.random() - 0.5) * 0.15;
+
+    // 80% use geo-mapped types, 20% use cyber/sigint/nuclear for Kill Chain variety
+    const eventType = Math.random() < 0.8
+      ? pick(EVENT_TYPES_BY_GEO[geoType])
+      : pick(CYBER_SIGINT_NUCLEAR_TYPES);
+
+    const title = `[${cityName}] ${pick(titles[geoType])}`;
+    const confidence = Math.round((0.4 + Math.random() * 0.55) * 100) / 100;
+    const severity = pick(eventSeverities);
+    const verification = pick(verificationStatuses);
+
+    await supabase.from("intel_events").insert({
+      title,
+      event_type: eventType,
+      city: cityName,
+      country: CITY_COUNTRY[cityName] || "Unknown",
+      lat, lng,
+      severity,
+      confidence,
+      verification_status: verification,
+      summary: `Automated intel: ${eventType.replace(/_/g, " ")} activity detected near ${cityName}. Confidence ${Math.round(confidence * 100)}%.`,
+      created_at: now,
+      updated_at: now,
+    });
+    actions.push(`Inserted intel_event (${eventType}) for ${cityName}`);
+  }
+
+
   const numAirspace = 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < numAirspace; i++) {
     const city = pick(cityNames);
@@ -345,6 +408,16 @@ Deno.serve(async (req) => {
     const toDelete = oldRockets.slice(15).map((r) => r.id);
     await supabase.from("rockets").delete().in("id", toDelete);
     actions.push(`Pruned ${toDelete.length} old rockets`);
+  }
+
+  // Intel events — keep last 100
+  const { data: oldIntelEvents } = await supabase
+    .from("intel_events").select("id")
+    .order("created_at", { ascending: false });
+  if (oldIntelEvents && oldIntelEvents.length > 100) {
+    const toDelete = oldIntelEvents.slice(100).map((e) => e.id);
+    await supabase.from("intel_events").delete().in("id", toDelete);
+    actions.push(`Pruned ${toDelete.length} old intel events`);
   }
 
   return new Response(JSON.stringify({ ok: true, actions }), {
