@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, ReactNode, useEffect } from "react";
 import { DEFAULT_COMPONENT_VISIBILITY, type ComponentVisibility } from "@/components/dashboard/MapCommandBar";
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers, Lock, Unlock } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, GripVertical, ChevronDown, ChevronUp, Map, BarChart3, Bell, Layers, Lock, Unlock, Shield, Crosshair, Brain } from "lucide-react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StatsBar } from "@/components/dashboard/StatsBar";
