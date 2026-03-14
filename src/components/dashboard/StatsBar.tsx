@@ -260,14 +260,26 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
         <StatCard icon={Activity} label={t(tr["stat.risk"].en, tr["stat.risk"].ar)} value={riskScore} color={riskScore >= 60 ? "text-warning" : "text-success"} pulse={dataFresh} />
       </div>
 
-      {/* War cost cards - LIVE TICKING */}
+      {/* War cost cards - COLLAPSIBLE */}
       {warCosts.data && !warCosts.error && (
         <div className="border-t border-border/50 bg-card/30">
-          <div className="flex items-center justify-between px-2 py-0">
-            <span className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider leading-none">War Cost Estimate</span>
-            <ScenarioToggle active={scenario} onChange={setScenario} />
-          </div>
-          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-0.5 px-1.5 sm:px-2 py-px transition-shadow duration-500`}>
+          <button
+            onClick={() => setWarCostOpen(o => !o)}
+            className="w-full flex items-center justify-between px-2.5 py-1 hover:bg-secondary/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider leading-none">War Cost Estimate</span>
+              <span className="text-[10px] font-mono font-bold text-critical">
+                ${(warCosts.data.total_daily_cost_billions * scenarioMultiplier).toFixed(2)}B/day — ${scenarioCumulative.toFixed(1)}B total
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ScenarioToggle active={scenario} onChange={(s) => { s !== scenario && setScenario(s); }} />
+              <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${warCostOpen ? "rotate-180" : ""}`} />
+            </div>
+          </button>
+          {warCostOpen && (
+          <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-0.5 px-1.5 sm:px-2 py-1 transition-shadow duration-500`}>
             <StatCard
               icon={DollarSign}
               label={t(tr["stat.daily_cost"].en, tr["stat.daily_cost"].ar)}
