@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
 import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
 import { TelemetryPanel } from "./TelemetryPanel";
+import { AISourceCollector } from "./AISourceCollector";
 
 interface Inline3DViewProps {
   lat: number;
