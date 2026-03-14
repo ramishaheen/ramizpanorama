@@ -439,7 +439,39 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
 
       {/* Kanban Grid */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden p-3">
-        <div className="flex gap-1 h-full min-w-max">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              <span className="text-xs font-mono text-muted-foreground">Loading kill chain...</span>
+            </div>
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-4 text-center max-w-md">
+              <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
+                <Target className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-mono font-bold text-foreground mb-1">KILL CHAIN BOARD EMPTY</h3>
+                <p className="text-[10px] font-mono text-muted-foreground leading-relaxed">
+                  No tasks in the F2T2EA pipeline. Generate tasks from existing target tracks to populate the board across all phases.
+                </p>
+              </div>
+              <button
+                onClick={seedFromTargets}
+                disabled={seeding}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-md text-[10px] font-mono font-bold bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 transition-colors disabled:opacity-50"
+              >
+                {seeding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                {seeding ? "GENERATING TASKS..." : "GENERATE FROM TARGET TRACKS"}
+              </button>
+              <span className="text-[8px] font-mono text-muted-foreground/60">
+                Assigns targets across DELIBERATE → COMPLETE phases with AI-matched shooters
+              </span>
+            </div>
+          </div>
+        ) : (
           {COLUMNS.map((col, colIdx) => {
             const colTasks = getColumnTasks(col.id);
             const colSuggestions = showSuggestions ? getColumnSuggestions(col.id) : [];
