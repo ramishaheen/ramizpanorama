@@ -109,6 +109,28 @@ const OVERLAY_LAYERS: MapLayerDef[] = [
   { id: "bicycling", label: "Cycling Paths", icon: Route, type: "overlay" },
 ];
 
+// ====== INTELLIGENCE OVERLAY DEFINITIONS ======
+interface IntelLayerDef {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  fetchFn: string; // DB table or edge function identifier
+}
+
+const INTEL_LAYERS: IntelLayerDef[] = [
+  { id: "geo-alerts", label: "Geo Alerts", icon: MapPinned, color: "#ef4444", fetchFn: "geo_alerts" },
+  { id: "intel-events", label: "Intel Events", icon: Activity, color: "#f97316", fetchFn: "intel_events" },
+  { id: "target-tracks", label: "Target Tracks", icon: Crosshair, color: "#ef4444", fetchFn: "target_tracks" },
+  { id: "force-units", label: "Force Units", icon: Shield, color: "#3b82f6", fetchFn: "force_units" },
+  { id: "sensor-coverage", label: "Sensor Coverage", icon: Radio, color: "#a855f7", fetchFn: "sensor_feeds" },
+  { id: "cameras-intel", label: "Cameras / CCTV", icon: Camera, color: "#06b6d4", fetchFn: "cameras" },
+  { id: "earthquakes", label: "Earthquakes", icon: Activity, color: "#eab308", fetchFn: "usgs-earthquakes" },
+  { id: "wildfires", label: "Wildfires / Thermal", icon: Activity, color: "#f97316", fetchFn: "nasa-wildfires" },
+  { id: "vessels", label: "AIS Vessels", icon: Layers, color: "#0ea5e9", fetchFn: "ais-vessels" },
+  { id: "conflict-events", label: "Conflict Events", icon: MapPinned, color: "#dc2626", fetchFn: "conflict-events" },
+];
+
 // ====== DATA SOURCES (simulated from sensor_feeds) ======
 interface DataSourceDef {
   id: string;
@@ -137,6 +159,8 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
   const [activeOverlays, setActiveOverlays] = useState<Set<string>>(new Set());
   const [overlayLayers, setOverlayLayers] = useState<any[]>([]);
   const [dataSources, setDataSources] = useState<DataSourceDef[]>([]);
+  const [activeIntelLayers, setActiveIntelLayers] = useState<Set<string>>(new Set());
+  const [intelMarkers, setIntelMarkers] = useState<Record<string, any[]>>({});
 
   // Fetch data sources from sensor_feeds
   useEffect(() => {
@@ -738,6 +762,92 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
     toast({ title: "All tools cleared", description: "Map overlays removed." });
   };
 
+  // ===== INTELLIGENCE LAYER TOGGLE =====
+  const toggleIntelLayer = useCallback(async (layerId: string) => {
+    const map = mapRef.current;
+    const google = getGoogle();
+    if (!map || !google) return;
+
+    const next = new Set(activeIntelLayers);
+
+    if (next.has(layerId)) {
+      // Remove markers
+      next.delete(layerId);
+      (intelMarkers[layerId] || []).forEach((m: any) => { try { m.setMap(null); } catch {} });
+      setIntelMarkers(prev => { const c = { ...prev }; delete c[layerId]; return c; });
+    } else {
+      next.add(layerId);
+      const layerDef = INTEL_LAYERS.find(l => l.id === layerId);
+      if (!layerDef) return;
+
+      let items: any[] = [];
+      const newMarkers: any[] = [];
+
+      try {
+        // DB table sources
+        const dbTables = ["geo_alerts", "intel_events", "target_tracks", "force_units", "sensor_feeds", "cameras"];
+        if (dbTables.includes(layerDef.fetchFn)) {
+          const { data } = await supabase.from(layerDef.fetchFn as any).select("*").limit(100);
+          items = data || [];
+        } else {
+          // Edge function sources
+          const { data } = await supabase.functions.invoke(layerDef.fetchFn);
+          if (layerDef.fetchFn === "usgs-earthquakes") items = data?.earthquakes || [];
+          else if (layerDef.fetchFn === "nasa-wildfires") items = data?.fires || [];
+          else if (layerDef.fetchFn === "ais-vessels") items = data?.vessels || [];
+          else if (layerDef.fetchFn === "conflict-events") items = data?.data || [];
+        }
+
+        items.forEach((item: any) => {
+          const iLat = item.lat ?? item.latitude;
+          const iLng = item.lng ?? item.longitude;
+          if (!iLat || !iLng) return;
+
+          if (layerDef.id === "sensor-coverage") {
+            const circle = new google.maps.Circle({
+              map, center: { lat: iLat, lng: iLng },
+              radius: (item.coverage_radius_km || 10) * 1000,
+              strokeColor: layerDef.color, strokeWeight: 1, strokeOpacity: 0.5,
+              fillColor: layerDef.color, fillOpacity: 0.06,
+            });
+            newMarkers.push(circle);
+          } else if (layerDef.id === "earthquakes") {
+            const mag = item.magnitude || 3;
+            const circle = new google.maps.Circle({
+              map, center: { lat: iLat, lng: iLng },
+              radius: Math.pow(2, mag) * 200,
+              strokeColor: mag >= 5 ? "#ef4444" : "#eab308", strokeWeight: 1.5, strokeOpacity: 0.7,
+              fillColor: mag >= 5 ? "#ef4444" : "#eab308", fillOpacity: 0.15,
+            });
+            newMarkers.push(circle);
+          } else {
+            const marker = new google.maps.Marker({
+              map, position: { lat: iLat, lng: iLng },
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 5,
+                fillColor: layerDef.color,
+                fillOpacity: 0.85,
+                strokeColor: "#fff",
+                strokeWeight: 1,
+              },
+              title: item.title || item.name || item.source_name || item.track_id || `${iLat.toFixed(3)}, ${iLng.toFixed(3)}`,
+            });
+            newMarkers.push(marker);
+          }
+        });
+
+        setIntelMarkers(prev => ({ ...prev, [layerId]: newMarkers }));
+        toast({ title: `${layerDef.label} loaded`, description: `${items.length} items on map` });
+      } catch (e) {
+        console.error(`Intel layer ${layerId} error:`, e);
+        toast({ title: "Layer error", description: String(e), variant: "destructive" });
+      }
+    }
+
+    setActiveIntelLayers(next);
+  }, [mapRef, activeIntelLayers, intelMarkers]);
+
   const filteredSections = searchQuery
     ? SECTIONS.filter(
         (s) =>
@@ -807,6 +917,44 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
                         <Icon className="h-3.5 w-3.5" />
                         <span className="font-bold">{layer.label}</span>
                         {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Intelligence overlay layers */}
+              <div>
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[8px] font-mono font-bold text-muted-foreground tracking-[0.15em]">INTELLIGENCE OVERLAYS</span>
+                  {activeIntelLayers.size > 0 && (
+                    <span className="text-[7px] font-mono px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">{activeIntelLayers.size}</span>
+                  )}
+                </div>
+                <div className="mt-1.5 space-y-1">
+                  {INTEL_LAYERS.map(layer => {
+                    const Icon = layer.icon;
+                    const isActive = activeIntelLayers.has(layer.id);
+                    const markerCount = (intelMarkers[layer.id] || []).length;
+                    return (
+                      <button
+                        key={layer.id}
+                        onClick={() => toggleIntelLayer(layer.id)}
+                        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-sm border text-[9px] font-mono transition-all ${
+                          isActive
+                            ? "border-opacity-50 text-foreground"
+                            : "bg-muted/10 border-border/20 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                        }`}
+                        style={isActive ? { backgroundColor: layer.color + "15", borderColor: layer.color + "50", color: layer.color } : {}}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="font-bold flex-1 text-left">{layer.label}</span>
+                        {isActive && (
+                          <>
+                            <span className="text-[7px] opacity-70">{markerCount}</span>
+                            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: layer.color }} />
+                          </>
+                        )}
                       </button>
                     );
                   })}

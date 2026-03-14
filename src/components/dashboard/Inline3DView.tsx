@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
 import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
 import { TelemetryPanel } from "./TelemetryPanel";
+import { AISourceCollector } from "./AISourceCollector";
 
 interface Inline3DViewProps {
   lat: number;
@@ -24,6 +25,7 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
   const [weatherEnabled, setWeatherEnabled] = useState(false);
   const [incidentsEnabled, setIncidentsEnabled] = useState(true);
   const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
+  const [aiCollectorOpen, setAiCollectorOpen] = useState(false);
 
   // Fetch Google Maps API key
   useEffect(() => {
@@ -168,6 +170,18 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
 
       {/* Controls */}
       <div className="absolute top-4 right-14 z-20 flex items-center gap-1">
+        <button
+          onClick={() => setAiCollectorOpen(!aiCollectorOpen)}
+          className={`h-8 flex items-center gap-1.5 px-2.5 rounded-sm backdrop-blur border transition-all text-[9px] font-mono font-bold uppercase tracking-wider ${
+            aiCollectorOpen
+              ? "bg-primary/20 border-primary/50 text-primary"
+              : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"
+          }`}
+          title="AI Source Collector"
+        >
+          <Brain className="h-3.5 w-3.5" />
+          <span>AI Collect</span>
+        </button>
         <button onClick={rotateView} className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Rotate 90°">
           <RotateCcw className="h-3.5 w-3.5" />
         </button>
@@ -238,6 +252,11 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       {/* Overlays */}
       <WeatherRadarOverlay mapRef={mapRef} enabled={weatherEnabled} opacity={0.7} />
       <LiveIncidentsOverlay mapRef={mapRef} enabled={incidentsEnabled} lat={lat} lng={lng} />
+
+      {/* AI Source Collector */}
+      {aiCollectorOpen && (
+        <AISourceCollector lat={lat} lng={lng} mapRef={mapRef} onClose={() => setAiCollectorOpen(false)} />
+      )}
     </div>,
     document.body,
   );
