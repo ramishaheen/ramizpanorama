@@ -143,15 +143,29 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         </div>
       )}
 
-      {/* Analysis Tools Panel */}
+      {/* Left Sidebar — tools + back to globe */}
       {toolsPanelOpen && (
-        <div className="absolute top-0 left-0 z-30 w-[252px] h-full overflow-y-auto bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20 p-2 space-y-2 scrollbar-thin">
-          <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
-          <TelemetryPanel lat={lat} lng={lng} heading={heading} tilt={tilt} zoom={zoom} />
+        <div className="absolute top-0 left-0 z-30 w-[252px] h-full flex flex-col bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20">
+          {/* Scrollable tools area */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+            <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
+            <TelemetryPanel lat={lat} lng={lng} heading={heading} tilt={tilt} zoom={zoom} />
+            {weatherEnabled && <WeatherTrafficPanel />}
+          </div>
+          {/* Pinned footer — Back to Globe */}
+          <div className="flex-shrink-0 border-t border-border/30 p-2">
+            <button
+              onClick={onClose}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-all group"
+            >
+              <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Panel toggle */}
+      {/* Panel toggle + hide tools */}
       <div className={`absolute top-4 z-30 flex items-center gap-2 ${toolsPanelOpen ? "left-[268px]" : "left-4"} transition-all`}>
         <button
           onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
@@ -160,17 +174,16 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         >
           {toolsPanelOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
         </button>
-      </div>
-
-      {/* BACK TO GLOBE — pinned bottom */}
-      <div className="absolute bottom-4 left-4 z-30">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 px-3 py-2 rounded-sm bg-background/85 backdrop-blur-md border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
-        >
-          <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
-        </button>
+        {/* Back to Globe when sidebar is closed */}
+        {!toolsPanelOpen && (
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-background/80 backdrop-blur border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
+          >
+            <Globe className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+            <span className="text-[9px] font-mono font-bold uppercase tracking-wider">Globe</span>
+          </button>
+        )}
       </div>
 
       {/* Controls */}
