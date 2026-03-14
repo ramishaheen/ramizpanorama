@@ -478,6 +478,19 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
       });
       setShowPicker(false);
       fetchTasks();
+
+      // Get inserted task ID and start automation
+      const { data: newTask } = await supabase
+        .from("kill_chain_tasks")
+        .select("id")
+        .eq("target_track_id", target.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (newTask) {
+        toast.info(PHASE_TOASTS.find);
+        runKillChainAutomation(newTask.id, target.id);
+      }
     } catch (err) {
       toast.error("Failed to initiate kill chain");
     } finally {
