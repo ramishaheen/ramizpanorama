@@ -274,6 +274,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { data: aisVesselsRaw } = useAISVessels();
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
+  const { markers: telegramMarkers, refresh: refreshTelegram } = useTelegramIntel();
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
