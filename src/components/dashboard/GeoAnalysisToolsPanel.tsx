@@ -141,6 +141,21 @@ interface DataSourceDef {
   icon: React.ElementType;
 }
 
+const DEFAULT_DATA_SOURCES: DataSourceDef[] = [
+  { id: "ds-gdelt", name: "GDELT Global News", type: "OSINT", status: "active", lastData: new Date().toISOString(), icon: Activity },
+  { id: "ds-opensky", name: "OpenSky ADS-B", type: "ADS-B", status: "active", lastData: new Date().toISOString(), icon: Navigation },
+  { id: "ds-firms", name: "NASA FIRMS Thermal", type: "SATELLITE", status: "active", lastData: new Date().toISOString(), icon: Satellite },
+  { id: "ds-usgs", name: "USGS Earthquakes", type: "SEISMIC", status: "active", lastData: new Date().toISOString(), icon: Activity },
+  { id: "ds-ais", name: "AIS Maritime Tracker", type: "MARITIME", status: "active", lastData: new Date().toISOString(), icon: Layers },
+  { id: "ds-warleaks", name: "WarsLeaks Telegram", type: "OSINT", status: "active", lastData: new Date().toISOString(), icon: Radio },
+  { id: "ds-acled", name: "ACLED Conflict Data", type: "OSINT", status: "active", lastData: new Date().toISOString(), icon: MapPinned },
+  { id: "ds-nvd", name: "NVD / CVE Feeds", type: "CYBER", status: "active", lastData: new Date().toISOString(), icon: Shield },
+  { id: "ds-sentinel", name: "Sentinel-2 Imagery", type: "SATELLITE", status: "degraded", lastData: new Date(Date.now() - 3600000).toISOString(), icon: Satellite },
+  { id: "ds-cctv", name: "CCTV Network", type: "CCTV", status: "active", lastData: new Date().toISOString(), icon: Camera },
+  { id: "ds-sigint", name: "SIGINT Intercepts", type: "SIGINT", status: "degraded", lastData: new Date(Date.now() - 7200000).toISOString(), icon: Radio },
+  { id: "ds-darkweb", name: "Dark Web Monitor", type: "CYBER", status: "active", lastData: new Date().toISOString(), icon: Wifi },
+];
+
 interface GeoAnalysisToolsPanelProps {
   mapRef: MutableRefObject<any>;
   lat: number;
