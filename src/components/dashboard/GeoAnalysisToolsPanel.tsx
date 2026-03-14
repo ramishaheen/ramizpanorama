@@ -859,7 +859,7 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
   const STATUS_COLORS = { active: "#22c55e", degraded: "#eab308", offline: "#ef4444" };
 
   return (
-    <div className="absolute top-0 left-0 bottom-0 z-30 w-[252px] flex flex-col bg-background/95 backdrop-blur-md border-r border-border/40" style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.4)" }}>
+    <div className="flex flex-col h-full w-full bg-background/95 backdrop-blur-md border-r border-border/40" style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.4)" }}>
       <Tabs defaultValue="tools" className="flex flex-col h-full">
         <TabsList className="rounded-none bg-muted/40 border-b border-border/30 h-9 px-1 shrink-0">
           <TabsTrigger value="layers" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Map layers</TabsTrigger>
