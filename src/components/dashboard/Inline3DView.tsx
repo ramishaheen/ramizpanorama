@@ -25,6 +25,7 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
   const [weatherEnabled, setWeatherEnabled] = useState(false);
   const [incidentsEnabled, setIncidentsEnabled] = useState(true);
   const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
+  const [aiCollectorOpen, setAiCollectorOpen] = useState(false);
 
   // Fetch Google Maps API key
   useEffect(() => {
