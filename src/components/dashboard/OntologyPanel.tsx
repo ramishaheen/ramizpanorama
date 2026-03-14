@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Network, RefreshCw, Filter, MapPin, Zap, ArrowRight, Download, Database } from "lucide-react";
+import { Network, RefreshCw, Filter, MapPin, Zap, ArrowRight, Download, Database, Maximize2 } from "lucide-react";
 import { useOntology, type OntologyEntity, type OntologyRelationship } from "@/hooks/useOntology";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { OntologyManagerModal } from "./OntologyManagerModal";
 
 const ENTITY_ICONS: Record<string, string> = {
   equipment: "🪖",
