@@ -324,6 +324,21 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => clearInterval(iv);
   }, [globeReady]);
 
+  // Zoom-based marker scaling
+  useEffect(() => {
+    const container = globeContainerRef.current;
+    if (!container) return;
+    const scale = viewAlt <= 0.3 ? 1.8
+      : viewAlt <= 1.5 ? 1.8 - (viewAlt - 0.3) / 1.2 * 0.8
+      : viewAlt <= 3.0 ? 1.0 - (viewAlt - 1.5) / 1.5 * 0.5
+      : 0.5;
+    container.querySelectorAll('.globe-marker').forEach((el: Element) => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.dataset.baseScale = scale.toFixed(2);
+      htmlEl.style.transform = `scale(${scale.toFixed(2)})`;
+    });
+  }, [viewAlt]);
+
   const handleATRScan = useCallback(async () => {
     if (aiScanning !== "idle") return;
     setAiScanning("atr");
@@ -793,9 +808,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     onClick?: () => void;
   }) => {
     const wrapper = document.createElement("div");
-    wrapper.style.cssText = `display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;transition:transform 0.3s ease,z-index 0s;position:relative;`;
-    wrapper.onmouseenter = () => { wrapper.style.transform = "scale(1.4)"; wrapper.style.zIndex = "999"; if (tipEl) tipEl.style.display = "block"; };
-    wrapper.onmouseleave = () => { wrapper.style.transform = "scale(1)"; wrapper.style.zIndex = "auto"; if (tipEl) tipEl.style.display = "none"; };
+    wrapper.className = "globe-marker";
+    wrapper.style.cssText = `display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;transition:transform 0.3s ease,z-index 0s;position:relative;transform-origin:center center;`;
+    wrapper.dataset.baseScale = "1";
+    wrapper.onmouseenter = () => { const base = parseFloat(wrapper.dataset.baseScale || "1"); wrapper.style.transform = `scale(${(base * 1.4).toFixed(2)})`; wrapper.style.zIndex = "999"; if (tipEl) tipEl.style.display = "block"; };
+    wrapper.onmouseleave = () => { const base = parseFloat(wrapper.dataset.baseScale || "1"); wrapper.style.transform = `scale(${base.toFixed(2)})`; wrapper.style.zIndex = "auto"; if (tipEl) tipEl.style.display = "none"; };
     if (opts.onClick) wrapper.onclick = opts.onClick;
 
     // Icon
