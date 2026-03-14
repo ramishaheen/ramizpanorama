@@ -239,7 +239,8 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       {/* Overlays */}
       <WeatherRadarOverlay mapRef={mapRef} enabled={weatherEnabled} opacity={0.7} />
       <LiveIncidentsOverlay mapRef={mapRef} enabled={incidentsEnabled} lat={lat} lng={lng} />
-    </div>
+    </div>,
+    document.body,
   );
 };
 
