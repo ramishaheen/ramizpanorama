@@ -786,93 +786,193 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const densityMult = panopticDensity / 100;
   const isrSatellites = useMemo(() => allSatellites.filter((s) => KEY_ISR_SATS.some((k) => s.name.toUpperCase().includes(k))), [allSatellites]);
 
+  // ============= MARKER ELEMENT FACTORY =============
+  const createMarkerEl = useCallback((opts: {
+    icon: string; color: string; size: number; label: string; sublabel?: string;
+    pulse?: boolean; category?: string; tooltipHtml?: string;
+    onClick?: () => void;
+  }) => {
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;transition:transform 0.3s ease,z-index 0s;position:relative;`;
+    wrapper.onmouseenter = () => { wrapper.style.transform = "scale(1.4)"; wrapper.style.zIndex = "999"; if (tipEl) tipEl.style.display = "block"; };
+    wrapper.onmouseleave = () => { wrapper.style.transform = "scale(1)"; wrapper.style.zIndex = "auto"; if (tipEl) tipEl.style.display = "none"; };
+    if (opts.onClick) wrapper.onclick = opts.onClick;
+
+    // Icon
+    const icon = document.createElement("div");
+    icon.style.cssText = `font-size:${opts.size}px;filter:drop-shadow(0 0 ${opts.pulse ? 8 : 4}px ${opts.color});line-height:1;text-align:center;`;
+    icon.textContent = opts.icon;
+    wrapper.appendChild(icon);
+
+    // Pulse ring
+    if (opts.pulse) {
+      const ring = document.createElement("div");
+      ring.style.cssText = `position:absolute;width:${opts.size + 12}px;height:${opts.size + 12}px;border-radius:50%;border:1px solid ${opts.color};opacity:0.5;animation:satPulse 2s ease-out infinite;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;`;
+      wrapper.appendChild(ring);
+    }
+
+    // Sublabel
+    if (opts.sublabel) {
+      const lbl = document.createElement("div");
+      lbl.style.cssText = `font-family:monospace;font-size:7px;color:${opts.color};letter-spacing:0.5px;font-weight:bold;white-space:nowrap;margin-top:1px;text-shadow:0 0 4px rgba(0,0,0,0.9),0 0 8px ${opts.color}40;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;`;
+      lbl.textContent = opts.sublabel;
+      wrapper.appendChild(lbl);
+    }
+
+    // Tooltip on hover
+    let tipEl: HTMLElement | null = null;
+    if (opts.tooltipHtml) {
+      tipEl = document.createElement("div");
+      tipEl.style.cssText = `display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;z-index:1000;pointer-events:none;`;
+      tipEl.innerHTML = opts.tooltipHtml;
+      wrapper.appendChild(tipEl);
+    }
+
+    // Fallback title
+    wrapper.title = opts.label;
+    return wrapper;
+  }, []);
+
   // ============= MAIN GLOBE DATA UPDATE =============
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe || !globeReady) return;
-    const points: any[] = [];
+    const layerElements: any[] = [];
     const cutoff = timelineTimestamp;
 
-    // EARTHQUAKES — seismic wave icon, scaled by magnitude
+    // Helper to build tooltip HTML
+    const tip = (borderColor: string, inner: string) =>
+      `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${borderColor};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${borderColor}20;white-space:nowrap;">${inner}</div>`;
+
+    // EARTHQUAKES
     if (layers.earthquakes) {
       earthquakes.forEach((eq) => {
         const eqTime = (eq as any).time || Date.now();
         if (eqTime > cutoff) return;
         const col = eq.magnitude >= 5 ? "#ef4444" : eq.magnitude >= 3 ? "#ff6b00" : "#fbbf24";
         const sevIcon = eq.magnitude >= 5 ? "🔴" : eq.magnitude >= 3 ? "🟠" : "🟡";
-        const alertStr = (eq as any).alert ? `<div style="color:#ef4444;font-size:8px;margin-top:1px">⚠ ALERT: ${(eq as any).alert.toUpperCase()}</div>` : "";
-        points.push({ lat: eq.lat, lng: eq.lng, pointAlt: 0.01, color: col, radius: Math.max(0.3, eq.magnitude * 0.15) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sevIcon}</span> SEISMIC M${eq.magnitude}</div><div style="font-size:9px;margin-top:2px">📍 ${eq.place}</div><div style="color:#888;font-size:8px;margin-top:1px">${eq.lat.toFixed(2)}°, ${eq.lng.toFixed(2)}° • ${eq.depth}km deep${eq.felt ? ` • Felt: ${eq.felt}` : ""}</div>${alertStr}</div>` });
+        layerElements.push({
+          lat: eq.lat, lng: eq.lng, alt: 0.01,
+          el: createMarkerEl({
+            icon: sevIcon, color: col, size: eq.magnitude >= 5 ? 20 : 16,
+            label: `M${eq.magnitude} — ${eq.place}`,
+            sublabel: `M${eq.magnitude}`,
+            pulse: eq.magnitude >= 5,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sevIcon}</span> SEISMIC M${eq.magnitude}</div><div style="font-size:9px;margin-top:2px">📍 ${eq.place}</div><div style="color:#888;font-size:8px">${eq.lat.toFixed(2)}°, ${eq.lng.toFixed(2)}° • ${eq.depth}km deep${eq.felt ? ` • Felt: ${eq.felt}` : ""}</div>`)
+          })
+        });
       });
     }
 
-    // WILDFIRES — smoke icon, sized by FRP
+    // WILDFIRES
     if (layers.wildfires) {
       wildfires.forEach((f) => {
         const isIntense = f.frp > 50;
         const col = isIntense ? "#ff2200" : "#ff6600";
-        points.push({ lat: f.lat, lng: f.lng, pointAlt: 0.008, color: col, radius: Math.max(0.25, f.brightness / 250) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px rgba(255,69,0,0.2)"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">💨</span> SMOKE / THERMAL</div><div style="font-size:9px;margin-top:2px">${(f as any).region || "Unknown"} • FRP: ${f.frp}MW</div><div style="color:#888;font-size:8px;margin-top:1px">Confidence: ${f.confidence} • Brightness: ${f.brightness}K</div><div style="color:#666;font-size:8px">FIRMS/VIIRS • ${f.date} ${f.time} UTC</div></div>` });
+        layerElements.push({
+          lat: f.lat, lng: f.lng, alt: 0.008,
+          el: createMarkerEl({
+            icon: isIntense ? "🔥" : "💨", color: col, size: isIntense ? 18 : 14,
+            label: `Fire — ${(f as any).region || "Unknown"} FRP:${f.frp}`,
+            sublabel: `FRP ${f.frp}`,
+            pulse: isIntense,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">${isIntense ? "🔥" : "💨"}</span> SMOKE / THERMAL</div><div style="font-size:9px;margin-top:2px">${(f as any).region || "Unknown"} • FRP: ${f.frp}MW</div><div style="color:#888;font-size:8px">Confidence: ${f.confidence} • ${f.date} ${f.time} UTC</div>`)
+          })
+        });
       });
     }
 
-    // CONFLICTS — event-type specific icons
+    // CONFLICTS
     if (layers.conflicts && conflictEvents.length) {
       conflictEvents.forEach((ev) => {
         const col = ev.severity === "critical" ? "#dc2626" : ev.severity === "high" ? "#f97316" : "#eab308";
         const evType = (ev.event_type || "").toLowerCase();
         const cIcon = evType.includes("battle") ? "⚔️" : evType.includes("explosion") ? "💥" : evType.includes("protest") ? "✊" : evType.includes("riot") ? "🔥" : evType.includes("violence") ? "⚠️" : "🎯";
-        points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.02, color: col, radius: 0.35 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> ${ev.event_type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">📍 ${ev.location}, ${ev.country}</div><div style="color:#888;font-size:8px;margin-top:1px">${ev.fatalities > 0 ? `💀 ${ev.fatalities} fatalities • ` : ""}Source: ${ev.source}</div></div>` });
+        layerElements.push({
+          lat: ev.lat, lng: ev.lng, alt: 0.02,
+          el: createMarkerEl({
+            icon: cIcon, color: col, size: 18,
+            label: `${ev.event_type} — ${ev.location}, ${ev.country}`,
+            sublabel: ev.event_type.slice(0, 10).toUpperCase(),
+            pulse: ev.severity === "critical" || ev.severity === "high",
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> ${ev.event_type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">📍 ${ev.location}, ${ev.country}</div><div style="color:#888;font-size:8px">${ev.fatalities > 0 ? `💀 ${ev.fatalities} fatalities • ` : ""}Source: ${ev.source}</div>`)
+          })
+        });
       });
     }
 
-    // NUCLEAR — radiation symbol with facility details
+    // NUCLEAR
     if (layers.nuclear) {
       nuclearStations.forEach((st) => {
-        points.push({ lat: st.lat, lng: st.lng, pointAlt: 0.02, color: "#a855f7", radius: 0.3 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid #a855f7;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(168,85,247,0.2)"><div style="color:#a855f7;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">☢️</span> RADIATION MONITOR</div><div style="font-size:9px;margin-top:2px">${st.name}</div><div style="color:#888;font-size:8px;margin-top:1px">📊 ${st.dose_rate} ${st.unit} • ${st.country}</div></div>` });
+        layerElements.push({
+          lat: st.lat, lng: st.lng, alt: 0.02,
+          el: createMarkerEl({
+            icon: "☢️", color: "#a855f7", size: 18,
+            label: `Radiation Monitor — ${st.name}`,
+            sublabel: st.name.slice(0, 12),
+            pulse: true,
+            tooltipHtml: tip("#a855f7", `<div style="color:#a855f7;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">☢️</span> RADIATION MONITOR</div><div style="font-size:9px;margin-top:2px">${st.name}</div><div style="color:#888;font-size:8px">📊 ${st.dose_rate} ${st.unit} • ${st.country}</div>`)
+          })
+        });
       });
       nuclearFacilities.forEach((fac) => {
-        points.push({ lat: fac.lat, lng: fac.lng, pointAlt: 0.025, color: "#e879f9", radius: 0.35 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid #e879f9;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(232,121,249,0.2)"><div style="color:#e879f9;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">⚛️</span> NUCLEAR FACILITY</div><div style="font-size:9px;margin-top:2px">${fac.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${fac.country} • ${fac.type} • Status: ${fac.status}</div></div>` });
+        layerElements.push({
+          lat: fac.lat, lng: fac.lng, alt: 0.025,
+          el: createMarkerEl({
+            icon: "⚛️", color: "#e879f9", size: 18,
+            label: `Nuclear Facility — ${fac.name}`,
+            sublabel: fac.name.slice(0, 12),
+            pulse: true,
+            tooltipHtml: tip("#e879f9", `<div style="color:#e879f9;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">⚛️</span> NUCLEAR FACILITY</div><div style="font-size:9px;margin-top:2px">${fac.name}</div><div style="color:#888;font-size:8px">${fac.country} • ${fac.type} • ${fac.status}</div>`)
+          })
+        });
       });
     }
 
-    // MARITIME — type-specific vessel icons
+    // MARITIME
     if (layers.maritime && panopticMaritime) {
       aisVessels.forEach((v: any) => {
         const col = v.type === "MILITARY" ? "#ef4444" : v.type === "TANKER" ? "#f97316" : v.type === "FISHING" ? "#22d3ee" : "#22c55e";
         const vIcon = v.type === "MILITARY" ? "⚓" : v.type === "TANKER" ? "🛢" : v.type === "CARGO" ? "📦" : v.type === "FISHING" ? "🎣" : "🚢";
-        const vLabel = v.type === "MILITARY" ? "WARSHIP" : v.type === "TANKER" ? "OIL TANKER" : v.type === "CARGO" ? "CARGO VESSEL" : v.type === "FISHING" ? "FISHING" : "VESSEL";
-        points.push({ lat: v.lat, lng: v.lng, pointAlt: 0.005, color: col, radius: (v.type === "MILITARY" ? 0.25 : 0.18) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${vIcon}</span> ${vLabel}</div><div style="font-size:10px;margin-top:2px">${v.name} <span style="color:#888">(${v.flag})</span></div><div style="color:#888;font-size:8px;margin-top:1px">${v.speed}kn • HDG ${v.heading}° → ${v.destination || "—"}</div></div>` });
+        layerElements.push({
+          lat: v.lat, lng: v.lng, alt: 0.005,
+          el: createMarkerEl({
+            icon: vIcon, color: col, size: v.type === "MILITARY" ? 18 : 14,
+            label: `${v.name} (${v.flag}) ${v.speed}kn → ${v.destination || "—"}`,
+            sublabel: v.name.slice(0, 10),
+            pulse: v.type === "MILITARY",
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${vIcon}</span> ${v.type}</div><div style="font-size:10px;margin-top:2px">${v.name} <span style="color:#888">(${v.flag})</span></div><div style="color:#888;font-size:8px">${v.speed}kn • HDG ${v.heading}° → ${v.destination || "—"}</div>`)
+          })
+        });
       });
     }
 
-    // FLIGHTS — type-specific icons and labels
+    // FLIGHTS
     if (layers.flights && panopticFlights) {
       allFlights.forEach((f: any) => {
         const isMil = f.military || f.callsign?.match(/^(RCH|EVAC|DUKE|REAC|NAVY|JAKE|RRR|FORTE|VADER|IAM)/i);
         if (!layers.militaryFlights && isMil) return;
         const acType = (f.type || "").toUpperCase();
-        // Determine icon based on aircraft type
-        let icon = isMil ? "🎖" : "✈️";
+        let fIcon = isMil ? "🎖" : "✈️";
         let typeLabel = isMil ? "MILITARY" : "AIRLINER";
-        if (acType.includes("F-15") || acType.includes("F-16") || acType.includes("F-35") || acType.includes("F-22") || acType.includes("SU-") || acType.includes("MIG")) {icon = "🔴";typeLabel = "FIGHTER";} else
-        if (acType.includes("C-17") || acType.includes("C-130") || acType.includes("C-5") || acType.includes("AN-")) {icon = "📦";typeLabel = "TRANSPORT";} else
-        if (acType.includes("KC-") || acType.includes("TANKER")) {icon = "⛽";typeLabel = "TANKER";} else
-        if (acType.includes("P-8") || acType.includes("P-3")) {icon = "🔍";typeLabel = "MPA/ASW";} else
-        if (acType.includes("RQ-") || acType.includes("MQ-") || acType.includes("HERON") || acType.includes("HERMES")) {icon = "👁";typeLabel = "UAV/DRONE";} else
-        if (acType.includes("E-3") || acType.includes("E-2") || acType.includes("E-8")) {icon = "📡";typeLabel = "AWACS";} else
-        if (acType.includes("B7") || acType.includes("B73") || acType.includes("B77") || acType.includes("B78") || acType.includes("B787")) {icon = "✈️";typeLabel = "BOEING";} else
-        if (acType.includes("A3") || acType.includes("A32") || acType.includes("A33") || acType.includes("A35") || acType.includes("A38")) {icon = "✈️";typeLabel = "AIRBUS";} else
-        if (acType.includes("HELI") || acType.includes("H60") || acType.includes("AH-") || acType.includes("UH-") || acType.includes("CH-")) {icon = "🚁";typeLabel = "HELICOPTER";}
+        if (acType.includes("F-15") || acType.includes("F-16") || acType.includes("F-35") || acType.includes("F-22") || acType.includes("SU-") || acType.includes("MIG")) { fIcon = "🔴"; typeLabel = "FIGHTER"; } else
+        if (acType.includes("C-17") || acType.includes("C-130") || acType.includes("C-5") || acType.includes("AN-")) { fIcon = "📦"; typeLabel = "TRANSPORT"; } else
+        if (acType.includes("KC-") || acType.includes("TANKER")) { fIcon = "⛽"; typeLabel = "TANKER"; } else
+        if (acType.includes("P-8") || acType.includes("P-3")) { fIcon = "🔍"; typeLabel = "MPA/ASW"; } else
+        if (acType.includes("RQ-") || acType.includes("MQ-") || acType.includes("HERON") || acType.includes("HERMES")) { fIcon = "👁"; typeLabel = "UAV/DRONE"; } else
+        if (acType.includes("E-3") || acType.includes("E-2") || acType.includes("E-8")) { fIcon = "📡"; typeLabel = "AWACS"; } else
+        if (acType.includes("HELI") || acType.includes("H60") || acType.includes("AH-") || acType.includes("UH-") || acType.includes("CH-")) { fIcon = "🚁"; typeLabel = "HELICOPTER"; }
         const col = isMil ? "#ef4444" : "#00d4ff";
-        const hdg = f.heading ? `HDG ${Math.round(f.heading)}°` : "";
-        const route = f.route ? `<div style="color:#aaa;font-size:8px;margin-top:1px">📍 ${f.route}</div>` : "";
-        points.push({ lat: f.lat || f.latitude, lng: f.lng || f.longitude, pointAlt: 0.05, color: col, radius: (isMil ? 0.18 : 0.1) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${col}25"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> ${typeLabel} — ${f.callsign || "UNKNOWN"}</div><div style="font-size:9px;margin-top:2px">${acType || "—"} • ${f.airline || f.origin_country || ""}</div><div style="color:#888;font-size:8px;margin-top:1px">${f.velocity ? Math.round(f.velocity * 3.6) + " km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"} • ${hdg}</div>${route}</div>` });
+        layerElements.push({
+          lat: f.lat || f.latitude, lng: f.lng || f.longitude, alt: 0.05,
+          el: createMarkerEl({
+            icon: fIcon, color: col, size: isMil ? 16 : 12,
+            label: `${typeLabel} — ${f.callsign || "UNKNOWN"}`,
+            sublabel: isMil ? f.callsign : undefined,
+            pulse: isMil,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${fIcon}</span> ${typeLabel} — ${f.callsign || "UNKNOWN"}</div><div style="font-size:9px;margin-top:2px">${acType || "—"} • ${f.airline || f.origin_country || ""}</div><div style="color:#888;font-size:8px">${f.velocity ? Math.round(f.velocity * 3.6) + " km/h" : ""} • FL${f.baro_altitude ? Math.round(f.baro_altitude / 30.48) : "?"}</div>${f.route ? `<div style="color:#aaa;font-size:8px">📍 ${f.route}</div>` : ""}`)
+          })
+        });
       });
     }
 
@@ -881,8 +981,16 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       airQualityData.forEach((aq) => {
         const aqi = aq.aqi || 0;
         const color = aqi > 150 ? "#dc2626" : aqi > 100 ? "#f97316" : aqi > 50 ? "#eab308" : "#22c55e";
-        points.push({ lat: aq.lat, lng: aq.lng, pointAlt: 0.008, color, radius: 0.15 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${color};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${color};font-weight:bold">🌬 AQI ${aqi}</div><div>${aq.city} • ${aq.aqi_level}</div></div>` });
+        layerElements.push({
+          lat: aq.lat, lng: aq.lng, alt: 0.008,
+          el: createMarkerEl({
+            icon: "🌬", color, size: 14,
+            label: `AQI ${aqi} — ${aq.city}`,
+            sublabel: `AQI ${aqi}`,
+            pulse: aqi > 150,
+            tooltipHtml: tip(color, `<div style="color:${color};font-weight:bold">🌬 AQI ${aqi}</div><div>${aq.city} • ${aq.aqi_level}</div>`)
+          })
+        });
       });
     }
 
@@ -890,41 +998,156 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     if (layers.geoFusion && geoFusionData?.events?.length) {
       geoFusionData.events.forEach((ev) => {
         const col = ev.severity >= 4 ? "#dc2626" : ev.severity >= 3 ? "#f97316" : "#eab308";
-        points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.025, color: col, radius: 0.3 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(10,10,20,0.95);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0"><div style="color:${col};font-weight:bold">📡 ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.source} • ${ev.confidence}</div></div>` });
-      });
-    }
-
-    // GPS JAMMING — red tile zones with multiple coverage points
-    if (layers.gpsJamming) {
-      gpsJammingZones.forEach((z) => {
-        if (z.ts > cutoff) return;
-        const col = z.severity === "critical" ? "#ff0033" : z.severity === "high" ? "#cc0022" : "#aa0033";
-        // Render as a cluster of red tile-like points to simulate area coverage
-        const offsets = [
-        [0, 0], [0.15, 0.15], [-0.15, 0.15], [0.15, -0.15], [-0.15, -0.15],
-        [0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25]];
-
-        offsets.forEach(([dlat, dlng]) => {
-          points.push({ lat: z.lat + dlat, lng: z.lng + dlng, pointAlt: 0.012, color: col, radius: 0.22 * densityMult,
-            label: dlat === 0 && dlng === 0 ? `<div style="font-family:monospace;font-size:11px;background:rgba(40,0,0,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 15px ${col}40"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">🟥</span> GPS JAMMING ZONE</div><div style="font-size:9px;margin-top:2px">📡 ${z.label}</div><div style="color:#ff6666;font-size:8px;margin-top:1px">${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11, 19)} UTC</div><div style="color:#cc4444;font-size:7px;margin-top:1px">⚠ GNSS DENIED — NAV UNRELIABLE</div></div>` : "" });
+        layerElements.push({
+          lat: ev.lat, lng: ev.lng, alt: 0.025,
+          el: createMarkerEl({
+            icon: "📡", color: col, size: 16,
+            label: `${ev.event_type} — ${ev.location}, ${ev.country}`,
+            sublabel: ev.event_type.slice(0, 10).toUpperCase(),
+            pulse: ev.severity >= 4,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold">📡 ${ev.event_type.toUpperCase()}</div><div>${ev.location}, ${ev.country}</div><div style="color:#888;font-size:9px">${ev.source} • ${ev.confidence}</div>`)
+          })
         });
       });
     }
 
-    // EMULATED OSINT EVENTS — with category-specific icons, timeline filtered
+    // GPS JAMMING
+    if (layers.gpsJamming) {
+      gpsJammingZones.forEach((z) => {
+        if (z.ts > cutoff) return;
+        const col = z.severity === "critical" ? "#ff0033" : z.severity === "high" ? "#cc0022" : "#aa0033";
+        layerElements.push({
+          lat: z.lat, lng: z.lng, alt: 0.012,
+          el: createMarkerEl({
+            icon: "🟥", color: col, size: 20,
+            label: `GPS JAMMING — ${z.label}`,
+            sublabel: "GPS JAM",
+            pulse: true,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:14px">🟥</span> GPS JAMMING ZONE</div><div style="font-size:9px;margin-top:2px">📡 ${z.label}</div><div style="color:#ff6666;font-size:8px">${z.severity.toUpperCase()} • ${new Date(z.ts).toISOString().slice(11, 19)} UTC</div><div style="color:#cc4444;font-size:7px">⚠ GNSS DENIED — NAV UNRELIABLE</div>`)
+          })
+        });
+      });
+    }
+
+    // EMULATED OSINT EVENTS
     emulatedEvents.forEach((ev) => {
       if (ev.ts > cutoff) return;
-      points.push({ lat: ev.lat, lng: ev.lng, pointAlt: 0.022, color: ev.color, radius: 0.3 * densityMult,
-        label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${ev.color};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${ev.color}20"><div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px;margin-top:1px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div></div>` });
+      layerElements.push({
+        lat: ev.lat, lng: ev.lng, alt: 0.022,
+        el: createMarkerEl({
+          icon: ev.icon, color: ev.color, size: 16,
+          label: ev.label,
+          sublabel: ev.type.slice(0, 10).toUpperCase(),
+          pulse: ev.severity === "critical",
+          tooltipHtml: tip(ev.color, `<div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div>`)
+        })
+      });
     });
 
-    console.log(`[4D] Rendering ${points.length} points on globe`);
-    globe.pointsData(points);
+    // ========== C2 COP: Blue Force Units ==========
+    if (layers.blueForce) {
+      blueUnits.forEach((u: any) => {
+        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔵" : u.unit_type === "air_defense" ? "🛡" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "💥" : u.unit_type === "command" ? "⭐" : u.unit_type === "special_ops" ? "🗡" : "📦";
+        layerElements.push({
+          lat: u.lat, lng: u.lng, alt: 0.03,
+          el: createMarkerEl({
+            icon: echelonIcon, color: "#3b82f6", size: 16,
+            label: `BLUE — ${u.name} (${u.unit_type})`,
+            sublabel: u.name.slice(0, 10),
+            pulse: false,
+            tooltipHtml: tip("#3b82f6", `<div style="color:#3b82f6;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> BLUE FORCE</div><div style="font-size:10px;margin-top:2px">▢ ${u.name}</div><div style="color:#888;font-size:8px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E ${u.speed_kph > 0 ? `• ${u.speed_kph}kph HDG ${u.heading}°` : ""}</div>`)
+          })
+        });
+      });
+    }
 
-    // SATELLITES — render as HTML icon elements for visible satellite icons (not dots/lines)
+    // ========== C2 COP: Red Force Units ==========
+    if (layers.redForce) {
+      redUnits.forEach((u: any) => {
+        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔴" : u.unit_type === "air_defense" ? "🎯" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "🚀" : "⚠️";
+        layerElements.push({
+          lat: u.lat, lng: u.lng, alt: 0.03,
+          el: createMarkerEl({
+            icon: echelonIcon, color: "#ef4444", size: 16,
+            label: `RED — ${u.name} (${u.unit_type})`,
+            sublabel: u.name.slice(0, 10),
+            pulse: true,
+            tooltipHtml: tip("#ef4444", `<div style="color:#ef4444;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> RED FORCE</div><div style="font-size:10px;margin-top:2px">◇ ${u.name}</div><div style="color:#888;font-size:8px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E • SRC: ${u.source.toUpperCase()}</div>`)
+          })
+        });
+      });
+    }
+
+    // ========== C2: AI Target Tracks ==========
+    if (layers.targetTracks) {
+      activeTargets.forEach((t: any) => {
+        const pCol = t.priority === "critical" ? "#dc2626" : t.priority === "high" ? "#f97316" : t.priority === "medium" ? "#eab308" : "#22c55e";
+        const cIcon = t.classification === "tank" ? "🪖" : t.classification === "sam_site" ? "🎯" : t.classification === "missile_launcher" ? "🚀" : t.classification === "radar" ? "📡" : t.classification === "artillery" ? "💥" : t.classification === "command_post" ? "🏛" : "⚠️";
+        layerElements.push({
+          lat: t.lat, lng: t.lng, alt: 0.035,
+          el: createMarkerEl({
+            icon: cIcon, color: pCol, size: t.priority === "critical" ? 22 : 18,
+            label: `TARGET ${t.track_id} — ${t.classification}`,
+            sublabel: `TGT ${t.track_id}`,
+            pulse: t.priority === "critical" || t.priority === "high",
+            onClick: () => setWorkbenchTargetId(t.id),
+            tooltipHtml: tip(pCol, `<div style="color:${pCol};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> TARGET ${t.track_id}</div><div style="font-size:10px;margin-top:2px">${t.classification.toUpperCase().replace("_", " ")} — ${(t.confidence * 100).toFixed(0)}%</div><div style="color:#888;font-size:8px">${t.priority.toUpperCase()} PRIORITY • ${t.source_sensor.toUpperCase()} • ${t.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${t.ai_assessment || ""}</div>`)
+          })
+        });
+      });
+    }
+
+    // ========== SENSOR COVERAGE ==========
+    if (layers.sensorCoverage && sensorFeeds.length > 0) {
+      const coverageBorders: Record<string, string> = {
+        satellite: "#00d4ff", drone: "#f97316", cctv: "#22c55e",
+        sigint: "#a855f7", osint: "#eab308", ground: "#ef4444", iot: "#06b6d4"
+      };
+      sensorFeeds.forEach((sf: any) => {
+        if (sf.status === "offline") return;
+        const cat = sf.feed_type.split("_")[0];
+        const col = coverageBorders[cat] || "#00d4ff";
+        const sIcon = cat === "satellite" ? "🛰" : cat === "drone" ? "👁" : cat === "cctv" ? "📹" : cat === "sigint" ? "📡" : cat === "ground" ? "📡" : "📊";
+        layerElements.push({
+          lat: sf.lat, lng: sf.lng, alt: 0.005,
+          el: createMarkerEl({
+            icon: sIcon, color: col, size: 14,
+            label: `SENSOR — ${sf.source_name}`,
+            sublabel: sf.source_name.slice(0, 10),
+            pulse: sf.status === "degraded",
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sIcon}</span> SENSOR</div><div style="font-size:10px;margin-top:2px">${sf.source_name}</div><div style="color:#888;font-size:8px">${sf.feed_type} • ${sf.status.toUpperCase()} • HP:${sf.health_score}%</div><div style="color:#666;font-size:8px">${sf.coverage_radius_km}km range • ${sf.data_rate_hz}Hz</div>`)
+          })
+        });
+      });
+    }
+
+    // ========== AI SCAN DETECTIONS ==========
+    if (aiScanResults.length > 0) {
+      aiScanResults.forEach((d: any) => {
+        const isATR = d.scanType === "ATR";
+        const col = isATR ? d.priority === "critical" ? "#dc2626" : d.priority === "high" ? "#f97316" : "#eab308" : d.color || "#3b82f6";
+        const dIcon = isATR ? "🎯" : "👁";
+        const age = Math.round((Date.now() - d.scannedAt) / 60000);
+        layerElements.push({
+          lat: d.lat, lng: d.lng, alt: 0.045,
+          el: createMarkerEl({
+            icon: dIcon, color: col, size: 18,
+            label: `AI ${d.scanType} — ${d.classification || "unknown"}`,
+            sublabel: (d.classification || "DET").slice(0, 8).toUpperCase(),
+            pulse: true,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${dIcon}</span> AI ${d.scanType} DETECTION</div><div style="font-size:10px;margin-top:2px">${(d.classification || "unknown").toUpperCase().replace(/_/g, " ")} — ${((d.confidence || 0) * 100).toFixed(0)}%</div><div style="color:#888;font-size:8px">${d.ai_assessment || d.label || ""}</div><div style="color:#666;font-size:8px">${age}m ago • ${d.lat?.toFixed(4)}°N ${d.lng?.toFixed(4)}°E</div>`)
+          })
+        });
+      });
+    }
+
+    // Clear points — all markers are now HTML elements
+    globe.pointsData([]);
+
+    // SATELLITES — render as HTML icon elements
+    let satHtmlElements: any[] = [];
     if (layers.satellites && panopticSats && allSatellites.length) {
-      const satHtmlElements = allSatellites.slice(0, 200).map((s) => {
+      satHtmlElements = allSatellites.slice(0, 200).map((s) => {
         const isISR = KEY_ISR_SATS.some((k) => s.name.toUpperCase().includes(k));
         const isMil = s.category === "Military" || s.category === "Early Warning";
         const satCol = isMil ? "#ef4444" : s.category === "Earth Observation" ? "#00d4ff" : s.category === "Navigation" ? "#22c55e" : s.category === "Weather" ? "#a855f7" : s.category === "Space Station" ? "#ffffff" : s.category === "Starlink" ? "#666" : "#555";
@@ -934,51 +1157,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         const showLabel = isISR || isMil || s.category === "Space Station" || s.category === "Early Warning";
 
         return {
-          lat: s.lat,
-          lng: s.lng,
+          lat: s.lat, lng: s.lng,
           alt: Math.min(s.alt / 6371 * 0.15, 0.8),
-          name: s.name,
-          category: s.category,
-          satCol,
-          el: (() => {
-            const wrapper = document.createElement("div");
-            wrapper.style.cssText = `display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;transition:transform 0.3s ease;`;
-            wrapper.onmouseenter = () => {wrapper.style.transform = "scale(1.5)";wrapper.style.zIndex = "999";};
-            wrapper.onmouseleave = () => {wrapper.style.transform = "scale(1)";wrapper.style.zIndex = "auto";};
-
-            // Icon element
-            const icon = document.createElement("div");
-            icon.style.cssText = `font-size:${size}px;filter:drop-shadow(0 0 ${isISR ? 8 : 4}px ${satCol});line-height:1;text-align:center;`;
-            icon.textContent = catIcon;
-            wrapper.appendChild(icon);
-
-            // Pulse ring for ISR/Military
-            if (isISR || isMil) {
-              const ring = document.createElement("div");
-              ring.style.cssText = `position:absolute;width:${size + 10}px;height:${size + 10}px;border-radius:50%;border:1px solid ${satCol};opacity:0.4;animation:satPulse 2s ease-out infinite;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;`;
-              wrapper.appendChild(ring);
-            }
-
-            // Name label for important sats
-            if (showLabel) {
-              const label = document.createElement("div");
-              label.style.cssText = `font-family:monospace;font-size:7px;color:${satCol};letter-spacing:1px;font-weight:bold;white-space:nowrap;margin-top:1px;text-shadow:0 0 4px rgba(0,0,0,0.9),0 0 8px ${satCol}40;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;`;
-              label.textContent = s.name.length > 12 ? s.name.slice(0, 12) : s.name;
-              wrapper.appendChild(label);
-            }
-
-            // Tooltip on click
-            wrapper.title = `${catIcon} ${s.name}\n${s.category} • ${Math.round(s.alt)}km\nInc ${s.inclination.toFixed(1)}° • Period ${period}min`;
-            return wrapper;
-          })()
+          el: createMarkerEl({
+            icon: catIcon, color: satCol, size,
+            label: `${catIcon} ${s.name}\n${s.category} • ${Math.round(s.alt)}km\nInc ${s.inclination.toFixed(1)}° • Period ${period}min`,
+            sublabel: showLabel ? (s.name.length > 12 ? s.name.slice(0, 12) : s.name) : undefined,
+            pulse: isISR || isMil,
+            tooltipHtml: tip(satCol, `<div style="color:${satCol};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${catIcon}</span> ${s.name}</div><div style="font-size:9px;margin-top:2px">${s.category} • ${Math.round(s.alt)}km</div><div style="color:#888;font-size:8px">Inc ${s.inclination.toFixed(1)}° • Period ${period}min</div>`)
+          })
         };
       });
-      globe.htmlElementsData(satHtmlElements);
-      globe.objectsData([]);
-    } else {
-      globe.htmlElementsData([]);
-      globe.objectsData([]);
     }
+
+    // Performance cap: max 500 total HTML elements (200 sats + 300 layer items)
+    const cappedLayers = layerElements.slice(0, 300);
+    console.log(`[4D] Rendering ${satHtmlElements.length} sats + ${cappedLayers.length} layer icons as HTML elements`);
+    globe.htmlElementsData([...satHtmlElements, ...cappedLayers]);
+    globe.objectsData([]);
 
     // ARCS — rockets, threat corridors, scan cones
     const arcs: any[] = [];
@@ -998,9 +1194,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         { startLat: 35.69, startLng: 51.39, endLat: 15.35, endLng: 44.21, colors: ["rgba(168,85,247,0.3)", "rgba(168,85,247,0.1)"] }
       );
     }
-    // Satellite orbital track arcs — trace partial orbit paths for top satellites
+    // Satellite orbital track arcs
     if (layers.satellites && panopticSats) {
-      // Orbital tracks: compute positions ±15° along mean anomaly for visible orbit segments
       const trackSats = allSatellites.filter((s) => {
         const isISR = KEY_ISR_SATS.some((k) => s.name.toUpperCase().includes(k));
         return isISR || s.category === "Military" || s.category === "Early Warning" || s.category === "Earth Observation";
@@ -1009,23 +1204,16 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       trackSats.forEach((s) => {
         const isMil = s.category === "Military" || s.category === "Early Warning";
         const trackCol = isMil ? "rgba(239,68,68,0.35)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.3)" : s.category === "Navigation" ? "rgba(34,197,94,0.25)" : "rgba(168,85,247,0.25)";
-        const trackColFade = isMil ? "rgba(239,68,68,0.08)" : s.category === "Earth Observation" ? "rgba(0,212,255,0.06)" : "rgba(100,100,100,0.06)";
-
-        // Generate 3 arc segments along the orbit: behind, at, ahead
-        const offsets = [-12, -6, 6, 12]; // degrees offset on mean anomaly
-        for (let i = 0; i < offsets.length - 1; i++) {
-          const ma1 = s.meanAnomaly + offsets[i];
-          const ma2 = s.meanAnomaly + offsets[i + 1];
+        const trackColFade = isMil ? "rgba(239,68,68,0.08)" : "rgba(0,212,255,0.05)";
+        const segments = 6;
+        const step = 30 / segments;
+        for (let i = 0; i < segments; i++) {
+          const ma1 = s.meanAnomaly - 15 + i * step;
+          const ma2 = s.meanAnomaly - 15 + (i + 1) * step;
           const pos1 = propagateSatelliteAtMA(s.inclination, s.raan, ma1, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
           const pos2 = propagateSatelliteAtMA(s.inclination, s.raan, ma2, s.meanMotion, s.eccentricity, s.epochYear, s.epochDay);
-          arcs.push({
-            startLat: pos1.lat, startLng: pos1.lng,
-            endLat: pos2.lat, endLng: pos2.lng,
-            colors: [trackCol, trackColFade]
-          });
+          arcs.push({ startLat: pos1.lat, startLng: pos1.lng, endLat: pos2.lat, endLng: pos2.lng, colors: [trackCol, trackColFade] });
         }
-
-        // Scan cone arc from satellite to ground footprint
         const isISR = KEY_ISR_SATS.some((k) => s.name.toUpperCase().includes(k));
         if (isISR) {
           const coneCol = isMil ? "rgba(239,68,68,0.4)" : "rgba(0,212,255,0.35)";
@@ -1035,83 +1223,12 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     }
     globe.arcsData(arcs);
 
-    // ========== C2 COP: Blue Force Units ==========
-    if (layers.blueForce) {
-      blueUnits.forEach((u: any) => {
-        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔵" : u.unit_type === "air_defense" ? "🛡" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "💥" : u.unit_type === "command" ? "⭐" : u.unit_type === "special_ops" ? "🗡" : "📦";
-        points.push({
-          lat: u.lat, lng: u.lng, pointAlt: 0.03, color: "#3b82f6", radius: 0.3 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,25,0.96);border:1px solid #3b82f6;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(59,130,246,0.3)"><div style="color:#3b82f6;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> BLUE FORCE</div><div style="font-size:10px;margin-top:2px">▢ ${u.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E ${u.speed_kph > 0 ? `• ${u.speed_kph}kph HDG ${u.heading}°` : ""}</div></div>`
-        });
-      });
-    }
-
-    // ========== C2 COP: Red Force Units ==========
-    if (layers.redForce) {
-      redUnits.forEach((u: any) => {
-        const echelonIcon = u.unit_type === "armor" ? "🪖" : u.unit_type === "infantry" ? "🔴" : u.unit_type === "air_defense" ? "🎯" : u.unit_type === "naval" ? "⚓" : u.unit_type === "drone" ? "👁" : u.unit_type === "artillery" ? "🚀" : "⚠️";
-        points.push({
-          lat: u.lat, lng: u.lng, pointAlt: 0.03, color: "#ef4444", radius: 0.35 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(25,5,5,0.96);border:1px solid #ef4444;padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px rgba(239,68,68,0.3)"><div style="color:#ef4444;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${echelonIcon}</span> RED FORCE</div><div style="font-size:10px;margin-top:2px">◇ ${u.name}</div><div style="color:#888;font-size:8px;margin-top:1px">${u.unit_type.toUpperCase()} • ${u.echelon.toUpperCase()} • ${u.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${u.lat.toFixed(3)}°N ${u.lng.toFixed(3)}°E • SRC: ${u.source.toUpperCase()}</div></div>`
-        });
-      });
-    }
-
-    // ========== C2: AI Target Tracks ==========
-    if (layers.targetTracks) {
-      activeTargets.forEach((t: any) => {
-        const pCol = t.priority === "critical" ? "#dc2626" : t.priority === "high" ? "#f97316" : t.priority === "medium" ? "#eab308" : "#22c55e";
-        const cIcon = t.classification === "tank" ? "🪖" : t.classification === "sam_site" ? "🎯" : t.classification === "missile_launcher" ? "🚀" : t.classification === "radar" ? "📡" : t.classification === "artillery" ? "💥" : t.classification === "command_post" ? "🏛" : "⚠️";
-        points.push({
-          lat: t.lat, lng: t.lng, pointAlt: 0.035, color: pCol, radius: (t.priority === "critical" ? 0.4 : 0.3) * densityMult,
-          targetTrackId: t.id,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(15,5,5,0.96);border:1px solid ${pCol};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 12px ${pCol}40"><div style="color:${pCol};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${cIcon}</span> TARGET ${t.track_id}</div><div style="font-size:10px;margin-top:2px">${t.classification.toUpperCase().replace("_", " ")} — ${(t.confidence * 100).toFixed(0)}%</div><div style="color:#888;font-size:8px;margin-top:1px">${t.priority.toUpperCase()} PRIORITY • ${t.source_sensor.toUpperCase()} • ${t.status.toUpperCase()}</div><div style="color:#666;font-size:8px">${t.ai_assessment || ""}</div></div>`
-        });
-      });
-    }
-
-    // ========== SENSOR COVERAGE CIRCLES ==========
-    if (layers.sensorCoverage && sensorFeeds.length > 0) {
-      const coverageColors: Record<string, string> = {
-        satellite: "rgba(0,212,255,0.12)", drone: "rgba(249,115,22,0.15)", cctv: "rgba(34,197,94,0.15)",
-        sigint: "rgba(168,85,247,0.12)", osint: "rgba(234,179,8,0.08)", ground: "rgba(239,68,68,0.12)", iot: "rgba(6,182,212,0.1)"
-      };
-      const coverageBorders: Record<string, string> = {
-        satellite: "#00d4ff", drone: "#f97316", cctv: "#22c55e",
-        sigint: "#a855f7", osint: "#eab308", ground: "#ef4444", iot: "#06b6d4"
-      };
-      sensorFeeds.forEach((sf: any) => {
-        if (sf.status === "offline") return;
-        const cat = sf.feed_type.split("_")[0];
-        const col = coverageBorders[cat] || "#00d4ff";
-        const sIcon = cat === "satellite" ? "🛰" : cat === "drone" ? "👁" : cat === "cctv" ? "📹" : cat === "sigint" ? "📡" : cat === "ground" ? "📡" : "📊";
-        points.push({
-          lat: sf.lat, lng: sf.lng, pointAlt: 0.005, color: col, radius: Math.min(sf.coverage_radius_km / 200, 1.5) * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 10px ${col}20"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sIcon}</span> SENSOR</div><div style="font-size:10px;margin-top:2px">${sf.source_name}</div><div style="color:#888;font-size:8px;margin-top:1px">${sf.feed_type} • ${sf.status.toUpperCase()} • HP:${sf.health_score}%</div><div style="color:#666;font-size:8px">${sf.coverage_radius_km}km range • ${sf.data_rate_hz}Hz</div></div>`
-        });
-      });
-    }
-
-    // ========== AI SCAN DETECTIONS ==========
-    if (aiScanResults.length > 0) {
-      aiScanResults.forEach((d: any) => {
-        const isATR = d.scanType === "ATR";
-        const col = isATR ? d.priority === "critical" ? "#dc2626" : d.priority === "high" ? "#f97316" : "#eab308" : d.color || "#3b82f6";
-        const icon = isATR ? "🎯" : "👁";
-        const age = Math.round((Date.now() - d.scannedAt) / 60000);
-        points.push({
-          lat: d.lat, lng: d.lng, pointAlt: 0.045, color: col, radius: 0.35 * densityMult,
-          label: `<div style="font-family:monospace;font-size:11px;background:rgba(5,5,15,0.96);border:1px solid ${col};padding:6px 10px;border-radius:4px;color:#f0f0f0;box-shadow:0 0 14px ${col}40"><div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${icon}</span> AI ${d.scanType} DETECTION</div><div style="font-size:10px;margin-top:2px">${(d.classification || "unknown").toUpperCase().replace(/_/g, " ")} — ${((d.confidence || 0) * 100).toFixed(0)}%</div><div style="color:#888;font-size:8px;margin-top:1px">${d.ai_assessment || d.label || ""}</div><div style="color:#666;font-size:8px">${age}m ago • ${d.lat?.toFixed(4)}°N ${d.lng?.toFixed(4)}°E</div></div>`
-        });
-      });
-    }
-
     if (layers.borders) {
       globe.polygonsData(getCountryGeoJSON(ALL_COUNTRY_CODES).features);
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets, aiScanResults]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets, aiScanResults, createMarkerEl]);
 
   const chipLayers = [
   { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
