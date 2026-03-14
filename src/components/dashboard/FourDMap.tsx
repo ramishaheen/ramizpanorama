@@ -9,6 +9,7 @@ import { useConflictEvents } from "@/hooks/useConflictEvents";
 import { useNuclearMonitors } from "@/hooks/useNuclearMonitors";
 import { useAISVessels } from "@/hooks/useAISVessels";
 import { useGeoFusion } from "@/hooks/useGeoFusion";
+import { useTelegramIntel } from "@/hooks/useTelegramIntel";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import type { Rocket as RocketType } from "@/data/mockData";
