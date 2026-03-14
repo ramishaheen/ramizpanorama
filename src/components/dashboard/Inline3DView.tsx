@@ -4,7 +4,7 @@ import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftC
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
-import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
+import { Inline3DSidebar } from "./urban3d/Inline3DSidebar";
 import { AISourceCollector } from "./AISourceCollector";
 import { WeatherTrafficPanel } from "./WeatherTrafficPanel";
 
@@ -142,24 +142,19 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         </div>
       )}
 
-      {/* Left Sidebar — tools + back to globe */}
+      {/* Left Sidebar */}
       {toolsPanelOpen && (
-        <div className="absolute top-0 left-0 z-30 w-[252px] bottom-0 flex flex-col bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20">
-          {/* Dedicated tools area — uses calc to reserve space for footer */}
-          <div style={{ height: "calc(100% - 52px)" }} className="overflow-hidden">
-            <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
-          </div>
-
-          {/* Pinned footer — Back to Globe */}
-          <div className="h-[52px] shrink-0 border-t border-border/30 p-2 bg-background/85 backdrop-blur-md flex items-center">
-            <button
-              onClick={onClose}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-all group"
-            >
-              <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
-            </button>
-          </div>
+        <div className="absolute top-0 left-0 z-30 w-[252px] h-full">
+          <Inline3DSidebar
+            mapRef={mapRef}
+            lat={lat}
+            lng={lng}
+            onClose={onClose}
+            weatherEnabled={weatherEnabled}
+            incidentsEnabled={incidentsEnabled}
+            onToggleWeather={() => setWeatherEnabled((v) => !v)}
+            onToggleIncidents={() => setIncidentsEnabled((v) => !v)}
+          />
         </div>
       )}
 
