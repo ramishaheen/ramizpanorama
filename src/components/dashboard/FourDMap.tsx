@@ -485,11 +485,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     async function fetchFlights() {
       try {
         const { data } = await supabase.functions.invoke("live-flights");
-        if (data?.flights?.length) setFlights(data.flights.slice(0, 500));
+        if (data?.aircraft?.length) setFlights(data.aircraft.slice(0, 500));
       } catch (e) { console.warn("[4D] Flights fetch failed, using emulated"); }
     }
     fetchFlights();
-    const iv = setInterval(fetchFlights, 30000);
+    const iv = setInterval(fetchFlights, 15000);
     return () => clearInterval(iv);
   }, []);
 
