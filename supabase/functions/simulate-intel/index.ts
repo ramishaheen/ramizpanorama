@@ -5,7 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Maritime corridors — vessels must stay within these water zones
 const MARITIME_CORRIDORS = [
   { latMin: 23.5, latMax: 30.8, lngMin: 47.5, lngMax: 56.8 },
   { latMin: 22.0, latMax: 27.8, lngMin: 55.8, lngMax: 62.8 },
@@ -24,7 +23,6 @@ function isInWater(lat: number, lng: number): boolean {
   );
 }
 
-// All Arab capitals + conflict cities with coords
 const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   Baghdad: { lat: 33.31, lng: 44.37 },
   Tehran: { lat: 35.69, lng: 51.39 },
@@ -45,28 +43,37 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   Muscat: { lat: 23.59, lng: 58.54 },
   Manama: { lat: 26.23, lng: 50.59 },
   Cairo: { lat: 30.04, lng: 31.24 },
-  Algiers: { lat: 36.75, lng: 3.06 },
-  Tunis: { lat: 36.81, lng: 10.18 },
-  Rabat: { lat: 34.02, lng: -6.83 },
-  Tripoli: { lat: 32.90, lng: 13.18 },
   Sanaa: { lat: 15.37, lng: 44.21 },
   Aden: { lat: 12.79, lng: 45.04 },
   Khartoum: { lat: 15.60, lng: 32.53 },
-  Mogadishu: { lat: 2.05, lng: 45.32 },
   Djibouti: { lat: 11.59, lng: 43.15 },
+  Idlib: { lat: 35.93, lng: 36.63 },
+  Homs: { lat: 34.73, lng: 36.72 },
+  Basra: { lat: 30.51, lng: 47.81 },
+  Kirkuk: { lat: 35.47, lng: 44.39 },
+  Rafah: { lat: 31.28, lng: 34.25 },
+  "Khan Younis": { lat: 31.34, lng: 34.30 },
+  Hodeidah: { lat: 14.80, lng: 42.95 },
+  Marib: { lat: 15.46, lng: 45.32 },
+  "Deir ez-Zor": { lat: 35.34, lng: 40.14 },
+  Haifa: { lat: 32.79, lng: 34.99 },
+  Tabriz: { lat: 38.08, lng: 46.29 },
+  Isfahan: { lat: 32.65, lng: 51.68 },
 };
 
 const cityNames = Object.keys(CITY_COORDS);
 
-// Country lookup for cities
 const CITY_COUNTRY: Record<string, string> = {
   Baghdad: "Iraq", Tehran: "Iran", Beirut: "Lebanon", Damascus: "Syria",
   Amman: "Jordan", Gaza: "Palestine", Jerusalem: "Israel", "Tel Aviv": "Israel",
   Mosul: "Iraq", Aleppo: "Syria", Erbil: "Iraq", Riyadh: "Saudi Arabia",
   Dubai: "UAE", "Abu Dhabi": "UAE", Doha: "Qatar", "Kuwait City": "Kuwait",
-  Muscat: "Oman", Manama: "Bahrain", Cairo: "Egypt", Algiers: "Algeria",
-  Tunis: "Tunisia", Rabat: "Morocco", Tripoli: "Libya", Sanaa: "Yemen",
-  Aden: "Yemen", Khartoum: "Sudan", Mogadishu: "Somalia", Djibouti: "Djibouti",
+  Muscat: "Oman", Manama: "Bahrain", Cairo: "Egypt",
+  Sanaa: "Yemen", Aden: "Yemen", Khartoum: "Sudan", Djibouti: "Djibouti",
+  Idlib: "Syria", Homs: "Syria", Basra: "Iraq", Kirkuk: "Iraq",
+  Rafah: "Palestine", "Khan Younis": "Palestine", Hodeidah: "Yemen",
+  Marib: "Yemen", "Deir ez-Zor": "Syria", Haifa: "Israel",
+  Tabriz: "Iran", Isfahan: "Iran",
 };
 
 const geoTypes = ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"] as const;
@@ -75,12 +82,11 @@ const airspaceTypes = ["NOTAM", "TFR", "CLOSURE"] as const;
 const rocketTypes = ["Ballistic", "Cruise", "SRBM", "MRBM", "Drone"] as const;
 const rocketStatuses = ["launched", "in_flight"] as const;
 
-// Event types mapped to Kill Chain categories
 const EVENT_TYPES_BY_GEO: Record<string, string[]> = {
-  MILITARY: ["airstrike", "explosion", "missile_launch", "drone_incursion", "artillery_barrage"],
-  DIPLOMATIC: ["diplomatic_incident", "sanctions_update", "ceasefire_violation", "embassy_alert"],
-  ECONOMIC: ["naval_movement", "vessel_interdiction", "port_closure", "trade_disruption"],
-  HUMANITARIAN: ["mass_gathering", "protest", "refugee_flow", "humanitarian_crisis"],
+  MILITARY: ["airstrike", "explosion", "missile_launch", "drone_incursion", "artillery_barrage", "ground_offensive", "naval_engagement"],
+  DIPLOMATIC: ["diplomatic_incident", "sanctions_update", "ceasefire_violation", "embassy_alert", "peace_talks"],
+  ECONOMIC: ["naval_movement", "vessel_interdiction", "port_closure", "trade_disruption", "oil_price_impact"],
+  HUMANITARIAN: ["mass_gathering", "protest", "refugee_flow", "humanitarian_crisis", "medical_emergency"],
 };
 
 const CYBER_SIGINT_NUCLEAR_TYPES = [
@@ -91,60 +97,68 @@ const CYBER_SIGINT_NUCLEAR_TYPES = [
 const verificationStatuses = ["unverified", "auto_detected", "verified"] as const;
 const eventSeverities = ["info", "low", "medium", "high", "critical"] as const;
 
-const titles: Record<string, string[]> = {
+// Dynamic, contextual title templates — use %CITY%, %REGION%, %TIME% placeholders
+const dynamicTitles: Record<string, string[]> = {
   MILITARY: [
-    "Airstrikes reported near city center",
-    "Military convoy movement detected",
-    "Anti-aircraft system activated",
-    "Drone incursion detected over restricted zone",
-    "Explosion reported near military base",
-    "SAM battery activation detected",
-    "Artillery fire reported on outskirts",
-    "Military helicopter activity above city",
-    "Sniper fire reported in contested area",
-    "IED detonation on main highway",
+    "Multiple airstrikes reported in %CITY% targeting military positions",
+    "UAV incursion detected over %CITY% airspace at %TIME%",
+    "Anti-aircraft systems activated near %CITY% military base",
+    "Ground forces movement detected %CITY% — %REGION% axis",
+    "Incoming fire reported at %CITY% outskirts, IDF/militia response underway",
+    "SAM battery activated near %CITY% — threat assessment underway",
+    "Artillery exchange reported along %CITY%-%REGION% front line",
+    "Military helicopter operations observed above %CITY%",
+    "Suspected IED detonation on highway near %CITY%",
+    "Sniper activity reported in %CITY% contested zone",
+    "Forward operating base shelled near %CITY%",
+    "Armored vehicle convoy spotted moving toward %CITY%",
+    "Drone swarm activity detected over %CITY% at %TIME%",
+    "Counter-battery fire directed at positions near %CITY%",
+    "Special forces operation reported in %CITY% urban area",
   ],
   DIPLOMATIC: [
-    "Emergency diplomatic meeting convened",
-    "Ambassador recalled amid tensions",
-    "UN envoy arrives for de-escalation talks",
-    "Sanctions announced against local entities",
-    "Ceasefire negotiations underway",
-    "Diplomatic corridor established",
-    "Embassy staff evacuation ordered",
-    "Peace talks stalled over key demands",
+    "Emergency diplomatic consultations convened regarding %CITY% crisis",
+    "Ambassador recalled from %REGION% amid escalating tensions",
+    "UN envoy dispatched to %CITY% for de-escalation talks",
+    "New sanctions package announced targeting %REGION% entities",
+    "Ceasefire negotiations in %CITY% stall over key demands",
+    "Diplomatic corridor established between %CITY% and %REGION%",
+    "Emergency evacuation order for embassy staff in %CITY%",
+    "International mediation effort launched for %REGION% conflict",
   ],
   ECONOMIC: [
-    "Fuel prices surge amid supply disruption",
-    "Currency under pressure from regional instability",
-    "Port operations suspended due to threat",
-    "Trade route rerouted adding significant costs",
-    "Banking sector faces liquidity concerns",
-    "Power grid disruption reported",
-    "Food supply chain disrupted by conflict",
-    "Insurance premiums spike for regional transit",
+    "Fuel supply disruption reported at %CITY% distribution hub",
+    "%REGION% currency drops amid regional security concerns",
+    "Port operations at %CITY% suspended — threat assessment ongoing",
+    "Trade routes through %REGION% rerouted — costs surge 40%",
+    "Power grid disruption reported in %CITY% metropolitan area",
+    "Food supply chain disrupted along %CITY%-%REGION% corridor",
+    "Insurance premiums spike for %REGION% maritime transit",
+    "Banking system disruption reported in %CITY%",
   ],
   HUMANITARIAN: [
-    "Mass displacement reported from conflict zone",
-    "Aid convoy blocked at checkpoint",
-    "Hospital capacity exceeded in city center",
-    "Refugee flow detected toward border crossing",
-    "Water infrastructure damaged by shelling",
-    "Civilian evacuation order issued",
-    "Medical supply shortage critical",
-    "Emergency shelter deployment underway",
+    "Mass displacement from %CITY% — %REGION% conflict zone reported",
+    "Aid convoy blocked at %CITY% checkpoint — urgent intervention needed",
+    "Hospital capacity exceeded in %CITY% — casualties mounting",
+    "Refugee flow detected toward %CITY% border crossing at %TIME%",
+    "Water infrastructure damaged by shelling in %CITY%",
+    "Civilian evacuation underway from %CITY% neighborhoods",
+    "Medical supply shortage reaches critical level in %CITY%",
+    "Emergency shelter deployment activated in %CITY%",
+    "UNRWA reports deteriorating conditions in %CITY% camps",
+    "Humanitarian corridor requested for %CITY% civilian population",
   ],
 };
 
 const airspaceDescriptions = [
-  "NOTAM issued — military exercise in progress",
-  "Temporary flight restriction active",
-  "Airspace closure due to security operations",
-  "Restricted zone expanded — UAV activity detected",
-  "Flight advisory — missile defense test",
-  "Emergency airspace restriction — active threat",
-  "No-fly zone enforced — ongoing hostilities",
-  "Air traffic rerouted — military operations",
+  "NOTAM issued — active military operations near %CITY%",
+  "Temporary flight restriction in effect — %CITY% sector",
+  "Airspace closure — security operations ongoing near %CITY%",
+  "Restricted zone expanded — UAV threat detected over %CITY%",
+  "Flight advisory — missile defense activation near %CITY%",
+  "Emergency airspace restriction — active threat assessment %CITY%",
+  "No-fly zone enforced — hostile drone activity near %CITY%",
+  "Air traffic rerouted — %CITY% area military operations",
 ];
 
 function pick<T>(arr: readonly T[]): T {
@@ -153,6 +167,18 @@ function pick<T>(arr: readonly T[]): T {
 
 function rand(min: number, max: number) {
   return Math.round((Math.random() * (max - min) + min) * 10) / 10;
+}
+
+function generateTitle(geoType: string, city: string): string {
+  const templates = dynamicTitles[geoType] || dynamicTitles.MILITARY;
+  const template = pick(templates);
+  const otherCity = pick(cityNames.filter(c => c !== city));
+  const now = new Date();
+  const timeStr = `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}Z`;
+  return template
+    .replace(/%CITY%/g, city)
+    .replace(/%REGION%/g, CITY_COUNTRY[city] || otherCity)
+    .replace(/%TIME%/g, timeStr);
 }
 
 Deno.serve(async (req) => {
@@ -168,7 +194,7 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString();
   const actions: string[] = [];
 
-  // 1. Drift a vessel — with water validation
+  // 1. Drift a vessel
   const vesselId = `v-00${Math.ceil(Math.random() * 8)}`;
   const { data: currentVessel } = await supabase.from("vessels").select("lat,lng,heading,speed").eq("id", vesselId).single();
   if (currentVessel) {
@@ -180,13 +206,11 @@ Deno.serve(async (req) => {
     if (isInWater(newLat, newLng)) {
       const headingDrift = (Math.random() - 0.5) * 10;
       await supabase.from("vessels").update({
-        lat: newLat,
-        lng: newLng,
+        lat: newLat, lng: newLng,
         heading: Math.round(((currentVessel.heading + headingDrift) % 360 + 360) % 360 * 10) / 10,
-        speed: rand(5, 22),
-        timestamp: now,
+        speed: rand(5, 22), timestamp: now,
       }).eq("id", vesselId);
-      actions.push(`Drifted vessel ${vesselId} (in water)`);
+      actions.push(`Drifted vessel ${vesselId}`);
     } else {
       const reversedHeading = (currentVessel.heading + 180) % 360;
       const revLat = currentVessel.lat + drift * Math.cos(reversedHeading * Math.PI / 180);
@@ -196,23 +220,19 @@ Deno.serve(async (req) => {
           lat: revLat, lng: revLng, heading: reversedHeading,
           speed: rand(5, 22), timestamp: now,
         }).eq("id", vesselId);
-        actions.push(`Reversed vessel ${vesselId} (hit land boundary)`);
       } else {
         await supabase.from("vessels").update({
           heading: reversedHeading, speed: rand(3, 10), timestamp: now,
         }).eq("id", vesselId);
-        actions.push(`Vessel ${vesselId} stuck, reversed heading only`);
       }
+      actions.push(`Vessel ${vesselId} course corrected`);
     }
   }
 
-  // 2. Generate geo alerts for 2-3 random cities
-  const selectedCities = [];
+  // 2. Geo alerts — 2-3 cities with dynamic titles
   const shuffled = [...cityNames].sort(() => Math.random() - 0.5);
   const numCities = 2 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < numCities && i < shuffled.length; i++) {
-    selectedCities.push(shuffled[i]);
-  }
+  const selectedCities = shuffled.slice(0, numCities);
 
   for (const cityName of selectedCities) {
     const coords = CITY_COORDS[cityName];
@@ -221,26 +241,26 @@ Deno.serve(async (req) => {
     const alertId = `ga-live-${cityName.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const lat = coords.lat + (Math.random() - 0.5) * 0.1;
     const lng = coords.lng + (Math.random() - 0.5) * 0.1;
+    const title = generateTitle(geoType, cityName);
 
     await supabase.from("geo_alerts").insert({
       id: alertId, type: geoType, region: cityName,
-      title: `[${cityName}] ${pick(titles[geoType])}`,
-      summary: `Live intelligence update for ${cityName}. Automated monitoring detected activity change.`,
+      title: `[${cityName}] ${title}`,
+      summary: `Live monitoring — ${CITY_COUNTRY[cityName] || "Unknown"} sector. ${title}`,
       severity, source: "WarOS Auto-Monitor", timestamp: now, lat, lng,
     });
-    actions.push(`Inserted geo alert for ${cityName}`);
 
     const teId = `te-live-${cityName.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const teTypes = ["airspace", "maritime", "alert", "diplomatic"] as const;
     const teType = geoType === "MILITARY" ? "alert" : geoType === "DIPLOMATIC" ? "diplomatic" : geoType === "ECONOMIC" ? "maritime" : pick(teTypes);
     await supabase.from("timeline_events").insert({
-      id: teId, type: teType, title: `[${cityName}] ${pick(titles[geoType])}`,
+      id: teId, type: teType, title: `[${cityName}] ${title}`,
       severity, timestamp: now,
     });
-    actions.push(`Inserted timeline event for ${cityName}`);
+    actions.push(`Alert: ${cityName} (${geoType})`);
   }
 
-  // 2b. Generate intel_events (2-3 per cycle) for Events Feed + Kill Chain
+  // 3. Intel events — 2-3 per cycle with diverse types
   const numIntelEvents = 2 + Math.floor(Math.random() * 2);
   const intelCities = [...cityNames].sort(() => Math.random() - 0.5).slice(0, numIntelEvents);
 
@@ -250,12 +270,11 @@ Deno.serve(async (req) => {
     const lat = coords.lat + (Math.random() - 0.5) * 0.15;
     const lng = coords.lng + (Math.random() - 0.5) * 0.15;
 
-    // 80% use geo-mapped types, 20% use cyber/sigint/nuclear for Kill Chain variety
     const eventType = Math.random() < 0.8
       ? pick(EVENT_TYPES_BY_GEO[geoType])
       : pick(CYBER_SIGINT_NUCLEAR_TYPES);
 
-    const title = `[${cityName}] ${pick(titles[geoType])}`;
+    const title = generateTitle(geoType, cityName);
     const confidence = Math.round((0.4 + Math.random() * 0.55) * 100) / 100;
     const severity = pick(eventSeverities);
     const verification = pick(verificationStatuses);
@@ -265,44 +284,35 @@ Deno.serve(async (req) => {
       event_type: eventType,
       city: cityName,
       country: CITY_COUNTRY[cityName] || "Unknown",
-      lat, lng,
-      severity,
-      confidence,
+      lat, lng, severity, confidence,
       verification_status: verification,
-      summary: `Automated intel: ${eventType.replace(/_/g, " ")} activity detected near ${cityName}. Confidence ${Math.round(confidence * 100)}%.`,
-      created_at: now,
-      updated_at: now,
+      summary: `Intel: ${eventType.replace(/_/g, " ")} — ${cityName}, ${CITY_COUNTRY[cityName] || ""}. Confidence ${Math.round(confidence * 100)}%. ${title}`,
+      created_at: now, updated_at: now,
     });
-    actions.push(`Inserted intel_event (${eventType}) for ${cityName}`);
+    actions.push(`Intel event: ${cityName} (${eventType})`);
   }
 
-
+  // 4. Airspace alerts
   const numAirspace = 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < numAirspace; i++) {
     const city = pick(cityNames);
     const coords = CITY_COORDS[city];
     const aaId = `aa-live-${city.replace(/\s/g, "")}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const desc = pick(airspaceDescriptions).replace(/%CITY%/g, city);
     await supabase.from("airspace_alerts").insert({
       id: aaId,
-      type: pick(airspaceTypes),
-      region: city,
+      type: pick(airspaceTypes), region: city,
       lat: coords.lat + (Math.random() - 0.5) * 0.2,
       lng: coords.lng + (Math.random() - 0.5) * 0.2,
-      radius: rand(5, 50),
-      severity: pick(severities),
-      description: pick(airspaceDescriptions),
-      timestamp: now,
-      active: true,
+      radius: rand(5, 50), severity: pick(severities),
+      description: desc, timestamp: now, active: true,
     });
-    actions.push(`Inserted airspace alert for ${city}`);
+    actions.push(`Airspace: ${city}`);
   }
 
-  // 4. Rocket simulation — 40% chance to launch new, always transition existing active ones
-  // Transition active rockets first
+  // 5. Rockets — transition active, 40% chance new launch
   const { data: activeRockets } = await supabase
-    .from("rockets")
-    .select("*")
-    .like("id", "rk-live-%")
+    .from("rockets").select("*").like("id", "rk-live-%")
     .in("status", ["launched", "in_flight"]);
 
   if (activeRockets) {
@@ -317,11 +327,10 @@ Deno.serve(async (req) => {
         speed: newStatus === "in_flight" ? rand(800, 2400) : 0,
         timestamp: now,
       }).eq("id", rocket.id);
-      actions.push(`Transitioned rocket ${rocket.id} to ${newStatus}`);
+      actions.push(`Rocket ${rocket.id} → ${newStatus}`);
     }
   }
 
-  // Launch new rocket (40% chance)
   if (Math.random() < 0.4) {
     const originCity = pick(cityNames);
     const targetCity = pick(cityNames.filter(c => c !== originCity));
@@ -334,22 +343,18 @@ Deno.serve(async (req) => {
       id: rkId,
       name: `${pick(rocketTypes)}-${Math.floor(Math.random() * 900 + 100)}`,
       type: pick(rocketTypes),
-      origin_lat: oCoords.lat,
-      origin_lng: oCoords.lng,
-      target_lat: tCoords.lat,
-      target_lng: tCoords.lng,
+      origin_lat: oCoords.lat, origin_lng: oCoords.lng,
+      target_lat: tCoords.lat, target_lng: tCoords.lng,
       current_lat: oCoords.lat + (tCoords.lat - oCoords.lat) * progress,
       current_lng: oCoords.lng + (tCoords.lng - oCoords.lng) * progress,
       status,
       severity: pick(["high", "critical"] as const),
-      speed: rand(600, 2400),
-      altitude: rand(30, 180),
-      timestamp: now,
+      speed: rand(600, 2400), altitude: rand(30, 180), timestamp: now,
     });
-    actions.push(`Launched new rocket ${rkId} from ${originCity} → ${targetCity}`);
+    actions.push(`Launched rocket from ${originCity} → ${targetCity}`);
   }
 
-  // 5. Update risk score
+  // 6. Risk scores
   const { data: currentRisk } = await supabase
     .from("risk_scores").select("*")
     .order("last_updated", { ascending: false }).limit(1).single();
@@ -369,58 +374,27 @@ Deno.serve(async (req) => {
     actions.push("Updated risk scores");
   }
 
-  // 6. Prune old live data (keep reasonable amounts)
-  // Geo alerts — keep last 100
-  const { data: oldAlerts } = await supabase
-    .from("geo_alerts").select("id").like("id", "ga-live-%")
-    .order("timestamp", { ascending: false });
-  if (oldAlerts && oldAlerts.length > 100) {
-    const toDelete = oldAlerts.slice(100).map((a) => a.id);
-    await supabase.from("geo_alerts").delete().in("id", toDelete);
-    actions.push(`Pruned ${toDelete.length} old geo alerts`);
+  // 7. Pruning — keep data fresh
+  const pruneTargets = [
+    { table: "geo_alerts", prefix: "ga-live-%", limit: 100, orderCol: "timestamp" },
+    { table: "timeline_events", prefix: "te-live-%", limit: 80, orderCol: "timestamp" },
+    { table: "airspace_alerts", prefix: "aa-live-%", limit: 30, orderCol: "timestamp" },
+    { table: "rockets", prefix: "rk-live-%", limit: 15, orderCol: "timestamp" },
+    { table: "intel_events", prefix: null, limit: 100, orderCol: "created_at" },
+  ];
+
+  for (const target of pruneTargets) {
+    let query = supabase.from(target.table).select("id");
+    if (target.prefix) query = query.like("id", target.prefix);
+    const { data: rows } = await query.order(target.orderCol, { ascending: false });
+    if (rows && rows.length > target.limit) {
+      const toDelete = rows.slice(target.limit).map((r: any) => r.id);
+      await supabase.from(target.table).delete().in("id", toDelete);
+      actions.push(`Pruned ${toDelete.length} from ${target.table}`);
+    }
   }
 
-  // Timeline events — keep last 80
-  const { data: oldEvents } = await supabase
-    .from("timeline_events").select("id").like("id", "te-live-%")
-    .order("timestamp", { ascending: false });
-  if (oldEvents && oldEvents.length > 80) {
-    const toDelete = oldEvents.slice(80).map((e) => e.id);
-    await supabase.from("timeline_events").delete().in("id", toDelete);
-    actions.push(`Pruned ${toDelete.length} old timeline events`);
-  }
-
-  // Airspace alerts — keep last 30
-  const { data: oldAirspace } = await supabase
-    .from("airspace_alerts").select("id").like("id", "aa-live-%")
-    .order("timestamp", { ascending: false });
-  if (oldAirspace && oldAirspace.length > 30) {
-    const toDelete = oldAirspace.slice(30).map((a) => a.id);
-    await supabase.from("airspace_alerts").delete().in("id", toDelete);
-    actions.push(`Pruned ${toDelete.length} old airspace alerts`);
-  }
-
-  // Rockets — keep last 15 live ones
-  const { data: oldRockets } = await supabase
-    .from("rockets").select("id").like("id", "rk-live-%")
-    .order("timestamp", { ascending: false });
-  if (oldRockets && oldRockets.length > 15) {
-    const toDelete = oldRockets.slice(15).map((r) => r.id);
-    await supabase.from("rockets").delete().in("id", toDelete);
-    actions.push(`Pruned ${toDelete.length} old rockets`);
-  }
-
-  // Intel events — keep last 100
-  const { data: oldIntelEvents } = await supabase
-    .from("intel_events").select("id")
-    .order("created_at", { ascending: false });
-  if (oldIntelEvents && oldIntelEvents.length > 100) {
-    const toDelete = oldIntelEvents.slice(100).map((e) => e.id);
-    await supabase.from("intel_events").delete().in("id", toDelete);
-    actions.push(`Pruned ${toDelete.length} old intel events`);
-  }
-
-  return new Response(JSON.stringify({ ok: true, actions }), {
+  return new Response(JSON.stringify({ ok: true, actions, ts: now }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
