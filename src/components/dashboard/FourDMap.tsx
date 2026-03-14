@@ -1611,6 +1611,23 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
           </div>
         </div>
       )}
+
+      {/* Kill Chain Kanban Board overlay */}
+      {showKanban && (
+        <KillChainKanban
+          onClose={() => setShowKanban(false)}
+          onLocate={handleFeedClick}
+          onOpenOptimizer={() => { setShowKanban(false); setShowOptimizer(true); }}
+        />
+      )}
+
+      {/* AI Metrics Prioritizer overlay */}
+      {showOptimizer && (
+        <AIMetricsPrioritizer
+          onClose={() => setShowOptimizer(false)}
+          onApproveAndZoom={(lat, lng) => { setShowOptimizer(false); handleFeedClick(lat, lng); }}
+        />
+      )}
     </div>
   );
 };
