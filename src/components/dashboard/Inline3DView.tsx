@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
@@ -124,8 +125,8 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
     map.panTo({ lat, lng });
   };
 
-  return (
-    <div className="absolute inset-0 z-10 bg-background">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] bg-background">
       {/* Map container */}
       <div ref={mapContainerRef} className="absolute inset-0" />
 
@@ -237,7 +238,8 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       {/* Overlays */}
       <WeatherRadarOverlay mapRef={mapRef} enabled={weatherEnabled} opacity={0.7} />
       <LiveIncidentsOverlay mapRef={mapRef} enabled={incidentsEnabled} lat={lat} lng={lng} />
-    </div>
+    </div>,
+    document.body,
   );
 };
 
