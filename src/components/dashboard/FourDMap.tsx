@@ -1405,7 +1405,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 {layerConfigs.map((layer) =>
               <button key={layer.id} onClick={() => toggleLayer(layer.id)}
               className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-all duration-150 border-l-2 ${layers[layer.id] ? "bg-[hsl(190,30%,10%)] border-l-primary" : "bg-transparent border-l-transparent hover:bg-[hsl(220,15%,10%)]"}`}>
-                    <Checkbox checked={layers[layer.id]} onCheckedChange={() => toggleLayer(layer.id)} className="h-3 w-3 pointer-events-none rounded-sm" />
+                    <Checkbox checked={layers[layer.id]} className="h-3 w-3 pointer-events-none rounded-sm" />
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layers[layer.id] ? layer.color : "#374151" }} />
                     <span className={`flex items-center gap-1 text-[10px] font-mono tracking-wide ${layers[layer.id] ? "text-foreground" : "text-muted-foreground"}`}>
                       {layer.icon} {layer.label}
