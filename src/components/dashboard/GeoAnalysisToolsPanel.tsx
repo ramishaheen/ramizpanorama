@@ -821,19 +821,59 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
             });
             newMarkers.push(circle);
           } else {
-            const marker = new google.maps.Marker({
-              map, position: { lat: iLat, lng: iLng },
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 5,
-                fillColor: layerDef.color,
-                fillOpacity: 0.85,
-                strokeColor: "#fff",
-                strokeWeight: 1,
-              },
-              title: item.title || item.name || item.source_name || item.track_id || `${iLat.toFixed(3)}, ${iLng.toFixed(3)}`,
-            });
-            newMarkers.push(marker);
+            // Styled emoji icon marker
+            const iconEmoji = layerDef.id === "geo-alerts" ? "⚠️" :
+              layerDef.id === "intel-events" ? "📡" :
+              layerDef.id === "target-tracks" ? "🎯" :
+              layerDef.id === "force-units" ? (item.affiliation === "blue" ? "🔵" : item.affiliation === "red" ? "🔴" : "🪖") :
+              layerDef.id === "cameras-intel" ? "📹" :
+              layerDef.id === "wildfires" ? "🔥" :
+              layerDef.id === "vessels" ? (item.type === "MILITARY" ? "⚓" : item.type === "TANKER" ? "🛢" : "🚢") :
+              layerDef.id === "conflict-events" ? "⚔️" : "📌";
+            const title = item.title || item.name || item.source_name || item.track_id || `${iLat.toFixed(3)}, ${iLng.toFixed(3)}`;
+            const severity = item.severity || item.priority || "info";
+            const sevColor = severity === "critical" ? "#ef4444" : severity === "high" ? "#f97316" : severity === "medium" ? "#eab308" : layerDef.color;
+
+            // Create styled HTML element for AdvancedMarkerElement or fallback
+            const el = document.createElement("div");
+            el.style.cssText = `display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.2s;`;
+            el.onmouseenter = () => { el.style.transform = "scale(1.4)"; el.style.zIndex = "999"; };
+            el.onmouseleave = () => { el.style.transform = "scale(1)"; el.style.zIndex = "auto"; };
+            const iconEl = document.createElement("div");
+            iconEl.style.cssText = `font-size:18px;filter:drop-shadow(0 0 4px ${sevColor});line-height:1;text-align:center;`;
+            iconEl.textContent = iconEmoji;
+            el.appendChild(iconEl);
+            const lbl = document.createElement("div");
+            lbl.style.cssText = `font-family:monospace;font-size:7px;color:${sevColor};font-weight:bold;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 3px rgba(0,0,0,0.9);margin-top:1px;`;
+            lbl.textContent = title.slice(0, 15);
+            el.appendChild(lbl);
+            el.title = title;
+
+            // Try AdvancedMarkerElement first, fallback to basic Marker
+            try {
+              if (google.maps.marker?.AdvancedMarkerElement) {
+                const marker = new google.maps.marker.AdvancedMarkerElement({
+                  map, position: { lat: iLat, lng: iLng }, content: el,
+                });
+                newMarkers.push(marker);
+              } else {
+                throw new Error("fallback");
+              }
+            } catch {
+              const marker = new google.maps.Marker({
+                map, position: { lat: iLat, lng: iLng },
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 7,
+                  fillColor: sevColor,
+                  fillOpacity: 0.9,
+                  strokeColor: "#fff",
+                  strokeWeight: 1.5,
+                },
+                title,
+              });
+              newMarkers.push(marker);
+            }
           }
         });
 
