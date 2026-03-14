@@ -125,7 +125,6 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
     map.panTo({ lat, lng });
   };
 
-  return (
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-background">
       {/* Map container */}
