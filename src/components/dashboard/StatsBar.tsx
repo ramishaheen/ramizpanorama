@@ -352,9 +352,9 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
               scenario={scenario}
             />
           )}
+          </>
           )}
         </div>
-      )}
       {warCosts.loading && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-t border-border/50">
           <div className="h-3 w-3 border border-primary border-t-transparent rounded-full animate-spin" />
