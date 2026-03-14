@@ -25,6 +25,8 @@ import { KillChainKanban } from "./KillChainKanban";
 import { AIMetricsPrioritizer } from "./AIMetricsPrioritizer";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 import { useSensorToShooter } from "@/hooks/useSensorToShooter";
+import { useOntology } from "@/hooks/useOntology";
+import { getPOIIcon } from "@/hooks/useGooglePlaces";
 import { toast } from "sonner";
 
 
@@ -280,6 +282,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [showKanban, setShowKanban] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const { commitStrike } = useSensorToShooter();
+  const { entities: ontologyEntities } = useOntology();
 
   // ========== LIVE DB EVENTS ==========
   const [dbIntelEvents, setDbIntelEvents] = useState<any[]>([]);
@@ -1046,20 +1049,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // EMULATED OSINT EVENTS
-    emulatedEvents.forEach((ev) => {
-      if (ev.ts > cutoff) return;
-      layerElements.push({
-        lat: ev.lat, lng: ev.lng, alt: 0.022,
-        el: createMarkerEl({
-          icon: ev.icon, color: ev.color, size: 16,
-          label: ev.label,
-          sublabel: ev.type.slice(0, 10).toUpperCase(),
-          pulse: ev.severity === "critical",
-          tooltipHtml: tip(ev.color, `<div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div>`)
-        })
+    // EMULATED OSINT EVENTS — guarded by conflicts or geoFusion layer
+    if (layers.conflicts || layers.geoFusion) {
+      emulatedEvents.forEach((ev) => {
+        if (ev.ts > cutoff) return;
+        layerElements.push({
+          lat: ev.lat, lng: ev.lng, alt: 0.022,
+          el: createMarkerEl({
+            icon: ev.icon, color: ev.color, size: 16,
+            label: ev.label,
+            sublabel: ev.type.slice(0, 10).toUpperCase(),
+            pulse: ev.severity === "critical",
+            tooltipHtml: tip(ev.color, `<div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div>`)
+          })
+        });
       });
-    });
+    }
 
     // ========== C2 COP: Blue Force Units ==========
     if (layers.blueForce) {
@@ -1133,6 +1138,71 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             sublabel: sf.source_name.slice(0, 10),
             pulse: sf.status === "degraded",
             tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sIcon}</span> SENSOR</div><div style="font-size:10px;margin-top:2px">${sf.source_name}</div><div style="color:#888;font-size:8px">${sf.feed_type} • ${sf.status.toUpperCase()} • HP:${sf.health_score}%</div><div style="color:#666;font-size:8px">${sf.coverage_radius_km}km range • ${sf.data_rate_hz}Hz</div>`)
+          })
+        });
+      });
+    }
+
+    // ========== SHOOTER ASSETS ==========
+    if (layers.shooterAssets && shooterAssets.length > 0) {
+      const SHOOTER_ICONS: Record<string, string> = {
+        strike_aircraft: "✈️", ucav: "👁", artillery: "💥", missile_battery: "🚀",
+        naval_surface: "🚢", rotary_wing: "🚁", ground_vehicle: "🪖"
+      };
+      shooterAssets.forEach((sa: any) => {
+        const sIcon = SHOOTER_ICONS[sa.asset_type] || "🎯";
+        const col = sa.current_tasking === "engaged" ? "#ef4444" : sa.current_tasking === "ready" ? "#22c55e" : "#f97316";
+        layerElements.push({
+          lat: sa.lat, lng: sa.lng, alt: 0.04,
+          el: createMarkerEl({
+            icon: sIcon, color: col, size: 18,
+            label: `SHOOTER — ${sa.callsign}`,
+            sublabel: sa.callsign.slice(0, 10),
+            pulse: sa.current_tasking === "engaged",
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${sIcon}</span> ${sa.callsign}</div><div style="font-size:10px;margin-top:2px">${sa.asset_type.toUpperCase().replace(/_/g, " ")}</div><div style="color:#888;font-size:8px">${sa.current_tasking?.toUpperCase()} • FUEL ${sa.fuel_remaining_pct}% • ${sa.speed_kts}kts</div><div style="color:#666;font-size:8px">ROE: ${sa.roe_zone?.toUpperCase()} • ALT ${sa.altitude_ft}ft</div>`)
+          })
+        });
+      });
+    }
+
+    // ========== GOOGLE POIs ==========
+    if (layers.googlePOI && googlePOIPoints.length > 0) {
+      googlePOIPoints.forEach((poi: any) => {
+        const pIcon = getPOIIcon(poi.category);
+        const col = "#a855f7";
+        layerElements.push({
+          lat: poi.lat, lng: poi.lng, alt: 0.01,
+          el: createMarkerEl({
+            icon: pIcon, color: col, size: 14,
+            label: `POI — ${poi.name}`,
+            sublabel: poi.name.slice(0, 12),
+            pulse: false,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${pIcon}</span> ${poi.category?.toUpperCase()}</div><div style="font-size:10px;margin-top:2px">${poi.name}</div>`)
+          })
+        });
+      });
+    }
+
+    // ========== ONTOLOGY ENTITIES ==========
+    if (layers.ontologyEntities && ontologyEntities.length > 0) {
+      const ONT_ICONS: Record<string, string> = {
+        equipment: "🪖", facility: "🏛", unit: "⚔️", person: "👤",
+        vehicle: "🚛", infrastructure: "🏗", weapon_system: "🎯"
+      };
+      const AFF_COLORS: Record<string, string> = {
+        blue: "#3b82f6", red: "#ef4444", neutral: "#eab308", unknown: "#6b7280"
+      };
+      ontologyEntities.forEach((oe: any) => {
+        const oIcon = ONT_ICONS[oe.entity_type] || "🔗";
+        const col = AFF_COLORS[oe.affiliation] || "#8b5cf6";
+        layerElements.push({
+          lat: oe.lat, lng: oe.lng, alt: 0.025,
+          el: createMarkerEl({
+            icon: oIcon, color: col, size: 16,
+            label: `ONT — ${oe.name}`,
+            sublabel: (oe.designation || oe.name).slice(0, 10),
+            pulse: oe.confidence < 0.6,
+            tooltipHtml: tip(col, `<div style="color:${col};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${oIcon}</span> ${oe.name}</div><div style="font-size:10px;margin-top:2px">${oe.entity_type.toUpperCase()} • ${oe.affiliation.toUpperCase()}</div><div style="color:#888;font-size:8px">${(oe.confidence * 100).toFixed(0)}% CONF • ${oe.status?.toUpperCase()}</div><div style="color:#666;font-size:8px">${oe.description || ""}</div>`)
           })
         });
       });
@@ -1245,7 +1315,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets, aiScanResults, createMarkerEl]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets, aiScanResults, googlePOIPoints, ontologyEntities, createMarkerEl]);
 
   const chipLayers = [
   { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
