@@ -1319,6 +1319,13 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   <div className="w-px h-3 bg-[hsl(190,60%,20%)] mx-1" />
                   <span className="text-[8px] font-mono text-muted-foreground tracking-[0.1em]">MULTI-INT FUSION</span>
                   <div className="flex items-center gap-1 ml-2"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[8px] font-mono text-success">LIVE</span></div>
+                  <div className="w-px h-3 bg-[hsl(190,60%,20%)] mx-1" />
+                  <button onClick={() => setShowKanban(true)} className="flex items-center gap-1 px-2 py-1 rounded text-[8px] font-mono font-bold border border-[#f97316]/40 text-[#f97316] hover:bg-[#f97316]/10 transition-colors">
+                    <Zap className="h-3 w-3" /> BOARD
+                  </button>
+                  <button onClick={() => setShowOptimizer(true)} className="flex items-center gap-1 px-2 py-1 rounded text-[8px] font-mono font-bold border border-primary/40 text-primary hover:bg-primary/10 transition-colors">
+                    <Sparkles className="h-3 w-3" /> AI OPTIMIZE
+                  </button>
                 </div>
               </div>
               <div className="absolute top-3 right-14 z-20 flex items-center gap-2">
