@@ -621,6 +621,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
             );
           })}
         </div>
+        )}
       </div>
 
       {/* AI Suggestions Banner */}
