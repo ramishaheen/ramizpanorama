@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
 import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
+import { TelemetryPanel } from "./TelemetryPanel";
 
 interface Inline3DViewProps {
   lat: number;
