@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, Bot, User, Loader2, Trash2, Shield, Copy, Check } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Send, Bot, User, Loader2, Trash2, Shield, Copy, Check, X, Maximize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
