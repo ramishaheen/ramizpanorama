@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
