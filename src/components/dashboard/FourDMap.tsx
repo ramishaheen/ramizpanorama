@@ -1356,7 +1356,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       <div className="flex flex-1 min-h-0">
         {/* LEFT PANEL — hidden on mobile by default, togglable */}
         {!cleanUI &&
-        <div className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-0 z-[10001]' : 'hidden'} md:relative md:flex w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex-col overflow-hidden min-h-0`}>
+        <div className={`${mobileSidebarOpen ? 'absolute inset-y-0 left-0 z-[10001]' : 'hidden'} md:relative md:flex w-56 flex-shrink-0 bg-[hsl(220,20%,7%)] border-r border-[hsl(190,60%,20%)] flex-col overflow-auto scrollbar-thin min-h-0`}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <div className="relative"><Radar className="h-4 w-4 text-primary" /><div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-success animate-pulse" /></div>
@@ -1561,7 +1561,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
 
         {/* RIGHT PANEL — Attributes + Feed */}
         {!cleanUI &&
-        <div className="hidden md:flex w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex-col min-h-0 pointer-events-auto" style={{ minWidth: 256 }}>
+        <div className="hidden md:flex w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex-col min-h-0 pointer-events-auto overflow-auto scrollbar-thin" style={{ minWidth: 256 }}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-primary" />
@@ -1573,7 +1573,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="max-h-48 min-h-0 overflow-y-auto scrollbar-thin flex-shrink-0">
+            <div className="max-h-48 min-h-0 overflow-auto scrollbar-thin flex-shrink-0">
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)] space-y-2.5">
               {[
               { label: "BLOOM", icon: <Sparkles className="h-3.5 w-3.5 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
@@ -1711,7 +1711,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto flex flex-col">
+            <div className="flex-1 min-h-0 overflow-auto scrollbar-thin flex flex-col">
               {c2RightTab === "FEED" &&
             <>
                   <div className="px-3 py-1 border-b border-[hsl(190,60%,10%)]">
