@@ -1755,6 +1755,12 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
               {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
             </div>
+
+            <div className="px-3 py-2 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)] flex-shrink-0">
+              <button onClick={onClose} className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded text-[9px] font-mono font-bold tracking-wider border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors">
+                <X className="h-3 w-3" /> BACK TO GLOBE
+              </button>
+            </div>
           </div>
         }
       </div>
