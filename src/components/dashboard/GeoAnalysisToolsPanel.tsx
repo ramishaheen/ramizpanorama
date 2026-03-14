@@ -109,6 +109,28 @@ const OVERLAY_LAYERS: MapLayerDef[] = [
   { id: "bicycling", label: "Cycling Paths", icon: Route, type: "overlay" },
 ];
 
+// ====== INTELLIGENCE OVERLAY DEFINITIONS ======
+interface IntelLayerDef {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  fetchFn: string; // DB table or edge function identifier
+}
+
+const INTEL_LAYERS: IntelLayerDef[] = [
+  { id: "geo-alerts", label: "Geo Alerts", icon: MapPinned, color: "#ef4444", fetchFn: "geo_alerts" },
+  { id: "intel-events", label: "Intel Events", icon: Activity, color: "#f97316", fetchFn: "intel_events" },
+  { id: "target-tracks", label: "Target Tracks", icon: Crosshair, color: "#ef4444", fetchFn: "target_tracks" },
+  { id: "force-units", label: "Force Units", icon: Shield, color: "#3b82f6", fetchFn: "force_units" },
+  { id: "sensor-coverage", label: "Sensor Coverage", icon: Radio, color: "#a855f7", fetchFn: "sensor_feeds" },
+  { id: "cameras-intel", label: "Cameras / CCTV", icon: Camera, color: "#06b6d4", fetchFn: "cameras" },
+  { id: "earthquakes", label: "Earthquakes", icon: Activity, color: "#eab308", fetchFn: "usgs-earthquakes" },
+  { id: "wildfires", label: "Wildfires / Thermal", icon: Activity, color: "#f97316", fetchFn: "nasa-wildfires" },
+  { id: "vessels", label: "AIS Vessels", icon: Layers, color: "#0ea5e9", fetchFn: "ais-vessels" },
+  { id: "conflict-events", label: "Conflict Events", icon: MapPinned, color: "#dc2626", fetchFn: "conflict-events" },
+];
+
 // ====== DATA SOURCES (simulated from sensor_feeds) ======
 interface DataSourceDef {
   id: string;
