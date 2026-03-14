@@ -1571,7 +1571,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+            <div className="max-h-48 min-h-0 overflow-y-auto scrollbar-thin flex-shrink-0">
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)] space-y-2.5">
               {[
               { label: "BLOOM", icon: <Sparkles className="h-3.5 w-3.5 text-[#eab308]" />, value: bloomEnabled, set: setBloomEnabled, color: "#eab308" },
