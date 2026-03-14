@@ -310,7 +310,7 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
         </div>
 
         {/* Column 3: Detail Panel */}
-        <div className="w-[320px] shrink-0 flex flex-col bg-card/30">
+        <div className="w-[320px] shrink-0 flex flex-col bg-card/30 overflow-auto scrollbar-thin">
           {selectedEntity ? (
             <>
               {/* Entity detail header */}
