@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe, Compass, MapPin, Maximize2, RotateCcw } from "lucide-react";
+import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
+import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
 
 interface Inline3DViewProps {
   lat: number;
@@ -20,6 +21,7 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
   const [zoom, setZoom] = useState(18);
   const [weatherEnabled, setWeatherEnabled] = useState(false);
   const [incidentsEnabled, setIncidentsEnabled] = useState(true);
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(true);
 
   // Fetch Google Maps API key
   useEffect(() => {
@@ -46,7 +48,6 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       return;
     }
 
-    // Load script if not loaded
     const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
     if (existingScript) {
       const checkInterval = setInterval(() => {
@@ -88,12 +89,10 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
     mapRef.current = map;
     setLoading(false);
 
-    // Track camera changes
     map.addListener("heading_changed", () => setHeading(Math.round(map.getHeading() || 0)));
     map.addListener("tilt_changed", () => setTilt(Math.round(map.getTilt() || 0)));
     map.addListener("zoom_changed", () => setZoom(Math.round(map.getZoom() || 18)));
 
-    // Add a marker at the target location
     new google.maps.Marker({
       position: { lat, lng },
       map,
@@ -112,8 +111,7 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
   const rotateView = () => {
     const map = mapRef.current;
     if (!map) return;
-    const currentHeading = map.getHeading() || 0;
-    map.setHeading(currentHeading + 90);
+    map.setHeading((map.getHeading() || 0) + 90);
   };
 
   const resetView = () => {
@@ -126,13 +124,13 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
   };
 
   return (
-    <div className="absolute inset-0 z-10 bg-black">
+    <div className="absolute inset-0 z-10 bg-background">
       {/* Map container */}
       <div ref={mapContainerRef} className="absolute inset-0" />
 
       {/* Loading state */}
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-20">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             <span className="text-[10px] font-mono text-primary uppercase tracking-wider">Loading 3D View...</span>
@@ -140,34 +138,48 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         </div>
       )}
 
-      {/* BACK TO GLOBE button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-2 rounded-lg bg-black/85 backdrop-blur-md border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
-      >
-        <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
-        <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
-      </button>
+      {/* Analysis Tools Panel */}
+      {toolsPanelOpen && (
+        <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
+      )}
+
+      {/* BACK TO GLOBE + Panel toggle */}
+      <div className={`absolute top-4 z-30 flex items-center gap-2 ${toolsPanelOpen ? "left-[268px]" : "left-4"} transition-all`}>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 px-3 py-2 rounded-sm bg-background/85 backdrop-blur-md border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
+        >
+          <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
+        </button>
+        <button
+          onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
+          className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
+          title={toolsPanelOpen ? "Hide tools" : "Show tools"}
+        >
+          {toolsPanelOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
+        </button>
+      </div>
 
       {/* Controls */}
       <div className="absolute top-4 right-14 z-20 flex items-center gap-1">
-        <button onClick={rotateView} className="w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Rotate 90°">
+        <button onClick={rotateView} className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Rotate 90°">
           <RotateCcw className="h-3.5 w-3.5" />
         </button>
-        <button onClick={resetView} className="w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Reset view">
+        <button onClick={resetView} className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Reset view">
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
-        <button onClick={() => setWeatherEnabled(!weatherEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-md backdrop-blur border transition-all ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-black/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather Radar">
+        <button onClick={() => setWeatherEnabled(!weatherEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-sm backdrop-blur border transition-all ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather Radar">
           <span className="text-[10px]">🌧</span>
         </button>
-        <button onClick={() => setIncidentsEnabled(!incidentsEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-md backdrop-blur border transition-all ${incidentsEnabled ? "bg-amber-500/20 border-amber-500/50 text-amber-400" : "bg-black/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Live Incidents">
+        <button onClick={() => setIncidentsEnabled(!incidentsEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-sm backdrop-blur border transition-all ${incidentsEnabled ? "bg-amber-500/20 border-amber-500/50 text-amber-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Live Incidents">
           <span className="text-[10px]">⚠️</span>
         </button>
       </div>
 
       {/* Coordinate HUD */}
       <div className="absolute bottom-4 right-4 z-20">
-        <div className="bg-black/85 backdrop-blur-md border border-primary/25 rounded-lg px-3 py-2" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+        <div className="bg-background/85 backdrop-blur-md border border-primary/25 rounded-sm px-3 py-2" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
           <div className="flex items-center gap-2 mb-1">
             <MapPin className="h-3 w-3 text-primary" />
             <span className="text-[9px] font-mono font-bold text-primary uppercase">3D Recon View</span>
@@ -189,12 +201,32 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
 
       {/* Mode indicator */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-black/80 backdrop-blur-md border border-primary/30">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-background/80 backdrop-blur-md border border-primary/30">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <Compass className="h-3 w-3 text-primary" />
           <span className="text-[9px] font-mono font-bold text-primary uppercase tracking-wider">Photorealistic 3D</span>
           <span className="text-[8px] font-mono text-muted-foreground">•</span>
           <span className="text-[8px] font-mono text-muted-foreground">{lat.toFixed(2)}°N {lng.toFixed(2)}°E</span>
+        </div>
+      </div>
+
+      {/* Bottom info bar */}
+      <div className={`absolute bottom-4 z-20 ${toolsPanelOpen ? "left-[268px]" : "left-4"} transition-all`}>
+        <div className="flex items-center gap-3 px-3 py-1.5 rounded-sm bg-background/80 backdrop-blur-md border border-border/30">
+          <div className="flex items-center gap-1.5 text-[8px] font-mono">
+            <span className="text-muted-foreground">BEARING</span>
+            <span className="text-foreground">{heading}°</span>
+          </div>
+          <div className="w-px h-3 bg-border/40" />
+          <div className="flex items-center gap-1.5 text-[8px] font-mono">
+            <span className="text-muted-foreground">MGRS</span>
+            <span className="text-foreground">{simpleMGRS(lat, lng)}</span>
+          </div>
+          <div className="w-px h-3 bg-border/40" />
+          <div className="flex items-center gap-1.5 text-[8px] font-mono">
+            <span className="text-muted-foreground">ALT</span>
+            <span className="text-foreground">~{Math.round(50 + Math.abs(lat * 3))}m</span>
+          </div>
         </div>
       </div>
 
@@ -204,3 +236,10 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
     </div>
   );
 };
+
+function simpleMGRS(lat: number, lng: number): string {
+  const zoneNum = Math.floor((lng + 180) / 6) + 1;
+  const letters = "CDEFGHJKLMNPQRSTUVWX";
+  const latBand = letters[Math.floor((lat + 80) / 8)] || "X";
+  return `${zoneNum}${latBand}`;
+}
