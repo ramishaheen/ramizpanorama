@@ -58,11 +58,38 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
 
 const cityNames = Object.keys(CITY_COORDS);
 
+// Country lookup for cities
+const CITY_COUNTRY: Record<string, string> = {
+  Baghdad: "Iraq", Tehran: "Iran", Beirut: "Lebanon", Damascus: "Syria",
+  Amman: "Jordan", Gaza: "Palestine", Jerusalem: "Israel", "Tel Aviv": "Israel",
+  Mosul: "Iraq", Aleppo: "Syria", Erbil: "Iraq", Riyadh: "Saudi Arabia",
+  Dubai: "UAE", "Abu Dhabi": "UAE", Doha: "Qatar", "Kuwait City": "Kuwait",
+  Muscat: "Oman", Manama: "Bahrain", Cairo: "Egypt", Algiers: "Algeria",
+  Tunis: "Tunisia", Rabat: "Morocco", Tripoli: "Libya", Sanaa: "Yemen",
+  Aden: "Yemen", Khartoum: "Sudan", Mogadishu: "Somalia", Djibouti: "Djibouti",
+};
+
 const geoTypes = ["DIPLOMATIC", "MILITARY", "ECONOMIC", "HUMANITARIAN"] as const;
 const severities = ["low", "medium", "high", "critical"] as const;
 const airspaceTypes = ["NOTAM", "TFR", "CLOSURE"] as const;
 const rocketTypes = ["Ballistic", "Cruise", "SRBM", "MRBM", "Drone"] as const;
 const rocketStatuses = ["launched", "in_flight"] as const;
+
+// Event types mapped to Kill Chain categories
+const EVENT_TYPES_BY_GEO: Record<string, string[]> = {
+  MILITARY: ["airstrike", "explosion", "missile_launch", "drone_incursion", "artillery_barrage"],
+  DIPLOMATIC: ["diplomatic_incident", "sanctions_update", "ceasefire_violation", "embassy_alert"],
+  ECONOMIC: ["naval_movement", "vessel_interdiction", "port_closure", "trade_disruption"],
+  HUMANITARIAN: ["mass_gathering", "protest", "refugee_flow", "humanitarian_crisis"],
+};
+
+const CYBER_SIGINT_NUCLEAR_TYPES = [
+  "cyber_intrusion", "network_breach", "gps_jamming", "sigint_intercept",
+  "nuclear_activity", "centrifuge_anomaly", "electronic_warfare",
+];
+
+const verificationStatuses = ["unverified", "pending", "confirmed"] as const;
+const eventSeverities = ["info", "low", "medium", "high", "critical"] as const;
 
 const titles: Record<string, string[]> = {
   MILITARY: [
