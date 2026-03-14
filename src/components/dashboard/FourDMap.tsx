@@ -1564,7 +1564,10 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-primary" />
                 <span className="text-[11px] font-bold tracking-[0.2em] text-primary uppercase">ATTRIBUTES</span>
-                <div className="ml-auto flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[7px] font-mono text-success">ACTIVE</span></div>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <button onClick={() => setCleanUI(true)} className="px-1.5 py-0.5 rounded text-[7px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors">HIDE</button>
+                  <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[7px] font-mono text-success">ACTIVE</span>
+                </div>
               </div>
             </div>
 
@@ -1689,9 +1692,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="px-3 py-1.5 border-b border-[hsl(190,60%,12%)]">
-              <button onClick={() => setCleanUI(true)} className="w-full px-2 py-1.5 rounded text-[9px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors text-center">CLEAN UI</button>
-            </div>
             </div>
 
             <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)] flex-shrink-0">
@@ -1754,6 +1754,12 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
               {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
               {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
+            </div>
+
+            <div className="px-3 py-2 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)] flex-shrink-0">
+              <button onClick={onClose} className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded text-[9px] font-mono font-bold tracking-wider border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors">
+                <X className="h-3 w-3" /> BACK TO GLOBE
+              </button>
             </div>
           </div>
         }
