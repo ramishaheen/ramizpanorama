@@ -54,6 +54,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
   const [selectedEntity, setSelectedEntity] = useState<OntologyEntity | null>(null);
   const [correlating, setCorrelating] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [showManager, setShowManager] = useState(false);
 
   const entityTypes = ["equipment", "facility", "unit", "person", "vehicle", "infrastructure", "weapon_system"];
   const filtered = filterType ? entities.filter(e => e.entity_type === filterType) : entities;
