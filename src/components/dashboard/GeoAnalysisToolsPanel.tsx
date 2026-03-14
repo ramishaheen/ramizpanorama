@@ -1048,7 +1048,7 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
               {dataSources.length === 0 && (
                 <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">
                   <Wifi className="h-5 w-5 mx-auto mb-2 opacity-30" />
-                  Loading feeds...
+                  No feeds connected
                 </div>
               )}
               {dataSources.map(src => {
