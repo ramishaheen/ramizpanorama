@@ -206,8 +206,9 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         <button onClick={resetView} className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Reset view">
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
-        <button onClick={() => setWeatherEnabled(!weatherEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-sm backdrop-blur border transition-all ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather Radar">
-          <span className="text-[10px]">🌧</span>
+        <button onClick={() => { setWeatherEnabled(!weatherEnabled); if (!toolsPanelOpen && !weatherEnabled) setToolsPanelOpen(true); }} className={`h-8 flex items-center gap-1.5 px-2.5 rounded-sm backdrop-blur border transition-all text-[9px] font-mono font-bold uppercase tracking-wider ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather & Conditions">
+          <Cloud className="h-3.5 w-3.5" />
+          <span>Weather</span>
         </button>
         <button onClick={() => setIncidentsEnabled(!incidentsEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-sm backdrop-blur border transition-all ${incidentsEnabled ? "bg-amber-500/20 border-amber-500/50 text-amber-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Live Incidents">
           <span className="text-[10px]">⚠️</span>
