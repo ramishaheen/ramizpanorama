@@ -1512,10 +1512,14 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                           <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
                           <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
                         </button>
-                        <div className="px-2 pb-1">
+                        <div className="px-2 pb-1 flex items-center gap-1">
                           <button onClick={() => handleSlewSensor(ev.lat, ev.lng)}
                             className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#06b6d4]/30 text-[#06b6d4] hover:bg-[#06b6d4]/10 transition-colors">
                             📡 SLEW
+                          </button>
+                          <button onClick={() => { setC2RightTab("KILLCHAIN"); }}
+                            className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/30 text-[#f97316] hover:bg-[#f97316]/10 transition-colors">
+                            ⚡ CHAIN
                           </button>
                         </div>
                       </div>
