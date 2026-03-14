@@ -1,36 +1,25 @@
 import { useState } from "react";
-import { Network, RefreshCw, Filter, MapPin, Zap, ArrowRight, Download, Database, Maximize2 } from "lucide-react";
+import { Network, RefreshCw, Filter, MapPin, Zap, ArrowRight, Download, Database, Maximize2, Brain, Loader2 } from "lucide-react";
 import { useOntology, type OntologyEntity, type OntologyRelationship } from "@/hooks/useOntology";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OntologyManagerModal } from "./OntologyManagerModal";
 
 const ENTITY_ICONS: Record<string, string> = {
-  equipment: "🪖",
-  facility: "🏛",
-  unit: "⚔️",
-  person: "👤",
-  vehicle: "🚛",
-  infrastructure: "🏗",
-  weapon_system: "🎯",
+  equipment: "🪖", facility: "🏛", unit: "⚔️", person: "👤",
+  vehicle: "🚛", infrastructure: "🏗", weapon_system: "🎯",
 };
 
 const AFFILIATION_COLORS: Record<string, string> = {
-  blue: "#3b82f6",
-  red: "#ef4444",
-  neutral: "#eab308",
-  unknown: "#6b7280",
+  blue: "#3b82f6", red: "#ef4444", neutral: "#eab308", unknown: "#6b7280",
 };
 
 const REL_LABELS: Record<string, string> = {
-  occupies: "OCCUPIES",
-  commands: "COMMANDS",
-  observes: "OBSERVES",
-  targets: "TARGETS",
-  transports: "TRANSPORTS",
-  supplies: "SUPPLIES",
-  defends: "DEFENDS",
-  attacks: "ATTACKS",
+  occupies: "OCCUPIES", commands: "COMMANDS", observes: "OBSERVES",
+  targets: "TARGETS", transports: "TRANSPORTS", supplies: "SUPPLIES",
+  defends: "DEFENDS", attacks: "ATTACKS",
+  impacts: "IMPACTS", caused_by: "CAUSED BY", assessed_by: "ASSESSED BY",
+  observed_at: "OBSERVED AT", threatens: "THREATENS", defends_against: "DEFENDS AGAINST",
 };
 
 const SEED_DETECTIONS = [
@@ -49,33 +38,28 @@ interface OntologyPanelProps {
 }
 
 export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
-  const { entities, relationships, loading, fetchEntities, runCorrelation } = useOntology();
+  const { entities, relationships, loading, fetchEntities, runAIFusion, fusing } = useOntology();
   const [filterType, setFilterType] = useState<string | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<OntologyEntity | null>(null);
-  const [correlating, setCorrelating] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [showManager, setShowManager] = useState(false);
 
   const entityTypes = ["equipment", "facility", "unit", "person", "vehicle", "infrastructure", "weapon_system"];
   const filtered = filterType ? entities.filter(e => e.entity_type === filterType) : entities;
 
-  const handleCorrelate = async () => {
-    setCorrelating(true);
-    await runCorrelation();
-    await fetchEntities();
-    setCorrelating(false);
-    toast.success("Correlation complete");
+  const handleFusion = async () => {
+    const result = await runAIFusion();
+    if (result) {
+      await fetchEntities();
+      toast.success(`🧠 AI Fusion: ${result.discovered_entities} entities, ${result.discovered_relations} relations`);
+    }
   };
 
   const handleSeed = async () => {
     setSeeding(true);
     try {
       const { data, error } = await supabase.functions.invoke("sensor-ingest", {
-        body: {
-          action: "ingest",
-          feed_id: null,
-          detections: SEED_DETECTIONS,
-        },
+        body: { action: "ingest", feed_id: null, detections: SEED_DETECTIONS },
       });
       if (error) throw error;
       toast.success(`🌐 Seeded ${data?.count || SEED_DETECTIONS.length} ontology entities`);
@@ -104,9 +88,9 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
             <button onClick={() => setShowManager(true)} className="p-1 rounded hover:bg-primary/10 transition-colors" title="Open Ontology Manager">
               <Maximize2 className="h-3 w-3 text-primary" />
             </button>
-            <button onClick={handleCorrelate} disabled={correlating} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="AI Correlate">
-              <Zap className={`h-2.5 w-2.5 ${correlating ? "animate-pulse" : ""}`} />
-              CORRELATE
+            <button onClick={handleFusion} disabled={fusing} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="AI Fusion">
+              {fusing ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Brain className="h-2.5 w-2.5" />}
+              FUSE
             </button>
             <button onClick={() => fetchEntities(filterType || undefined)} className="p-1 rounded hover:bg-primary/10 transition-colors">
               <RefreshCw className={`h-3 w-3 text-primary ${loading ? "animate-spin" : ""}`} />
@@ -141,7 +125,10 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
             <div className="flex items-center gap-2">
               <span className="text-lg">{ENTITY_ICONS[selectedEntity.entity_type]}</span>
               <div>
-                <div className="text-[11px] font-mono font-bold text-foreground">{selectedEntity.name}</div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] font-mono font-bold text-foreground">{selectedEntity.name}</span>
+                  {selectedEntity.attributes?.ai_discovered && <Brain className="h-3 w-3 text-primary" />}
+                </div>
                 <div className="text-[8px] font-mono text-muted-foreground">{selectedEntity.designation || selectedEntity.entity_type.toUpperCase()}</div>
               </div>
             </div>
@@ -186,12 +173,19 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
                   const isSource = r.source_entity_id === selectedEntity.id;
                   const linkedId = isSource ? r.target_entity_id : r.source_entity_id;
                   const linkedEnt = entities.find(e => e.id === linkedId);
+                  const hasAIReason = r.metadata?.ai_reason;
                   return (
-                    <div key={r.id} className="flex items-center gap-1 px-1.5 py-1 bg-[hsl(220,18%,8%)] rounded border border-[hsl(220,15%,12%)]">
-                      <ArrowRight className="h-2.5 w-2.5 text-primary" />
-                      <span className="text-[8px] font-mono text-primary">{REL_LABELS[r.relationship_type] || r.relationship_type}</span>
-                      <span className="text-[8px] font-mono text-foreground">{linkedEnt?.name || linkedId.slice(0, 8)}</span>
-                      <span className="ml-auto text-[7px] font-mono text-muted-foreground">{(r.confidence * 100).toFixed(0)}%</span>
+                    <div key={r.id} className="px-1.5 py-1 bg-[hsl(220,18%,8%)] rounded border border-[hsl(220,15%,12%)] space-y-0.5">
+                      <div className="flex items-center gap-1">
+                        <ArrowRight className="h-2.5 w-2.5 text-primary" />
+                        <span className="text-[8px] font-mono text-primary">{REL_LABELS[r.relationship_type] || r.relationship_type}</span>
+                        {hasAIReason && <Brain className="h-2 w-2 text-primary" />}
+                        <span className="text-[8px] font-mono text-foreground">{linkedEnt?.name || linkedId.slice(0, 8)}</span>
+                        <span className="ml-auto text-[7px] font-mono text-muted-foreground">{(r.confidence * 100).toFixed(0)}%</span>
+                      </div>
+                      {hasAIReason && (
+                        <div className="text-[7px] font-mono text-primary/70 pl-4 italic">{r.metadata.ai_reason}</div>
+                      )}
                     </div>
                   );
                 })}
@@ -217,6 +211,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px]">{ENTITY_ICONS[ent.entity_type]}</span>
                   <span className="text-[9px] font-mono text-foreground truncate flex-1">{ent.name}</span>
+                  {ent.attributes?.ai_discovered && <Brain className="h-2.5 w-2.5 text-primary shrink-0" />}
                   <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: AFFILIATION_COLORS[ent.affiliation] }} />
                   <span className="text-[7px] font-mono text-muted-foreground">{(ent.confidence * 100).toFixed(0)}%</span>
                 </div>

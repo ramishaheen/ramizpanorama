@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.gimbal-control]
 verify_jwt = false
+
+[functions.ontology-ai-fuse]
+verify_jwt = false

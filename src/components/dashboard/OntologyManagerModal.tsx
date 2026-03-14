@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import {
   Network, X, Search, Filter, Zap, RefreshCw, ArrowRight, ArrowLeftRight,
   Database, MapPin, ChevronRight, Plus, RotateCcw, Clock, Shield,
-  Eye, Link2, Unlink, AlertTriangle, CheckCircle, Loader2
+  Eye, Link2, Unlink, AlertTriangle, CheckCircle, Loader2, Brain,
+  Activity, Crosshair, Users, FileWarning, Layers
 } from "lucide-react";
 import { useOntology, type OntologyEntity, type OntologyRelationship } from "@/hooks/useOntology";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,13 +23,29 @@ const REL_TYPE_COLORS: Record<string, string> = {
   occupies: "#22c55e", commands: "#3b82f6", observes: "#eab308",
   targets: "#ef4444", transports: "#8b5cf6", supplies: "#f97316",
   defends: "#06b6d4", attacks: "#dc2626",
+  impacts: "#f43f5e", caused_by: "#a855f7", assessed_by: "#14b8a6",
+  observed_at: "#84cc16", threatens: "#ff6b6b", defends_against: "#22d3ee",
 };
 
 const REL_LABELS: Record<string, string> = {
   occupies: "OCCUPIES", commands: "COMMANDS", observes: "OBSERVES",
   targets: "TARGETS", transports: "TRANSPORTS", supplies: "SUPPLIES",
   defends: "DEFENDS", attacks: "ATTACKS",
+  impacts: "IMPACTS", caused_by: "CAUSED BY", assessed_by: "ASSESSED BY",
+  observed_at: "OBSERVED AT", threatens: "THREATENS", defends_against: "DEFENDS AGAINST",
 };
+
+const FUSION_STAGES = [
+  "Scanning ontology_entities...",
+  "Scanning intel_events...",
+  "Scanning geo_alerts...",
+  "Scanning target_tracks...",
+  "Scanning force_units...",
+  "Scanning action_logs...",
+  "Running AI correlation engine...",
+  "Inserting discovered entities...",
+  "Mapping cross-layer relationships...",
+];
 
 const SEED_DETECTIONS = [
   { name: "T-72B3 Platoon", entity_type: "equipment", affiliation: "red", lat: 33.312, lng: 44.366, confidence: 0.82, designation: "RU-ARM-4", description: "Armored platoon observed near checkpoint", attributes: { count: 4, camouflage: "partial" } },
@@ -47,20 +64,29 @@ interface OntologyManagerModalProps {
 }
 
 export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModalProps) => {
-  const { entities, relationships, loading, fetchEntities, fetchRelationships, runCorrelation } = useOntology();
+  const { entities, relationships, loading, fetchEntities, fetchRelationships, runCorrelation, runAIFusion, fusing, fusionResult } = useOntology();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<OntologyEntity | null>(null);
   const [selectedRelationship, setSelectedRelationship] = useState<OntologyRelationship | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [correlating, setCorrelating] = useState(false);
   const [seeding, setSeeding] = useState(false);
-  const [discovering, setDiscovering] = useState(false);
+  const [fusionStage, setFusionStage] = useState(0);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  // Animate fusion stages
+  useEffect(() => {
+    if (!fusing) { setFusionStage(0); return; }
+    const interval = setInterval(() => {
+      setFusionStage(prev => (prev + 1) % FUSION_STAGES.length);
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [fusing]);
 
   const entityTypes = useMemo(() => {
     const types = ["equipment", "facility", "unit", "person", "vehicle", "infrastructure", "weapon_system"];
@@ -112,21 +138,19 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
     }
   };
 
-  const handleDiscoverRelations = async () => {
-    setDiscovering(true);
-    try {
-      // Run correlation to discover relationships from available data
-      const result = await runCorrelation();
+  const handleAIFusion = async () => {
+    const result = await runAIFusion();
+    if (result) {
       await fetchEntities();
       await fetchRelationships();
-      const newCount = result?.new_relationships || 0;
-      toast.success(`🧠 Discovered ${newCount} new relationships from available intel`, { duration: 5000 });
-    } catch {
-      toast.error("Relation discovery failed");
-    } finally {
-      setDiscovering(false);
+      toast.success(`🧠 AI Fusion: ${result.discovered_entities} entities, ${result.discovered_relations} relations discovered`, { duration: 6000 });
     }
   };
+
+  // Count AI-discovered relationships (those with ai_reason in metadata)
+  const aiRelationships = useMemo(() => {
+    return relationships.filter(r => r.metadata?.ai_reason || r.metadata?.source === "ai_fusion");
+  }, [relationships]);
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex flex-col bg-background">
@@ -138,17 +162,23 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
           <span className="text-[9px] font-mono text-muted-foreground px-2 py-0.5 rounded bg-muted/30 border border-border">
             {entities.length} entities · {relationships.length} relations
           </span>
+          {aiRelationships.length > 0 && (
+            <span className="text-[9px] font-mono text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/30">
+              <Brain className="h-2.5 w-2.5 inline mr-1" />{aiRelationships.length} AI-fused
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleDiscoverRelations} disabled={discovering || entities.length === 0}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-mono font-bold border border-primary/40 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
-            {discovering ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />}
-            DISCOVER RELATIONS
+          {/* AI FUSION button */}
+          <button onClick={handleAIFusion} disabled={fusing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[9px] font-mono font-bold bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 transition-colors disabled:opacity-50 animate-pulse-subtle">
+            {fusing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+            AI FUSION
           </button>
           <button onClick={handleCorrelate} disabled={correlating}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-mono font-bold border border-accent/40 text-accent-foreground hover:bg-accent/10 transition-colors disabled:opacity-50">
             {correlating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-            AI CORRELATE
+            CORRELATE
           </button>
           <button onClick={() => { fetchEntities(); fetchRelationships(); }}
             className="p-1.5 rounded hover:bg-accent/10 transition-colors">
@@ -160,9 +190,22 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
         </div>
       </div>
 
+      {/* Fusion progress bar */}
+      {fusing && (
+        <div className="shrink-0 px-4 py-2 border-b border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+            <span className="text-[9px] font-mono text-primary font-bold">{FUSION_STAGES[fusionStage]}</span>
+          </div>
+          <div className="mt-1 h-1 bg-background/50 rounded-full overflow-hidden">
+            <div className="h-full bg-primary/60 rounded-full transition-all duration-1000" style={{ width: `${((fusionStage + 1) / FUSION_STAGES.length) * 100}%` }} />
+          </div>
+        </div>
+      )}
+
       {/* 3-Column Layout */}
       <div className="flex-1 flex min-h-0">
-        {/* Column 1: Entity Types / Properties List */}
+        {/* Column 1: Entity Types / Relationship Types / Cross-Layer Sources */}
         <div className="w-[240px] shrink-0 flex flex-col border-r border-border bg-card/50 overflow-auto scrollbar-thin">
           <div className="shrink-0 px-3 py-2 border-b border-border">
             <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1.5">ENTITY TYPES</div>
@@ -219,6 +262,35 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
               );
             })}
 
+            {/* Cross-Layer Sources Section */}
+            <div className="px-3 py-2 border-t border-border mt-1">
+              <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1.5">
+                <Layers className="h-2.5 w-2.5 inline mr-1" />CROSS-LAYER SOURCES
+              </div>
+            </div>
+            {fusionResult?.sourceCounts ? (
+              Object.entries(fusionResult.sourceCounts).map(([table, count]) => {
+                const icons: Record<string, typeof Activity> = {
+                  ontology_entities: Database, intel_events: Activity, geo_alerts: AlertTriangle,
+                  target_tracks: Crosshair, force_units: Users, action_logs: FileWarning,
+                };
+                const Icon = icons[table] || Database;
+                return (
+                  <div key={table} className="px-3 py-1.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-2.5 w-2.5 text-primary/60" />
+                      <span className="text-[8px] font-mono text-muted-foreground">{table.replace("_", " ")}</span>
+                    </div>
+                    <span className={`text-[8px] font-mono ${count > 0 ? "text-primary" : "text-muted-foreground/40"}`}>{count}</span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-3 py-2 text-[8px] font-mono text-muted-foreground/50 text-center">
+                Run AI FUSION to scan layers
+              </div>
+            )}
+
             {entities.length === 0 && !loading && (
               <div className="px-3 py-6 text-center space-y-2">
                 <div className="text-[9px] font-mono text-muted-foreground">No entities in ontology</div>
@@ -232,9 +304,8 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
           </div>
         </div>
 
-        {/* Column 2: Entity List + Properties */}
+        {/* Column 2: Entity List */}
         <div className="flex-1 flex flex-col min-w-0 border-r border-border">
-          {/* Entity type header */}
           <div className="shrink-0 px-4 py-2.5 border-b border-border bg-card/30 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {selectedType && <span className="text-lg">{ENTITY_ICONS[selectedType]}</span>}
@@ -251,15 +322,9 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                 <Plus className="h-2.5 w-2.5" />
                 SEED
               </button>
-              <button onClick={handleCorrelate} disabled={correlating}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[8px] font-mono border border-border text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors disabled:opacity-50">
-                <RotateCcw className={`h-2.5 w-2.5 ${correlating ? "animate-spin" : ""}`} />
-                RESET
-              </button>
             </div>
           </div>
 
-          {/* Properties / entity list */}
           <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
             {filteredEntities.length === 0 && !loading && (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
@@ -271,6 +336,7 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
             {filteredEntities.map(ent => {
               const isSelected = selectedEntity?.id === ent.id;
               const relCount = relationships.filter(r => r.source_entity_id === ent.id || r.target_entity_id === ent.id).length;
+              const isAIDiscovered = ent.attributes?.ai_discovered;
               return (
                 <button
                   key={ent.id}
@@ -282,7 +348,10 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                     <span className="text-sm">{ENTITY_ICONS[ent.entity_type]}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] font-mono font-bold text-foreground truncate">{ent.name}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-mono font-bold text-foreground truncate">{ent.name}</span>
+                      {isAIDiscovered && <Brain className="h-2.5 w-2.5 text-primary shrink-0" />}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[8px] font-mono text-muted-foreground">{ent.designation || ent.entity_type}</span>
                       <span className="text-[7px] font-mono text-muted-foreground/60">{ent.lat.toFixed(2)}°, {ent.lng.toFixed(2)}°</span>
@@ -318,12 +387,13 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">{ENTITY_ICONS[selectedEntity.entity_type]}</span>
                   <div>
-                    <div className="text-[12px] font-mono font-bold text-foreground">{selectedEntity.name}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[12px] font-mono font-bold text-foreground">{selectedEntity.name}</span>
+                      {selectedEntity.attributes?.ai_discovered && <Brain className="h-3 w-3 text-primary" />}
+                    </div>
                     <div className="text-[9px] font-mono text-muted-foreground">{selectedEntity.designation || selectedEntity.entity_type.toUpperCase()}</div>
                   </div>
                 </div>
-
-                {/* Quick actions */}
                 <div className="flex items-center gap-1.5">
                   {onLocate && (
                     <button onClick={() => { onLocate(selectedEntity.lat, selectedEntity.lng); onClose(); }}
@@ -339,7 +409,6 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
 
               {/* Properties */}
               <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 py-3 space-y-3">
-                {/* Core fields */}
                 <div>
                   <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1.5">PROPERTIES</div>
                   <div className="space-y-1">
@@ -352,20 +421,15 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                       { id: "lng", label: "Longitude", value: `${selectedEntity.lng.toFixed(5)}°`, icon: "🌐" },
                       { id: "last_known", label: "Last Known", value: new Date(selectedEntity.last_known_at).toISOString().slice(0, 16).replace("T", " "), icon: "🕐" },
                     ].map(prop => (
-                      <button
-                        key={prop.id}
-                        onClick={() => setSelectedRelationship(null)}
-                        className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded bg-background/50 border border-border/50 hover:border-primary/30 transition-colors"
-                      >
+                      <div key={prop.id} className="w-full flex items-center gap-2 px-2 py-1.5 rounded bg-background/50 border border-border/50">
                         <span className="text-[9px]">{prop.icon}</span>
                         <span className="text-[9px] font-mono text-muted-foreground flex-1">{prop.label}</span>
                         <span className="text-[9px] font-mono font-bold text-foreground" style={{ color: prop.color }}>{prop.value}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Description */}
                 {selectedEntity.description && (
                   <div>
                     <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1">DESCRIPTION</div>
@@ -375,7 +439,6 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                   </div>
                 )}
 
-                {/* Custom attributes */}
                 {Object.keys(selectedEntity.attributes).length > 0 && (
                   <div>
                     <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1">ATTRIBUTES</div>
@@ -396,9 +459,9 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                     <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground">
                       RELATIONSHIPS ({entityRelationships.length})
                     </div>
-                    <button onClick={handleDiscoverRelations} disabled={discovering}
+                    <button onClick={handleAIFusion} disabled={fusing}
                       className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
-                      {discovering ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Zap className="h-2.5 w-2.5" />}
+                      {fusing ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Brain className="h-2.5 w-2.5" />}
                       DISCOVER
                     </button>
                   </div>
@@ -416,6 +479,7 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                         const linkedEnt = getEntityById(linkedId);
                         const relColor = REL_TYPE_COLORS[rel.relationship_type] || "#6b7280";
                         const isRelSelected = selectedRelationship?.id === rel.id;
+                        const hasAIReason = rel.metadata?.ai_reason;
                         return (
                           <button
                             key={rel.id}
@@ -427,6 +491,7 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                               <span className="text-[8px] font-mono font-bold" style={{ color: relColor }}>
                                 {isSource ? "" : "← "}{REL_LABELS[rel.relationship_type] || rel.relationship_type.toUpperCase()}{isSource ? " →" : ""}
                               </span>
+                              {hasAIReason && <Brain className="h-2 w-2 text-primary" />}
                               <span className="ml-auto text-[7px] font-mono text-muted-foreground">{(rel.confidence * 100).toFixed(0)}%</span>
                             </div>
                             <div className="flex items-center gap-1.5 pl-4">
@@ -441,6 +506,11 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                             </div>
                             {isRelSelected && (
                               <div className="mt-1.5 pt-1.5 border-t border-border/30 space-y-0.5 pl-4">
+                                {hasAIReason && (
+                                  <div className="text-[7px] font-mono text-primary bg-primary/5 rounded p-1.5 border border-primary/20 mb-1">
+                                    <Brain className="h-2 w-2 inline mr-1" />AI: {rel.metadata.ai_reason}
+                                  </div>
+                                )}
                                 <div className="flex justify-between text-[7px] font-mono">
                                   <span className="text-muted-foreground">Valid From</span>
                                   <span className="text-foreground">{new Date(rel.valid_from).toISOString().slice(0, 16).replace("T", " ")}</span>
@@ -451,7 +521,7 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                                     <span className="text-foreground">{new Date(rel.valid_to).toISOString().slice(0, 16).replace("T", " ")}</span>
                                   </div>
                                 )}
-                                {Object.keys(rel.metadata || {}).length > 0 && Object.entries(rel.metadata).map(([k, v]) => (
+                                {Object.entries(rel.metadata || {}).filter(([k]) => k !== "ai_reason" && k !== "source").map(([k, v]) => (
                                   <div key={k} className="flex justify-between text-[7px] font-mono">
                                     <span className="text-muted-foreground">{k}</span>
                                     <span className="text-foreground">{String(v)}</span>
@@ -472,7 +542,18 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                   )}
                 </div>
 
-                {/* Sensor source */}
+                {/* AI Analysis Panel */}
+                {fusionResult?.analysis_summary && (
+                  <div>
+                    <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1">
+                      <Brain className="h-2.5 w-2.5 inline mr-1" />AI ANALYSIS
+                    </div>
+                    <div className="text-[8px] font-mono text-foreground/80 bg-primary/5 rounded p-2.5 border border-primary/20 leading-relaxed">
+                      {fusionResult.analysis_summary}
+                    </div>
+                  </div>
+                )}
+
                 {selectedEntity.source_sensor_id && (
                   <div>
                     <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1">SOURCE</div>
@@ -482,7 +563,6 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
                   </div>
                 )}
 
-                {/* RID */}
                 <div>
                   <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1">RID</div>
                   <div className="text-[8px] font-mono text-muted-foreground/70 bg-background/50 rounded p-2 border border-border/50 break-all">
@@ -498,11 +578,11 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
               <div className="text-[9px] font-mono text-muted-foreground/60 max-w-[200px]">
                 Choose an entity from the list to view its properties, attributes, and established relationships.
               </div>
-              {entities.length > 0 && relationships.length === 0 && (
-                <button onClick={handleDiscoverRelations} disabled={discovering}
+              {entities.length > 0 && (
+                <button onClick={handleAIFusion} disabled={fusing}
                   className="mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded text-[9px] font-mono font-bold border border-primary/40 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50">
-                  {discovering ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                  DISCOVER ALL RELATIONS
+                  {fusing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+                  RUN AI FUSION
                 </button>
               )}
             </div>
