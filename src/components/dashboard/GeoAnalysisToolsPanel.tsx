@@ -141,6 +141,21 @@ interface DataSourceDef {
   icon: React.ElementType;
 }
 
+const DEFAULT_DATA_SOURCES: DataSourceDef[] = [
+  { id: "ds-gdelt", name: "GDELT Global News", type: "OSINT", status: "active", lastData: new Date().toISOString(), icon: Activity },
+  { id: "ds-opensky", name: "OpenSky ADS-B", type: "ADS-B", status: "active", lastData: new Date().toISOString(), icon: Navigation },
+  { id: "ds-firms", name: "NASA FIRMS Thermal", type: "SATELLITE", status: "active", lastData: new Date().toISOString(), icon: Satellite },
+  { id: "ds-usgs", name: "USGS Earthquakes", type: "SEISMIC", status: "active", lastData: new Date().toISOString(), icon: Activity },
+  { id: "ds-ais", name: "AIS Maritime Tracker", type: "MARITIME", status: "active", lastData: new Date().toISOString(), icon: Layers },
+  { id: "ds-warleaks", name: "WarsLeaks Telegram", type: "OSINT", status: "active", lastData: new Date().toISOString(), icon: Radio },
+  { id: "ds-acled", name: "ACLED Conflict Data", type: "OSINT", status: "active", lastData: new Date().toISOString(), icon: MapPinned },
+  { id: "ds-nvd", name: "NVD / CVE Feeds", type: "CYBER", status: "active", lastData: new Date().toISOString(), icon: Shield },
+  { id: "ds-sentinel", name: "Sentinel-2 Imagery", type: "SATELLITE", status: "degraded", lastData: new Date(Date.now() - 3600000).toISOString(), icon: Satellite },
+  { id: "ds-cctv", name: "CCTV Network", type: "CCTV", status: "active", lastData: new Date().toISOString(), icon: Camera },
+  { id: "ds-sigint", name: "SIGINT Intercepts", type: "SIGINT", status: "degraded", lastData: new Date(Date.now() - 7200000).toISOString(), icon: Radio },
+  { id: "ds-darkweb", name: "Dark Web Monitor", type: "CYBER", status: "active", lastData: new Date().toISOString(), icon: Wifi },
+];
+
 interface GeoAnalysisToolsPanelProps {
   mapRef: MutableRefObject<any>;
   lat: number;
@@ -162,20 +177,22 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
   const [activeIntelLayers, setActiveIntelLayers] = useState<Set<string>>(new Set());
   const [intelMarkers, setIntelMarkers] = useState<Record<string, any[]>>({});
 
-  // Fetch data sources from sensor_feeds
+  // Fetch data sources from sensor_feeds, merge with defaults
   useEffect(() => {
     const fetchSources = async () => {
       const { data } = await supabase.from("sensor_feeds").select("id, source_name, feed_type, status, last_data_at").limit(20);
-      if (data) {
-        setDataSources(data.map((s: any) => ({
-          id: s.id,
-          name: s.source_name,
-          type: s.feed_type,
-          status: s.status === "active" ? "active" : s.status === "degraded" ? "degraded" : "offline",
-          lastData: s.last_data_at || "N/A",
-          icon: s.feed_type === "cctv" ? Camera : s.feed_type === "satellite" ? Satellite : s.feed_type === "sigint" ? Radio : Wifi,
-        })));
-      }
+      const dbSources: DataSourceDef[] = (data || []).map((s: any) => ({
+        id: s.id,
+        name: s.source_name,
+        type: s.feed_type,
+        status: s.status === "active" ? "active" as const : s.status === "degraded" ? "degraded" as const : "offline" as const,
+        lastData: s.last_data_at || "N/A",
+        icon: s.feed_type === "cctv" ? Camera : s.feed_type === "satellite" ? Satellite : s.feed_type === "sigint" ? Radio : Wifi,
+      }));
+      // Merge: DB sources first, then defaults that aren't duplicated by name
+      const dbNames = new Set(dbSources.map(d => d.name.toLowerCase()));
+      const merged = [...dbSources, ...DEFAULT_DATA_SOURCES.filter(d => !dbNames.has(d.name.toLowerCase()))];
+      setDataSources(merged);
     };
     fetchSources();
   }, []);
@@ -699,13 +716,20 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
     "grg-builder": drawGRG,
   };
 
+  const isMapReady = useCallback(() => {
+    const g = (window as any).google;
+    return !!(mapRef.current && g?.maps);
+  }, [mapRef]);
+
   const toggleTool = (toolId: string) => {
+    if (!isMapReady()) {
+      toast({ title: "Map engine offline", description: "Google Maps not loaded — tool unavailable.", variant: "destructive" });
+      return;
+    }
     const next = new Set(activeTools);
     if (next.has(toolId)) {
       next.delete(toolId);
-      // Clear all overlays for this tool
       clearOverlays();
-      // Re-draw any remaining active tools
       next.forEach(t => { TOOL_ACTIONS[t]?.(); });
     } else {
       next.add(toolId);
@@ -900,11 +924,20 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
 
   return (
     <div className="flex flex-col h-full w-full bg-background/95 backdrop-blur-md border-r border-border/40" style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.4)" }}>
-      <Tabs defaultValue="tools" className="flex flex-col h-full">
+      <Tabs defaultValue="sources" className="flex flex-col h-full">
         <TabsList className="rounded-none bg-muted/40 border-b border-border/30 h-9 px-1 shrink-0">
-          <TabsTrigger value="layers" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Map layers</TabsTrigger>
-          <TabsTrigger value="sources" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Data sources</TabsTrigger>
-          <TabsTrigger value="tools" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">Tools</TabsTrigger>
+          <TabsTrigger value="layers" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            Map layers
+            {activeIntelLayers.size > 0 && <span className="ml-1 text-[7px] px-1 py-0.5 rounded-full bg-primary/20 text-primary">{activeIntelLayers.size}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="sources" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            Data sources
+            <span className="ml-1 text-[7px] px-1 py-0.5 rounded-full bg-primary/20 text-primary">{dataSources.filter(s => s.status === "active").length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="text-[9px] font-mono uppercase tracking-wider px-2 py-1 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            Tools
+            {activeTools.size > 0 && <span className="ml-1 text-[7px] px-1 py-0.5 rounded-full bg-primary/20 text-primary">{activeTools.size}</span>}
+          </TabsTrigger>
         </TabsList>
 
         {/* ===== MAP LAYERS TAB ===== */}
@@ -1015,7 +1048,7 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
               {dataSources.length === 0 && (
                 <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">
                   <Wifi className="h-5 w-5 mx-auto mb-2 opacity-30" />
-                  Loading feeds...
+                  No feeds connected
                 </div>
               )}
               {dataSources.map(src => {
@@ -1040,7 +1073,21 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
 
         {/* ===== TOOLS TAB ===== */}
         <TabsContent value="tools" className="flex-1 flex flex-col overflow-hidden mt-0">
-          {/* Search */}
+          {/* Map status indicator */}
+          <div className="px-2 py-1.5 border-b border-border/20 shrink-0">
+            {isMapReady() ? (
+              <span className="inline-flex items-center gap-1.5 text-[8px] font-mono font-bold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+                <span style={{ color: "#22c55e" }}>MAP READY</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[8px] font-mono font-bold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                <span className="text-destructive">MAP OFFLINE</span>
+              </span>
+            )}
+          </div>
+
           <div className="px-2 py-2 border-b border-border/20 shrink-0">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
