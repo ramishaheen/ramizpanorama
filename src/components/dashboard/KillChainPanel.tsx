@@ -306,9 +306,18 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     try {
       // Create a target track from the event first
       const trackId = `EVT-${Date.now()}`;
-      const classification = ev.event_type.includes("strike") || ev.event_type.includes("explosion") ? "artillery" :
-        ev.event_type.includes("missile") ? "missile_launcher" :
-        ev.event_type.includes("military") ? "command_post" : "unknown";
+      const evTypeLower = (ev.event_type + " " + ev.title).toLowerCase();
+      const classification = evTypeLower.match(/strike|explosion|artillery|barrage/) ? "artillery" :
+        evTypeLower.match(/missile|rocket/) ? "missile_launcher" :
+        evTypeLower.match(/radar|jam|signal/) ? "radar" :
+        evTypeLower.match(/sam|air.?def/) ? "sam_site" :
+        evTypeLower.match(/tank|armor/) ? "tank" :
+        evTypeLower.match(/truck|convoy|transport/) ? "truck" :
+        evTypeLower.match(/apc|vehicle/) ? "apc" :
+        evTypeLower.match(/supply|depot|logistics/) ? "supply_depot" :
+        "command_post"; // default to command_post (valid enum value)
+      const sourceSensor = evTypeLower.match(/sigint|signal|gps|jam|spectrum/) ? "sigint" :
+        evTypeLower.match(/satellite|imagery|sar|eo/) ? "satellite" : "drone";
       const priority = ev.severity === "critical" ? "critical" : ev.severity === "high" ? "high" : ev.severity === "medium" ? "medium" : "low";
 
       const { data: newTrack, error: trackErr } = await supabase.from("target_tracks").insert({
@@ -317,7 +326,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         confidence: ev.confidence,
         lat: ev.lat,
         lng: ev.lng,
-        source_sensor: "osint_news" as any,
+        source_sensor: sourceSensor as any,
         status: "detected" as any,
         priority: priority as any,
         ai_assessment: `Event-sourced: ${ev.title}`,
