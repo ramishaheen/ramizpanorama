@@ -248,6 +248,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   const [initiatingTarget, setInitiatingTarget] = useState<string | null>(null);
   const [pickerTab, setPickerTab] = useState<"targets" | "events">("targets");
   const [selectedEventForModal, setSelectedEventForModal] = useState<EventOption | null>(null);
+  const [automatingId, setAutomatingId] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     const { data } = await supabase
