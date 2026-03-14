@@ -124,8 +124,8 @@ export const AIMetricsPrioritizer = ({ onClose, onOptimized, onApproveAndZoom }:
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-[700px] max-w-[95vw] max-h-[85vh] bg-[hsl(220,20%,6%)] border border-border/40 rounded-lg shadow-2xl flex flex-col overflow-hidden" style={{ boxShadow: "0 0 60px hsl(190,80%,30%,0.08)" }}>
+    <div className="fixed inset-0 z-[99999] flex flex-col bg-background">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-border/30">
           <Sparkles className="h-4 w-4 text-primary" />
