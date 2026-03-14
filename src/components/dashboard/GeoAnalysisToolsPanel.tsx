@@ -716,13 +716,20 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
     "grg-builder": drawGRG,
   };
 
+  const isMapReady = useCallback(() => {
+    const g = (window as any).google;
+    return !!(mapRef.current && g?.maps);
+  }, [mapRef]);
+
   const toggleTool = (toolId: string) => {
+    if (!isMapReady()) {
+      toast({ title: "Map engine offline", description: "Google Maps not loaded — tool unavailable.", variant: "destructive" });
+      return;
+    }
     const next = new Set(activeTools);
     if (next.has(toolId)) {
       next.delete(toolId);
-      // Clear all overlays for this tool
       clearOverlays();
-      // Re-draw any remaining active tools
       next.forEach(t => { TOOL_ACTIONS[t]?.(); });
     } else {
       next.add(toolId);
