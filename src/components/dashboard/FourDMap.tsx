@@ -25,6 +25,8 @@ import { KillChainKanban } from "./KillChainKanban";
 import { AIMetricsPrioritizer } from "./AIMetricsPrioritizer";
 import { useSensorFeeds } from "@/hooks/useSensorFeeds";
 import { useSensorToShooter } from "@/hooks/useSensorToShooter";
+import { useOntology } from "@/hooks/useOntology";
+import { getPOIIcon } from "@/hooks/useGooglePlaces";
 import { toast } from "sonner";
 
 
