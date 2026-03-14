@@ -1073,7 +1073,21 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
 
         {/* ===== TOOLS TAB ===== */}
         <TabsContent value="tools" className="flex-1 flex flex-col overflow-hidden mt-0">
-          {/* Search */}
+          {/* Map status indicator */}
+          <div className="px-2 py-1.5 border-b border-border/20 shrink-0">
+            {isMapReady() ? (
+              <span className="inline-flex items-center gap-1.5 text-[8px] font-mono font-bold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+                <span style={{ color: "#22c55e" }}>MAP READY</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[8px] font-mono font-bold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                <span className="text-destructive">MAP OFFLINE</span>
+              </span>
+            )}
+          </div>
+
           <div className="px-2 py-2 border-b border-border/20 shrink-0">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
