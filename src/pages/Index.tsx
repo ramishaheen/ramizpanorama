@@ -445,14 +445,31 @@ const Index = () => {
                         </button>
                       </div>
                       <div className="flex-1 overflow-y-auto">
-                        <div className="p-3 space-y-3">
+                        <div className="p-3 space-y-1">
                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
                             <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
-                              {leftOrder.map((id) => (
-                                <DraggableWidget key={id} id={id} disabled={layoutLocked}>
-                                  {leftWidgets[id]}
-                                </DraggableWidget>
-                              ))}
+                              {leftOrder.map((id) => {
+                                const sectionMap: Record<string, { label: string; icon: any; color: string }> = {
+                                  rockets: { label: "THREAT STATUS", icon: Shield, color: "text-critical" },
+                                  "geo-fusion": { label: "SITUATIONAL AWARENESS", icon: Crosshair, color: "text-primary" },
+                                  commodities: { label: "INTELLIGENCE", icon: Brain, color: "text-accent" },
+                                };
+                                const section = sectionMap[id];
+                                return (
+                                  <div key={id}>
+                                    {section && (
+                                      <div className="flex items-center gap-1.5 pt-3 pb-1 px-1">
+                                        <section.icon className={`h-2.5 w-2.5 ${section.color}`} />
+                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${section.color} font-bold`}>{section.label}</span>
+                                        <div className="flex-1 h-px bg-border/40" />
+                                      </div>
+                                    )}
+                                    <DraggableWidget id={id} disabled={layoutLocked}>
+                                      {leftWidgets[id]}
+                                    </DraggableWidget>
+                                  </div>
+                                );
+                              })}
                             </SortableContext>
                           </DndContext>
                         </div>
