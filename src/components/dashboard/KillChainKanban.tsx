@@ -183,6 +183,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [executingSuggestion, setExecutingSuggestion] = useState<string | null>(null);
   const [aiRunning, setAiRunning] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const fetchTasks = useCallback(async () => {
     const { data } = await supabase
@@ -207,6 +208,73 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
     }
     setLoading(false);
   }, []);
+
+  // Seed kill chain tasks from existing target_tracks when board is empty
+  const seedFromTargets = useCallback(async () => {
+    setSeeding(true);
+    try {
+      const { data: targets } = await supabase
+        .from("target_tracks")
+        .select("id, track_id, priority, confidence, classification")
+        .order("confidence", { ascending: false })
+        .limit(14);
+
+      if (!targets || targets.length === 0) {
+        toast.error("No target tracks available to seed");
+        setSeeding(false);
+        return;
+      }
+
+      // Distribute targets across phases for a realistic board
+      const phaseDistribution: { phase: string; status: string }[] = [
+        { phase: "find", status: "pending" },
+        { phase: "find", status: "pending" },
+        { phase: "find", status: "in_progress" },
+        { phase: "find", status: "in_progress" },
+        { phase: "fix", status: "in_progress" },
+        { phase: "fix", status: "in_progress" },
+        { phase: "track", status: "in_progress" },
+        { phase: "track", status: "in_progress" },
+        { phase: "engage", status: "in_progress" },
+        { phase: "engage", status: "in_progress" },
+        { phase: "assess", status: "in_progress" },
+        { phase: "assess", status: "in_progress" },
+        { phase: "assess", status: "complete" },
+        { phase: "assess", status: "complete" },
+      ];
+
+      const platforms = ["MQ-9 Reaper", "F-35A", "DDG-51 Burke", "AH-64E Apache", "B-2 Spirit", null, null];
+      const weapons = ["AGM-114 Hellfire", "GBU-39 SDB", "RGM-84 Harpoon", "AGM-65 Maverick", "JDAM GBU-31", null, null];
+
+      const inserts = targets.map((t, i) => {
+        const dist = phaseDistribution[i % phaseDistribution.length];
+        const needsPlatform = ["track", "engage", "assess"].includes(dist.phase);
+        const platformIdx = Math.floor(Math.random() * platforms.length);
+        return {
+          target_track_id: t.id,
+          phase: dist.phase as any,
+          status: dist.status as any,
+          assigned_platform: needsPlatform ? platforms[platformIdx] : null,
+          recommended_weapon: needsPlatform ? weapons[platformIdx] : null,
+          notes: t.priority === "critical" ? "Priority escalated by AI" : null,
+          bda_result: dist.status === "complete" ? "Target neutralized — 85% structural damage confirmed via AEGIS" : null,
+        };
+      });
+
+      const { error } = await supabase.from("kill_chain_tasks").insert(inserts);
+      if (error) {
+        console.error("Seed error:", error);
+        toast.error("Failed to seed tasks: " + error.message);
+      } else {
+        toast.success(`🎯 ${inserts.length} kill chain tasks generated from target tracks`);
+        await fetchTasks();
+      }
+    } catch (e) {
+      toast.error("Seed failed");
+      console.error(e);
+    }
+    setSeeding(false);
+  }, [fetchTasks]);
 
   useEffect(() => {
     fetchTasks();
