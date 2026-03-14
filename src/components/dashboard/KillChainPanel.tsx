@@ -521,6 +521,22 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     }).eq("id", task.id);
     toast.success(`${PHASE_ICONS[nextPhase]} Advanced to ${nextPhase.toUpperCase()}`);
     fetchTasks();
+
+    // Auto-generate BDA when reaching ASSESS phase
+    if (nextPhase === "assess") {
+      toast.info(PHASE_TOASTS.assess);
+      setTimeout(async () => {
+        const { data: updatedTask } = await supabase
+          .from("kill_chain_tasks")
+          .select("*, target_tracks(track_id, classification, priority, lat, lng, confidence)")
+          .eq("id", task.id)
+          .single();
+        if (updatedTask) {
+          const mapped = { ...updatedTask, target: updatedTask.target_tracks } as unknown as KCTask;
+          generateBDA(mapped);
+        }
+      }, 2000);
+    }
   };
 
   const approveTask = async (id: string) => {
