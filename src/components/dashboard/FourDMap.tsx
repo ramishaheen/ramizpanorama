@@ -1709,7 +1709,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto flex flex-col">
               {c2RightTab === "FEED" &&
             <>
                   <div className="px-3 py-1 border-b border-[hsl(190,60%,10%)]">
