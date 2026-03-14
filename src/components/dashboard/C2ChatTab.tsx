@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, Bot, User, Loader2, Trash2, Shield, Copy, Check } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Send, Bot, User, Loader2, Trash2, Shield, Copy, Check, X, Maximize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Message {
@@ -132,7 +133,7 @@ const IntelMessage = ({ content }: { content: string }) => {
   );
 };
 
-export const C2ChatTab = () => {
+export const C2ChatTab = ({ fullscreen = false, onClose }: { fullscreen?: boolean; onClose?: () => void }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -190,24 +191,48 @@ export const C2ChatTab = () => {
 
   const formatTime = (ts?: number) => ts ? new Date(ts).toISOString().slice(11, 19) + " UTC" : "";
 
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-2 py-2 space-y-2">
+  const chatContent = (
+    <div className={`flex flex-col ${fullscreen ? "h-full" : "h-full min-h-0"}`}>
+      {/* Fullscreen header */}
+      {fullscreen && (
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40 bg-[hsl(220,20%,6%)] flex-shrink-0">
+          <div className="h-8 w-8 rounded-full bg-[#f97316]/10 flex items-center justify-center">
+            <Shield className="h-4 w-4 text-[#f97316]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold font-mono tracking-[0.2em] text-foreground">AEGIS</span>
+              <span className="text-[#f97316] text-xs font-bold font-mono">C2 INTELLIGENCE</span>
+            </div>
+            <p className="text-[8px] font-mono text-muted-foreground">Joint Force C2 Analyst • BDA • COA • Threat Correlation • Mission Planning</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-[8px] font-mono text-muted-foreground">{messages.length} messages</span>
+            {onClose && (
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded bg-destructive/20 border border-destructive/40 text-destructive hover:bg-destructive/30 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div ref={scrollRef} className={`flex-1 min-h-0 overflow-y-auto scrollbar-thin space-y-2 ${fullscreen ? "px-6 py-4 max-w-4xl mx-auto w-full" : "px-2 py-2"}`}>
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-4">
-            <div className="h-10 w-10 rounded-full bg-[#f97316]/10 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-[#f97316]" />
+          <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-8">
+            <div className={`rounded-full bg-[#f97316]/10 flex items-center justify-center ${fullscreen ? "h-16 w-16" : "h-10 w-10"}`}>
+              <Shield className={`text-[#f97316] ${fullscreen ? "h-8 w-8" : "h-5 w-5"}`} />
             </div>
             <div>
-              <p className="text-[10px] font-mono font-bold text-foreground">AEGIS • C2 ASSISTANT</p>
-              <p className="text-[8px] text-muted-foreground mt-1 max-w-[220px]">
+              <p className={`font-mono font-bold text-foreground ${fullscreen ? "text-sm" : "text-[10px]"}`}>AEGIS • C2 ASSISTANT</p>
+              <p className={`text-muted-foreground mt-1 ${fullscreen ? "text-xs max-w-md" : "text-[8px] max-w-[220px]"}`}>
                 Joint Force C2 analyst. BDA, COA recommendations, threat correlation, mission planning.
               </p>
             </div>
-            <div className="flex flex-wrap gap-1 justify-center mt-1">
+            <div className={`flex flex-wrap gap-1.5 justify-center mt-1 ${fullscreen ? "max-w-lg" : ""}`}>
               {quickPrompts.map(q => (
                 <button key={q} onClick={() => send(q)}
-                  className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-[hsl(220,15%,18%)] hover:border-[#f97316]/50 hover:bg-[#f97316]/5 text-muted-foreground hover:text-foreground transition-colors">
+                  className={`font-mono rounded border border-[hsl(220,15%,18%)] hover:border-[#f97316]/50 hover:bg-[#f97316]/5 text-muted-foreground hover:text-foreground transition-colors ${fullscreen ? "text-[10px] px-3 py-1.5" : "text-[8px] px-1.5 py-0.5"}`}>
                   {q}
                 </button>
               ))}
@@ -216,7 +241,6 @@ export const C2ChatTab = () => {
         )}
         {messages.map((msg, i) => (
           <div key={i}>
-            {/* Timestamp header for first message or when gap > 2 min */}
             {(i === 0 || (msg.timestamp && messages[i - 1]?.timestamp && msg.timestamp - messages[i - 1].timestamp! > 120000)) && (
               <div className="flex items-center justify-center my-1">
                 <span className="text-[7px] font-mono text-muted-foreground/50 px-2">{formatTime(msg.timestamp)}</span>
@@ -224,11 +248,11 @@ export const C2ChatTab = () => {
             )}
             <div className={`flex gap-1.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "assistant" && (
-                <div className="flex-shrink-0 h-4 w-4 rounded-full bg-[#f97316]/10 flex items-center justify-center mt-0.5">
-                  <Bot className="h-2.5 w-2.5 text-[#f97316]" />
+                <div className={`flex-shrink-0 rounded-full bg-[#f97316]/10 flex items-center justify-center mt-0.5 ${fullscreen ? "h-6 w-6" : "h-4 w-4"}`}>
+                  <Bot className={`text-[#f97316] ${fullscreen ? "h-3.5 w-3.5" : "h-2.5 w-2.5"}`} />
                 </div>
               )}
-              <div className={`max-w-[88%] rounded px-2 py-1.5 ${msg.role === "user" ? "bg-primary/20 text-foreground" : "bg-[hsl(220,15%,8%)] border border-[hsl(220,15%,15%)] text-foreground"}`}>
+              <div className={`rounded px-2 py-1.5 ${fullscreen ? "max-w-[75%]" : "max-w-[88%]"} ${msg.role === "user" ? "bg-primary/20 text-foreground" : "bg-[hsl(220,15%,8%)] border border-[hsl(220,15%,15%)] text-foreground"}`}>
                 {msg.role === "assistant" ? (
                   <div>
                     <IntelMessage content={msg.content} />
@@ -236,11 +260,11 @@ export const C2ChatTab = () => {
                       <CopyButton text={msg.content} />
                     </div>
                   </div>
-                ) : <p className="text-[10px] font-mono">{msg.content}</p>}
+                ) : <p className={`font-mono ${fullscreen ? "text-xs" : "text-[10px]"}`}>{msg.content}</p>}
               </div>
               {msg.role === "user" && (
-                <div className="flex-shrink-0 h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
-                  <User className="h-2.5 w-2.5 text-primary" />
+                <div className={`flex-shrink-0 rounded-full bg-primary/20 flex items-center justify-center mt-0.5 ${fullscreen ? "h-6 w-6" : "h-4 w-4"}`}>
+                  <User className={`text-primary ${fullscreen ? "h-3.5 w-3.5" : "h-2.5 w-2.5"}`} />
                 </div>
               )}
             </div>
@@ -248,30 +272,30 @@ export const C2ChatTab = () => {
         ))}
         {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
           <div className="flex items-center gap-1.5">
-            <div className="h-4 w-4 rounded-full bg-[#f97316]/10 flex items-center justify-center">
-              <Loader2 className="h-2.5 w-2.5 text-[#f97316] animate-spin" />
+            <div className={`rounded-full bg-[#f97316]/10 flex items-center justify-center ${fullscreen ? "h-6 w-6" : "h-4 w-4"}`}>
+              <Loader2 className={`text-[#f97316] animate-spin ${fullscreen ? "h-3.5 w-3.5" : "h-2.5 w-2.5"}`} />
             </div>
-            <span className="text-[8px] text-muted-foreground font-mono animate-pulse">AEGIS analyzing...</span>
+            <span className={`text-muted-foreground font-mono animate-pulse ${fullscreen ? "text-xs" : "text-[8px]"}`}>AEGIS analyzing...</span>
           </div>
         )}
       </div>
 
       {/* Context-aware suggestions */}
       {contextSuggestions.length > 0 && !isLoading && (
-        <div className="px-2 py-1 border-t border-[hsl(190,60%,10%)] flex flex-wrap gap-1">
+        <div className={`border-t border-[hsl(190,60%,10%)] flex flex-wrap gap-1 ${fullscreen ? "px-6 py-2 max-w-4xl mx-auto w-full" : "px-2 py-1"}`}>
           {contextSuggestions.map(s => (
             <button key={s} onClick={() => send(s)}
-              className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/20 text-[#f97316]/70 hover:text-[#f97316] hover:border-[#f97316]/40 hover:bg-[#f97316]/5 transition-colors">
+              className={`font-mono rounded border border-[#f97316]/20 text-[#f97316]/70 hover:text-[#f97316] hover:border-[#f97316]/40 hover:bg-[#f97316]/5 transition-colors ${fullscreen ? "text-[9px] px-2 py-1" : "text-[7px] px-1.5 py-0.5"}`}>
               {s}
             </button>
           ))}
         </div>
       )}
 
-      <div className="border-t border-[hsl(190,60%,12%)] px-2 py-1.5">
-        <div className="flex items-center gap-1.5">
+      <div className={`border-t border-[hsl(190,60%,12%)] ${fullscreen ? "px-6 py-3 max-w-4xl mx-auto w-full" : "px-2 py-1.5"}`}>
+        <div className={`flex items-center ${fullscreen ? "gap-2" : "gap-1.5"}`}>
           <button onClick={() => { setMessages([]); setContextSuggestions([]); }} className="p-1 rounded hover:bg-muted transition-colors" title="Clear">
-            <Trash2 className="h-2.5 w-2.5 text-muted-foreground" />
+            <Trash2 className={`text-muted-foreground ${fullscreen ? "h-3.5 w-3.5" : "h-2.5 w-2.5"}`} />
           </button>
           <input
             ref={inputRef}
@@ -279,15 +303,26 @@ export const C2ChatTab = () => {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
             placeholder="C2 query..."
-            className="flex-1 bg-muted/50 border border-[hsl(220,15%,18%)] rounded px-2 py-1 text-[9px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#f97316]/50 transition-colors"
+            className={`flex-1 bg-muted/50 border border-[hsl(220,15%,18%)] rounded font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#f97316]/50 transition-colors ${fullscreen ? "px-3 py-2 text-xs" : "px-2 py-1 text-[9px]"}`}
             disabled={isLoading}
           />
-          <button onClick={() => send()} disabled={isLoading || !input.trim()} className="p-1 rounded bg-[#f97316]/20 text-[#f97316] hover:bg-[#f97316]/30 disabled:opacity-30 transition-colors">
-            <Send className="h-3 w-3" />
+          <button onClick={() => send()} disabled={isLoading || !input.trim()} className={`rounded bg-[#f97316]/20 text-[#f97316] hover:bg-[#f97316]/30 disabled:opacity-30 transition-colors ${fullscreen ? "p-2" : "p-1"}`}>
+            <Send className={fullscreen ? "h-4 w-4" : "h-3 w-3"} />
           </button>
         </div>
-        <p className="text-[7px] text-muted-foreground/50 font-mono mt-0.5 text-center">AEGIS • JADC2 C2 Assistant • SIMULATION ONLY</p>
+        <p className={`text-muted-foreground/50 font-mono mt-0.5 text-center ${fullscreen ? "text-[8px]" : "text-[7px]"}`}>AEGIS • JADC2 C2 Assistant • SIMULATION ONLY</p>
       </div>
     </div>
   );
+
+  if (fullscreen) {
+    return createPortal(
+      <div className="fixed inset-0 z-[99999] bg-background flex flex-col">
+        {chatContent}
+      </div>,
+      document.body
+    );
+  }
+
+  return chatContent;
 };

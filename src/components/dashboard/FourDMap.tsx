@@ -283,6 +283,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const [showKanban, setShowKanban] = useState(false);
+  const [showC2Fullscreen, setShowC2Fullscreen] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const { commitStrike } = useSensorToShooter();
   const { entities: ontologyEntities } = useOntology();
@@ -1663,7 +1664,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                         📡 {offlineSensors} Offline
                       </button>
                     }
-                    <button onClick={() => setC2RightTab("C2 INTEL")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary/70 hover:bg-primary/10 transition-colors">
+                    <button onClick={() => setShowC2Fullscreen(true)} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary/70 hover:bg-primary/10 transition-colors">
                       🤖 AEGIS Intel
                     </button>
                   </div>
@@ -1747,6 +1748,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
               {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} />}
               {c2RightTab === "C2 INTEL" && <C2ChatTab />}
+              {showC2Fullscreen && <C2ChatTab fullscreen onClose={() => setShowC2Fullscreen(false)} />}
               {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
               {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
               {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
