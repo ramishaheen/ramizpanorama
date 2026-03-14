@@ -163,7 +163,7 @@ export const OntologyManagerModal = ({ onClose, onLocate }: OntologyManagerModal
       {/* 3-Column Layout */}
       <div className="flex-1 flex min-h-0">
         {/* Column 1: Entity Types / Properties List */}
-        <div className="w-[240px] shrink-0 flex flex-col border-r border-border bg-card/50">
+        <div className="w-[240px] shrink-0 flex flex-col border-r border-border bg-card/50 overflow-auto scrollbar-thin">
           <div className="shrink-0 px-3 py-2 border-b border-border">
             <div className="text-[8px] font-mono font-bold tracking-[0.2em] text-muted-foreground mb-1.5">ENTITY TYPES</div>
             <div className="relative">
