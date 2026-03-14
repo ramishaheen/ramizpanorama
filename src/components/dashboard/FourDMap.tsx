@@ -1564,7 +1564,10 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-primary" />
                 <span className="text-[11px] font-bold tracking-[0.2em] text-primary uppercase">ATTRIBUTES</span>
-                <div className="ml-auto flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[7px] font-mono text-success">ACTIVE</span></div>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <button onClick={() => setCleanUI(true)} className="px-1.5 py-0.5 rounded text-[7px] font-mono tracking-wider border border-[hsl(220,15%,18%)] text-muted-foreground hover:bg-[hsl(220,15%,12%)] hover:text-foreground transition-colors">HIDE</button>
+                  <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /><span className="text-[7px] font-mono text-success">ACTIVE</span>
+                </div>
               </div>
             </div>
 
