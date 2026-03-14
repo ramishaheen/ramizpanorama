@@ -564,11 +564,34 @@ const Index = () => {
                         <div className="direction-ltr">
                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleRightDragEnd}>
                             <SortableContext items={rightOrder} strategy={verticalListSortingStrategy}>
-                              {rightOrder.map((id) => (
-                                <DraggableWidget key={id} id={id} disabled={layoutLocked}>
-                                  {rightWidgets[id]}
-                                </DraggableWidget>
-                              ))}
+                              {rightOrder.map((id) => {
+                                const accentMap: Record<string, string> = {
+                                  notifications: "border-l-2 border-l-destructive",
+                                  "war-updates": "border-l-2 border-l-warning",
+                                  layers: "border-l-2 border-l-primary",
+                                  timeline: "border-l-2 border-l-primary",
+                                  cyber: "border-l-2 border-l-accent",
+                                };
+                                const labelMap: Record<string, string> = {
+                                  notifications: "ALERTS",
+                                  "war-updates": "WAR UPDATES",
+                                  layers: "MAP LAYERS",
+                                  timeline: "TIMELINE",
+                                  cyber: "CYBER",
+                                };
+                                return (
+                                  <div key={id} className={accentMap[id] || ""}>
+                                    {labelMap[id] && (
+                                      <div className="px-2 pt-2 pb-0.5">
+                                        <span className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground font-semibold">{labelMap[id]}</span>
+                                      </div>
+                                    )}
+                                    <DraggableWidget id={id} disabled={layoutLocked}>
+                                      {rightWidgets[id]}
+                                    </DraggableWidget>
+                                  </div>
+                                );
+                              })}
                             </SortableContext>
                           </DndContext>
                         </div>
