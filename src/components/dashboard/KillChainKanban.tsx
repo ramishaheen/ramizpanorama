@@ -472,6 +472,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
             </div>
           </div>
         ) : (
+          <div className="flex gap-1 h-full min-w-max">
           {COLUMNS.map((col, colIdx) => {
             const colTasks = getColumnTasks(col.id);
             const colSuggestions = showSuggestions ? getColumnSuggestions(col.id) : [];
