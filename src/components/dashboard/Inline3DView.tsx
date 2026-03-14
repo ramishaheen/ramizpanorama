@@ -141,7 +141,10 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
 
       {/* Analysis Tools Panel */}
       {toolsPanelOpen && (
-        <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
+        <div className="absolute top-0 left-0 z-30 w-[252px] h-full overflow-y-auto bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20 p-2 space-y-2 scrollbar-thin">
+          <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
+          <TelemetryPanel lat={lat} lng={lng} heading={heading} tilt={tilt} zoom={zoom} />
+        </div>
       )}
 
       {/* BACK TO GLOBE + Panel toggle */}
