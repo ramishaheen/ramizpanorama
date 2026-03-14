@@ -277,6 +277,25 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const { commitStrike } = useSensorToShooter();
 
+  // ========== LIVE DB EVENTS ==========
+  const [dbIntelEvents, setDbIntelEvents] = useState<any[]>([]);
+  const [dbGeoAlerts, setDbGeoAlerts] = useState<any[]>([]);
+
+  const fetchDbEvents = useCallback(async () => {
+    const [{ data: ie }, { data: ga }] = await Promise.all([
+      supabase.from("intel_events").select("id, title, event_type, severity, lat, lng, confidence, created_at, city, country").order("created_at", { ascending: false }).limit(50),
+      supabase.from("geo_alerts").select("id, title, type, severity, lat, lng, timestamp, source, summary").order("timestamp", { ascending: false }).limit(50),
+    ]);
+    if (ie) setDbIntelEvents(ie);
+    if (ga) setDbGeoAlerts(ga);
+  }, []);
+
+  useEffect(() => {
+    fetchDbEvents();
+    const iv = setInterval(fetchDbEvents, 30000);
+    return () => clearInterval(iv);
+  }, [fetchDbEvents]);
+
   // ========== AI SCAN ON ZOOM ==========
   const [viewAlt, setViewAlt] = useState(2.2);
   const [viewCenter, setViewCenter] = useState<{ lat: number; lng: number }>({ lat: 30, lng: 45 });
