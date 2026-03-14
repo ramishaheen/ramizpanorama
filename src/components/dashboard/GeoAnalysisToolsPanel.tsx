@@ -762,6 +762,92 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
     toast({ title: "All tools cleared", description: "Map overlays removed." });
   };
 
+  // ===== INTELLIGENCE LAYER TOGGLE =====
+  const toggleIntelLayer = useCallback(async (layerId: string) => {
+    const map = mapRef.current;
+    const google = getGoogle();
+    if (!map || !google) return;
+
+    const next = new Set(activeIntelLayers);
+
+    if (next.has(layerId)) {
+      // Remove markers
+      next.delete(layerId);
+      (intelMarkers[layerId] || []).forEach((m: any) => { try { m.setMap(null); } catch {} });
+      setIntelMarkers(prev => { const c = { ...prev }; delete c[layerId]; return c; });
+    } else {
+      next.add(layerId);
+      const layerDef = INTEL_LAYERS.find(l => l.id === layerId);
+      if (!layerDef) return;
+
+      let items: any[] = [];
+      const newMarkers: any[] = [];
+
+      try {
+        // DB table sources
+        const dbTables = ["geo_alerts", "intel_events", "target_tracks", "force_units", "sensor_feeds", "cameras"];
+        if (dbTables.includes(layerDef.fetchFn)) {
+          const { data } = await supabase.from(layerDef.fetchFn as any).select("*").limit(100);
+          items = data || [];
+        } else {
+          // Edge function sources
+          const { data } = await supabase.functions.invoke(layerDef.fetchFn);
+          if (layerDef.fetchFn === "usgs-earthquakes") items = data?.earthquakes || [];
+          else if (layerDef.fetchFn === "nasa-wildfires") items = data?.fires || [];
+          else if (layerDef.fetchFn === "ais-vessels") items = data?.vessels || [];
+          else if (layerDef.fetchFn === "conflict-events") items = data?.data || [];
+        }
+
+        items.forEach((item: any) => {
+          const iLat = item.lat ?? item.latitude;
+          const iLng = item.lng ?? item.longitude;
+          if (!iLat || !iLng) return;
+
+          if (layerDef.id === "sensor-coverage") {
+            const circle = new google.maps.Circle({
+              map, center: { lat: iLat, lng: iLng },
+              radius: (item.coverage_radius_km || 10) * 1000,
+              strokeColor: layerDef.color, strokeWeight: 1, strokeOpacity: 0.5,
+              fillColor: layerDef.color, fillOpacity: 0.06,
+            });
+            newMarkers.push(circle);
+          } else if (layerDef.id === "earthquakes") {
+            const mag = item.magnitude || 3;
+            const circle = new google.maps.Circle({
+              map, center: { lat: iLat, lng: iLng },
+              radius: Math.pow(2, mag) * 200,
+              strokeColor: mag >= 5 ? "#ef4444" : "#eab308", strokeWeight: 1.5, strokeOpacity: 0.7,
+              fillColor: mag >= 5 ? "#ef4444" : "#eab308", fillOpacity: 0.15,
+            });
+            newMarkers.push(circle);
+          } else {
+            const marker = new google.maps.Marker({
+              map, position: { lat: iLat, lng: iLng },
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 5,
+                fillColor: layerDef.color,
+                fillOpacity: 0.85,
+                strokeColor: "#fff",
+                strokeWeight: 1,
+              },
+              title: item.title || item.name || item.source_name || item.track_id || `${iLat.toFixed(3)}, ${iLng.toFixed(3)}`,
+            });
+            newMarkers.push(marker);
+          }
+        });
+
+        setIntelMarkers(prev => ({ ...prev, [layerId]: newMarkers }));
+        toast({ title: `${layerDef.label} loaded`, description: `${items.length} items on map` });
+      } catch (e) {
+        console.error(`Intel layer ${layerId} error:`, e);
+        toast({ title: "Layer error", description: String(e), variant: "destructive" });
+      }
+    }
+
+    setActiveIntelLayers(next);
+  }, [mapRef, activeIntelLayers, intelMarkers]);
+
   const filteredSections = searchQuery
     ? SECTIONS.filter(
         (s) =>
