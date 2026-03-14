@@ -164,6 +164,9 @@ const KillChainEventModal = ({
               <span className="text-[7px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${sevColor}20`, color: sevColor, border: `1px solid ${sevColor}40` }}>
                 {event.severity.toUpperCase()}
               </span>
+              <span className="text-[7px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/30">
+                {situationCategory}
+              </span>
             </div>
             <div className="flex items-center gap-2 mt-1 text-[7px] font-mono text-muted-foreground">
               <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{event.lat.toFixed(3)}°N, {event.lng.toFixed(3)}°E</span>
