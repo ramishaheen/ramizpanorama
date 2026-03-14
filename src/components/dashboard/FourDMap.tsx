@@ -324,6 +324,21 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     return () => clearInterval(iv);
   }, [globeReady]);
 
+  // Zoom-based marker scaling
+  useEffect(() => {
+    const container = globeContainerRef.current;
+    if (!container) return;
+    const scale = viewAlt <= 0.3 ? 1.8
+      : viewAlt <= 1.5 ? 1.8 - (viewAlt - 0.3) / 1.2 * 0.8
+      : viewAlt <= 3.0 ? 1.0 - (viewAlt - 1.5) / 1.5 * 0.5
+      : 0.5;
+    container.querySelectorAll('.globe-marker').forEach((el: Element) => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.dataset.baseScale = scale.toFixed(2);
+      htmlEl.style.transform = `scale(${scale.toFixed(2)})`;
+    });
+  }, [viewAlt]);
+
   const handleATRScan = useCallback(async () => {
     if (aiScanning !== "idle") return;
     setAiScanning("atr");
