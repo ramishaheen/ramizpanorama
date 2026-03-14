@@ -279,6 +279,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
             </div>
           </button>
           {warCostOpen && (
+          <>
           <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-0.5 px-1.5 sm:px-2 py-1 transition-shadow duration-500`}>
             <StatCard
               icon={DollarSign}
@@ -355,6 +356,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
           </>
           )}
         </div>
+      )}
       {warCosts.loading && (
         <div className="flex items-center gap-2 px-4 py-1.5 border-t border-border/50">
           <div className="h-3 w-3 border border-primary border-t-transparent rounded-full animate-spin" />
