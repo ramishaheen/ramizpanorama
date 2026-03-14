@@ -248,6 +248,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   const [initiatingTarget, setInitiatingTarget] = useState<string | null>(null);
   const [pickerTab, setPickerTab] = useState<"targets" | "events">("targets");
   const [selectedEventForModal, setSelectedEventForModal] = useState<EventOption | null>(null);
+  const [automatingId, setAutomatingId] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     const { data } = await supabase
@@ -293,6 +294,67 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20);
     setAvailableEvents(mapped);
   };
+
+  // ===== AUTO-PROGRESSION ENGINE =====
+  const PHASE_DELAYS: Record<string, number> = { find: 0, fix: 3000, track: 5000, target: 8000 };
+  const PHASE_TOASTS: Record<string, string> = {
+    find: "🔍 Correlating OSINT sources...",
+    fix: "📌 Geo-locking target — S2S matching...",
+    track: "👁 Track custody established",
+    target: "🎯 Weaponeering complete — HITL APPROVAL REQUIRED",
+    engage: "💥 Strike committed",
+    assess: "📋 Generating BDA via AEGIS...",
+  };
+
+  const runKillChainAutomation = useCallback(async (taskId: string, targetTrackId: string) => {
+    setAutomatingId(taskId);
+    const autoPhases = ["fix", "track", "target"] as const;
+    let cumulativeDelay = 0;
+
+    for (const phase of autoPhases) {
+      cumulativeDelay += PHASE_DELAYS[phase];
+      await new Promise(resolve => setTimeout(resolve, PHASE_DELAYS[phase]));
+
+      // At FIX phase, try S2S matching for best shooter
+      if (phase === "fix") {
+        toast.info(PHASE_TOASTS.fix);
+        try {
+          const { data: s2sData } = await supabase.functions.invoke("sensor-to-shooter", {
+            body: { action: "match_shooters", target_track_id: targetTrackId },
+          });
+          if (s2sData?.recommendations?.[0]) {
+            const best = s2sData.recommendations[0];
+            await supabase.from("kill_chain_tasks").update({
+              assigned_platform: best.shooter?.callsign || best.callsign || "AUTO-MATCHED",
+              recommended_weapon: best.recommended_weapon || "AUTO-SELECTED",
+              updated_at: new Date().toISOString(),
+            }).eq("id", taskId);
+          }
+        } catch {
+          console.warn("S2S auto-match unavailable during FIX phase");
+        }
+      } else {
+        toast.info(PHASE_TOASTS[phase]);
+      }
+
+      // Advance the phase in DB
+      const status = phase === "target" ? "pending" : "in_progress";
+      await supabase.from("kill_chain_tasks").update({
+        phase: phase as any,
+        status: status as any,
+        updated_at: new Date().toISOString(),
+      }).eq("id", taskId);
+
+      await fetchTasks();
+
+      // At TARGET, pause for HITL
+      if (phase === "target") {
+        toast.warning("⚠ HITL APPROVAL REQUIRED — review & approve to proceed to ENGAGE", { duration: 10000 });
+        break;
+      }
+    }
+    setAutomatingId(null);
+  }, [fetchTasks]);
 
   const handleOpenPicker = () => {
     setShowPicker(true);
@@ -361,6 +423,19 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
       });
       setShowPicker(false);
       fetchTasks();
+
+      // Get inserted task ID for automation
+      const { data: newTask } = await supabase
+        .from("kill_chain_tasks")
+        .select("id")
+        .eq("target_track_id", newTrack.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (newTask) {
+        toast.info(PHASE_TOASTS.find);
+        runKillChainAutomation(newTask.id, newTrack.id);
+      }
     } catch (err) {
       toast.error("Failed to initiate from event");
     } finally {
@@ -403,6 +478,19 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
       });
       setShowPicker(false);
       fetchTasks();
+
+      // Get inserted task ID and start automation
+      const { data: newTask } = await supabase
+        .from("kill_chain_tasks")
+        .select("id")
+        .eq("target_track_id", target.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (newTask) {
+        toast.info(PHASE_TOASTS.find);
+        runKillChainAutomation(newTask.id, target.id);
+      }
     } catch (err) {
       toast.error("Failed to initiate kill chain");
     } finally {
@@ -433,6 +521,22 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
     }).eq("id", task.id);
     toast.success(`${PHASE_ICONS[nextPhase]} Advanced to ${nextPhase.toUpperCase()}`);
     fetchTasks();
+
+    // Auto-generate BDA when reaching ASSESS phase
+    if (nextPhase === "assess") {
+      toast.info(PHASE_TOASTS.assess);
+      setTimeout(async () => {
+        const { data: updatedTask } = await supabase
+          .from("kill_chain_tasks")
+          .select("*, target_tracks(track_id, classification, priority, lat, lng, confidence)")
+          .eq("id", task.id)
+          .single();
+        if (updatedTask) {
+          const mapped = { ...updatedTask, target: updatedTask.target_tracks } as unknown as KCTask;
+          generateBDA(mapped);
+        }
+      }, 2000);
+    }
   };
 
   const approveTask = async (id: string) => {
