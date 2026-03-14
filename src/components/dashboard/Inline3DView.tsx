@@ -150,21 +150,25 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         </div>
       )}
 
-      {/* BACK TO GLOBE + Panel toggle */}
+      {/* Panel toggle */}
       <div className={`absolute top-4 z-30 flex items-center gap-2 ${toolsPanelOpen ? "left-[268px]" : "left-4"} transition-all`}>
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 px-3 py-2 rounded-sm bg-background/85 backdrop-blur-md border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
-        >
-          <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
-        </button>
         <button
           onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
           className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
           title={toolsPanelOpen ? "Hide tools" : "Show tools"}
         >
           {toolsPanelOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {/* BACK TO GLOBE — pinned bottom */}
+      <div className="absolute bottom-4 left-4 z-30">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 px-3 py-2 rounded-sm bg-background/85 backdrop-blur-md border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
+        >
+          <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
         </button>
       </div>
 
