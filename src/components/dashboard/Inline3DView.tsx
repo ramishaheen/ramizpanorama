@@ -252,6 +252,11 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       {/* Overlays */}
       <WeatherRadarOverlay mapRef={mapRef} enabled={weatherEnabled} opacity={0.7} />
       <LiveIncidentsOverlay mapRef={mapRef} enabled={incidentsEnabled} lat={lat} lng={lng} />
+
+      {/* AI Source Collector */}
+      {aiCollectorOpen && (
+        <AISourceCollector lat={lat} lng={lng} mapRef={mapRef} onClose={() => setAiCollectorOpen(false)} />
+      )}
     </div>,
     document.body,
   );
