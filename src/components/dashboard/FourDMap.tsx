@@ -1664,7 +1664,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                         📡 {offlineSensors} Offline
                       </button>
                     }
-                    <button onClick={() => setC2RightTab("C2 INTEL")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary/70 hover:bg-primary/10 transition-colors">
+                    <button onClick={() => setShowC2Fullscreen(true)} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary/70 hover:bg-primary/10 transition-colors">
                       🤖 AEGIS Intel
                     </button>
                   </div>
