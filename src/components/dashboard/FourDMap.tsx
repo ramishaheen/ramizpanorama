@@ -1048,20 +1048,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
-    // EMULATED OSINT EVENTS
-    emulatedEvents.forEach((ev) => {
-      if (ev.ts > cutoff) return;
-      layerElements.push({
-        lat: ev.lat, lng: ev.lng, alt: 0.022,
-        el: createMarkerEl({
-          icon: ev.icon, color: ev.color, size: 16,
-          label: ev.label,
-          sublabel: ev.type.slice(0, 10).toUpperCase(),
-          pulse: ev.severity === "critical",
-          tooltipHtml: tip(ev.color, `<div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div>`)
-        })
+    // EMULATED OSINT EVENTS — guarded by conflicts or geoFusion layer
+    if (layers.conflicts || layers.geoFusion) {
+      emulatedEvents.forEach((ev) => {
+        if (ev.ts > cutoff) return;
+        layerElements.push({
+          lat: ev.lat, lng: ev.lng, alt: 0.022,
+          el: createMarkerEl({
+            icon: ev.icon, color: ev.color, size: 16,
+            label: ev.label,
+            sublabel: ev.type.slice(0, 10).toUpperCase(),
+            pulse: ev.severity === "critical",
+            tooltipHtml: tip(ev.color, `<div style="color:${ev.color};font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">${ev.icon}</span> ${ev.type.toUpperCase()}</div><div style="font-size:9px;margin-top:2px">${ev.label}</div><div style="color:#888;font-size:8px">${new Date(ev.ts).toISOString().replace("T", " ").slice(0, 19)} UTC</div>`)
+          })
+        });
       });
-    });
+    }
 
     // ========== C2 COP: Blue Force Units ==========
     if (layers.blueForce) {
