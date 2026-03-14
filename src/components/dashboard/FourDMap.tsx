@@ -1315,7 +1315,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     } else {
       globe.polygonsData([]);
     }
-  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets, aiScanResults, createMarkerEl]);
+  }, [layers, earthquakes, wildfires, conflictEvents, nuclearStations, nuclearFacilities, aisVessels, allFlights, airQualityData, geoFusionData, allSatellites, rockets, timelineTimestamp, gpsJammingZones, emulatedEvents, densityMult, panopticFlights, panopticSats, panopticMaritime, isrSatellites, globeReady, blueUnits, redUnits, activeTargets, sensorFeeds, shooterAssets, aiScanResults, googlePOIPoints, ontologyEntities, createMarkerEl]);
 
   const chipLayers = [
   { id: "flights", label: "Flights", icon: <Plane className="h-3 w-3" /> },
