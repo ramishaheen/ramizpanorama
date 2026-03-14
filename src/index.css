@@ -1110,3 +1110,17 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted)) transparent;
 }
+
+/* Leaflet popups & tooltips above all overlays */
+.leaflet-popup-pane {
+  z-index: 10001 !important;
+}
+.leaflet-tooltip-pane {
+  z-index: 10001 !important;
+}
+.leaflet-popup {
+  z-index: 10001 !important;
+}
+.leaflet-tooltip {
+  z-index: 10001 !important;
+}
