@@ -1872,6 +1872,12 @@ export type Database = {
         | "supplies"
         | "defends"
         | "attacks"
+        | "impacts"
+        | "caused_by"
+        | "assessed_by"
+        | "observed_at"
+        | "threatens"
+        | "defends_against"
       review_status:
         | "pending"
         | "approved"
@@ -2217,6 +2223,12 @@ export const Constants = {
         "supplies",
         "defends",
         "attacks",
+        "impacts",
+        "caused_by",
+        "assessed_by",
+        "observed_at",
+        "threatens",
+        "defends_against",
       ],
       review_status: [
         "pending",
