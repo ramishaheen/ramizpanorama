@@ -144,14 +144,14 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
 
       {/* Left Sidebar — tools + back to globe */}
       {toolsPanelOpen && (
-        <div className="absolute top-0 left-0 z-30 w-[252px] h-full bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20">
-          {/* Dedicated tools area (cannot collapse) */}
-          <div className="absolute inset-0 pb-14 overflow-hidden">
+        <div className="absolute top-0 left-0 z-30 w-[252px] h-full flex flex-col bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20">
+          {/* Dedicated tools area */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
           </div>
 
           {/* Pinned footer — Back to Globe */}
-          <div className="absolute bottom-0 left-0 right-0 border-t border-border/30 p-2 bg-background/85 backdrop-blur-md">
+          <div className="shrink-0 border-t border-border/30 p-2 bg-background/85 backdrop-blur-md">
             <button
               onClick={onClose}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-all group"
