@@ -133,7 +133,7 @@ const IntelMessage = ({ content }: { content: string }) => {
   );
 };
 
-export const C2ChatTab = () => {
+export const C2ChatTab = ({ fullscreen = false, onClose }: { fullscreen?: boolean; onClose?: () => void }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
