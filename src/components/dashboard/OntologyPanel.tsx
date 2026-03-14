@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Network, RefreshCw, Filter, MapPin, Zap, ArrowRight, Download, Database } from "lucide-react";
+import { Network, RefreshCw, Filter, MapPin, Zap, ArrowRight, Download, Database, Maximize2 } from "lucide-react";
 import { useOntology, type OntologyEntity, type OntologyRelationship } from "@/hooks/useOntology";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { OntologyManagerModal } from "./OntologyManagerModal";
 
 const ENTITY_ICONS: Record<string, string> = {
   equipment: "🪖",
@@ -53,6 +54,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
   const [selectedEntity, setSelectedEntity] = useState<OntologyEntity | null>(null);
   const [correlating, setCorrelating] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [showManager, setShowManager] = useState(false);
 
   const entityTypes = ["equipment", "facility", "unit", "person", "vehicle", "infrastructure", "weapon_system"];
   const filtered = filterType ? entities.filter(e => e.entity_type === filterType) : entities;
@@ -99,6 +101,9 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
             <span className="text-[7px] font-mono text-muted-foreground">({entities.length})</span>
           </div>
           <div className="flex items-center gap-1">
+            <button onClick={() => setShowManager(true)} className="p-1 rounded hover:bg-primary/10 transition-colors" title="Open Ontology Manager">
+              <Maximize2 className="h-3 w-3 text-primary" />
+            </button>
             <button onClick={handleCorrelate} disabled={correlating} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="AI Correlate">
               <Zap className={`h-2.5 w-2.5 ${correlating ? "animate-pulse" : ""}`} />
               CORRELATE
@@ -224,6 +229,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
           </>
         )}
       </div>
+      {showManager && <OntologyManagerModal onClose={() => setShowManager(false)} onLocate={onLocate} />}
     </div>
   );
 };
