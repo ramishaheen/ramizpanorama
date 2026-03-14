@@ -1748,6 +1748,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
               {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} />}
               {c2RightTab === "C2 INTEL" && <C2ChatTab />}
+              {showC2Fullscreen && <C2ChatTab fullscreen onClose={() => setShowC2Fullscreen(false)} />}
               {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
               {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
               {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
