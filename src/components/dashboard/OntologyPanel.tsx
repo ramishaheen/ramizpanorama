@@ -229,6 +229,7 @@ export const OntologyPanel = ({ onLocate }: OntologyPanelProps) => {
           </>
         )}
       </div>
+      {showManager && <OntologyManagerModal onClose={() => setShowManager(false)} onLocate={onLocate} />}
     </div>
   );
 };
