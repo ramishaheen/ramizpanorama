@@ -146,9 +146,12 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
       {/* Left Sidebar — tools + back to globe */}
       {toolsPanelOpen && (
         <div className="absolute top-0 left-0 z-30 w-[252px] h-full flex flex-col bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20">
-          {/* Scrollable tools area */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+          {/* GeoAnalysisToolsPanel takes available space with its own internal scroll */}
+          <div className="flex-1 min-h-0">
             <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
+          </div>
+          {/* Telemetry + Weather below tools — scrollable if needed */}
+          <div className="flex-shrink-0 max-h-[40%] overflow-y-auto border-t border-border/20 p-2 space-y-2 scrollbar-thin">
             <TelemetryPanel lat={lat} lng={lng} heading={heading} tilt={tilt} zoom={zoom} />
             {weatherEnabled && <WeatherTrafficPanel />}
           </div>
