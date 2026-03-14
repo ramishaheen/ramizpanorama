@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose, Brain } from "lucide-react";
+import { Globe, Compass, MapPin, Maximize2, RotateCcw, PanelLeftOpen, PanelLeftClose, Brain, Cloud } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WeatherRadarOverlay } from "./urban3d/WeatherRadarOverlay";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
 import { GeoAnalysisToolsPanel } from "./GeoAnalysisToolsPanel";
 import { TelemetryPanel } from "./TelemetryPanel";
 import { AISourceCollector } from "./AISourceCollector";
+import { WeatherTrafficPanel } from "./WeatherTrafficPanel";
 
 interface Inline3DViewProps {
   lat: number;
@@ -142,15 +143,29 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         </div>
       )}
 
-      {/* Analysis Tools Panel */}
+      {/* Left Sidebar — tools + back to globe */}
       {toolsPanelOpen && (
-        <div className="absolute top-0 left-0 z-30 w-[252px] h-full overflow-y-auto bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20 p-2 space-y-2 scrollbar-thin">
-          <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
-          <TelemetryPanel lat={lat} lng={lng} heading={heading} tilt={tilt} zoom={zoom} />
+        <div className="absolute top-0 left-0 z-30 w-[252px] h-full flex flex-col bg-[hsl(220,15%,5%)]/90 backdrop-blur-md border-r border-border/20">
+          {/* Scrollable tools area */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+            <GeoAnalysisToolsPanel mapRef={mapRef} lat={lat} lng={lng} />
+            <TelemetryPanel lat={lat} lng={lng} heading={heading} tilt={tilt} zoom={zoom} />
+            {weatherEnabled && <WeatherTrafficPanel />}
+          </div>
+          {/* Pinned footer — Back to Globe */}
+          <div className="flex-shrink-0 border-t border-border/30 p-2">
+            <button
+              onClick={onClose}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-all group"
+            >
+              <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Panel toggle */}
+      {/* Panel toggle + hide tools */}
       <div className={`absolute top-4 z-30 flex items-center gap-2 ${toolsPanelOpen ? "left-[268px]" : "left-4"} transition-all`}>
         <button
           onClick={() => setToolsPanelOpen(!toolsPanelOpen)}
@@ -159,17 +174,16 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         >
           {toolsPanelOpen ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
         </button>
-      </div>
-
-      {/* BACK TO GLOBE — pinned bottom */}
-      <div className="absolute bottom-4 left-4 z-30">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 px-3 py-2 rounded-sm bg-background/85 backdrop-blur-md border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
-        >
-          <Globe className="h-4 w-4 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Back to Globe</span>
-        </button>
+        {/* Back to Globe when sidebar is closed */}
+        {!toolsPanelOpen && (
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-background/80 backdrop-blur border border-primary/40 text-primary hover:bg-primary/15 hover:border-primary/60 transition-all group"
+          >
+            <Globe className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+            <span className="text-[9px] font-mono font-bold uppercase tracking-wider">Globe</span>
+          </button>
+        )}
       </div>
 
       {/* Controls */}
@@ -192,8 +206,9 @@ export const Inline3DView = ({ lat, lng, onClose }: Inline3DViewProps) => {
         <button onClick={resetView} className="w-8 h-8 flex items-center justify-center rounded-sm bg-background/80 backdrop-blur border border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40 transition-all" title="Reset view">
           <Maximize2 className="h-3.5 w-3.5" />
         </button>
-        <button onClick={() => setWeatherEnabled(!weatherEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-sm backdrop-blur border transition-all ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather Radar">
-          <span className="text-[10px]">🌧</span>
+        <button onClick={() => { setWeatherEnabled(!weatherEnabled); if (!toolsPanelOpen && !weatherEnabled) setToolsPanelOpen(true); }} className={`h-8 flex items-center gap-1.5 px-2.5 rounded-sm backdrop-blur border transition-all text-[9px] font-mono font-bold uppercase tracking-wider ${weatherEnabled ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Weather & Conditions">
+          <Cloud className="h-3.5 w-3.5" />
+          <span>Weather</span>
         </button>
         <button onClick={() => setIncidentsEnabled(!incidentsEnabled)} className={`w-8 h-8 flex items-center justify-center rounded-sm backdrop-blur border transition-all ${incidentsEnabled ? "bg-amber-500/20 border-amber-500/50 text-amber-400" : "bg-background/80 border-border/30 text-muted-foreground hover:text-primary hover:border-primary/40"}`} title="Live Incidents">
           <span className="text-[10px]">⚠️</span>
