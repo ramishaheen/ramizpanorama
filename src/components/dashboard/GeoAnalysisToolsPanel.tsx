@@ -177,20 +177,22 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
   const [activeIntelLayers, setActiveIntelLayers] = useState<Set<string>>(new Set());
   const [intelMarkers, setIntelMarkers] = useState<Record<string, any[]>>({});
 
-  // Fetch data sources from sensor_feeds
+  // Fetch data sources from sensor_feeds, merge with defaults
   useEffect(() => {
     const fetchSources = async () => {
       const { data } = await supabase.from("sensor_feeds").select("id, source_name, feed_type, status, last_data_at").limit(20);
-      if (data) {
-        setDataSources(data.map((s: any) => ({
-          id: s.id,
-          name: s.source_name,
-          type: s.feed_type,
-          status: s.status === "active" ? "active" : s.status === "degraded" ? "degraded" : "offline",
-          lastData: s.last_data_at || "N/A",
-          icon: s.feed_type === "cctv" ? Camera : s.feed_type === "satellite" ? Satellite : s.feed_type === "sigint" ? Radio : Wifi,
-        })));
-      }
+      const dbSources: DataSourceDef[] = (data || []).map((s: any) => ({
+        id: s.id,
+        name: s.source_name,
+        type: s.feed_type,
+        status: s.status === "active" ? "active" as const : s.status === "degraded" ? "degraded" as const : "offline" as const,
+        lastData: s.last_data_at || "N/A",
+        icon: s.feed_type === "cctv" ? Camera : s.feed_type === "satellite" ? Satellite : s.feed_type === "sigint" ? Radio : Wifi,
+      }));
+      // Merge: DB sources first, then defaults that aren't duplicated by name
+      const dbNames = new Set(dbSources.map(d => d.name.toLowerCase()));
+      const merged = [...dbSources, ...DEFAULT_DATA_SOURCES.filter(d => !dbNames.has(d.name.toLowerCase()))];
+      setDataSources(merged);
     };
     fetchSources();
   }, []);
