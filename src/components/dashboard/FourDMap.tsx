@@ -283,6 +283,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const [showKanban, setShowKanban] = useState(false);
+  const [showC2Fullscreen, setShowC2Fullscreen] = useState(false);
   const [showOptimizer, setShowOptimizer] = useState(false);
   const { commitStrike } = useSensorToShooter();
   const { entities: ontologyEntities } = useOntology();
