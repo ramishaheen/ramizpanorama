@@ -9,6 +9,7 @@ import { useConflictEvents } from "@/hooks/useConflictEvents";
 import { useNuclearMonitors } from "@/hooks/useNuclearMonitors";
 import { useAISVessels } from "@/hooks/useAISVessels";
 import { useGeoFusion } from "@/hooks/useGeoFusion";
+import { useTelegramIntel } from "@/hooks/useTelegramIntel";
 import { useAirQuality } from "@/hooks/useAirQuality";
 import { getCountryGeoJSON } from "@/data/countryBorders";
 import type { Rocket as RocketType } from "@/data/mockData";
@@ -243,7 +244,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     conflicts: true, rockets: true, nuclear: true, airQuality: false, geoFusion: true,
     borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
     blueForce: true, redForce: true, targetTracks: true, killChain: false,
-    sensorCoverage: false, ontologyEntities: false, shooterAssets: true
+    sensorCoverage: false, ontologyEntities: false, shooterAssets: true,
+    telegramOSINT: true
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
@@ -272,6 +274,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { data: aisVesselsRaw } = useAISVessels();
   const { data: geoFusionData } = useGeoFusion();
   const { data: airQualityData } = useAirQuality();
+  const { markers: telegramMarkers, refresh: refreshTelegram } = useTelegramIntel();
   const [googlePOIPoints, setGooglePOIPoints] = useState<any[]>([]);
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
@@ -618,7 +621,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   { id: "killChain", label: "Kill Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
   { id: "sensorCoverage", label: "Sensor Coverage", icon: <Radar className="h-3.5 w-3.5" />, color: "#06b6d4", count: sensorFeeds.length },
   { id: "ontologyEntities", label: "Ontology Entities", icon: <Globe className="h-3.5 w-3.5" />, color: "#8b5cf6" },
-  { id: "shooterAssets", label: "Shooter Assets", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: shooterAssets.length }];
+  { id: "shooterAssets", label: "Shooter Assets", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: shooterAssets.length },
+  { id: "telegramOSINT", label: "Telegram OSINT", icon: <Radio className="h-3.5 w-3.5" />, color: "#10b981", count: telegramMarkers.length }];
 
 
   // Timeline
@@ -687,27 +691,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   { lat: 34.0, lng: 43.5, label: "Central Iraq", severity: "medium", radius: 0.35, ts: Date.now() - 3600000 * 18 }],
   []);
 
-  // Emulated OSINT events with category-specific icons
-  const emulatedEvents = useMemo(() => [
-  { lat: 33.5, lng: 36.3, type: "Airstrike", icon: "💥", color: "#ef4444", ts: Date.now() - 3600000 * 2, label: "Airstrike — Damascus suburbs", severity: "critical" as const },
-  { lat: 32.6, lng: 44.0, type: "IED", icon: "💣", color: "#f97316", ts: Date.now() - 3600000 * 5, label: "IED detonation — Karbala road", severity: "high" as const },
-  { lat: 15.3, lng: 44.2, type: "Drone Strike", icon: "👁", color: "#ef4444", ts: Date.now() - 3600000 * 1, label: "UAV strike — Sanaa outskirts", severity: "critical" as const },
-  { lat: 31.5, lng: 34.5, type: "Rocket Barrage", icon: "🚀", color: "#dc2626", ts: Date.now() - 3600000 * 3, label: "Rocket barrage — Gaza border", severity: "critical" as const },
-  { lat: 36.3, lng: 43.1, type: "Recon Overflight", icon: "✈️", color: "#00d4ff", ts: Date.now() - 3600000 * 7, label: "ISR overflight — Mosul", severity: "low" as const },
-  { lat: 34.9, lng: 51.3, type: "Centrifuge Activity", icon: "⚛️", color: "#a855f7", ts: Date.now() - 3600000 * 9, label: "Fordow — unusual centrifuge activity", severity: "high" as const },
-  { lat: 29.2, lng: 50.3, type: "Naval Movement", icon: "⚓", color: "#22c55e", ts: Date.now() - 3600000 * 4, label: "IRGCN fast boats — Kharg Island", severity: "medium" as const },
-  { lat: 25.3, lng: 55.3, type: "Cyber Incident", icon: "🖥", color: "#e879f9", ts: Date.now() - 3600000 * 11, label: "Cyber probe — Dubai infrastructure", severity: "medium" as const },
-  { lat: 33.3, lng: 44.4, type: "Protest", icon: "✊", color: "#eab308", ts: Date.now() - 3600000 * 6, label: "Mass gathering — Baghdad", severity: "low" as const },
-  { lat: 37.0, lng: 35.4, type: "Military Buildup", icon: "🪖", color: "#ef4444", ts: Date.now() - 3600000 * 14, label: "Armor movement — Incirlik", severity: "high" as const },
-  { lat: 30.1, lng: 31.4, type: "Border Incident", icon: "🚧", color: "#f97316", ts: Date.now() - 3600000 * 16, label: "Sinai border clash", severity: "medium" as const },
-  { lat: 12.8, lng: 45.0, type: "Maritime Interdiction", icon: "🚢", color: "#00d4ff", ts: Date.now() - 3600000 * 8, label: "Vessel seizure — Bab el-Mandeb", severity: "medium" as const },
-  { lat: 35.7, lng: 51.4, type: "SIGINT Spike", icon: "📡", color: "#e879f9", ts: Date.now() - 3600000 * 13, label: "SIGINT spike — Tehran", severity: "high" as const },
-  { lat: 24.7, lng: 46.7, type: "Air Defense Test", icon: "🛡", color: "#a855f7", ts: Date.now() - 3600000 * 20, label: "Patriot test fire — Riyadh", severity: "medium" as const },
-  { lat: 32.1, lng: 34.8, type: "Iron Dome Activation", icon: "🛡", color: "#ef4444", ts: Date.now() - 3600000 * 0.5, label: "Iron Dome intercept — Tel Aviv", severity: "critical" as const },
-  { lat: 27.0, lng: 49.5, type: "Oil Facility Alert", icon: "🛢", color: "#f97316", ts: Date.now() - 3600000 * 3.5, label: "Security alert — Ras Tanura", severity: "high" as const },
-  { lat: 33.9, lng: 35.5, type: "Hezbollah Movement", icon: "🎯", color: "#dc2626", ts: Date.now() - 3600000 * 1.5, label: "Convoy movement — South Lebanon", severity: "critical" as const },
-  { lat: 36.8, lng: 40.5, type: "Kurdish Clash", icon: "⚔️", color: "#f97316", ts: Date.now() - 3600000 * 10, label: "Border skirmish — NE Syria", severity: "high" as const }],
-  []);
+  // Live Telegram OSINT replaces static emulated events
+  const emulatedEvents = useMemo(() => [] as any[], []);
 
   // Unified event feed with icons
   const getEventIcon = (type: string) => {
@@ -761,6 +746,16 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     // Emulated fallback
     emulatedEvents.forEach((ev, i) => {if (ev.ts <= cutoff) addUnique({ id: `emu-${i}`, ts: ev.ts, type: ev.type, label: ev.label, lat: ev.lat, lng: ev.lng, severity: ev.severity, color: ev.color, source: "OSINT", icon: ev.icon });});
 
+    // WarsLeaks Telegram OSINT — live intelligence for target countries
+    if (layers.telegramOSINT) {
+      telegramMarkers.forEach((m) => {
+        const mTs = new Date(m.timestamp).getTime();
+        if (isNaN(mTs) || mTs > cutoff) return;
+        const col = m.severity === "critical" ? "#dc2626" : m.severity === "high" ? "#f97316" : m.severity === "medium" ? "#eab308" : "#22c55e";
+        addUnique({ id: `tg-${m.id}`, ts: mTs, type: m.category, label: `${m.headline}${m.summary ? ` — ${m.summary}` : ""}`, lat: m.lat, lng: m.lng, severity: m.severity, color: col, source: "WARLEAKS", icon: getEventIcon(m.category) });
+      });
+    }
+
     if (geoFusionData?.events) {
       geoFusionData.events.forEach((ev, i) => {
         const evTs = new Date(ev.timestamp).getTime();
@@ -783,8 +778,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       if (z.ts <= cutoff) addUnique({ id: `jam-${i}`, ts: z.ts, type: "GPS Jamming", label: z.label, lat: z.lat, lng: z.lng, severity: z.severity, color: "#e879f9", source: "SIGINT", icon: "📡" });
     });
     feed.sort((a, b) => b.ts - a.ts);
-    return feed.slice(0, 80);
-  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, gpsJammingZones, dbIntelEvents, dbGeoAlerts]);
+    return feed.slice(0, 120);
+  }, [timelineTimestamp, emulatedEvents, geoFusionData, conflictEvents, earthquakes, gpsJammingZones, dbIntelEvents, dbGeoAlerts, telegramMarkers, layers.telegramOSINT]);
 
   useEffect(() => {if (feedRef.current && playing) feedRef.current.scrollTop = 0;}, [unifiedFeed.length, playing]);
 
