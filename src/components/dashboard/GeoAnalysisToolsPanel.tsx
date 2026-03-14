@@ -963,6 +963,37 @@ export const GeoAnalysisToolsPanel = ({ mapRef, lat, lng }: GeoAnalysisToolsPane
             </div>
           </ScrollArea>
         </TabsContent>
+
+        {/* ===== DATA SOURCES TAB ===== */}
+        <TabsContent value="sources" className="flex-1 flex flex-col overflow-hidden mt-0">
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1.5">
+              <div className="flex items-center justify-between px-1 mb-1">
+                <span className="text-[8px] font-mono font-bold text-muted-foreground tracking-[0.15em]">CONNECTED FEEDS</span>
+                <span className="text-[8px] font-mono text-primary">{dataSources.length}</span>
+              </div>
+              {dataSources.length === 0 && (
+                <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">
+                  <Wifi className="h-5 w-5 mx-auto mb-2 opacity-30" />
+                  Loading feeds...
+                </div>
+              )}
+              {dataSources.map(src => {
+                const Icon = src.icon;
+                return (
+                  <div key={src.id} className="flex items-center gap-2 px-2.5 py-2 rounded-sm border border-border/20 bg-muted/10 hover:border-primary/20 transition-colors">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] font-mono font-bold text-foreground truncate">{src.name}</div>
+                      <div className="text-[7px] font-mono text-muted-foreground">{src.type.toUpperCase()}</div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_COLORS[src.status] }} />
+                      <span className="text-[7px] font-mono" style={{ color: STATUS_COLORS[src.status] }}>{src.status.toUpperCase()}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </ScrollArea>
         </TabsContent>
