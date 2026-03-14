@@ -146,6 +146,8 @@ const KillChainEventModal = ({
     event.event_type.includes("missile") ? "🚀" :
     event.event_type.includes("conflict") || event.event_type.includes("military") ? "⚔️" :
     event.event_type.includes("cyber") ? "🔓" : "📡";
+  const situationCategory = classifyEvent(event);
+  const adaptiveActions = ADAPTIVE_ACTIONS[situationCategory];
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={onCancel}>
