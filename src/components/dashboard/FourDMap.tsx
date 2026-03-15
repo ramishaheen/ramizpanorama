@@ -23,6 +23,7 @@ import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
 import { OSINTLinksPanel } from "./OSINTLinksPanel";
+import { ValyuSearchPanel } from "./ValyuSearchPanel";
 import { osintMapData } from "@/data/osintMapData";
 import { TargetingWorkbench } from "./TargetingWorkbench";
 import { Inline3DView } from "./Inline3DView";
@@ -284,7 +285,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
   const [shooterAssets, setShooterAssets] = useState<any[]>([]);
-  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S" | "LINKS" | "OSINT">("FEED");
+  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S" | "LINKS" | "OSINT" | "VALYU">("FEED");
   const [osintFilterCountry, setOsintFilterCountry] = useState<string | null>(null);
   const [c2PopupOpen, setC2PopupOpen] = useState(false);
   const [c2IntelContext, setC2IntelContext] = useState<{ type: "event" | "target"; title: string; event_type: string; severity: string; lat: number; lng: number; source: string; details?: string } | null>(null);
@@ -1788,7 +1789,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTO" },
                   { key: "S2S" as const, icon: "🚀", label: "S2S" },
                   { key: "LINKS" as const, icon: "📶", label: "LINKS" },
-                  { key: "OSINT" as const, icon: "🌐", label: "OSINT" },
+                   { key: "OSINT" as const, icon: "🌐", label: "OSINT" },
+                  { key: "VALYU" as const, icon: "⚡", label: "VALYU" },
                 ]).map((btn) => (
                   <button
                     key={btn.key}
@@ -1829,7 +1831,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTOLOGY" },
                 { key: "S2S" as const, icon: "🚀", label: "S2S" },
                 { key: "LINKS" as const, icon: "📶", label: "LINKS" },
-                { key: "OSINT" as const, icon: "🌐", label: "OSINT" },
+                  { key: "OSINT" as const, icon: "🌐", label: "OSINT" },
+                  { key: "VALYU" as const, icon: "⚡", label: "VALYU" },
               ]).map((tab) => (
                 <button
                   key={tab.key}
@@ -1915,6 +1918,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
             {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
             {c2RightTab === "OSINT" && <OSINTLinksPanel onLocate={handleFeedClick} mapCenter={viewCenter} mapAltitude={viewAlt} filterCountry={osintFilterCountry} />}
+            {c2RightTab === "VALYU" && <ValyuSearchPanel onLocate={handleFeedClick} />}
           </div>
         </div>,
         document.body
