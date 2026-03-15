@@ -79,6 +79,16 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [pulsing, setPulsing] = useState(false);
   const [nearbyOnly, setNearbyOnly] = useState(true);
+  const [mapFilterEnabled, setMapFilterEnabled] = useState(true);
+
+  // Compute zoom-dependent radius
+  const mapRadius = useMemo(() => {
+    if (!mapAltitude) return 2000;
+    if (mapAltitude > 2.0) return 2000;
+    if (mapAltitude > 1.0) return 800;
+    if (mapAltitude > 0.5) return 300;
+    return 100;
+  }, [mapAltitude]);
 
   const handlePulse = async () => {
     setPulsing(true);
