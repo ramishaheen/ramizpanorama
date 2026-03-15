@@ -504,7 +504,7 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
         assigned_platform: platform,
       });
 
-      toast.success(`⚡ KILL CHAIN INITIATED`, {
+      toast.success(`⚡ ACTION-CHAIN INITIATED`, {
         description: `${target.track_id} • ${target.classification} • ${target.priority.toUpperCase()} priority\nPlatform: ${platform} • Weapon: ${weapon}`,
       });
       setShowPicker(false);
