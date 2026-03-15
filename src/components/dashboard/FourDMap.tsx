@@ -1558,7 +1558,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         </div>
 
         {/* RIGHT PANEL — Attributes + Feed */}
-        {!cleanUI &&
+        {!cleanUI && !c2PopupOpen &&
         <div className="hidden md:flex w-64 flex-shrink-0 relative z-[50] bg-[hsl(220,20%,7%)] border-l border-[hsl(190,60%,20%)] flex-col min-h-0 pointer-events-auto overflow-auto scrollbar-thin" style={{ minWidth: 256 }}>
             <div className="px-3 py-2.5 border-b border-[hsl(190,60%,15%)] bg-[hsl(220,20%,6%)]">
               <div className="flex items-center gap-2">
