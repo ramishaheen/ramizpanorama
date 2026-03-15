@@ -291,7 +291,33 @@ export function IntelGlobalMap() {
 
       {/* Layer panel */}
       {panelOpen && (
-        <div className="absolute top-12 right-3 z-[1000] bg-card/90 backdrop-blur border border-border rounded-lg p-3 space-y-2 min-w-[160px]">
+        <div className="absolute top-12 right-3 z-[1000] bg-card/90 backdrop-blur border border-border rounded-lg p-3 space-y-2 min-w-[180px]">
+          {/* Tile Presets */}
+          <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Basemap</div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {(Object.entries(TILE_PRESETS) as [TilePreset, typeof TILE_PRESETS[TilePreset]][]).map(([key, preset]) => {
+              const disabled = preset.needsKey && !yandexKey;
+              return (
+                <button
+                  key={key}
+                  disabled={disabled}
+                  onClick={() => switchTile(key)}
+                  className={`text-[8px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                    activeTile === key
+                      ? "bg-primary/20 text-primary border-primary/40"
+                      : disabled
+                      ? "text-muted-foreground/40 border-border/40 cursor-not-allowed"
+                      : "text-muted-foreground border-border hover:text-foreground hover:border-foreground/30"
+                  }`}
+                  title={disabled ? "Yandex API key not configured" : preset.label}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="border-t border-border pt-2" />
           <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Layers</div>
           {([
             { key: "events" as LayerKey, label: "Events", emoji: "📡" },
