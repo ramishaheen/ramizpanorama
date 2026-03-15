@@ -453,7 +453,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
                 <Target className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h3 className="text-sm font-mono font-bold text-foreground mb-1">KILL CHAIN BOARD EMPTY</h3>
+                <h3 className="text-sm font-mono font-bold text-foreground mb-1">ACTION-CHAIN BOARD EMPTY</h3>
                 <p className="text-[10px] font-mono text-muted-foreground leading-relaxed">
                   No tasks in the F2T2EA pipeline. Generate tasks from existing target tracks to populate the board across all phases.
                 </p>
