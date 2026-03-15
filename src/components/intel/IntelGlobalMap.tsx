@@ -6,10 +6,34 @@ import { useMapSync } from "@/hooks/useMapSync";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Layers, RefreshCw, Maximize2, Minimize2 } from "lucide-react";
+import { Layers, RefreshCw, Maximize2, Minimize2, Map as MapIcon } from "lucide-react";
 
-const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTR = '&copy; <a href="https://carto.com/">CARTO</a>';
+type TilePreset = "carto-dark" | "osm" | "yandex-sat" | "yandex-map";
+
+const TILE_PRESETS: Record<TilePreset, { url: string; attr: string; label: string; needsKey?: boolean }> = {
+  "carto-dark": {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attr: '&copy; <a href="https://carto.com/">CARTO</a>',
+    label: "CARTO Dark",
+  },
+  osm: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attr: '&copy; <a href="https://openstreetmap.org">OSM</a>',
+    label: "OSM",
+  },
+  "yandex-sat": {
+    url: "https://sat0{s}.maps.yandex.net/tiles?l=sat&x={x}&y={y}&z={z}&lang=en_US",
+    attr: '&copy; <a href="https://yandex.com/maps">Yandex</a>',
+    label: "Yandex Sat",
+    needsKey: true,
+  },
+  "yandex-map": {
+    url: "https://vec0{s}.maps.yandex.net/tiles?l=map&x={x}&y={y}&z={z}&lang=en_US",
+    attr: '&copy; <a href="https://yandex.com/maps">Yandex</a>',
+    label: "Yandex Map",
+    needsKey: true,
+  },
+};
 
 const SEV_COLORS: Record<string, string> = {
   critical: "#ef4444",
