@@ -249,7 +249,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
     blueForce: true, redForce: true, targetTracks: true, killChain: false,
     sensorCoverage: false, ontologyEntities: false, shooterAssets: true,
-    telegramOSINT: true
+    telegramOSINT: true,
+    osintLinks: false
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
