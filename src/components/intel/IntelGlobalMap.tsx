@@ -8,9 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Layers, RefreshCw, Maximize2, Minimize2, Map as MapIcon } from "lucide-react";
 
-type TilePreset = "carto-dark" | "osm" | "yandex-sat" | "yandex-map";
+type TilePreset = "carto-dark" | "osm" | "yandex-sat" | "yandex-map" | "mapbox-sat";
 
-const TILE_PRESETS: Record<TilePreset, { url: string; attr: string; label: string; needsKey?: boolean }> = {
+const TILE_PRESETS: Record<TilePreset, { url: string; attr: string; label: string; needsKey?: "yandex" | "mapbox" }> = {
   "carto-dark": {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attr: '&copy; <a href="https://carto.com/">CARTO</a>',
@@ -25,13 +25,19 @@ const TILE_PRESETS: Record<TilePreset, { url: string; attr: string; label: strin
     url: "https://sat0{s}.maps.yandex.net/tiles?l=sat&x={x}&y={y}&z={z}&lang=en_US",
     attr: '&copy; <a href="https://yandex.com/maps">Yandex</a>',
     label: "Yandex Sat",
-    needsKey: true,
+    needsKey: "yandex",
   },
   "yandex-map": {
     url: "https://vec0{s}.maps.yandex.net/tiles?l=map&x={x}&y={y}&z={z}&lang=en_US",
     attr: '&copy; <a href="https://yandex.com/maps">Yandex</a>',
     label: "Yandex Map",
-    needsKey: true,
+    needsKey: "yandex",
+  },
+  "mapbox-sat": {
+    url: "",
+    attr: '&copy; <a href="https://mapbox.com">Mapbox</a>',
+    label: "Mapbox Sat",
+    needsKey: "mapbox",
   },
 };
 
