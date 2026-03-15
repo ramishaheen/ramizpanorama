@@ -1730,6 +1730,94 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       <button onClick={() => setCleanUI(false)} className="fixed bottom-20 right-4 z-[10001] px-3 py-1.5 rounded bg-[hsl(220,20%,7%)/0.8] backdrop-blur border border-[hsl(190,60%,18%)] text-[9px] font-mono text-primary hover:bg-primary/10 transition-colors">RESTORE UI</button>
       }
 
+      {/* C2 FULLSCREEN POPUP */}
+      {c2PopupOpen && createPortal(
+        <div className="fixed inset-0 z-[99999] bg-background flex flex-col animate-in fade-in duration-200">
+          {/* Top tab bar */}
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card flex-shrink-0">
+            <div className="flex items-center gap-1">
+              {([
+                { key: "FEED" as const, icon: "📋", label: "FEED" },
+                { key: "TARGETS" as const, icon: "🎯", label: "TARGETS" },
+                { key: "KILLCHAIN" as const, icon: "⚡", label: "KILLCHAIN" },
+                { key: "C2 INTEL" as const, icon: "🧠", label: "C2 INTEL" },
+                { key: "SENSORS" as const, icon: "📡", label: "SENSORS" },
+                { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTOLOGY" },
+                { key: "S2S" as const, icon: "🚀", label: "S2S" },
+                { key: "LINKS" as const, icon: "📶", label: "LINKS" },
+              ]).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setC2RightTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[9px] font-mono font-bold tracking-wider transition-colors ${
+                    c2RightTab === tab.key
+                      ? "bg-primary/20 text-primary border border-primary/40"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent"
+                  }`}
+                >
+                  <span className="text-[11px]">{tab.icon}</span>{tab.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setC2PopupOpen(false)}
+              className="p-1.5 rounded border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Panel content */}
+          <div className="flex-1 min-h-0 overflow-auto flex flex-col">
+            {c2RightTab === "FEED" && (
+              <>
+                <div className="px-4 py-2 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 text-[hsl(25,95%,53%)]" /><span className="text-[10px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
+                    <span className="text-[10px] font-mono text-primary">{unifiedFeed.length}</span>
+                  </div>
+                </div>
+                <div ref={feedRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+                  {unifiedFeed.map((ev) => (
+                    <div key={ev.id} className={`border-b border-border/40 border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-muted/30 transition-colors`}>
+                      <button onClick={() => handleFeedClick(ev.lat, ev.lng)} className="w-full text-left px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
+                            <span className="text-[11px]">{ev.icon}</span> {ev.type.toUpperCase()}
+                          </span>
+                          <span className="text-[8px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
+                        </div>
+                        <div className="text-[9px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
+                        <div className="text-[8px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
+                      </button>
+                      <div className="px-3 pb-1.5 flex items-center gap-1">
+                        <button onClick={() => handleSlewSensor(ev.lat, ev.lng)}
+                          className="text-[8px] font-mono px-2 py-0.5 rounded border border-accent/30 text-accent hover:bg-accent/10 transition-colors">
+                          📡 SLEW
+                        </button>
+                        <button onClick={() => { setC2RightTab("KILLCHAIN"); }}
+                          className="text-[8px] font-mono px-2 py-0.5 rounded border border-[hsl(25,95%,53%)]/30 text-[hsl(25,95%,53%)] hover:bg-[hsl(25,95%,53%)]/10 transition-colors">
+                          ⚡ CHAIN
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {unifiedFeed.length === 0 && <div className="px-4 py-8 text-center text-[10px] font-mono text-muted-foreground">No events in window</div>}
+                </div>
+              </>
+            )}
+            {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
+            {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} />}
+            {c2RightTab === "C2 INTEL" && <C2ChatTab />}
+            {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
+            {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
+            {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
+            {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* BOTTOM TIMELINE */}
       {!cleanUI &&
       <div className="flex-shrink-0 bg-[hsl(220,20%,6%)] border-t border-[hsl(190,60%,15%)]">
