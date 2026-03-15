@@ -135,7 +135,7 @@ const ADAPTIVE_ACTIONS: Record<SituationCategory, Record<string, (ev: EventOptio
     track: () => ["Maintain track custody via assigned ISR", "Monitor for repositioning or dispersal", "Update velocity vector every 30s"],
     target: () => ["Match optimal shooter via S2S engine", "Calculate Pk (probability of kill) & collateral estimate", "Verify ROE compliance for engagement zone"],
     engage: () => ["⚠ HITL authorization REQUIRED", "ROE compliance check — confirm weapons-free", "Execute strike via assigned platform"],
-    assess: () => ["Generate BDA via AEGIS AI", "Confirm functional kill or re-strike requirement", "Update ontology & close kill chain"],
+    assess: () => ["Generate BDA via AEGIS AI", "Confirm functional kill or re-strike requirement", "Update ontology & close action-chain"],
   },
 };
 
