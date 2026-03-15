@@ -23,6 +23,7 @@ import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
 import { OSINTLinksPanel } from "./OSINTLinksPanel";
+import { ValyuSearchPanel } from "./ValyuSearchPanel";
 import { osintMapData } from "@/data/osintMapData";
 import { TargetingWorkbench } from "./TargetingWorkbench";
 import { Inline3DView } from "./Inline3DView";
