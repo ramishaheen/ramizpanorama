@@ -22,6 +22,8 @@ import { SensorPiPView } from "./SensorPiPView";
 import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
+import { OSINTLinksPanel } from "./OSINTLinksPanel";
+import { osintMapData } from "@/data/osintMapData";
 import { TargetingWorkbench } from "./TargetingWorkbench";
 import { Inline3DView } from "./Inline3DView";
 import { KillChainKanban } from "./KillChainKanban";
@@ -247,7 +249,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     borders: true, gpsJamming: true, militaryFlights: true, googlePOI: false,
     blueForce: true, redForce: true, targetTracks: true, killChain: false,
     sensorCoverage: false, ontologyEntities: false, shooterAssets: true,
-    telegramOSINT: true
+    telegramOSINT: true,
+    osintLinks: false
   });
   const [satellites, setSatellites] = useState<SatPoint[]>([]);
   const [flights, setFlights] = useState<any[]>([]);
@@ -281,7 +284,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [forceUnits, setForceUnits] = useState<any[]>([]);
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
   const [shooterAssets, setShooterAssets] = useState<any[]>([]);
-  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S" | "LINKS">("FEED");
+  const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S" | "LINKS" | "OSINT">("FEED");
+  const [osintFilterCountry, setOsintFilterCountry] = useState<string | null>(null);
   const [c2PopupOpen, setC2PopupOpen] = useState(false);
   const [c2IntelContext, setC2IntelContext] = useState<{ type: "event" | "target"; title: string; event_type: string; severity: string; lat: number; lng: number; source: string; details?: string } | null>(null);
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
@@ -664,7 +668,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   { id: "sensorCoverage", label: "Sensor Coverage", icon: <Radar className="h-3.5 w-3.5" />, color: "#06b6d4", count: sensorFeeds.length },
   { id: "ontologyEntities", label: "Ontology Entities", icon: <Globe className="h-3.5 w-3.5" />, color: "#8b5cf6" },
   { id: "shooterAssets", label: "Shooter Assets", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: shooterAssets.length },
-  { id: "telegramOSINT", label: "Telegram OSINT", icon: <Radio className="h-3.5 w-3.5" />, color: "#10b981", count: telegramMarkers.length }];
+  { id: "telegramOSINT", label: "Telegram OSINT", icon: <Radio className="h-3.5 w-3.5" />, color: "#10b981", count: telegramMarkers.length },
+  { id: "osintLinks", label: "OSINT Resources", icon: <Globe className="h-3.5 w-3.5" />, color: "#06b6d4", count: osintMapData.length }];
 
 
   // Timeline
@@ -1294,6 +1299,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
+    // OSINT RESOURCE MARKERS
+    if (layers.osintLinks) {
+      const minLinks = viewAlt >= 3.0 ? 5 : viewAlt >= 1.5 ? 3 : 1;
+      osintMapData.filter(c => c.links.length >= minLinks).forEach((c) => {
+        layerElements.push({
+          lat: c.lat, lng: c.lng, alt: 0.015,
+          el: createMarkerEl({
+            icon: "🌐", color: "#06b6d4", size: 14,
+            label: `${c.country} — ${c.links.length} OSINT resources`,
+            sublabel: c.country.slice(0, 10).toUpperCase(),
+            pulse: false,
+            tooltipHtml: tip("#06b6d4", `<div style="color:#06b6d4;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">🌐</span> ${c.country}</div><div style="font-size:9px;margin-top:2px">${c.links.length} OSINT resources</div><div style="color:#888;font-size:8px">${[...new Set(c.links.map(l => l.category))].slice(0, 4).join(", ")}</div>`),
+            onClick: () => { setOsintFilterCountry(c.country); setC2RightTab("OSINT"); setC2PopupOpen(true); }
+          })
+        });
+      });
+    }
+
     // Performance cap: max 500 total HTML elements (200 sats + 300 layer items)
     const cappedLayers = layerElements.slice(0, 300);
     console.log(`[4D] Rendering ${satHtmlElements.length} sats + ${cappedLayers.length} layer icons as HTML elements`);
@@ -1765,6 +1788,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTO" },
                   { key: "S2S" as const, icon: "🚀", label: "S2S" },
                   { key: "LINKS" as const, icon: "📶", label: "LINKS" },
+                  { key: "OSINT" as const, icon: "🌐", label: "OSINT" },
                 ]).map((btn) => (
                   <button
                     key={btn.key}
@@ -1805,6 +1829,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTOLOGY" },
                 { key: "S2S" as const, icon: "🚀", label: "S2S" },
                 { key: "LINKS" as const, icon: "📶", label: "LINKS" },
+                { key: "OSINT" as const, icon: "🌐", label: "OSINT" },
               ]).map((tab) => (
                 <button
                   key={tab.key}
@@ -1889,6 +1914,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
             {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
             {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
+            {c2RightTab === "OSINT" && <OSINTLinksPanel onLocate={handleFeedClick} mapCenter={viewCenter} mapAltitude={viewAlt} filterCountry={osintFilterCountry} />}
           </div>
         </div>,
         document.body
