@@ -141,7 +141,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    const result = JSON.parse(jsonMatch[0]);
+    let result: any;
+    try {
+      result = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      // Try to salvage by fixing common JSON issues: trailing commas, truncation
+      let fixedJson = jsonMatch[0]
+        .replace(/,\s*]/g, "]")   // trailing comma in arrays
+        .replace(/,\s*}/g, "}")   // trailing comma in objects
+        .replace(/[\x00-\x1F\x7F]/g, " "); // control chars
+      
+      // If JSON is truncated mid-array, try to close it
+      const openBrackets = (fixedJson.match(/\[/g) || []).length;
+      const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+      const openBraces = (fixedJson.match(/\{/g) || []).length;
+      const closeBraces = (fixedJson.match(/\}/g) || []).length;
+      
+      // Truncate to last complete object in the detections array
+      const lastCompleteObj = fixedJson.lastIndexOf("}");
+      if (lastCompleteObj > 0 && openBrackets > closeBrackets) {
+        fixedJson = fixedJson.slice(0, lastCompleteObj + 1);
+        for (let i = 0; i < openBrackets - closeBrackets; i++) fixedJson += "]";
+        for (let i = 0; i < openBraces - closeBraces - 0; i++) fixedJson += "}";
+      }
+
+      try {
+        result = JSON.parse(fixedJson);
+      } catch {
+        console.error("JSON repair failed:", (parseErr as Error).message, cleaned.slice(0, 500));
+        return new Response(JSON.stringify({ detections: [], scene_summary: "Detection parse error", object_count: 0 }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // Assign colors based on label
     const colorMap: Record<string, string> = {
