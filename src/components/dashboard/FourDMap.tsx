@@ -1770,6 +1770,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTO" },
                   { key: "S2S" as const, icon: "🚀", label: "S2S" },
                   { key: "LINKS" as const, icon: "📶", label: "LINKS" },
+                  { key: "OSINT" as const, icon: "🌐", label: "OSINT" },
                 ]).map((btn) => (
                   <button
                     key={btn.key}
