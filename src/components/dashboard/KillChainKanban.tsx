@@ -266,7 +266,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
         console.error("Seed error:", error);
         toast.error("Failed to seed tasks: " + error.message);
       } else {
-        toast.success(`🎯 ${inserts.length} kill chain tasks generated from target tracks`);
+        toast.success(`🎯 ${inserts.length} action-chain tasks generated from target tracks`);
         await fetchTasks();
       }
     } catch (e) {
@@ -387,7 +387,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40 bg-[hsl(220,20%,6%)]">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-primary" />
-          <span className="text-xs font-bold font-mono tracking-[0.2em] text-foreground">KILL CHAIN</span>
+          <span className="text-xs font-bold font-mono tracking-[0.2em] text-foreground">ACTION-CHAIN</span>
           <span className="text-primary text-xs font-bold font-mono">BOARD</span>
         </div>
 
@@ -443,7 +443,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
-              <span className="text-xs font-mono text-muted-foreground">Loading kill chain...</span>
+              <span className="text-xs font-mono text-muted-foreground">Loading action-chain...</span>
             </div>
           </div>
         ) : tasks.length === 0 ? (
@@ -453,7 +453,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
                 <Target className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h3 className="text-sm font-mono font-bold text-foreground mb-1">KILL CHAIN BOARD EMPTY</h3>
+                <h3 className="text-sm font-mono font-bold text-foreground mb-1">ACTION-CHAIN BOARD EMPTY</h3>
                 <p className="text-[10px] font-mono text-muted-foreground leading-relaxed">
                   No tasks in the F2T2EA pipeline. Generate tasks from existing target tracks to populate the board across all phases.
                 </p>
