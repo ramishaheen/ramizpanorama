@@ -47,15 +47,23 @@ export function RansomwareTracker() {
       const { data: result, error: fnError } = await supabase.functions.invoke("dark-web-intel", {
         body: { threatContext: [], mode: "ransomware-summary" },
       });
-      if (fnError) throw new Error(fnError.message);
-      setData({
-        leaks: result?.ransomwareLeaks || [],
-        groups: result?.dashboardStats?.activeRansomwareGroups || [],
-        totalVictims: (result?.ransomwareLeaks || []).length,
-      });
+      const payload = result ?? (typeof fnError === "object" && fnError !== null ? (fnError as any) : null);
+      if (!payload && fnError) throw new Error(String(fnError));
+      const parsed = typeof payload === "string" ? JSON.parse(payload) : payload;
+      if (parsed?.ransomwareLeaks !== undefined || parsed?.dashboardStats) {
+        setData({
+          leaks: parsed.ransomwareLeaks || [],
+          groups: parsed.dashboardStats?.activeRansomwareGroups || [],
+          totalVictims: (parsed.ransomwareLeaks || []).length,
+        });
+      } else if (fnError) {
+        throw new Error(String(fnError));
+      }
     } catch (err) {
-      console.error("Ransomware tracker error:", err);
-      setError(err instanceof Error ? err.message : "Failed");
+      if (!handleAIError(err, "ransomware-tracker")) {
+        console.error("Ransomware tracker error:", err);
+        setError(err instanceof Error ? err.message : "Failed");
+      }
     } finally {
       setLoading(false);
     }
