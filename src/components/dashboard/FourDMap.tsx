@@ -1652,7 +1652,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   <span className="text-[7px] font-mono text-muted-foreground tracking-[0.15em]">SUGGESTIONS</span>
                   <div className="flex flex-wrap gap-1">
                     {tasks_kc_count > 0 &&
-                    <button onClick={() => setC2RightTab("KILLCHAIN")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/30 text-[#f97316]/70 hover:bg-[#f97316]/10 transition-colors">
+                    <button onClick={() => { setC2RightTab("KILLCHAIN"); setC2PopupOpen(true); }} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/30 text-[#f97316]/70 hover:bg-[#f97316]/10 transition-colors">
                         ⚡ Kill Chain ({tasks_kc_count})
                       </button>
                     }
