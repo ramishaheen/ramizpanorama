@@ -449,7 +449,7 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
         notes: `Source: ${ev.source.toUpperCase()} EVENT — ${ev.title}`,
       });
 
-      toast.success(`⚡ KILL CHAIN FROM EVENT`, {
+      toast.success(`⚡ ACTION-CHAIN FROM EVENT`, {
         description: `${trackId} • ${ev.title.slice(0, 50)} • ${priority.toUpperCase()} priority`,
       });
       setShowPicker(false);
