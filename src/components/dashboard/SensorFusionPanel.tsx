@@ -72,7 +72,7 @@ interface SensorFusionPanelProps {
   activeFeedId?: string | null;
 }
 
-export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent }: SensorFusionPanelProps) => {
+export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent, onSelectFeed, activeFeedId }: SensorFusionPanelProps) => {
   const { feeds, summary, loading, fetchFeeds, feedsByCategory } = useSensorFeeds();
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [pulsing, setPulsing] = useState(false);
