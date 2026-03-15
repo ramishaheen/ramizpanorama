@@ -1800,6 +1800,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                           className="text-[8px] font-mono px-2 py-0.5 rounded border border-[hsl(25,95%,53%)]/30 text-[hsl(25,95%,53%)] hover:bg-[hsl(25,95%,53%)]/10 transition-colors">
                           ⚡ ACTION
                         </button>
+                        <button onClick={() => {
+                          setC2IntelContext({
+                            type: "event",
+                            title: ev.label,
+                            event_type: ev.type,
+                            severity: ev.severity,
+                            lat: ev.lat,
+                            lng: ev.lng,
+                            source: ev.source,
+                            details: `Timestamp: ${new Date(ev.ts).toISOString()}`,
+                          });
+                          setC2RightTab("C2 INTEL");
+                        }}
+                          className="text-[8px] font-mono px-2 py-0.5 rounded border border-[#f97316]/30 text-[#f97316] hover:bg-[#f97316]/10 transition-colors">
+                          🧠 C2
+                        </button>
                       </div>
                     </div>
                   ))}
