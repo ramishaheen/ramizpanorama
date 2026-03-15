@@ -1299,6 +1299,24 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
       });
     }
 
+    // OSINT RESOURCE MARKERS
+    if (layers.osintLinks) {
+      const minLinks = viewAlt >= 3.0 ? 5 : viewAlt >= 1.5 ? 3 : 1;
+      osintMapData.filter(c => c.links.length >= minLinks).forEach((c) => {
+        layerElements.push({
+          lat: c.lat, lng: c.lng, alt: 0.015,
+          el: createMarkerEl({
+            icon: "🌐", color: "#06b6d4", size: 14,
+            label: `${c.country} — ${c.links.length} OSINT resources`,
+            sublabel: c.country.slice(0, 10).toUpperCase(),
+            pulse: false,
+            tooltipHtml: tip("#06b6d4", `<div style="color:#06b6d4;font-weight:bold;display:flex;align-items:center;gap:4px"><span style="font-size:13px">🌐</span> ${c.country}</div><div style="font-size:9px;margin-top:2px">${c.links.length} OSINT resources</div><div style="color:#888;font-size:8px">${[...new Set(c.links.map(l => l.category))].slice(0, 4).join(", ")}</div>`),
+            onClick: () => { setOsintFilterCountry(c.country); setC2RightTab("OSINT"); setC2PopupOpen(true); }
+          })
+        });
+      });
+    }
+
     // Performance cap: max 500 total HTML elements (200 sats + 300 layer items)
     const cappedLayers = layerElements.slice(0, 300);
     console.log(`[4D] Rendering ${satHtmlElements.length} sats + ${cappedLayers.length} layer icons as HTML elements`);
