@@ -68,9 +68,11 @@ interface SensorFusionPanelProps {
   activeContext?: SensorContext | null;
   onClearContext?: () => void;
   onNavigateToEvent?: (tab: "FEED" | "TARGETS", lat: number, lng: number) => void;
+  onSelectFeed?: (feed: SensorFeed) => void;
+  activeFeedId?: string | null;
 }
 
-export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent }: SensorFusionPanelProps) => {
+export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent, onSelectFeed, activeFeedId }: SensorFusionPanelProps) => {
   const { feeds, summary, loading, fetchFeeds, feedsByCategory } = useSensorFeeds();
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [pulsing, setPulsing] = useState(false);
@@ -319,8 +321,8 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
                 const healthCol = healthPct >= 80 ? "#22c55e" : healthPct >= 50 ? "#eab308" : "#ef4444";
                 const distToCtx = activeContext ? haversineKm(feed.lat, feed.lng, activeContext.lat, activeContext.lng) : null;
                 return (
-                  <div key={feed.id} className="border-b border-border/10 border-l-2" style={{ borderLeftColor: statusCol }}>
-                    <button onClick={() => onLocate?.(feed.lat, feed.lng)}
+                   <div key={feed.id} className={`border-b border-border/10 border-l-2 transition-colors ${activeFeedId === feed.id ? "bg-primary/10 ring-1 ring-primary/30" : ""}`} style={{ borderLeftColor: statusCol }}>
+                    <button onClick={() => { onLocate?.(feed.lat, feed.lng); onSelectFeed?.(feed); }}
                       className="w-full text-left px-3 py-1.5 hover:bg-accent/10 transition-colors">
                       <div className="flex items-center gap-1.5">
                         <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: statusCol }} />

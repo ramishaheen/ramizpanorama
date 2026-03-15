@@ -291,6 +291,43 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { commitStrike } = useSensorToShooter();
   const { entities: ontologyEntities } = useOntology();
 
+  // ========== FEED-DRIVEN GLOBE IMAGERY ==========
+  const [activeSensorFeed, setActiveSensorFeed] = useState<import("@/hooks/useSensorFeeds").SensorFeed | null>(null);
+
+  const FEED_IMAGERY_MAP: Record<string, { image: string; atmosphere: string; label: string }> = {
+    satellite_eo: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "EO / OPTICAL" },
+    satellite_sar: { image: "//unpkg.com/three-globe/example/img/earth-dark.jpg", atmosphere: "hsl(30, 80%, 45%)", label: "SAR / RADAR" },
+    satellite_ir: { image: "//unpkg.com/three-globe/example/img/earth-night.jpg", atmosphere: "hsl(0, 70%, 40%)", label: "IR / THERMAL" },
+    drone: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(140, 70%, 35%)", label: "AERIAL / UAS" },
+    cctv: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "CCTV / CAM" },
+    sigint: { image: "//unpkg.com/three-globe/example/img/earth-dark.jpg", atmosphere: "hsl(270, 70%, 45%)", label: "SIGINT / DARK" },
+    osint: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "OSINT" },
+    ground: { image: "//unpkg.com/three-globe/example/img/earth-topology.png", atmosphere: "hsl(40, 80%, 45%)", label: "GROUND / TERRAIN" },
+    iot: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "IoT / SCADA" },
+  };
+
+  const DEFAULT_GLOBE_IMAGE = "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
+  const DEFAULT_ATMOSPHERE = "hsl(190, 80%, 40%)";
+
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe || !globeReady) return;
+    if (activeSensorFeed) {
+      const feedPrefix = activeSensorFeed.feed_type.split("_").slice(0, 2).join("_");
+      const feedCat = activeSensorFeed.feed_type.split("_")[0];
+      const mapping = FEED_IMAGERY_MAP[feedPrefix] || FEED_IMAGERY_MAP[feedCat] || { image: DEFAULT_GLOBE_IMAGE, atmosphere: DEFAULT_ATMOSPHERE };
+      globe.globeImageUrl(mapping.image);
+      globe.atmosphereColor(mapping.atmosphere);
+    } else {
+      globe.globeImageUrl(DEFAULT_GLOBE_IMAGE);
+      globe.atmosphereColor(DEFAULT_ATMOSPHERE);
+    }
+  }, [activeSensorFeed, globeReady]);
+
+  const handleSelectSensorFeed = useCallback((feed: import("@/hooks/useSensorFeeds").SensorFeed) => {
+    setActiveSensorFeed(prev => prev?.id === feed.id ? null : feed);
+  }, []);
+
   // ========== LIVE DB EVENTS ==========
   const [dbIntelEvents, setDbIntelEvents] = useState<any[]>([]);
   const [dbGeoAlerts, setDbGeoAlerts] = useState<any[]>([]);
@@ -1428,6 +1465,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
           <div ref={globeContainerRef} className="absolute inset-0" />
 
+          {/* Active Sensor Feed HUD Badge */}
+          {activeSensorFeed && (
+            <div className="absolute top-3 left-3 z-30 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-background/90 backdrop-blur-md border border-primary/40 shadow-lg">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono font-bold text-primary tracking-wider">
+                  {(FEED_IMAGERY_MAP[activeSensorFeed.feed_type.split("_").slice(0,2).join("_")] || FEED_IMAGERY_MAP[activeSensorFeed.feed_type.split("_")[0]])?.label || "SENSOR"}
+                </span>
+                <span className="text-[7px] font-mono text-muted-foreground truncate max-w-[120px]">{activeSensorFeed.source_name}</span>
+              </div>
+              <button onClick={() => setActiveSensorFeed(null)} className="ml-1 p-0.5 rounded hover:bg-destructive/20 transition-colors">
+                <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+              </button>
+            </div>
+          )}
+
           {/* Inline 3D Realistic View */}
           {/* AI SCAN HUD — appears when zoomed in */}
           {showScanHUD &&
@@ -1826,7 +1879,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
             {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} feedEvents={unifiedFeed} onIntelContext={(ctx) => { setC2IntelContext(ctx); setC2RightTab("C2 INTEL"); }} />}
             {c2RightTab === "C2 INTEL" && <C2ChatTab initialContext={c2IntelContext} onContextConsumed={() => setC2IntelContext(null)} />}
-            {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} activeContext={c2IntelContext} onClearContext={() => setC2IntelContext(null)} onNavigateToEvent={(tab, lat, lng) => { setC2RightTab(tab); handleFeedClick(lat, lng); }} />}
+            {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} activeContext={c2IntelContext} onClearContext={() => setC2IntelContext(null)} onNavigateToEvent={(tab, lat, lng) => { setC2RightTab(tab); handleFeedClick(lat, lng); }} onSelectFeed={handleSelectSensorFeed} activeFeedId={activeSensorFeed?.id ?? null} />}
             {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
             {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
             {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
