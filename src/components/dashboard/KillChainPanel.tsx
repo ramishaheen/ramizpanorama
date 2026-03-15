@@ -683,7 +683,7 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
       {/* Initiate button */}
       <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
         <button onClick={handleOpenPicker} className="w-full px-2 py-1.5 rounded text-[9px] font-mono font-bold border border-[#f97316]/40 text-[#f97316] hover:bg-[#f97316]/10 transition-colors flex items-center justify-center gap-1.5">
-          <Crosshair className="h-3 w-3" /> INITIATE KILL CHAIN
+          <Crosshair className="h-3 w-3" /> INITIATE ACTION-CHAIN
         </button>
       </div>
 
