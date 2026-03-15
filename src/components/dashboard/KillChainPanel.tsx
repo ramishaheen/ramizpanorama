@@ -61,9 +61,21 @@ const PHASE_ICONS: Record<string, string> = {
   find: "🔍", fix: "📌", track: "👁", target: "🎯", engage: "💥", assess: "📋",
 };
 
+interface IntelContext {
+  type: "event" | "target";
+  title: string;
+  event_type: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  source: string;
+  details?: string;
+}
+
 interface KillChainPanelProps {
   onLocate?: (lat: number, lng: number) => void;
   feedEvents?: FeedEvent[];
+  onIntelContext?: (ctx: IntelContext) => void;
 }
 
 // ===== SITUATION-ADAPTIVE F2T2EA ACTIONS =====
