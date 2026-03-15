@@ -805,7 +805,7 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
         {loading ? (
           <div className="flex items-center justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">No active kill chains</div>
+          <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">No active action-chains</div>
         ) : (
           tasks.map(task => {
             const col = PHASE_COLORS[task.phase] || "#888";
