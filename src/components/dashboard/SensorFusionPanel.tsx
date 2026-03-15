@@ -68,6 +68,8 @@ interface SensorFusionPanelProps {
   activeContext?: SensorContext | null;
   onClearContext?: () => void;
   onNavigateToEvent?: (tab: "FEED" | "TARGETS", lat: number, lng: number) => void;
+  onSelectFeed?: (feed: SensorFeed) => void;
+  activeFeedId?: string | null;
 }
 
 export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent }: SensorFusionPanelProps) => {
