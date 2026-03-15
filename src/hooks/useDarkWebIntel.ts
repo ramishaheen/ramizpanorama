@@ -240,7 +240,8 @@ export function useDarkWebIntel(threats: CyberThreat[]) {
       const { data, error } = await supabase.functions.invoke("dark-web-intel", {
         body: { threatContext: context },
       });
-      if (error) throw new Error(error.message);
+      // 429 responses include fallback data — use it instead of throwing
+      if (error && !data) throw new Error(error.message);
 
       // Merge new data with existing, deduplicating by id
       setDarkWeb(prev => {
