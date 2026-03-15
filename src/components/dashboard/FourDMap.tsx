@@ -281,6 +281,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [targetTracks, setTargetTracks] = useState<any[]>([]);
   const [shooterAssets, setShooterAssets] = useState<any[]>([]);
   const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S" | "LINKS">("FEED");
+  const [c2PopupOpen, setC2PopupOpen] = useState(false);
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const [showKanban, setShowKanban] = useState(false);
