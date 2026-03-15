@@ -97,11 +97,15 @@ export function IntelGlobalMap() {
   const [activeTile, setActiveTile] = useState<TilePreset>("carto-dark");
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [yandexKey, setYandexKey] = useState<string | null>(null);
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
 
-  // Fetch Yandex key once
+  // Fetch API keys once
   useEffect(() => {
     supabase.functions.invoke("yandex-tiles").then(({ data }) => {
       if (data?.apiKey) setYandexKey(data.apiKey);
+    });
+    supabase.functions.invoke("mapbox-token").then(({ data }) => {
+      if (data?.token) setMapboxToken(data.token);
     });
   }, []);
 
