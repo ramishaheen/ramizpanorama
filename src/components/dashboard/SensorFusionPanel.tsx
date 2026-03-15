@@ -106,14 +106,25 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
     }
   };
 
-  // Filter feeds by proximity when context is active
+  // Filter feeds by proximity — activeContext takes priority, then mapCenter
   const filteredFeeds = useMemo(() => {
-    if (!activeContext || !nearbyOnly) return feeds;
-    return feeds.filter(f => {
-      const dist = haversineKm(f.lat, f.lng, activeContext.lat, activeContext.lng);
-      return dist <= Math.max(f.coverage_radius_km, 50); // min 50km threshold
-    });
-  }, [feeds, activeContext, nearbyOnly]);
+    if (activeContext && nearbyOnly) {
+      return feeds.filter(f => {
+        const dist = haversineKm(f.lat, f.lng, activeContext.lat, activeContext.lng);
+        return dist <= Math.max(f.coverage_radius_km, 50);
+      });
+    }
+    if (!activeContext && mapCenter && mapFilterEnabled) {
+      const withDist = feeds.map(f => ({
+        ...f,
+        _dist: haversineKm(f.lat, f.lng, mapCenter.lat, mapCenter.lng),
+      }));
+      return withDist
+        .filter(f => f._dist <= mapRadius)
+        .sort((a, b) => a._dist - b._dist || b.health_score - a.health_score);
+    }
+    return feeds;
+  }, [feeds, activeContext, nearbyOnly, mapCenter, mapFilterEnabled, mapRadius]);
 
   const filteredFeedsByCategory = useMemo(() => {
     const cats: Record<string, SensorFeed[]> = {
