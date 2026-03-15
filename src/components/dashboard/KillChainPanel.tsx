@@ -467,6 +467,18 @@ export const KillChainPanel = ({ onLocate, feedEvents, onIntelContext }: KillCha
       setShowPicker(false);
       fetchTasks();
 
+      // Send context to C2 Intel
+      onIntelContext?.({
+        type: "event",
+        title: ev.title,
+        event_type: ev.event_type,
+        severity: ev.severity,
+        lat: ev.lat,
+        lng: ev.lng,
+        source: ev.source,
+        details: `Confidence: ${(ev.confidence * 100).toFixed(0)}%. Action-chain initiated with platform: ${platform}, weapon: ${weapon}.`,
+      });
+
       // Get inserted task ID for automation
       const { data: newTask } = await supabase
         .from("kill_chain_tasks")
