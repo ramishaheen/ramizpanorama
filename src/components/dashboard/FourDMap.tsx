@@ -1739,7 +1739,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {([
                 { key: "FEED" as const, icon: "📋", label: "FEED" },
                 { key: "TARGETS" as const, icon: "🎯", label: "TARGETS" },
-                { key: "KILLCHAIN" as const, icon: "⚡", label: "KILLCHAIN" },
+                { key: "KILLCHAIN" as const, icon: "⚡", label: "ACTION-CHAIN" },
                 { key: "C2 INTEL" as const, icon: "🧠", label: "C2 INTEL" },
                 { key: "SENSORS" as const, icon: "📡", label: "SENSORS" },
                 { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTOLOGY" },
