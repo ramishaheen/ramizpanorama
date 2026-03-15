@@ -1662,7 +1662,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                       </button>
                     }
                     {offlineSensors > 0 &&
-                    <button onClick={() => setC2RightTab("SENSORS")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#eab308]/30 text-[#eab308]/70 hover:bg-[#eab308]/10 transition-colors">
+                    <button onClick={() => { setC2RightTab("SENSORS"); setC2PopupOpen(true); }} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#eab308]/30 text-[#eab308]/70 hover:bg-[#eab308]/10 transition-colors">
                         📡 {offlineSensors} Offline
                       </button>
                     }
