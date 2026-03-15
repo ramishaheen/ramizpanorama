@@ -416,12 +416,23 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
           <span className="text-[7px] font-mono text-muted-foreground">
             {catOrder.filter(c => (filteredFeedsByCategory[c]?.length || 0) > 0).length} MODALITIES • {totalFeeds} FEEDS
             {activeContext && nearbyOnly && <span className="text-primary ml-1">• FILTERED</span>}
+            {isMapFiltered && <span className="text-primary ml-1">• MAP {mapRadius}km</span>}
           </span>
-          {degradedCount + offlineCount > 0 && (
-            <span className="text-[7px] font-mono text-[#eab308] flex items-center gap-0.5">
-              <AlertTriangle className="h-2.5 w-2.5" /> {degradedCount + offlineCount} NEED ATTENTION
-            </span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {!activeContext && mapCenter && (
+              <button
+                onClick={() => setMapFilterEnabled(!mapFilterEnabled)}
+                className={`text-[6px] font-mono px-1 py-0.5 rounded border transition-colors ${mapFilterEnabled ? "border-primary/50 bg-primary/10 text-primary" : "border-border/30 text-muted-foreground"}`}
+              >
+                {mapFilterEnabled ? "MAP" : "ALL"}
+              </button>
+            )}
+            {degradedCount + offlineCount > 0 && (
+              <span className="text-[7px] font-mono text-[#eab308] flex items-center gap-0.5">
+                <AlertTriangle className="h-2.5 w-2.5" /> {degradedCount + offlineCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
