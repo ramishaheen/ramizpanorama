@@ -297,8 +297,43 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { commitStrike } = useSensorToShooter();
   const { entities: ontologyEntities } = useOntology();
 
+  // ========== MAPBOX TOKEN ==========
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.functions.invoke("mapbox-token").then(({ data }) => {
+      if (data?.token) setMapboxToken(data.token);
+    });
+  }, []);
+
+  // ========== GLOBE STYLE ==========
+  type GlobeStyle = "blue-marble" | "dark" | "night" | "topology" | "mapbox-sat";
+  const [globeStyle, setGlobeStyle] = useState<GlobeStyle>("blue-marble");
+
+  const GLOBE_STYLES: Record<GlobeStyle, { label: string; image: string | null; atmosphere: string; needsMapbox?: boolean }> = {
+    "blue-marble": { label: "MARBLE", image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)" },
+    "dark": { label: "DARK", image: "//unpkg.com/three-globe/example/img/earth-dark.jpg", atmosphere: "hsl(270, 70%, 45%)" },
+    "night": { label: "NIGHT", image: "//unpkg.com/three-globe/example/img/earth-night.jpg", atmosphere: "hsl(30, 60%, 35%)" },
+    "topology": { label: "TOPO", image: "//unpkg.com/three-globe/example/img/earth-topology.png", atmosphere: "hsl(40, 80%, 45%)" },
+    "mapbox-sat": { label: "MAPBOX", image: null, atmosphere: "hsl(200, 70%, 35%)", needsMapbox: true },
+  };
+
   // ========== FEED-DRIVEN GLOBE IMAGERY ==========
   const [activeSensorFeed, setActiveSensorFeed] = useState<import("@/hooks/useSensorFeeds").SensorFeed | null>(null);
+
+  // Apply globe style
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe || !globeReady) return;
+    if (activeSensorFeed) return; // sensor feed overrides style
+    const style = GLOBE_STYLES[globeStyle];
+    if (style.needsMapbox && mapboxToken) {
+      const mapboxUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/0,0,1,0/1024x512?access_token=${mapboxToken}`;
+      globe.globeImageUrl(mapboxUrl);
+    } else if (style.image) {
+      globe.globeImageUrl(style.image);
+    }
+    globe.atmosphereColor(style.atmosphere);
+  }, [globeStyle, globeReady, mapboxToken, activeSensorFeed]);
 
   const FEED_IMAGERY_MAP: Record<string, { image: string; atmosphere: string; label: string }> = {
     satellite_eo: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "EO / OPTICAL" },
@@ -1690,6 +1725,32 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 {(["TACTICAL", "STRATEGIC", "MINIMAL"] as const).map((p) =>
                 <button key={p} onClick={() => setLayoutPreset(p)} className={`flex-1 px-1.5 py-1.5 rounded text-[9px] font-mono font-bold border transition-colors ${layoutPreset === p ? "border-primary/50 bg-primary/15 text-primary" : "border-[hsl(220,15%,18%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,25%)]"}`}>{p}</button>
                 )}
+              </div>
+            </div>
+
+            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)]">
+              <span className="text-[9px] font-mono text-muted-foreground tracking-[0.15em] mb-1.5 block">GLOBE TEXTURE</span>
+              <div className="flex flex-wrap gap-1">
+                {(Object.entries(GLOBE_STYLES) as [GlobeStyle, typeof GLOBE_STYLES[GlobeStyle]][]).map(([key, style]) => {
+                  const disabled = style.needsMapbox && !mapboxToken;
+                  return (
+                    <button
+                      key={key}
+                      disabled={disabled}
+                      onClick={() => { setActiveSensorFeed(null); setGlobeStyle(key); }}
+                      className={`px-1.5 py-1 rounded text-[8px] font-mono font-bold border transition-colors ${
+                        globeStyle === key && !activeSensorFeed
+                          ? "border-primary/50 bg-primary/15 text-primary"
+                          : disabled
+                          ? "border-[hsl(220,15%,18%)] text-muted-foreground/30 cursor-not-allowed"
+                          : "border-[hsl(220,15%,18%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,25%)]"
+                      }`}
+                      title={disabled ? "Mapbox token not configured" : style.label}
+                    >
+                      {style.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

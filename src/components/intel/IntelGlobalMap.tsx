@@ -8,9 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Layers, RefreshCw, Maximize2, Minimize2, Map as MapIcon } from "lucide-react";
 
-type TilePreset = "carto-dark" | "osm" | "yandex-sat" | "yandex-map";
+type TilePreset = "carto-dark" | "osm" | "yandex-sat" | "yandex-map" | "mapbox-sat";
 
-const TILE_PRESETS: Record<TilePreset, { url: string; attr: string; label: string; needsKey?: boolean }> = {
+const TILE_PRESETS: Record<TilePreset, { url: string; attr: string; label: string; needsKey?: "yandex" | "mapbox" }> = {
   "carto-dark": {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attr: '&copy; <a href="https://carto.com/">CARTO</a>',
@@ -25,13 +25,19 @@ const TILE_PRESETS: Record<TilePreset, { url: string; attr: string; label: strin
     url: "https://sat0{s}.maps.yandex.net/tiles?l=sat&x={x}&y={y}&z={z}&lang=en_US",
     attr: '&copy; <a href="https://yandex.com/maps">Yandex</a>',
     label: "Yandex Sat",
-    needsKey: true,
+    needsKey: "yandex",
   },
   "yandex-map": {
     url: "https://vec0{s}.maps.yandex.net/tiles?l=map&x={x}&y={y}&z={z}&lang=en_US",
     attr: '&copy; <a href="https://yandex.com/maps">Yandex</a>',
     label: "Yandex Map",
-    needsKey: true,
+    needsKey: "yandex",
+  },
+  "mapbox-sat": {
+    url: "",
+    attr: '&copy; <a href="https://mapbox.com">Mapbox</a>',
+    label: "Mapbox Sat",
+    needsKey: "mapbox",
   },
 };
 
@@ -91,11 +97,15 @@ export function IntelGlobalMap() {
   const [activeTile, setActiveTile] = useState<TilePreset>("carto-dark");
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [yandexKey, setYandexKey] = useState<string | null>(null);
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
 
-  // Fetch Yandex key once
+  // Fetch API keys once
   useEffect(() => {
     supabase.functions.invoke("yandex-tiles").then(({ data }) => {
       if (data?.apiKey) setYandexKey(data.apiKey);
+    });
+    supabase.functions.invoke("mapbox-token").then(({ data }) => {
+      if (data?.token) setMapboxToken(data.token);
     });
   }, []);
 
@@ -253,9 +263,14 @@ export function IntelGlobalMap() {
     const map = mapRef.current;
     if (!map) return;
     const config = TILE_PRESETS[preset];
-    if (config.needsKey && !yandexKey) return;
+    if (config.needsKey === "yandex" && !yandexKey) return;
+    if (config.needsKey === "mapbox" && !mapboxToken) return;
     if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
-    const tl = L.tileLayer(config.url, { attribution: config.attr, maxZoom: 18, subdomains: "1234" }).addTo(map);
+    let url = config.url;
+    if (preset === "mapbox-sat" && mapboxToken) {
+      url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
+    }
+    const tl = L.tileLayer(url, { attribution: config.attr, maxZoom: 18, subdomains: "1234", tileSize: 512, zoomOffset: -1 }).addTo(map);
     tileLayerRef.current = tl;
     setActiveTile(preset);
   };
@@ -307,8 +322,8 @@ export function IntelGlobalMap() {
           {/* Tile Presets */}
           <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Basemap</div>
           <div className="flex flex-wrap gap-1 mb-2">
-            {(Object.entries(TILE_PRESETS) as [TilePreset, typeof TILE_PRESETS[TilePreset]][]).map(([key, preset]) => {
-              const disabled = preset.needsKey && !yandexKey;
+          {(Object.entries(TILE_PRESETS) as [TilePreset, typeof TILE_PRESETS[TilePreset]][]).map(([key, preset]) => {
+              const disabled = (preset.needsKey === "yandex" && !yandexKey) || (preset.needsKey === "mapbox" && !mapboxToken);
               return (
                 <button
                   key={key}
@@ -321,7 +336,7 @@ export function IntelGlobalMap() {
                       ? "text-muted-foreground/40 border-border/40 cursor-not-allowed"
                       : "text-muted-foreground border-border hover:text-foreground hover:border-foreground/30"
                   }`}
-                  title={disabled ? "Yandex API key not configured" : preset.label}
+                  title={disabled ? "API key not configured" : preset.label}
                 >
                   {preset.label}
                 </button>
