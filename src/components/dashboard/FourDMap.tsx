@@ -1826,7 +1826,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
             {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} feedEvents={unifiedFeed} onIntelContext={(ctx) => { setC2IntelContext(ctx); setC2RightTab("C2 INTEL"); }} />}
             {c2RightTab === "C2 INTEL" && <C2ChatTab initialContext={c2IntelContext} onContextConsumed={() => setC2IntelContext(null)} />}
-            {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
+            {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} activeContext={c2IntelContext} onClearContext={() => setC2IntelContext(null)} onNavigateToEvent={(tab, lat, lng) => { setC2RightTab(tab); handleFeedClick(lat, lng); }} />}
             {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
             {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
             {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
