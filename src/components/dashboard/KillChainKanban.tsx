@@ -266,7 +266,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
         console.error("Seed error:", error);
         toast.error("Failed to seed tasks: " + error.message);
       } else {
-        toast.success(`🎯 ${inserts.length} kill chain tasks generated from target tracks`);
+        toast.success(`🎯 ${inserts.length} action-chain tasks generated from target tracks`);
         await fetchTasks();
       }
     } catch (e) {
