@@ -387,7 +387,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40 bg-[hsl(220,20%,6%)]">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-primary" />
-          <span className="text-xs font-bold font-mono tracking-[0.2em] text-foreground">KILL CHAIN</span>
+          <span className="text-xs font-bold font-mono tracking-[0.2em] text-foreground">ACTION-CHAIN</span>
           <span className="text-primary text-xs font-bold font-mono">BOARD</span>
         </div>
 
