@@ -443,7 +443,7 @@ export const KillChainKanban = ({ onClose, onLocate, onOpenOptimizer }: KillChai
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
-              <span className="text-xs font-mono text-muted-foreground">Loading kill chain...</span>
+              <span className="text-xs font-mono text-muted-foreground">Loading action-chain...</span>
             </div>
           </div>
         ) : tasks.length === 0 ? (
