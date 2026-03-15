@@ -1657,7 +1657,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                       </button>
                     }
                     {criticalTargetCount > 0 &&
-                    <button onClick={() => setC2RightTab("TARGETS")} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#ef4444]/30 text-[#ef4444]/70 hover:bg-[#ef4444]/10 transition-colors">
+                    <button onClick={() => { setC2RightTab("TARGETS"); setC2PopupOpen(true); }} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#ef4444]/30 text-[#ef4444]/70 hover:bg-[#ef4444]/10 transition-colors">
                         🎯 {criticalTargetCount} Critical
                       </button>
                     }
