@@ -178,6 +178,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
   }, [filteredFeeds]);
 
   const severityColor = activeContext?.severity === "critical" ? "hsl(var(--destructive))" : activeContext?.severity === "high" ? "#f97316" : "#eab308";
+  const isMapFiltered = !activeContext && mapCenter && mapFilterEnabled;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -187,6 +188,11 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
           <div className="flex items-center gap-1.5">
             <Radar className="h-3 w-3 text-primary" />
             <span className="text-[8px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">SENSOR FUSION</span>
+            {isMapFiltered && (
+              <span className="text-[6px] font-mono px-1 py-0.5 rounded bg-primary/10 text-primary border border-primary/30 animate-pulse">
+                MAP VIEW • {mapRadius}km
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button onClick={handlePulse} disabled={pulsing} className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="Pulse all active feeds">
