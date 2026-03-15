@@ -523,7 +523,7 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
         runKillChainAutomation(newTask.id, target.id);
       }
     } catch (err) {
-      toast.error("Failed to initiate kill chain");
+      toast.error("Failed to initiate action-chain");
     } finally {
       setInitiatingTarget(null);
     }
