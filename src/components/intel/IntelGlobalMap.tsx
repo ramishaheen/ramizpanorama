@@ -248,6 +248,18 @@ export function IntelGlobalMap() {
     }
   }, [selectedEvent]);
 
+  // Switch tile layer
+  const switchTile = (preset: TilePreset) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const config = TILE_PRESETS[preset];
+    if (config.needsKey && !yandexKey) return;
+    if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+    const tl = L.tileLayer(config.url, { attribution: config.attr, maxZoom: 18, subdomains: "1234" }).addTo(map);
+    tileLayerRef.current = tl;
+    setActiveTile(preset);
+  };
+
   // Fit all
   const fitAll = () => {
     const map = mapRef.current;
