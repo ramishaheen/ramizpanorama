@@ -1797,7 +1797,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                         </button>
                         <button onClick={() => { setC2RightTab("KILLCHAIN"); }}
                           className="text-[8px] font-mono px-2 py-0.5 rounded border border-[hsl(25,95%,53%)]/30 text-[hsl(25,95%,53%)] hover:bg-[hsl(25,95%,53%)]/10 transition-colors">
-                          ⚡ CHAIN
+                          ⚡ ACTION
                         </button>
                       </div>
                     </div>
