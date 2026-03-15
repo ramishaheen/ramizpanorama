@@ -88,17 +88,30 @@ export function IntelGlobalMap() {
   const [loading, setLoading] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeTile, setActiveTile] = useState<TilePreset>("carto-dark");
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [yandexKey, setYandexKey] = useState<string | null>(null);
+
+  // Fetch Yandex key once
+  useEffect(() => {
+    supabase.functions.invoke("yandex-tiles").then(({ data }) => {
+      if (data?.apiKey) setYandexKey(data.apiKey);
+    });
+  }, []);
 
   // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const preset = TILE_PRESETS["carto-dark"];
     const map = L.map(containerRef.current, {
       center: [30, 35],
       zoom: 4,
       zoomControl: false,
       attributionControl: false,
     });
-    L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 18 }).addTo(map);
+    const tl = L.tileLayer(preset.url, { attribution: preset.attr, maxZoom: 18, subdomains: "1234" }).addTo(map);
+    tileLayerRef.current = tl;
+    L.control.zoom({ position: "bottomright" }).addTo(map);
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
     const keys: LayerKey[] = ["events", "alerts", "targets"];
