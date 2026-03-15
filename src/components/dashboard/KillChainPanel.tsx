@@ -660,7 +660,7 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap className="h-3.5 w-3.5 text-[#f97316]" />
-            <span className="text-[10px] font-mono font-bold tracking-[0.15em] text-foreground uppercase">KILL CHAIN</span>
+            <span className="text-[10px] font-mono font-bold tracking-[0.15em] text-foreground uppercase">ACTION-CHAIN</span>
           </div>
           <span className="text-[8px] font-mono text-muted-foreground">{tasks.length} TASKS</span>
         </div>
