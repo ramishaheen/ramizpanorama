@@ -133,7 +133,18 @@ const IntelMessage = ({ content }: { content: string }) => {
   );
 };
 
-export const C2ChatTab = ({ fullscreen = false, onClose }: { fullscreen?: boolean; onClose?: () => void }) => {
+interface C2IntelContext {
+  type: "event" | "target";
+  title: string;
+  event_type: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  source: string;
+  details?: string;
+}
+
+export const C2ChatTab = ({ fullscreen = false, onClose, initialContext, onContextConsumed }: { fullscreen?: boolean; onClose?: () => void; initialContext?: C2IntelContext | null; onContextConsumed?: () => void }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);

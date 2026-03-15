@@ -262,7 +262,7 @@ const KillChainEventModal = ({
   );
 };
 
-export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) => {
+export const KillChainPanel = ({ onLocate, feedEvents, onIntelContext }: KillChainPanelProps) => {
   const [tasks, setTasks] = useState<KCTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
