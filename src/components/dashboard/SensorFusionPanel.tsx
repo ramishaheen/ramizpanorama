@@ -1,8 +1,16 @@
 import { useState, useMemo } from "react";
-import { Satellite, Camera, Radio, Globe, Radar, Wifi, WifiOff, RefreshCw, Zap, Activity, Cpu, ChevronDown, ChevronRight, AlertTriangle, Signal } from "lucide-react";
+import { Satellite, Camera, Radio, Globe, Radar, Wifi, WifiOff, RefreshCw, Zap, Activity, Cpu, ChevronDown, ChevronRight, AlertTriangle, Signal, X, Crosshair, Navigation } from "lucide-react";
 import { useSensorFeeds, type SensorFeed } from "@/hooks/useSensorFeeds";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const FEED_ICONS: Record<string, React.ReactNode> = {
   satellite: <Satellite className="h-3 w-3" />,
@@ -42,16 +50,31 @@ const PROTOCOL_LABELS: Record<string, string> = {
   manual: "MAN",
 };
 
+export interface SensorContext {
+  type: "event" | "target";
+  title: string;
+  event_type: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  source: string;
+  details?: string;
+}
+
 interface SensorFusionPanelProps {
   onToggleCoverage?: () => void;
   coverageEnabled?: boolean;
   onLocate?: (lat: number, lng: number) => void;
+  activeContext?: SensorContext | null;
+  onClearContext?: () => void;
+  onNavigateToEvent?: (tab: "FEED" | "TARGETS", lat: number, lng: number) => void;
 }
 
-export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate }: SensorFusionPanelProps) => {
+export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent }: SensorFusionPanelProps) => {
   const { feeds, summary, loading, fetchFeeds, feedsByCategory } = useSensorFeeds();
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [pulsing, setPulsing] = useState(false);
+  const [nearbyOnly, setNearbyOnly] = useState(true);
 
   const handlePulse = async () => {
     setPulsing(true);
@@ -68,7 +91,27 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
       setPulsing(false);
     }
   };
-  const cats = feedsByCategory();
+
+  // Filter feeds by proximity when context is active
+  const filteredFeeds = useMemo(() => {
+    if (!activeContext || !nearbyOnly) return feeds;
+    return feeds.filter(f => {
+      const dist = haversineKm(f.lat, f.lng, activeContext.lat, activeContext.lng);
+      return dist <= Math.max(f.coverage_radius_km, 50); // min 50km threshold
+    });
+  }, [feeds, activeContext, nearbyOnly]);
+
+  const filteredFeedsByCategory = useMemo(() => {
+    const cats: Record<string, SensorFeed[]> = {
+      satellite: [], drone: [], cctv: [], sigint: [], osint: [], ground: [], iot: [],
+    };
+    filteredFeeds.forEach(f => {
+      const prefix = f.feed_type.split("_")[0];
+      if (cats[prefix]) cats[prefix].push(f);
+      else cats.osint.push(f);
+    });
+    return cats;
+  }, [filteredFeeds]);
 
   const catOrder = ["satellite", "drone", "cctv", "sigint", "osint", "ground", "iot"];
   const catLabels: Record<string, string> = {
@@ -86,13 +129,12 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
     iot: "SCADA, buoy arrays, edge sensors",
   };
 
-  // Aggregate metrics
-  const totalFeeds = feeds.length;
-  const activeCount = feeds.filter(f => f.status === "active").length;
-  const degradedCount = feeds.filter(f => f.status === "degraded").length;
-  const offlineCount = feeds.filter(f => f.status === "offline" || f.status === "error").length;
-  const avgHealth = totalFeeds > 0 ? Math.round(feeds.reduce((s, f) => s + f.health_score, 0) / totalFeeds) : 0;
-  const totalDataRate = feeds.reduce((s, f) => s + f.data_rate_hz, 0);
+  const totalFeeds = filteredFeeds.length;
+  const activeCount = filteredFeeds.filter(f => f.status === "active").length;
+  const degradedCount = filteredFeeds.filter(f => f.status === "degraded").length;
+  const offlineCount = filteredFeeds.filter(f => f.status === "offline" || f.status === "error").length;
+  const avgHealth = totalFeeds > 0 ? Math.round(filteredFeeds.reduce((s, f) => s + f.health_score, 0) / totalFeeds) : 0;
+  const totalDataRate = filteredFeeds.reduce((s, f) => s + f.data_rate_hz, 0);
 
   const healthColor = avgHealth >= 85 ? "#22c55e" : avgHealth >= 60 ? "#eab308" : "#ef4444";
 
@@ -103,17 +145,19 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
   };
 
   const lastUpdate = useMemo(() => {
-    const latest = feeds.reduce((max, f) => {
+    const latest = filteredFeeds.reduce((max, f) => {
       const t = f.last_data_at ? new Date(f.last_data_at).getTime() : 0;
       return t > max ? t : max;
     }, 0);
     return latest > 0 ? new Date(latest).toISOString().slice(11, 19) + " UTC" : "—";
-  }, [feeds]);
+  }, [filteredFeeds]);
+
+  const severityColor = activeContext?.severity === "critical" ? "hsl(var(--destructive))" : activeContext?.severity === "high" ? "#f97316" : "#eab308";
 
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
+      <div className="px-3 py-1.5 border-b border-border/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Radar className="h-3 w-3 text-primary" />
@@ -132,8 +176,52 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
         </div>
       </div>
 
+      {/* Context Banner */}
+      {activeContext && (
+        <div className="px-2 py-1.5 border-b border-border/30 bg-accent/10">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <Crosshair className="h-3 w-3 animate-pulse" style={{ color: severityColor }} />
+              <span className="text-[8px] font-mono font-bold text-foreground tracking-wider">
+                {activeContext.type === "target" ? "🎯 TARGET" : "📡 EVENT"} CORRELATION
+              </span>
+            </div>
+            <button onClick={onClearContext} className="p-0.5 rounded hover:bg-destructive/20 transition-colors" title="Clear filter">
+              <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+            </button>
+          </div>
+          <div className="text-[9px] font-mono text-foreground truncate">{activeContext.title}</div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${severityColor}20`, color: severityColor }}>
+              {activeContext.severity?.toUpperCase()}
+            </span>
+            <span className="text-[7px] font-mono text-muted-foreground">{activeContext.event_type}</span>
+            <span className="text-[7px] font-mono text-muted-foreground">{activeContext.lat.toFixed(2)}, {activeContext.lng.toFixed(2)}</span>
+          </div>
+          {/* Nearby toggle */}
+          <div className="flex items-center gap-2 mt-1.5">
+            <button
+              onClick={() => setNearbyOnly(true)}
+              className={`text-[7px] font-mono px-1.5 py-0.5 rounded border transition-colors ${nearbyOnly ? "border-primary/50 bg-primary/10 text-primary" : "border-border/30 text-muted-foreground"}`}
+            >NEARBY ONLY ({filteredFeeds.length})</button>
+            <button
+              onClick={() => setNearbyOnly(false)}
+              className={`text-[7px] font-mono px-1.5 py-0.5 rounded border transition-colors ${!nearbyOnly ? "border-primary/50 bg-primary/10 text-primary" : "border-border/30 text-muted-foreground"}`}
+            >ALL SENSORS ({feeds.length})</button>
+            {/* Navigate back button */}
+            <button
+              onClick={() => onNavigateToEvent?.(activeContext.type === "target" ? "TARGETS" : "FEED", activeContext.lat, activeContext.lng)}
+              className="ml-auto flex items-center gap-0.5 text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+            >
+              <Navigation className="h-2.5 w-2.5" />
+              GO TO {activeContext.type === "target" ? "TGT" : "FEED"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Aggregate health bar */}
-      <div className="px-3 py-2 border-b border-[hsl(190,60%,10%)] bg-[hsl(220,18%,6%)]">
+      <div className="px-3 py-2 border-b border-border/30 bg-background/50">
         <div className="grid grid-cols-4 gap-2 mb-2">
           <div className="text-center">
             <div className="text-[10px] font-mono font-bold text-[#22c55e]">{activeCount}</div>
@@ -152,7 +240,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
             <div className="text-[6px] font-mono text-muted-foreground tracking-wider">HEALTH</div>
           </div>
         </div>
-        <div className="h-1.5 rounded-full bg-[hsl(220,15%,15%)] overflow-hidden flex">
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden flex">
           <div className="h-full bg-[#22c55e] transition-all" style={{ width: `${(activeCount / Math.max(totalFeeds, 1)) * 100}%` }} />
           <div className="h-full bg-[#eab308] transition-all" style={{ width: `${(degradedCount / Math.max(totalFeeds, 1)) * 100}%` }} />
           <div className="h-full bg-[#ef4444] transition-all" style={{ width: `${(offlineCount / Math.max(totalFeeds, 1)) * 100}%` }} />
@@ -166,9 +254,9 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
       </div>
 
       {/* Category summary chips */}
-      <div className="px-2 py-1.5 border-b border-[hsl(190,60%,10%)] flex flex-wrap gap-1">
+      <div className="px-2 py-1.5 border-b border-border/30 flex flex-wrap gap-1">
         {catOrder.map(cat => {
-          const catFeeds = cats[cat] || [];
+          const catFeeds = filteredFeedsByCategory[cat] || [];
           if (catFeeds.length === 0) return null;
           const active = catFeeds.filter(f => f.status === "active").length;
           const total = catFeeds.length;
@@ -176,7 +264,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
           const hasDegraded = catFeeds.some(f => f.status === "degraded");
           return (
             <button key={cat} onClick={() => setExpandedCat(expandedCat === cat ? null : cat)}
-              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-mono border transition-colors ${expandedCat === cat ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground hover:text-foreground"}`}>
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-mono border transition-colors ${expandedCat === cat ? "border-primary/50 bg-primary/10 text-primary" : "border-border/30 text-muted-foreground hover:text-foreground"}`}>
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: allOk ? "#22c55e" : hasDegraded ? "#eab308" : "#ef4444" }} />
               <span style={{ color: expandedCat === cat ? undefined : FEED_COLORS[cat] }}>{FEED_ICONS[cat]}</span>
               {active}/{total}
@@ -187,11 +275,11 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
 
       {/* Coverage overlay toggle */}
       {onToggleCoverage && (
-        <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
+        <div className="px-3 py-1.5 border-b border-border/30">
           <button onClick={onToggleCoverage}
-            className={`w-full flex items-center justify-between px-2 py-1 rounded text-[9px] font-mono border transition-colors ${coverageEnabled ? "border-primary/50 bg-primary/10 text-primary" : "border-[hsl(220,15%,15%)] text-muted-foreground"}`}>
+            className={`w-full flex items-center justify-between px-2 py-1 rounded text-[9px] font-mono border transition-colors ${coverageEnabled ? "border-primary/50 bg-primary/10 text-primary" : "border-border/30 text-muted-foreground"}`}>
             <span>COVERAGE OVERLAY</span>
-            <div className="w-8 h-4 rounded-full transition-colors relative" style={{ backgroundColor: coverageEnabled ? "hsl(190,80%,50%)" : "hsl(220,15%,20%)" }}>
+            <div className="w-8 h-4 rounded-full transition-colors relative" style={{ backgroundColor: coverageEnabled ? "hsl(var(--primary))" : "hsl(var(--muted))" }}>
               <div className={`w-3 h-3 rounded-full bg-foreground transition-transform absolute top-0.5 ${coverageEnabled ? "left-[14px]" : "left-0.5"}`} />
             </div>
           </button>
@@ -201,7 +289,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
       {/* Feed list by category */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
         {catOrder.map(cat => {
-          const catFeeds = cats[cat] || [];
+          const catFeeds = filteredFeedsByCategory[cat] || [];
           if (catFeeds.length === 0) return null;
           const isExpanded = expandedCat === cat;
           const catActive = catFeeds.filter(f => f.status === "active").length;
@@ -210,7 +298,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
           return (
             <div key={cat}>
               <button onClick={() => setExpandedCat(isExpanded ? null : cat)}
-                className="w-full px-3 py-1.5 flex items-center gap-2 bg-[hsl(220,18%,8%)] border-b border-[hsl(220,15%,12%)] hover:bg-[hsl(220,18%,10%)] transition-colors">
+                className="w-full px-3 py-1.5 flex items-center gap-2 bg-background/80 border-b border-border/20 hover:bg-accent/10 transition-colors">
                 {isExpanded ? <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" /> : <ChevronRight className="h-2.5 w-2.5 text-muted-foreground" />}
                 <span style={{ color: FEED_COLORS[cat] }}>{FEED_ICONS[cat]}</span>
                 <div className="flex-1 text-left">
@@ -229,34 +317,54 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
                 const statusCol = STATUS_COLORS[feed.status] || "#6b7280";
                 const healthPct = feed.health_score;
                 const healthCol = healthPct >= 80 ? "#22c55e" : healthPct >= 50 ? "#eab308" : "#ef4444";
+                const distToCtx = activeContext ? haversineKm(feed.lat, feed.lng, activeContext.lat, activeContext.lng) : null;
                 return (
-                  <button key={feed.id} onClick={() => onLocate?.(feed.lat, feed.lng)}
-                    className="w-full text-left px-3 py-1.5 border-b border-[hsl(220,15%,10%)] hover:bg-[hsl(190,20%,10%)] transition-colors border-l-2"
-                    style={{ borderLeftColor: statusCol }}>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: statusCol }} />
-                      <span className="text-[9px] font-mono text-foreground truncate flex-1">{feed.source_name}</span>
-                      <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${statusCol}20`, color: statusCol }}>{feed.status.toUpperCase()}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 pl-3">
-                      <span className="text-[7px] font-mono text-muted-foreground">{feed.feed_type}</span>
-                      <span className="text-[7px] font-mono" style={{ color: healthCol }}>HP:{healthPct}%</span>
-                      <span className="text-[7px] font-mono text-muted-foreground">{formatDataRate(feed.data_rate_hz)}</span>
-                      <span className="text-[7px] font-mono text-muted-foreground">{feed.coverage_radius_km}km</span>
-                      <span className="text-[7px] font-mono text-muted-foreground">{PROTOCOL_LABELS[feed.protocol] || feed.protocol}</span>
-                    </div>
-                    {/* Mini health bar */}
-                    <div className="mt-1 pl-3">
-                      <div className="h-0.5 rounded-full bg-[hsl(220,15%,15%)] overflow-hidden w-full">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${healthPct}%`, backgroundColor: healthCol }} />
+                  <div key={feed.id} className="border-b border-border/10 border-l-2" style={{ borderLeftColor: statusCol }}>
+                    <button onClick={() => onLocate?.(feed.lat, feed.lng)}
+                      className="w-full text-left px-3 py-1.5 hover:bg-accent/10 transition-colors">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: statusCol }} />
+                        <span className="text-[9px] font-mono text-foreground truncate flex-1">{feed.source_name}</span>
+                        <span className="text-[7px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: `${statusCol}20`, color: statusCol }}>{feed.status.toUpperCase()}</span>
                       </div>
-                    </div>
-                    {feed.last_data_at && (
-                      <div className="text-[6px] font-mono text-muted-foreground/60 mt-0.5 pl-3">
-                        Last data: {new Date(feed.last_data_at).toISOString().slice(11, 19)} UTC
+                      <div className="flex items-center gap-2 mt-0.5 pl-3">
+                        <span className="text-[7px] font-mono text-muted-foreground">{feed.feed_type}</span>
+                        <span className="text-[7px] font-mono" style={{ color: healthCol }}>HP:{healthPct}%</span>
+                        <span className="text-[7px] font-mono text-muted-foreground">{formatDataRate(feed.data_rate_hz)}</span>
+                        <span className="text-[7px] font-mono text-muted-foreground">{feed.coverage_radius_km}km</span>
+                        <span className="text-[7px] font-mono text-muted-foreground">{PROTOCOL_LABELS[feed.protocol] || feed.protocol}</span>
+                      </div>
+                      {/* Distance to context */}
+                      {distToCtx !== null && (
+                        <div className="text-[7px] font-mono text-primary mt-0.5 pl-3">
+                          📍 {distToCtx.toFixed(1)} km from {activeContext!.type === "target" ? "target" : "event"}
+                        </div>
+                      )}
+                      {/* Mini health bar */}
+                      <div className="mt-1 pl-3">
+                        <div className="h-0.5 rounded-full bg-muted overflow-hidden w-full">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${healthPct}%`, backgroundColor: healthCol }} />
+                        </div>
+                      </div>
+                      {feed.last_data_at && (
+                        <div className="text-[6px] font-mono text-muted-foreground/60 mt-0.5 pl-3">
+                          Last data: {new Date(feed.last_data_at).toISOString().slice(11, 19)} UTC
+                        </div>
+                      )}
+                    </button>
+                    {/* Navigate to event/target button */}
+                    {activeContext && onNavigateToEvent && (
+                      <div className="px-3 pb-1.5">
+                        <button
+                          onClick={() => onNavigateToEvent(activeContext.type === "target" ? "TARGETS" : "FEED", activeContext.lat, activeContext.lng)}
+                          className="flex items-center gap-1 text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <Navigation className="h-2.5 w-2.5" />
+                          {activeContext.type === "target" ? "🎯 GO TO TARGET" : "📡 GO TO FEED"}
+                        </button>
                       </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -265,9 +373,12 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate 
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-1 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)]">
+      <div className="px-3 py-1 border-t border-border/30 bg-background/80">
         <div className="flex items-center justify-between">
-          <span className="text-[7px] font-mono text-muted-foreground">{catOrder.filter(c => (cats[c]?.length || 0) > 0).length} MODALITIES • {totalFeeds} FEEDS</span>
+          <span className="text-[7px] font-mono text-muted-foreground">
+            {catOrder.filter(c => (filteredFeedsByCategory[c]?.length || 0) > 0).length} MODALITIES • {totalFeeds} FEEDS
+            {activeContext && nearbyOnly && <span className="text-primary ml-1">• FILTERED</span>}
+          </span>
           {degradedCount + offlineCount > 0 && (
             <span className="text-[7px] font-mono text-[#eab308] flex items-center gap-0.5">
               <AlertTriangle className="h-2.5 w-2.5" /> {degradedCount + offlineCount} NEED ATTENTION
