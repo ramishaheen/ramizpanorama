@@ -18,6 +18,7 @@ import { C2TargetingPanel } from "./C2TargetingPanel";
 import { KillChainPanel } from "./KillChainPanel";
 import { C2ChatTab } from "./C2ChatTab";
 import { SensorFusionPanel } from "./SensorFusionPanel";
+import { SensorPiPView } from "./SensorPiPView";
 import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
@@ -1479,6 +1480,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
               </button>
             </div>
+          )}
+
+          {/* Sensor Feed PiP Raw Data Stream */}
+          {activeSensorFeed && (
+            <SensorPiPView feed={activeSensorFeed} onClose={() => setActiveSensorFeed(null)} />
           )}
 
           {/* Inline 3D Realistic View */}
