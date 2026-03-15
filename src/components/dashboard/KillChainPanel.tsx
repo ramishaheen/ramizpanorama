@@ -40,6 +40,19 @@ interface EventOption {
   created_at: string;
 }
 
+interface FeedEvent {
+  id: string;
+  ts: number;
+  type: string;
+  label: string;
+  lat: number;
+  lng: number;
+  severity: string;
+  color: string;
+  source: string;
+  icon: string;
+}
+
 const PHASES = ["find", "fix", "track", "target", "engage", "assess"];
 const PHASE_COLORS: Record<string, string> = {
   find: "#00d4ff", fix: "#22c55e", track: "#eab308", target: "#f97316", engage: "#ef4444", assess: "#a855f7",
@@ -50,6 +63,7 @@ const PHASE_ICONS: Record<string, string> = {
 
 interface KillChainPanelProps {
   onLocate?: (lat: number, lng: number) => void;
+  feedEvents?: FeedEvent[];
 }
 
 // ===== SITUATION-ADAPTIVE F2T2EA ACTIONS =====
