@@ -291,6 +291,43 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { commitStrike } = useSensorToShooter();
   const { entities: ontologyEntities } = useOntology();
 
+  // ========== FEED-DRIVEN GLOBE IMAGERY ==========
+  const [activeSensorFeed, setActiveSensorFeed] = useState<import("@/hooks/useSensorFeeds").SensorFeed | null>(null);
+
+  const FEED_IMAGERY_MAP: Record<string, { image: string; atmosphere: string; label: string }> = {
+    satellite_eo: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "EO / OPTICAL" },
+    satellite_sar: { image: "//unpkg.com/three-globe/example/img/earth-dark.jpg", atmosphere: "hsl(30, 80%, 45%)", label: "SAR / RADAR" },
+    satellite_ir: { image: "//unpkg.com/three-globe/example/img/earth-night.jpg", atmosphere: "hsl(0, 70%, 40%)", label: "IR / THERMAL" },
+    drone: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(140, 70%, 35%)", label: "AERIAL / UAS" },
+    cctv: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "CCTV / CAM" },
+    sigint: { image: "//unpkg.com/three-globe/example/img/earth-dark.jpg", atmosphere: "hsl(270, 70%, 45%)", label: "SIGINT / DARK" },
+    osint: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "OSINT" },
+    ground: { image: "//unpkg.com/three-globe/example/img/earth-topology.png", atmosphere: "hsl(40, 80%, 45%)", label: "GROUND / TERRAIN" },
+    iot: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "IoT / SCADA" },
+  };
+
+  const DEFAULT_GLOBE_IMAGE = "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
+  const DEFAULT_ATMOSPHERE = "hsl(190, 80%, 40%)";
+
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe || !globeReady) return;
+    if (activeSensorFeed) {
+      const feedPrefix = activeSensorFeed.feed_type.split("_").slice(0, 2).join("_");
+      const feedCat = activeSensorFeed.feed_type.split("_")[0];
+      const mapping = FEED_IMAGERY_MAP[feedPrefix] || FEED_IMAGERY_MAP[feedCat] || { image: DEFAULT_GLOBE_IMAGE, atmosphere: DEFAULT_ATMOSPHERE };
+      globe.globeImageUrl(mapping.image);
+      globe.atmosphereColor(mapping.atmosphere);
+    } else {
+      globe.globeImageUrl(DEFAULT_GLOBE_IMAGE);
+      globe.atmosphereColor(DEFAULT_ATMOSPHERE);
+    }
+  }, [activeSensorFeed, globeReady]);
+
+  const handleSelectSensorFeed = useCallback((feed: import("@/hooks/useSensorFeeds").SensorFeed) => {
+    setActiveSensorFeed(prev => prev?.id === feed.id ? null : feed);
+  }, []);
+
   // ========== LIVE DB EVENTS ==========
   const [dbIntelEvents, setDbIntelEvents] = useState<any[]>([]);
   const [dbGeoAlerts, setDbGeoAlerts] = useState<any[]>([]);
