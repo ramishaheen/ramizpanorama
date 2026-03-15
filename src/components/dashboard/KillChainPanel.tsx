@@ -298,6 +298,23 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
   };
 
   const fetchAvailableEvents = async () => {
+    // If unified feed events are passed from the parent, use them directly
+    if (feedEvents && feedEvents.length > 0) {
+      const mapped: EventOption[] = feedEvents.map((fe) => ({
+        id: fe.id,
+        title: fe.label,
+        event_type: fe.type,
+        severity: fe.severity,
+        lat: fe.lat,
+        lng: fe.lng,
+        confidence: fe.severity === "critical" ? 0.95 : fe.severity === "high" ? 0.85 : fe.severity === "medium" ? 0.7 : 0.5,
+        source: (fe.source.includes("INTEL") || fe.source.includes("GEO") ? "intel" : "conflict") as "intel" | "conflict",
+        created_at: new Date(fe.ts).toISOString(),
+      }));
+      setAvailableEvents(mapped);
+      return;
+    }
+    // Fallback: fetch from DB
     const [{ data: intelEvents }, { data: geoAlerts }] = await Promise.all([
       supabase.from("intel_events").select("id, title, event_type, severity, lat, lng, confidence, created_at").order("created_at", { ascending: false }).limit(15),
       supabase.from("geo_alerts").select("id, title, type, severity, lat, lng, timestamp, source").order("timestamp", { ascending: false }).limit(15),
