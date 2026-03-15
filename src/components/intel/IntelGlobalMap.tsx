@@ -322,8 +322,8 @@ export function IntelGlobalMap() {
           {/* Tile Presets */}
           <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Basemap</div>
           <div className="flex flex-wrap gap-1 mb-2">
-            {(Object.entries(TILE_PRESETS) as [TilePreset, typeof TILE_PRESETS[TilePreset]][]).map(([key, preset]) => {
-              const disabled = preset.needsKey && !yandexKey;
+          {(Object.entries(TILE_PRESETS) as [TilePreset, typeof TILE_PRESETS[TilePreset]][]).map(([key, preset]) => {
+              const disabled = (preset.needsKey === "yandex" && !yandexKey) || (preset.needsKey === "mapbox" && !mapboxToken);
               return (
                 <button
                   key={key}
@@ -336,7 +336,7 @@ export function IntelGlobalMap() {
                       ? "text-muted-foreground/40 border-border/40 cursor-not-allowed"
                       : "text-muted-foreground border-border hover:text-foreground hover:border-foreground/30"
                   }`}
-                  title={disabled ? "Yandex API key not configured" : preset.label}
+                  title={disabled ? "API key not configured" : preset.label}
                 >
                   {preset.label}
                 </button>
