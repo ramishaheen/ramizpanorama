@@ -40,6 +40,19 @@ interface EventOption {
   created_at: string;
 }
 
+interface FeedEvent {
+  id: string;
+  ts: number;
+  type: string;
+  label: string;
+  lat: number;
+  lng: number;
+  severity: string;
+  color: string;
+  source: string;
+  icon: string;
+}
+
 const PHASES = ["find", "fix", "track", "target", "engage", "assess"];
 const PHASE_COLORS: Record<string, string> = {
   find: "#00d4ff", fix: "#22c55e", track: "#eab308", target: "#f97316", engage: "#ef4444", assess: "#a855f7",
@@ -50,6 +63,7 @@ const PHASE_ICONS: Record<string, string> = {
 
 interface KillChainPanelProps {
   onLocate?: (lat: number, lng: number) => void;
+  feedEvents?: FeedEvent[];
 }
 
 // ===== SITUATION-ADAPTIVE F2T2EA ACTIONS =====
@@ -121,7 +135,7 @@ const ADAPTIVE_ACTIONS: Record<SituationCategory, Record<string, (ev: EventOptio
     track: () => ["Maintain track custody via assigned ISR", "Monitor for repositioning or dispersal", "Update velocity vector every 30s"],
     target: () => ["Match optimal shooter via S2S engine", "Calculate Pk (probability of kill) & collateral estimate", "Verify ROE compliance for engagement zone"],
     engage: () => ["⚠ HITL authorization REQUIRED", "ROE compliance check — confirm weapons-free", "Execute strike via assigned platform"],
-    assess: () => ["Generate BDA via AEGIS AI", "Confirm functional kill or re-strike requirement", "Update ontology & close kill chain"],
+    assess: () => ["Generate BDA via AEGIS AI", "Confirm functional kill or re-strike requirement", "Update ontology & close action-chain"],
   },
 };
 
@@ -236,7 +250,7 @@ const KillChainEventModal = ({
   );
 };
 
-export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
+export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) => {
   const [tasks, setTasks] = useState<KCTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
@@ -284,6 +298,23 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
   };
 
   const fetchAvailableEvents = async () => {
+    // If unified feed events are passed from the parent, use them directly
+    if (feedEvents && feedEvents.length > 0) {
+      const mapped: EventOption[] = feedEvents.map((fe) => ({
+        id: fe.id,
+        title: fe.label,
+        event_type: fe.type,
+        severity: fe.severity,
+        lat: fe.lat,
+        lng: fe.lng,
+        confidence: fe.severity === "critical" ? 0.95 : fe.severity === "high" ? 0.85 : fe.severity === "medium" ? 0.7 : 0.5,
+        source: (fe.source.includes("INTEL") || fe.source.includes("GEO") ? "intel" : "conflict") as "intel" | "conflict",
+        created_at: new Date(fe.ts).toISOString(),
+      }));
+      setAvailableEvents(mapped);
+      return;
+    }
+    // Fallback: fetch from DB
     const [{ data: intelEvents }, { data: geoAlerts }] = await Promise.all([
       supabase.from("intel_events").select("id, title, event_type, severity, lat, lng, confidence, created_at").order("created_at", { ascending: false }).limit(15),
       supabase.from("geo_alerts").select("id, title, type, severity, lat, lng, timestamp, source").order("timestamp", { ascending: false }).limit(15),
@@ -418,7 +449,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         notes: `Source: ${ev.source.toUpperCase()} EVENT — ${ev.title}`,
       });
 
-      toast.success(`⚡ KILL CHAIN FROM EVENT`, {
+      toast.success(`⚡ ACTION-CHAIN FROM EVENT`, {
         description: `${trackId} • ${ev.title.slice(0, 50)} • ${priority.toUpperCase()} priority`,
       });
       setShowPicker(false);
@@ -473,7 +504,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         assigned_platform: platform,
       });
 
-      toast.success(`⚡ KILL CHAIN INITIATED`, {
+      toast.success(`⚡ ACTION-CHAIN INITIATED`, {
         description: `${target.track_id} • ${target.classification} • ${target.priority.toUpperCase()} priority\nPlatform: ${platform} • Weapon: ${weapon}`,
       });
       setShowPicker(false);
@@ -492,7 +523,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         runKillChainAutomation(newTask.id, target.id);
       }
     } catch (err) {
-      toast.error("Failed to initiate kill chain");
+      toast.error("Failed to initiate action-chain");
     } finally {
       setInitiatingTarget(null);
     }
@@ -629,7 +660,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap className="h-3.5 w-3.5 text-[#f97316]" />
-            <span className="text-[10px] font-mono font-bold tracking-[0.15em] text-foreground uppercase">KILL CHAIN</span>
+            <span className="text-[10px] font-mono font-bold tracking-[0.15em] text-foreground uppercase">ACTION-CHAIN</span>
           </div>
           <span className="text-[8px] font-mono text-muted-foreground">{tasks.length} TASKS</span>
         </div>
@@ -652,7 +683,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
       {/* Initiate button */}
       <div className="px-3 py-1.5 border-b border-[hsl(190,60%,10%)]">
         <button onClick={handleOpenPicker} className="w-full px-2 py-1.5 rounded text-[9px] font-mono font-bold border border-[#f97316]/40 text-[#f97316] hover:bg-[#f97316]/10 transition-colors flex items-center justify-center gap-1.5">
-          <Crosshair className="h-3 w-3" /> INITIATE KILL CHAIN
+          <Crosshair className="h-3 w-3" /> INITIATE ACTION-CHAIN
         </button>
       </div>
 
@@ -774,7 +805,7 @@ export const KillChainPanel = ({ onLocate }: KillChainPanelProps) => {
         {loading ? (
           <div className="flex items-center justify-center py-8"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">No active kill chains</div>
+          <div className="text-center py-6 text-[9px] font-mono text-muted-foreground">No active action-chains</div>
         ) : (
           tasks.map(task => {
             const col = PHASE_COLORS[task.phase] || "#888";
