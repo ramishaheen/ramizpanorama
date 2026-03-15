@@ -70,13 +70,25 @@ interface SensorFusionPanelProps {
   onNavigateToEvent?: (tab: "FEED" | "TARGETS", lat: number, lng: number) => void;
   onSelectFeed?: (feed: SensorFeed) => void;
   activeFeedId?: string | null;
+  mapCenter?: { lat: number; lng: number } | null;
+  mapAltitude?: number;
 }
 
-export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent, onSelectFeed, activeFeedId }: SensorFusionPanelProps) => {
+export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent, onSelectFeed, activeFeedId, mapCenter, mapAltitude }: SensorFusionPanelProps) => {
   const { feeds, summary, loading, fetchFeeds, feedsByCategory } = useSensorFeeds();
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [pulsing, setPulsing] = useState(false);
   const [nearbyOnly, setNearbyOnly] = useState(true);
+  const [mapFilterEnabled, setMapFilterEnabled] = useState(true);
+
+  // Compute zoom-dependent radius
+  const mapRadius = useMemo(() => {
+    if (!mapAltitude) return 2000;
+    if (mapAltitude > 2.0) return 2000;
+    if (mapAltitude > 1.0) return 800;
+    if (mapAltitude > 0.5) return 300;
+    return 100;
+  }, [mapAltitude]);
 
   const handlePulse = async () => {
     setPulsing(true);
@@ -94,14 +106,25 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
     }
   };
 
-  // Filter feeds by proximity when context is active
+  // Filter feeds by proximity — activeContext takes priority, then mapCenter
   const filteredFeeds = useMemo(() => {
-    if (!activeContext || !nearbyOnly) return feeds;
-    return feeds.filter(f => {
-      const dist = haversineKm(f.lat, f.lng, activeContext.lat, activeContext.lng);
-      return dist <= Math.max(f.coverage_radius_km, 50); // min 50km threshold
-    });
-  }, [feeds, activeContext, nearbyOnly]);
+    if (activeContext && nearbyOnly) {
+      return feeds.filter(f => {
+        const dist = haversineKm(f.lat, f.lng, activeContext.lat, activeContext.lng);
+        return dist <= Math.max(f.coverage_radius_km, 50);
+      });
+    }
+    if (!activeContext && mapCenter && mapFilterEnabled) {
+      const withDist = feeds.map(f => ({
+        ...f,
+        _dist: haversineKm(f.lat, f.lng, mapCenter.lat, mapCenter.lng),
+      }));
+      return withDist
+        .filter(f => f._dist <= mapRadius)
+        .sort((a, b) => a._dist - b._dist || b.health_score - a.health_score);
+    }
+    return feeds;
+  }, [feeds, activeContext, nearbyOnly, mapCenter, mapFilterEnabled, mapRadius]);
 
   const filteredFeedsByCategory = useMemo(() => {
     const cats: Record<string, SensorFeed[]> = {
@@ -155,6 +178,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
   }, [filteredFeeds]);
 
   const severityColor = activeContext?.severity === "critical" ? "hsl(var(--destructive))" : activeContext?.severity === "high" ? "#f97316" : "#eab308";
+  const isMapFiltered = !activeContext && mapCenter && mapFilterEnabled;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -164,6 +188,11 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
           <div className="flex items-center gap-1.5">
             <Radar className="h-3 w-3 text-primary" />
             <span className="text-[8px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">SENSOR FUSION</span>
+            {isMapFiltered && (
+              <span className="text-[6px] font-mono px-1 py-0.5 rounded bg-primary/10 text-primary border border-primary/30 animate-pulse">
+                MAP VIEW • {mapRadius}km
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button onClick={handlePulse} disabled={pulsing} className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-mono border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50" title="Pulse all active feeds">
@@ -320,6 +349,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
                 const healthPct = feed.health_score;
                 const healthCol = healthPct >= 80 ? "#22c55e" : healthPct >= 50 ? "#eab308" : "#ef4444";
                 const distToCtx = activeContext ? haversineKm(feed.lat, feed.lng, activeContext.lat, activeContext.lng) : null;
+                const distToMap = (!activeContext && mapCenter) ? haversineKm(feed.lat, feed.lng, mapCenter.lat, mapCenter.lng) : null;
                 return (
                    <div key={feed.id} className={`border-b border-border/10 border-l-2 transition-colors ${activeFeedId === feed.id ? "bg-primary/10 ring-1 ring-primary/30" : ""}`} style={{ borderLeftColor: statusCol }}>
                     <button onClick={() => { onLocate?.(feed.lat, feed.lng); onSelectFeed?.(feed); }}
@@ -340,6 +370,12 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
                       {distToCtx !== null && (
                         <div className="text-[7px] font-mono text-primary mt-0.5 pl-3">
                           📍 {distToCtx.toFixed(1)} km from {activeContext!.type === "target" ? "target" : "event"}
+                        </div>
+                      )}
+                      {/* Distance to map center */}
+                      {distToMap !== null && (
+                        <div className="text-[7px] font-mono text-muted-foreground mt-0.5 pl-3">
+                          🗺️ {distToMap.toFixed(0)} km from view center
                         </div>
                       )}
                       {/* Mini health bar */}
@@ -380,12 +416,23 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
           <span className="text-[7px] font-mono text-muted-foreground">
             {catOrder.filter(c => (filteredFeedsByCategory[c]?.length || 0) > 0).length} MODALITIES • {totalFeeds} FEEDS
             {activeContext && nearbyOnly && <span className="text-primary ml-1">• FILTERED</span>}
+            {isMapFiltered && <span className="text-primary ml-1">• MAP {mapRadius}km</span>}
           </span>
-          {degradedCount + offlineCount > 0 && (
-            <span className="text-[7px] font-mono text-[#eab308] flex items-center gap-0.5">
-              <AlertTriangle className="h-2.5 w-2.5" /> {degradedCount + offlineCount} NEED ATTENTION
-            </span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {!activeContext && mapCenter && (
+              <button
+                onClick={() => setMapFilterEnabled(!mapFilterEnabled)}
+                className={`text-[6px] font-mono px-1 py-0.5 rounded border transition-colors ${mapFilterEnabled ? "border-primary/50 bg-primary/10 text-primary" : "border-border/30 text-muted-foreground"}`}
+              >
+                {mapFilterEnabled ? "MAP" : "ALL"}
+              </button>
+            )}
+            {degradedCount + offlineCount > 0 && (
+              <span className="text-[7px] font-mono text-[#eab308] flex items-center gap-0.5">
+                <AlertTriangle className="h-2.5 w-2.5" /> {degradedCount + offlineCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
