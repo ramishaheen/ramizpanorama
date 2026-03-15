@@ -317,6 +317,9 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     "mapbox-sat": { label: "MAPBOX", image: null, atmosphere: "hsl(200, 70%, 35%)", needsMapbox: true },
   };
 
+  // ========== FEED-DRIVEN GLOBE IMAGERY ==========
+  const [activeSensorFeed, setActiveSensorFeed] = useState<import("@/hooks/useSensorFeeds").SensorFeed | null>(null);
+
   // Apply globe style
   useEffect(() => {
     const globe = globeRef.current;
@@ -324,7 +327,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     if (activeSensorFeed) return; // sensor feed overrides style
     const style = GLOBE_STYLES[globeStyle];
     if (style.needsMapbox && mapboxToken) {
-      // Use Mapbox Static Images API for equirectangular world image
       const mapboxUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/0,0,1,0/1024x512?access_token=${mapboxToken}`;
       globe.globeImageUrl(mapboxUrl);
     } else if (style.image) {
@@ -332,9 +334,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
     }
     globe.atmosphereColor(style.atmosphere);
   }, [globeStyle, globeReady, mapboxToken, activeSensorFeed]);
-
-  // ========== FEED-DRIVEN GLOBE IMAGERY ==========
-  const [activeSensorFeed, setActiveSensorFeed] = useState<import("@/hooks/useSensorFeeds").SensorFeed | null>(null);
 
   const FEED_IMAGERY_MAP: Record<string, { image: string; atmosphere: string; label: string }> = {
     satellite_eo: { image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)", label: "EO / OPTICAL" },
