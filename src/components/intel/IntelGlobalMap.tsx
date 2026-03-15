@@ -263,9 +263,14 @@ export function IntelGlobalMap() {
     const map = mapRef.current;
     if (!map) return;
     const config = TILE_PRESETS[preset];
-    if (config.needsKey && !yandexKey) return;
+    if (config.needsKey === "yandex" && !yandexKey) return;
+    if (config.needsKey === "mapbox" && !mapboxToken) return;
     if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
-    const tl = L.tileLayer(config.url, { attribution: config.attr, maxZoom: 18, subdomains: "1234" }).addTo(map);
+    let url = config.url;
+    if (preset === "mapbox-sat" && mapboxToken) {
+      url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
+    }
+    const tl = L.tileLayer(url, { attribution: config.attr, maxZoom: 18, subdomains: "1234", tileSize: 512, zoomOffset: -1 }).addTo(map);
     tileLayerRef.current = tl;
     setActiveTile(preset);
   };
