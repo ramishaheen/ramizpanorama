@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.ontology-ai-fuse]
 verify_jwt = false
+
+[functions.yandex-tiles]
+verify_jwt = false
