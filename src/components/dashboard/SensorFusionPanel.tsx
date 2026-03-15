@@ -349,6 +349,7 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
                 const healthPct = feed.health_score;
                 const healthCol = healthPct >= 80 ? "#22c55e" : healthPct >= 50 ? "#eab308" : "#ef4444";
                 const distToCtx = activeContext ? haversineKm(feed.lat, feed.lng, activeContext.lat, activeContext.lng) : null;
+                const distToMap = (!activeContext && mapCenter) ? haversineKm(feed.lat, feed.lng, mapCenter.lat, mapCenter.lng) : null;
                 return (
                    <div key={feed.id} className={`border-b border-border/10 border-l-2 transition-colors ${activeFeedId === feed.id ? "bg-primary/10 ring-1 ring-primary/30" : ""}`} style={{ borderLeftColor: statusCol }}>
                     <button onClick={() => { onLocate?.(feed.lat, feed.lng); onSelectFeed?.(feed); }}
@@ -369,6 +370,12 @@ export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate,
                       {distToCtx !== null && (
                         <div className="text-[7px] font-mono text-primary mt-0.5 pl-3">
                           📍 {distToCtx.toFixed(1)} km from {activeContext!.type === "target" ? "target" : "event"}
+                        </div>
+                      )}
+                      {/* Distance to map center */}
+                      {distToMap !== null && (
+                        <div className="text-[7px] font-mono text-muted-foreground mt-0.5 pl-3">
+                          🗺️ {distToMap.toFixed(0)} km from view center
                         </div>
                       )}
                       {/* Mini health bar */}
