@@ -282,6 +282,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const [shooterAssets, setShooterAssets] = useState<any[]>([]);
   const [c2RightTab, setC2RightTab] = useState<"FEED" | "TARGETS" | "KILLCHAIN" | "C2 INTEL" | "SENSORS" | "ONTOLOGY" | "S2S" | "LINKS">("FEED");
   const [c2PopupOpen, setC2PopupOpen] = useState(false);
+  const [c2IntelContext, setC2IntelContext] = useState<{ type: "event" | "target"; title: string; event_type: string; severity: string; lat: number; lng: number; source: string; details?: string } | null>(null);
   const { feeds: sensorFeeds, feedsByCategory: sensorCats } = useSensorFeeds();
   const [workbenchTargetId, setWorkbenchTargetId] = useState<string | null>(null);
   const [showKanban, setShowKanban] = useState(false);
@@ -1799,6 +1800,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                           className="text-[8px] font-mono px-2 py-0.5 rounded border border-[hsl(25,95%,53%)]/30 text-[hsl(25,95%,53%)] hover:bg-[hsl(25,95%,53%)]/10 transition-colors">
                           ⚡ ACTION
                         </button>
+                        <button onClick={() => {
+                          setC2IntelContext({
+                            type: "event",
+                            title: ev.label,
+                            event_type: ev.type,
+                            severity: ev.severity,
+                            lat: ev.lat,
+                            lng: ev.lng,
+                            source: ev.source,
+                            details: `Timestamp: ${new Date(ev.ts).toISOString()}`,
+                          });
+                          setC2RightTab("C2 INTEL");
+                        }}
+                          className="text-[8px] font-mono px-2 py-0.5 rounded border border-[#f97316]/30 text-[#f97316] hover:bg-[#f97316]/10 transition-colors">
+                          🧠 C2
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -1807,8 +1824,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               </>
             )}
             {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
-            {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} feedEvents={unifiedFeed} />}
-            {c2RightTab === "C2 INTEL" && <C2ChatTab />}
+            {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} feedEvents={unifiedFeed} onIntelContext={(ctx) => { setC2IntelContext(ctx); setC2RightTab("C2 INTEL"); }} />}
+            {c2RightTab === "C2 INTEL" && <C2ChatTab initialContext={c2IntelContext} onContextConsumed={() => setC2IntelContext(null)} />}
             {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
             {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
             {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}

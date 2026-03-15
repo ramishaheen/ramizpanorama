@@ -133,7 +133,18 @@ const IntelMessage = ({ content }: { content: string }) => {
   );
 };
 
-export const C2ChatTab = ({ fullscreen = false, onClose }: { fullscreen?: boolean; onClose?: () => void }) => {
+interface C2IntelContext {
+  type: "event" | "target";
+  title: string;
+  event_type: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  source: string;
+  details?: string;
+}
+
+export const C2ChatTab = ({ fullscreen = false, onClose, initialContext, onContextConsumed }: { fullscreen?: boolean; onClose?: () => void; initialContext?: C2IntelContext | null; onContextConsumed?: () => void }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -152,6 +163,24 @@ export const C2ChatTab = ({ fullscreen = false, onClose }: { fullscreen?: boolea
       setContextSuggestions(extractSuggestions(lastAssistant.content));
     }
   }, [messages, isLoading]);
+
+  // Auto-send when intel context is provided from Action-Chain
+  const contextProcessedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialContext || isLoading) return;
+    const contextKey = `${initialContext.type}-${initialContext.title}-${initialContext.lat}`;
+    if (contextProcessedRef.current === contextKey) return;
+    contextProcessedRef.current = contextKey;
+    
+    const prompt = initialContext.type === "target"
+      ? `Full C2 intelligence briefing for target: ${initialContext.title}. Classification: ${initialContext.event_type}. Priority: ${initialContext.severity}. Location: ${initialContext.lat.toFixed(4)}°N, ${initialContext.lng.toFixed(4)}°E. Source: ${initialContext.source}. ${initialContext.details || ""} Provide: threat assessment, engagement recommendations, collateral estimate, ISR coverage, and recommended COA.`
+      : `Full C2 intelligence briefing for event: ${initialContext.title}. Type: ${initialContext.event_type}. Severity: ${initialContext.severity}. Location: ${initialContext.lat.toFixed(4)}°N, ${initialContext.lng.toFixed(4)}°E. Source: ${initialContext.source}. ${initialContext.details || ""} Provide: situation assessment, threat correlation, recommended response, force disposition, and ISR tasking.`;
+    
+    setTimeout(() => {
+      send(prompt);
+      onContextConsumed?.();
+    }, 300);
+  }, [initialContext, isLoading]);
 
   const send = useCallback(async (overrideText?: string) => {
     const text = (overrideText || input).trim();

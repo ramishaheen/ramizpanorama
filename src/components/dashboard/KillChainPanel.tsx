@@ -61,9 +61,21 @@ const PHASE_ICONS: Record<string, string> = {
   find: "🔍", fix: "📌", track: "👁", target: "🎯", engage: "💥", assess: "📋",
 };
 
+interface IntelContext {
+  type: "event" | "target";
+  title: string;
+  event_type: string;
+  severity: string;
+  lat: number;
+  lng: number;
+  source: string;
+  details?: string;
+}
+
 interface KillChainPanelProps {
   onLocate?: (lat: number, lng: number) => void;
   feedEvents?: FeedEvent[];
+  onIntelContext?: (ctx: IntelContext) => void;
 }
 
 // ===== SITUATION-ADAPTIVE F2T2EA ACTIONS =====
@@ -250,7 +262,7 @@ const KillChainEventModal = ({
   );
 };
 
-export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) => {
+export const KillChainPanel = ({ onLocate, feedEvents, onIntelContext }: KillChainPanelProps) => {
   const [tasks, setTasks] = useState<KCTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPicker, setShowPicker] = useState(false);
@@ -455,6 +467,18 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
       setShowPicker(false);
       fetchTasks();
 
+      // Send context to C2 Intel
+      onIntelContext?.({
+        type: "event",
+        title: ev.title,
+        event_type: ev.event_type,
+        severity: ev.severity,
+        lat: ev.lat,
+        lng: ev.lng,
+        source: ev.source,
+        details: `Confidence: ${(ev.confidence * 100).toFixed(0)}%. Action-chain initiated with platform: ${platform}, weapon: ${weapon}.`,
+      });
+
       // Get inserted task ID for automation
       const { data: newTask } = await supabase
         .from("kill_chain_tasks")
@@ -509,6 +533,18 @@ export const KillChainPanel = ({ onLocate, feedEvents }: KillChainPanelProps) =>
       });
       setShowPicker(false);
       fetchTasks();
+
+      // Send context to C2 Intel
+      onIntelContext?.({
+        type: "target",
+        title: `${target.track_id} — ${target.classification}`,
+        event_type: target.classification,
+        severity: target.priority,
+        lat: target.lat,
+        lng: target.lng,
+        source: "TARGET-DB",
+        details: `Confidence: ${target.confidence}%. Status: ${target.status}. Platform: ${platform}, weapon: ${weapon}.`,
+      });
 
       // Get inserted task ID and start automation
       const { data: newTask } = await supabase
