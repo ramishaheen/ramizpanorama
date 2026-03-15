@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Lock, RefreshCw, Skull, ChevronRight, Clock, AlertTriangle, Globe, Shield } from "lucide-react";
+import { handleAIError } from "@/lib/ai-error-handler";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 
