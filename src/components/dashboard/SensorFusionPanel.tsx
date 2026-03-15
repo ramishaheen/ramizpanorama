@@ -74,7 +74,7 @@ interface SensorFusionPanelProps {
   mapAltitude?: number;
 }
 
-export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent, onSelectFeed, activeFeedId }: SensorFusionPanelProps) => {
+export const SensorFusionPanel = ({ onToggleCoverage, coverageEnabled, onLocate, activeContext, onClearContext, onNavigateToEvent, onSelectFeed, activeFeedId, mapCenter, mapAltitude }: SensorFusionPanelProps) => {
   const { feeds, summary, loading, fetchFeeds, feedsByCategory } = useSensorFeeds();
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [pulsing, setPulsing] = useState(false);
