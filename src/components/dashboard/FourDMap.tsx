@@ -1465,6 +1465,22 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
         <div className="flex-1 relative overflow-hidden" style={{ minWidth: 0, filter: sharpenEnabled ? `contrast(${1 + sharpenValue / 200})` : undefined }}>
           <div ref={globeContainerRef} className="absolute inset-0" />
 
+          {/* Active Sensor Feed HUD Badge */}
+          {activeSensorFeed && (
+            <div className="absolute top-3 left-3 z-30 flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-background/90 backdrop-blur-md border border-primary/40 shadow-lg">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-mono font-bold text-primary tracking-wider">
+                  {(FEED_IMAGERY_MAP[activeSensorFeed.feed_type.split("_").slice(0,2).join("_")] || FEED_IMAGERY_MAP[activeSensorFeed.feed_type.split("_")[0]])?.label || "SENSOR"}
+                </span>
+                <span className="text-[7px] font-mono text-muted-foreground truncate max-w-[120px]">{activeSensorFeed.source_name}</span>
+              </div>
+              <button onClick={() => setActiveSensorFeed(null)} className="ml-1 p-0.5 rounded hover:bg-destructive/20 transition-colors">
+                <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+              </button>
+            </div>
+          )}
+
           {/* Inline 3D Realistic View */}
           {/* AI SCAN HUD — appears when zoomed in */}
           {showScanHUD &&
