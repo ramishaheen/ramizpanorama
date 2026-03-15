@@ -1918,6 +1918,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
             {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
             {c2RightTab === "OSINT" && <OSINTLinksPanel onLocate={handleFeedClick} mapCenter={viewCenter} mapAltitude={viewAlt} filterCountry={osintFilterCountry} />}
+            {c2RightTab === "VALYU" && <ValyuSearchPanel onLocate={handleFeedClick} />}
           </div>
         </div>,
         document.body
