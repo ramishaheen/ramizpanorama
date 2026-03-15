@@ -297,6 +297,42 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   const { commitStrike } = useSensorToShooter();
   const { entities: ontologyEntities } = useOntology();
 
+  // ========== MAPBOX TOKEN ==========
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.functions.invoke("mapbox-token").then(({ data }) => {
+      if (data?.token) setMapboxToken(data.token);
+    });
+  }, []);
+
+  // ========== GLOBE STYLE ==========
+  type GlobeStyle = "blue-marble" | "dark" | "night" | "topology" | "mapbox-sat";
+  const [globeStyle, setGlobeStyle] = useState<GlobeStyle>("blue-marble");
+
+  const GLOBE_STYLES: Record<GlobeStyle, { label: string; image: string | null; atmosphere: string; needsMapbox?: boolean }> = {
+    "blue-marble": { label: "MARBLE", image: "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg", atmosphere: "hsl(190, 80%, 40%)" },
+    "dark": { label: "DARK", image: "//unpkg.com/three-globe/example/img/earth-dark.jpg", atmosphere: "hsl(270, 70%, 45%)" },
+    "night": { label: "NIGHT", image: "//unpkg.com/three-globe/example/img/earth-night.jpg", atmosphere: "hsl(30, 60%, 35%)" },
+    "topology": { label: "TOPO", image: "//unpkg.com/three-globe/example/img/earth-topology.png", atmosphere: "hsl(40, 80%, 45%)" },
+    "mapbox-sat": { label: "MAPBOX", image: null, atmosphere: "hsl(200, 70%, 35%)", needsMapbox: true },
+  };
+
+  // Apply globe style
+  useEffect(() => {
+    const globe = globeRef.current;
+    if (!globe || !globeReady) return;
+    if (activeSensorFeed) return; // sensor feed overrides style
+    const style = GLOBE_STYLES[globeStyle];
+    if (style.needsMapbox && mapboxToken) {
+      // Use Mapbox Static Images API for equirectangular world image
+      const mapboxUrl = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/0,0,1,0/1024x512?access_token=${mapboxToken}`;
+      globe.globeImageUrl(mapboxUrl);
+    } else if (style.image) {
+      globe.globeImageUrl(style.image);
+    }
+    globe.atmosphereColor(style.atmosphere);
+  }, [globeStyle, globeReady, mapboxToken, activeSensorFeed]);
+
   // ========== FEED-DRIVEN GLOBE IMAGERY ==========
   const [activeSensorFeed, setActiveSensorFeed] = useState<import("@/hooks/useSensorFeeds").SensorFeed | null>(null);
 
