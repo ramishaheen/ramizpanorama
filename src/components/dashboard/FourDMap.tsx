@@ -1482,6 +1482,11 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             </div>
           )}
 
+          {/* Sensor Feed PiP Raw Data Stream */}
+          {activeSensorFeed && (
+            <SensorPiPView feed={activeSensorFeed} onClose={() => setActiveSensorFeed(null)} />
+          )}
+
           {/* Inline 3D Realistic View */}
           {/* AI SCAN HUD — appears when zoomed in */}
           {showScanHUD &&
