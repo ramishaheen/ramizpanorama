@@ -18,6 +18,7 @@ import { C2TargetingPanel } from "./C2TargetingPanel";
 import { KillChainPanel } from "./KillChainPanel";
 import { C2ChatTab } from "./C2ChatTab";
 import { SensorFusionPanel } from "./SensorFusionPanel";
+import { SensorPiPView } from "./SensorPiPView";
 import { OntologyPanel } from "./OntologyPanel";
 import { SensorToShooterPanel } from "./SensorToShooterPanel";
 import DataLinksPanel from "./DataLinksPanel";
