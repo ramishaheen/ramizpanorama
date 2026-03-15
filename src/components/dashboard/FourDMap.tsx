@@ -1695,66 +1695,26 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
             </div>
 
             <div className="px-2 py-1.5 border-b border-[hsl(190,60%,12%)] bg-[hsl(220,20%,6%)] flex-shrink-0">
-              <div className="flex items-center gap-0.5">
-                {(["FEED", "TARGETS", "KILLCHAIN", "C2 INTEL", "SENSORS", "ONTOLOGY", "S2S", "LINKS"] as const).map((tab) =>
-              <button key={tab} onClick={() => setC2RightTab(tab)}
-                className={`px-1.5 py-1 rounded text-[7px] font-mono font-bold tracking-wider transition-colors ${
-                  c2RightTab === tab
-                    ? "bg-primary/20 text-primary border border-primary/40"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40 border border-transparent"
-                }`}>
-                    {tab}
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  { key: "FEED" as const, icon: "📋", label: "FEED" },
+                  { key: "TARGETS" as const, icon: "🎯", label: "TARGETS" },
+                  { key: "KILLCHAIN" as const, icon: "⚡", label: "KC" },
+                  { key: "C2 INTEL" as const, icon: "🧠", label: "C2" },
+                  { key: "SENSORS" as const, icon: "📡", label: "SENSORS" },
+                  { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTO" },
+                  { key: "S2S" as const, icon: "🚀", label: "S2S" },
+                  { key: "LINKS" as const, icon: "📶", label: "LINKS" },
+                ]).map((btn) => (
+                  <button
+                    key={btn.key}
+                    onClick={() => { setC2RightTab(btn.key); setC2PopupOpen(true); }}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded text-[8px] font-mono font-bold tracking-wider border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/10 transition-colors"
+                  >
+                    <span className="text-[10px]">{btn.icon}</span>{btn.label}
                   </button>
-              )}
+                ))}
               </div>
-            </div>
-
-            <div className="flex-1 min-h-0 overflow-auto scrollbar-thin flex flex-col">
-              {c2RightTab === "FEED" &&
-            <>
-                  <div className="px-3 py-1 border-b border-[hsl(190,60%,10%)]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5"><AlertTriangle className="h-3 w-3 text-[#f97316]" /><span className="text-[8px] font-bold tracking-[0.15em] text-foreground uppercase font-mono">EVENT FEED</span></div>
-                      <span className="text-[8px] font-mono text-primary">{unifiedFeed.length}</span>
-                    </div>
-                  </div>
-                  <div ref={feedRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-                    {unifiedFeed.map((ev) =>
-                <div key={ev.id} className={`border-b border-[hsl(220,15%,10%)] border-l-2 ${getSeverityBorder(ev.severity)} hover:bg-[hsl(190,20%,10%)] transition-colors`}>
-                        <button onClick={() => handleFeedClick(ev.lat, ev.lng)} className="w-full text-left px-2 py-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[8px] font-mono font-bold truncate flex items-center gap-1" style={{ color: ev.color }}>
-                              <span className="text-[10px]">{ev.icon}</span> {ev.type.toUpperCase()}
-                            </span>
-                            <span className="text-[7px] font-mono text-muted-foreground flex-shrink-0 ml-1">{ev.source}</span>
-                          </div>
-                          <div className="text-[8px] font-mono text-foreground/80 truncate mt-0.5">{ev.label}</div>
-                          <div className="text-[7px] font-mono text-muted-foreground mt-0.5">{new Date(ev.ts).toISOString().slice(11, 19)} UTC • {ev.lat.toFixed(2)}°, {ev.lng.toFixed(2)}°</div>
-                        </button>
-                        <div className="px-2 pb-1 flex items-center gap-1">
-                          <button onClick={() => handleSlewSensor(ev.lat, ev.lng)}
-                    className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#06b6d4]/30 text-[#06b6d4] hover:bg-[#06b6d4]/10 transition-colors">
-                            📡 SLEW
-                          </button>
-                          <button onClick={() => {setC2RightTab("KILLCHAIN");}}
-                    className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/30 text-[#f97316] hover:bg-[#f97316]/10 transition-colors">
-                            ⚡ CHAIN
-                          </button>
-                        </div>
-                      </div>
-                )}
-                    {unifiedFeed.length === 0 && <div className="px-3 py-4 text-center text-[9px] font-mono text-muted-foreground">No events in window</div>}
-                  </div>
-                </>
-            }
-              {c2RightTab === "TARGETS" && <C2TargetingPanel onLocate={handleFeedClick} />}
-              {c2RightTab === "KILLCHAIN" && <KillChainPanel onLocate={handleFeedClick} />}
-              {c2RightTab === "C2 INTEL" && <C2ChatTab />}
-              {showC2Fullscreen && <C2ChatTab fullscreen onClose={() => setShowC2Fullscreen(false)} />}
-              {c2RightTab === "SENSORS" && <SensorFusionPanel onLocate={handleFeedClick} onToggleCoverage={() => toggleLayer("sensorCoverage")} coverageEnabled={layers.sensorCoverage} />}
-              {c2RightTab === "ONTOLOGY" && <OntologyPanel onLocate={handleFeedClick} />}
-              {c2RightTab === "S2S" && <SensorToShooterPanel onLocate={handleFeedClick} />}
-              {c2RightTab === "LINKS" && <DataLinksPanel onLocate={handleFeedClick} />}
             </div>
 
             <div className="px-3 py-2 border-t border-[hsl(190,60%,12%)] bg-[hsl(220,20%,5%)] flex-shrink-0">
