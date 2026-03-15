@@ -621,7 +621,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   { id: "blueForce", label: "Blue Force (COP)", icon: <Users className="h-3.5 w-3.5" />, color: "#3b82f6", count: stats.blu },
   { id: "redForce", label: "Red Force (COP)", icon: <Swords className="h-3.5 w-3.5" />, color: "#ef4444", count: stats.red },
   { id: "targetTracks", label: "Target Tracks", icon: <Target className="h-3.5 w-3.5" />, color: "#f97316", count: stats.tgt },
-  { id: "killChain", label: "Kill Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
+  { id: "killChain", label: "Action-Chain Arcs", icon: <Zap className="h-3.5 w-3.5" />, color: "#dc2626" },
   { id: "sensorCoverage", label: "Sensor Coverage", icon: <Radar className="h-3.5 w-3.5" />, color: "#06b6d4", count: sensorFeeds.length },
   { id: "ontologyEntities", label: "Ontology Entities", icon: <Globe className="h-3.5 w-3.5" />, color: "#8b5cf6" },
   { id: "shooterAssets", label: "Shooter Assets", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: shooterAssets.length },
@@ -1653,7 +1653,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                   <div className="flex flex-wrap gap-1">
                     {tasks_kc_count > 0 &&
                     <button onClick={() => { setC2RightTab("KILLCHAIN"); setC2PopupOpen(true); }} className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#f97316]/30 text-[#f97316]/70 hover:bg-[#f97316]/10 transition-colors">
-                        ⚡ Kill Chain ({tasks_kc_count})
+                        ⚡ Action-Chain ({tasks_kc_count})
                       </button>
                     }
                     {criticalTargetCount > 0 &&
@@ -1699,7 +1699,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                 {([
                   { key: "FEED" as const, icon: "📋", label: "FEED" },
                   { key: "TARGETS" as const, icon: "🎯", label: "TARGETS" },
-                  { key: "KILLCHAIN" as const, icon: "⚡", label: "KC" },
+                  { key: "KILLCHAIN" as const, icon: "⚡", label: "AC" },
                   { key: "C2 INTEL" as const, icon: "🧠", label: "C2" },
                   { key: "SENSORS" as const, icon: "📡", label: "SENSORS" },
                   { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTO" },
@@ -1739,7 +1739,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
               {([
                 { key: "FEED" as const, icon: "📋", label: "FEED" },
                 { key: "TARGETS" as const, icon: "🎯", label: "TARGETS" },
-                { key: "KILLCHAIN" as const, icon: "⚡", label: "KILLCHAIN" },
+                { key: "KILLCHAIN" as const, icon: "⚡", label: "ACTION-CHAIN" },
                 { key: "C2 INTEL" as const, icon: "🧠", label: "C2 INTEL" },
                 { key: "SENSORS" as const, icon: "📡", label: "SENSORS" },
                 { key: "ONTOLOGY" as const, icon: "🔗", label: "ONTOLOGY" },
@@ -1797,7 +1797,7 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
                         </button>
                         <button onClick={() => { setC2RightTab("KILLCHAIN"); }}
                           className="text-[8px] font-mono px-2 py-0.5 rounded border border-[hsl(25,95%,53%)]/30 text-[hsl(25,95%,53%)] hover:bg-[hsl(25,95%,53%)]/10 transition-colors">
-                          ⚡ CHAIN
+                          ⚡ ACTION
                         </button>
                       </div>
                     </div>
