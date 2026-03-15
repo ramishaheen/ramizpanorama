@@ -668,7 +668,8 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   { id: "sensorCoverage", label: "Sensor Coverage", icon: <Radar className="h-3.5 w-3.5" />, color: "#06b6d4", count: sensorFeeds.length },
   { id: "ontologyEntities", label: "Ontology Entities", icon: <Globe className="h-3.5 w-3.5" />, color: "#8b5cf6" },
   { id: "shooterAssets", label: "Shooter Assets", icon: <Crosshair className="h-3.5 w-3.5" />, color: "#f97316", count: shooterAssets.length },
-  { id: "telegramOSINT", label: "Telegram OSINT", icon: <Radio className="h-3.5 w-3.5" />, color: "#10b981", count: telegramMarkers.length }];
+  { id: "telegramOSINT", label: "Telegram OSINT", icon: <Radio className="h-3.5 w-3.5" />, color: "#10b981", count: telegramMarkers.length },
+  { id: "osintLinks", label: "OSINT Resources", icon: <Globe className="h-3.5 w-3.5" />, color: "#06b6d4", count: osintMapData.length }];
 
 
   // Timeline
