@@ -1421,31 +1421,6 @@ export const FourDMap = ({ onClose, rockets = [] }: FourDMapProps) => {
   { id: "maritime", label: "Maritime", icon: <Anchor className="h-3 w-3" /> },
   { id: "borders", label: "Borders", icon: <MapPin className="h-3 w-3" /> }];
 
-            <div className="px-3 py-2.5 border-b border-[hsl(190,60%,12%)]">
-              <span className="text-[9px] font-mono text-muted-foreground tracking-[0.15em] mb-1.5 block">GLOBE TEXTURE</span>
-              <div className="flex flex-wrap gap-1">
-                {(Object.entries(GLOBE_STYLES) as [GlobeStyle, typeof GLOBE_STYLES[GlobeStyle]][]).map(([key, style]) => {
-                  const disabled = style.needsMapbox && !mapboxToken;
-                  return (
-                    <button
-                      key={key}
-                      disabled={disabled}
-                      onClick={() => { setActiveSensorFeed(null); setGlobeStyle(key); }}
-                      className={`px-1.5 py-1 rounded text-[8px] font-mono font-bold border transition-colors ${
-                        globeStyle === key && !activeSensorFeed
-                          ? "border-primary/50 bg-primary/15 text-primary"
-                          : disabled
-                          ? "border-[hsl(220,15%,18%)] text-muted-foreground/30 cursor-not-allowed"
-                          : "border-[hsl(220,15%,18%)] text-muted-foreground hover:text-foreground hover:border-[hsl(220,15%,25%)]"
-                      }`}
-                      title={disabled ? "Mapbox token not configured" : style.label}
-                    >
-                      {style.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
   const getTypeIcon = (type: string) => {
     switch (type) {case "city":return "🏙";case "facility":return "⚛";case "military":return "🎯";case "chokepoint":return "⚓";case "conflict":return "⚔";case "satellite":return "🛰";case "vessel":return "🚢";default:return "📌";}
