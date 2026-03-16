@@ -1486,6 +1486,9 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
           <button onClick={() => setCenterView("timeline")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "timeline" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Clock className="h-3 w-3 inline mr-1" />TIMELINE
           </button>
+          <button onClick={() => setCenterView("interactive")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "interactive" ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Globe className="h-3 w-3 inline mr-1" />INTERACTIVE MAP
+          </button>
         </div>
       </div>
 
