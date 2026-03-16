@@ -24,7 +24,7 @@ export interface CommodityPrices {
 
 const KEYS = ["oil", "brent", "gold", "silver", "gas", "copper", "wheat", "usdils", "usdsar", "ita", "btc", "eth"];
 const MAX_HISTORY = 20;
-const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true";
+// Crypto now fetched server-side via commodity-prices edge function
 
 const initHistory = (): Record<string, number[]> =>
   Object.fromEntries(KEYS.map(k => [k, []]));
