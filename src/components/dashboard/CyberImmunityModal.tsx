@@ -1963,6 +1963,31 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
           {error}
         </div>
       )}
+
+      {/* ═══ INTEL MAP POPUP ═══ */}
+      {showIntelMap && createPortal(
+        <div className="fixed inset-0 flex flex-col bg-background text-foreground" style={{ zIndex: 100000 }}>
+          {/* Popup header */}
+          <div className="cyber-command-bar flex-shrink-0">
+            <div className="w-[3px] h-5 bg-primary mr-3 flex-shrink-0" />
+            <Globe className="h-4 w-4 text-primary mr-2" />
+            <h2 className="text-[11px] font-mono font-bold tracking-[0.2em] mr-auto">
+              INTERACTIVE <span className="text-primary">INTEL MAP</span>
+            </h2>
+            <button
+              onClick={() => setShowIntelMap(false)}
+              className="p-1 border border-border/50 hover:border-destructive/50 hover:text-destructive transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {/* Map content */}
+          <div className="flex-1 min-h-0 relative cyber-inset-glow">
+            <InteractiveMapSummary />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>,
     document.body
   );
