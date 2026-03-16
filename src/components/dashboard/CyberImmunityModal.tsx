@@ -1602,6 +1602,8 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
               <APTIntelPanel />
             ) : centerView === "timeline" ? (
               <IncidentTimeline threats={filtered} onSelect={handleSelect} />
+            ) : centerView === "interactive" ? (
+              <InteractiveMapSummary />
             ) : (
               <EnhancedDarkWebMonitor
                 entries={darkWeb.entries}
