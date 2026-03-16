@@ -276,9 +276,9 @@ Deno.serve(async (req) => {
     console.error("dark-web-intel error:", error);
     const isRateLimit = error instanceof Error && error.message === "RATE_LIMIT";
     return new Response(
-      JSON.stringify(isRateLimit ? { ...FALLBACK, error: "Rate limited — using cached intelligence" } : FALLBACK),
+      JSON.stringify({ ...FALLBACK, ...(isRateLimit ? { error: "Rate limited — using cached intelligence" } : {}) }),
       {
-        status: isRateLimit ? 429 : 200,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
