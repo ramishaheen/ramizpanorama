@@ -1259,6 +1259,8 @@ function ThreatDetailCard({ threat, onClose }: { threat: CyberThreat; onClose: (
 /* ── Main Modal ── */
 export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityModalProps) => {
   const { threats: cyberThreats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [feedCollapsed, setFeedCollapsed] = useState(false);
 
   // Merge cyber threats with OSINT geo alerts converted to CyberThreat format
   const threats = useMemo(() => {
