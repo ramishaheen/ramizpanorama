@@ -1259,6 +1259,8 @@ function ThreatDetailCard({ threat, onClose }: { threat: CyberThreat; onClose: (
 /* ── Main Modal ── */
 export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityModalProps) => {
   const { threats: cyberThreats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [feedCollapsed, setFeedCollapsed] = useState(false);
 
   // Merge cyber threats with OSINT geo alerts converted to CyberThreat format
   const threats = useMemo(() => {
@@ -1424,150 +1426,191 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
 
   return createPortal(
     <div className="fixed inset-0 bg-background text-foreground flex flex-col" style={{ zIndex: 99999 }}>
-      {/* ── TOP BAR ── */}
-      <div className="flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 border-b border-border bg-card/90 backdrop-blur">
-        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-          <ShieldAlert className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-          <h1 className="text-xs sm:text-sm font-bold tracking-wider flex-shrink-0">CYBER <span className="text-primary">IMMUNITY</span></h1>
-          <span className="text-[9px] font-mono text-muted-foreground hidden sm:inline">OSINT OPERATIONS CENTER</span>
-          {/* Live / Replay badge */}
-          {isLive ? (
-            <span className="flex items-center gap-1 text-[9px] font-mono font-bold text-destructive px-2 py-0.5 rounded bg-destructive/10 border border-destructive/30">
-              <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-              LIVE
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-[9px] font-mono font-bold text-yellow-400 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30">
-              <Clock className="h-3 w-3" />
-              REPLAY · {hoursAgoLabel}
-            </span>
-          )}
-          {sources.length > 0 && (
-            <div className="flex items-center gap-1 ml-2 max-sm:hidden">
-              {sources.map((s) => (
-                <span key={s} className="text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-mono">{s}</span>
-              ))}
-            </div>
-          )}
+      {/* Scanline overlay */}
+      <div className="cyber-scanline-overlay" />
+
+      {/* ═══ HEADER — Gotham Command Bar ═══ */}
+      <div className="cyber-command-bar">
+        <div className="w-[3px] h-5 bg-primary mr-3 flex-shrink-0" />
+        <ShieldAlert className="h-4 w-4 text-primary flex-shrink-0 mr-2" />
+        <h1 className="text-[11px] font-mono font-bold tracking-[0.2em] flex-shrink-0 mr-3">
+          CYBER <span className="text-primary">IMMUNITY</span>
+        </h1>
+
+        {/* Threat level badge */}
+        <span className={`cyber-stat-chip ${threatLevelColor[stats.threatLevel]} px-2 py-0.5 border border-current/30 mr-3`}>
+          ■ {stats.threatLevel}
+        </span>
+
+        {/* Severity counts inline */}
+        <div className="flex items-center gap-2 mr-3 max-sm:hidden">
+          <span className="cyber-stat-chip text-destructive">C:{stats.severityCounts.critical}</span>
+          <span className="cyber-stat-chip text-orange-400">H:{stats.severityCounts.high}</span>
+          <span className="cyber-stat-chip text-yellow-400">M:{stats.severityCounts.medium}</span>
+          <span className="cyber-stat-chip text-primary">L:{stats.severityCounts.low}</span>
+          <span className="text-[8px] font-mono text-muted-foreground/60">T:{filtered.length}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {lastUpdated && <span className="text-[9px] font-mono text-muted-foreground max-sm:hidden">Updated: {new Date(lastUpdated).toLocaleTimeString()}</span>}
-          <button onClick={refresh} className="p-1.5 rounded border border-border hover:border-primary/50 hover:text-primary transition-colors" title="Refresh">
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <button onClick={onClose} className="p-1.5 rounded border border-border hover:border-destructive/50 hover:text-destructive transition-colors">
-            <X className="h-3.5 w-3.5" />
-          </button>
+
+        {/* Live / Replay badge */}
+        {isLive ? (
+          <span className="flex items-center gap-1.5 text-[8px] font-mono font-bold text-destructive px-2 py-0.5 border border-destructive/30 bg-destructive/10 mr-auto">
+            <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />LIVE
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 text-[8px] font-mono font-bold text-yellow-400 px-2 py-0.5 border border-yellow-500/30 bg-yellow-500/10 mr-auto">
+            <Clock className="h-3 w-3" />REPLAY · {hoursAgoLabel}
+          </span>
+        )}
+
+        {/* Right controls */}
+        {lastUpdated && <span className="text-[8px] font-mono text-muted-foreground/50 mr-2 max-sm:hidden">{new Date(lastUpdated).toLocaleTimeString()}</span>}
+        <button onClick={refresh} className="p-1 border border-border/50 hover:border-primary/50 hover:text-primary transition-colors mr-1" title="Refresh">
+          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+        </button>
+        <button onClick={onClose} className="p-1 border border-border/50 hover:border-destructive/50 hover:text-destructive transition-colors">
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+
+      {/* ═══ TAB BAR — Gotham Segmented Control ═══ */}
+      <div className="flex items-center border-b border-border bg-card/20 overflow-x-auto scrollbar-hide">
+        {([
+          { key: "map" as const, label: "MAP", icon: Globe, color: "primary" },
+          { key: "graph" as const, label: "GRAPH", icon: Network, color: "primary" },
+          { key: "darkweb" as const, label: "DARK WEB", icon: Skull, color: "primary" },
+          { key: "apt" as const, label: "APT INTEL", icon: Shield, color: "primary" },
+          { key: "timeline" as const, label: "TIMELINE", icon: Clock, color: "primary" },
+          { key: "interactive" as const, label: "INTEL MAP", icon: Globe, color: "primary" },
+        ] as const).map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setCenterView(tab.key)}
+              className={`cyber-tab flex items-center gap-1.5 flex-shrink-0 ${centerView === tab.key ? "cyber-tab-active" : ""}`}
+            >
+              <Icon className="h-3 w-3" />{tab.label}
+            </button>
+          );
+        })}
+        {/* Separator + source count */}
+        <div className="ml-auto flex items-center gap-2 px-3 flex-shrink-0">
+          {sources.length > 0 && <span className="text-[7px] font-mono text-primary/50">{sources.length} FEEDS</span>}
         </div>
       </div>
 
-      {/* ── THREAT LEVEL BAR ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-2 sm:px-4 py-1 sm:py-1.5 border-b border-border bg-card/50 text-[10px] font-mono gap-1">
-        <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide w-full sm:w-auto">
-          <span className={`font-bold flex-shrink-0 ${threatLevelColor[stats.threatLevel]}`}>■ {stats.threatLevel}</span>
-          <span className="text-destructive flex-shrink-0">C:{stats.severityCounts.critical}</span>
-          <span className="text-orange-400 flex-shrink-0">H:{stats.severityCounts.high}</span>
-          <span className="text-yellow-400 flex-shrink-0">M:{stats.severityCounts.medium}</span>
-          <span className="text-primary flex-shrink-0">L:{stats.severityCounts.low}</span>
-          <span className="text-muted-foreground flex-shrink-0">T:{filtered.length}</span>
-        </div>
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide w-full sm:w-auto">
-          <button onClick={() => setCenterView("map")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "map" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Globe className="h-3 w-3 inline mr-1" />MAP
-          </button>
-          <button onClick={() => setCenterView("graph")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "graph" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Network className="h-3 w-3 inline mr-1" />GRAPH
-          </button>
-          <button onClick={() => setCenterView("darkweb")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "darkweb" ? "bg-purple-500/20 text-purple-400 border-purple-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Skull className="h-3 w-3 inline mr-1" />DARK WEB
-          </button>
-          <button onClick={() => setCenterView("apt")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "apt" ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Shield className="h-3 w-3 inline mr-1" />APT INTEL
-          </button>
-          <button onClick={() => setCenterView("timeline")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "timeline" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Clock className="h-3 w-3 inline mr-1" />TIMELINE
-          </button>
-          <button onClick={() => setCenterView("interactive")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "interactive" ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Globe className="h-3 w-3 inline mr-1" />INTERACTIVE MAP
-          </button>
-        </div>
-      </div>
-
-      {/* ── ALERT BANNERS ── */}
+      {/* ═══ ALERT BANNERS ═══ */}
       <CyberAlertBanner threats={filtered} />
 
-      {/* ── MAIN CONTENT ── */}
-      <div className="flex flex-col md:flex-row flex-1 min-h-0">
-        {/* LEFT PANEL — hidden on mobile, shown on md+ */}
-        <div className="w-full md:w-[272px] border-b md:border-b-0 md:border-r border-border bg-card/30 flex flex-col max-md:hidden">
-          <ScrollArea className="flex-1">
-            <div className="p-3 space-y-3">
-              <IOCSearchSection search={search} setSearch={setSearch} />
+      {/* ═══ MAIN 3-COLUMN LAYOUT ═══ */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Country Filter</label>
-                <div className="flex flex-wrap gap-1">
-                  {COUNTRY_FILTERS.map((c) => (
-                    <button key={c} onClick={() => setCountryFilter(c)} className={`text-[8px] px-1.5 py-0.5 rounded border font-mono transition-colors ${countryFilter === c ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground hover:border-primary/30"}`}>
-                      {c}
-                    </button>
-                  ))}
+        {/* ── LEFT SIDEBAR ── */}
+        <div className={`border-r border-border bg-card/20 cyber-grid-bg flex flex-col transition-all duration-200 max-md:hidden ${leftCollapsed ? "w-0 overflow-hidden border-r-0" : "w-[260px]"}`}>
+          {!leftCollapsed && (
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-4">
+                {/* IOC Scanner Section */}
+                <div>
+                  <div className="cyber-section-header">IOC SCANNER</div>
+                  <IOCSearchSection search={search} setSearch={setSearch} />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Severity</label>
-                <div className="flex gap-1">
-                  {["all", "critical", "high", "medium", "low"].map((s) => (
-                    <button key={s} onClick={() => setSeverityFilter(s)} className={`text-[8px] px-1.5 py-0.5 rounded border font-mono transition-colors capitalize ${severityFilter === s ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                      {s}
-                    </button>
-                  ))}
+                {/* Country Filter — Compact Dropdown */}
+                <div>
+                  <div className="cyber-section-header">COUNTRY FILTER</div>
+                  <select
+                    value={countryFilter}
+                    onChange={(e) => setCountryFilter(e.target.value)}
+                    className="w-full h-7 text-[9px] font-mono bg-background/60 border border-border text-foreground px-2 focus:border-primary/50 focus:outline-none transition-colors"
+                  >
+                    {COUNTRY_FILTERS.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Intelligence Summary</label>
-                <div className="space-y-1 text-[10px]">
-                  {stats.topAttacker && <div className="flex justify-between"><span className="text-muted-foreground">Top Attacker</span><span className="text-destructive font-bold">{stats.topAttacker[0]} ({stats.topAttacker[1]})</span></div>}
-                  {stats.topTarget && <div className="flex justify-between"><span className="text-muted-foreground">Top Target</span><span className="text-primary font-bold">{stats.topTarget[0]} ({stats.topTarget[1]})</span></div>}
+                {/* Severity Filter — Dot Toggles */}
+                <div>
+                  <div className="cyber-section-header">SEVERITY</div>
+                  <div className="flex items-center gap-2">
+                    {(["all", "critical", "high", "medium", "low"] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSeverityFilter(s)}
+                        className={`flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 border transition-all ${severityFilter === s ? "border-primary/50 bg-primary/10 text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {s !== "all" && <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: SEVERITY_COLORS[s] }} />}
+                        {s === "all" ? "ALL" : s.charAt(0).toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Attack Types</label>
-                <div className="space-y-1">
-                  {stats.topTypes.map(([type, count]) => (
-                    <div key={type} className="flex items-center gap-2 text-[9px]">
-                      <div className="flex-1 bg-border/30 rounded-full h-1.5">
-                        <div className="bg-primary/60 h-full rounded-full" style={{ width: `${Math.min((count / (stats.topTypes[0]?.[1] || 1)) * 100, 100)}%` }} />
+                {/* Intelligence Summary */}
+                <div>
+                  <div className="cyber-section-header">INTEL SUMMARY</div>
+                  <div className="space-y-1.5 text-[9px]">
+                    {stats.topAttacker && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Top Attacker</span>
+                        <span className="text-destructive font-bold font-mono">{stats.topAttacker[0]} ({stats.topAttacker[1]})</span>
                       </div>
-                      <span className="text-muted-foreground w-20 truncate">{type}</span>
-                      <span className="text-foreground font-mono w-4 text-right">{count}</span>
-                    </div>
-                  ))}
-                  {stats.topTypes.length === 0 && <span className="text-[9px] text-muted-foreground italic">No attack data yet</span>}
+                    )}
+                    {stats.topTarget && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Top Target</span>
+                        <span className="text-primary font-bold font-mono">{stats.topTarget[0]} ({stats.topTarget[1]})</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Active Sources</label>
-                <div className="space-y-1">
-                  {(sources.length > 0 ? sources : EXPECTED_SOURCES).map((s) => (
-                    <div key={s} className="flex items-center gap-2 text-[9px]">
-                      <span className={`h-1.5 w-1.5 rounded-full ${sources.includes(s) ? "bg-green-500 animate-pulse" : "bg-muted-foreground/30"}`} />
-                      <span className={sources.includes(s) ? "text-muted-foreground" : "text-muted-foreground/50"}>{s}</span>
-                      {!sources.includes(s) && <span className="text-[7px] text-muted-foreground/40 italic">pending</span>}
-                    </div>
-                  ))}
+                {/* Attack Types */}
+                <div>
+                  <div className="cyber-section-header">ATTACK TYPES</div>
+                  <div className="space-y-1">
+                    {stats.topTypes.map(([type, count]) => (
+                      <div key={type} className="flex items-center gap-2 text-[8px]">
+                        <div className="flex-1 bg-border/20 h-1">
+                          <div className="bg-primary/50 h-full" style={{ width: `${Math.min((count / (stats.topTypes[0]?.[1] || 1)) * 100, 100)}%` }} />
+                        </div>
+                        <span className="text-muted-foreground w-20 truncate font-mono">{type}</span>
+                        <span className="text-foreground font-mono w-4 text-right">{count}</span>
+                      </div>
+                    ))}
+                    {stats.topTypes.length === 0 && <span className="text-[8px] text-muted-foreground/50 italic font-mono">No data</span>}
+                  </div>
+                </div>
+
+                {/* Active Sources */}
+                <div>
+                  <div className="cyber-section-header">ACTIVE SOURCES</div>
+                  <div className="space-y-0.5">
+                    {(sources.length > 0 ? sources : EXPECTED_SOURCES).map((s) => (
+                      <div key={s} className="flex items-center gap-2 text-[8px] font-mono">
+                        <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${sources.includes(s) ? "bg-green-500 animate-pulse" : "bg-muted-foreground/20"}`} />
+                        <span className={sources.includes(s) ? "text-muted-foreground" : "text-muted-foreground/30"}>{s}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </ScrollArea>
+            </ScrollArea>
+          )}
         </div>
 
-        {/* CENTER PANEL */}
-        <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Sidebar toggle */}
+        <button
+          onClick={() => setLeftCollapsed(!leftCollapsed)}
+          className="hidden md:flex w-4 items-center justify-center border-r border-border bg-card/30 hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary flex-shrink-0"
+          title={leftCollapsed ? "Show sidebar" : "Hide sidebar"}
+        >
+          <ChevronRight className={`h-3 w-3 transition-transform ${leftCollapsed ? "" : "rotate-180"}`} />
+        </button>
+
+        {/* ── CENTER PANEL ── */}
+        <div className="flex-1 flex flex-col min-w-0 relative cyber-inset-glow">
           <div className="flex-1 min-h-0 relative">
             {loading && threats.length === 0 ? (
               <CyberLoadingScreen sources={sources} />
@@ -1582,12 +1625,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
                   </div>
                   <p className="text-xs text-muted-foreground font-mono font-bold tracking-[0.12em]">AWAITING INTELLIGENCE DATA</p>
                   <p className="text-[9px] text-muted-foreground/60">OSINT feeds initializing — data will populate automatically</p>
-                  <div className="grid grid-cols-2 gap-1 mt-3">
-                    {EXPECTED_SOURCES.map((s) => (
-                      <div key={s} className="text-[8px] px-2 py-1 rounded border border-border bg-muted/20 text-muted-foreground/50">{s}</div>
-                    ))}
-                  </div>
-                  <button onClick={refresh} className="mt-2 text-[9px] px-3 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors font-mono">
+                  <button onClick={refresh} className="mt-2 text-[9px] px-3 py-1 border border-primary/30 text-primary hover:bg-primary/10 transition-colors font-mono">
                     RETRY FETCH
                   </button>
                 </div>
@@ -1620,27 +1658,9 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
                 onFetchDossier={handleFetchDossier}
               />
             )}
-
-            {/* Live stats HUD overlay (when no threat selected) */}
-            {!selectedThreat && filtered.length > 0 && (
-              <div className="absolute top-3 right-3 bg-card/80 backdrop-blur border border-border rounded-lg p-2.5 space-y-2 w-44" style={{ zIndex: 1000 }}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[8px] font-mono text-muted-foreground uppercase">Active Incidents</span>
-                  <span className="text-sm font-black text-primary tabular-nums">{filtered.length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[8px] font-mono text-muted-foreground uppercase">Last Event</span>
-                  <span className="text-[9px] font-mono text-foreground">{filtered[0]?.date || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-[8px] font-mono text-muted-foreground uppercase block mb-0.5">24h Frequency</span>
-                  <AttackSparkline threats={threats} />
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Rich detail overlay */}
+          {/* Threat detail overlay */}
           {selectedThreat && (
             <ThreatDetailCard threat={selectedThreat} onClose={() => setSelectedThreat(null)} />
           )}
@@ -1656,85 +1676,73 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
           )}
         </div>
 
-        {/* RIGHT PANEL — hidden below lg */}
-        <div className="w-full lg:w-[272px] border-t lg:border-t-0 lg:border-l border-border bg-card/30 flex flex-col max-lg:hidden">
+        {/* ── RIGHT SIDEBAR ── */}
+        <div className="w-[250px] border-l border-border bg-card/20 cyber-grid-bg flex flex-col max-lg:hidden">
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
-              <div className="text-center p-3 rounded border border-border bg-background/50">
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider block mb-2">AI Threat Assessment</label>
-                <div className={`text-2xl font-black ${threatLevelColor[stats.threatLevel]}`}>{stats.threatLevel}</div>
-                <div className="text-[9px] text-muted-foreground mt-1">Global Cyber Threat Level</div>
+              {/* Threat Level Gauge */}
+              <div className="cyber-panel p-3 text-center">
+                <div className="text-[7px] font-mono text-muted-foreground uppercase tracking-[0.2em] mb-1">AI THREAT ASSESSMENT</div>
+                <div className={`text-xl font-black font-mono ${threatLevelColor[stats.threatLevel]}`}>{stats.threatLevel}</div>
+                <div className="text-[8px] text-muted-foreground/60 mt-0.5">Global Cyber Threat Level</div>
               </div>
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Severity Breakdown</label>
-                <div className="space-y-1">
+              {/* Severity Breakdown */}
+              <div className="cyber-panel p-3">
+                <div className="cyber-section-header">SEVERITY BREAKDOWN</div>
+                <div className="space-y-1.5">
                   {(["critical", "high", "medium", "low"] as const).map((s) => (
-                    <div key={s} className="flex items-center gap-2 text-[9px]">
-                      <span className="capitalize w-12 text-muted-foreground">{s}</span>
-                      <div className="flex-1 bg-border/30 rounded-full h-2">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${Math.min((stats.severityCounts[s] / Math.max(filtered.length, 1)) * 100, 100)}%`, background: SEVERITY_COLORS[s] }} />
+                    <div key={s} className="flex items-center gap-2 text-[8px]">
+                      <span className="capitalize w-11 text-muted-foreground font-mono">{s}</span>
+                      <div className="flex-1 bg-border/15 h-1.5">
+                        <div className="h-full transition-all" style={{ width: `${Math.min((stats.severityCounts[s] / Math.max(filtered.length, 1)) * 100, 100)}%`, background: SEVERITY_COLORS[s] }} />
                       </div>
-                      <span className="font-mono w-4 text-right">{stats.severityCounts[s]}</span>
+                      <span className="font-mono w-4 text-right text-foreground">{stats.severityCounts[s]}</span>
                     </div>
                   ))}
                 </div>
+                {/* Inline sparkline */}
+                <div className="mt-2 pt-2 border-t border-border/30">
+                  <div className="text-[7px] font-mono text-muted-foreground/50 uppercase mb-1">4-WEEK FREQUENCY</div>
+                  <AttackSparkline threats={threats} />
+                </div>
               </div>
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> Anomaly Detection
-                </label>
+              {/* Anomaly Detection */}
+              <div className={`${stats.anomalies.length > 0 ? "cyber-panel-destructive" : "cyber-panel"} p-3`}>
+                <div className="cyber-section-header">
+                  <AlertTriangle className="h-3 w-3" /> ANOMALY DETECTION
+                </div>
                 <div className="space-y-1">
                   {stats.anomalies.length > 0 ? stats.anomalies.map((a, i) => (
-                    <div key={i} className="text-[9px] p-1.5 rounded bg-destructive/10 text-destructive border border-destructive/20">{a}</div>
+                    <div key={i} className="text-[8px] font-mono p-1.5 bg-destructive/10 text-destructive border border-destructive/20">{a}</div>
                   )) : (
-                    <div className="text-[9px] p-1.5 rounded bg-primary/10 text-primary border border-primary/20">✓ No anomalies detected</div>
+                    <div className="text-[8px] font-mono p-1.5 bg-primary/10 text-primary border border-primary/20">✓ No anomalies detected</div>
                   )}
                 </div>
               </div>
 
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Top Threat Actors</label>
+              {/* Top Threat Actors */}
+              <div className="cyber-panel p-3">
+                <div className="cyber-section-header">TOP ACTORS</div>
                 <div className="space-y-1">
                   {stats.topActors.map(([actor, count], i) => (
-                    <div key={actor} className="flex items-center gap-2 text-[9px]">
-                      <span className="text-muted-foreground w-3">{i + 1}.</span>
-                      <span className="flex-1 truncate">{actor}</span>
-                      <div className="w-16 bg-border/30 rounded-full h-1.5">
-                        <div className="bg-destructive/60 h-full rounded-full" style={{ width: `${(count / (stats.topActors[0]?.[1] || 1)) * 100}%` }} />
+                    <div key={actor} className="flex items-center gap-1.5 text-[8px]">
+                      <span className="text-muted-foreground/50 font-mono w-3">{i + 1}.</span>
+                      <span className="flex-1 truncate font-mono">{actor}</span>
+                      <div className="w-12 bg-border/15 h-1">
+                        <div className="bg-destructive/50 h-full" style={{ width: `${(count / (stats.topActors[0]?.[1] || 1)) * 100}%` }} />
                       </div>
-                      <span className="font-mono w-4 text-right text-destructive">{count}</span>
+                      <span className="font-mono w-3 text-right text-destructive">{count}</span>
                     </div>
                   ))}
-                  {stats.topActors.length === 0 && <span className="text-[9px] text-muted-foreground italic">No actor data yet</span>}
+                  {stats.topActors.length === 0 && <span className="text-[8px] text-muted-foreground/40 italic font-mono">No data</span>}
                 </div>
               </div>
 
-              {/* 24h attack frequency chart */}
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <Activity className="h-3 w-3" /> 4-Week Attack Frequency
-                </label>
-                <AttackSparkline threats={threats} />
-              </div>
-
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <Bug className="h-3 w-3" /> Recent IOCs
-                </label>
-                <div className="space-y-0.5">
-                  {stats.allIocs.length > 0 ? stats.allIocs.map((ioc, i) => (
-                    <div key={i} className="text-[8px] font-mono text-muted-foreground truncate">{ioc}</div>
-                  )) : (
-                    <span className="text-[9px] text-muted-foreground italic">No IOCs available</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Top Targeted Countries */}
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 block">Most Targeted</label>
+              {/* Most Targeted */}
+              <div className="cyber-panel p-3">
+                <div className="cyber-section-header">MOST TARGETED</div>
                 <div className="space-y-1">
                   {Object.entries(
                     filtered.reduce((acc: Record<string, number>, t) => {
@@ -1743,31 +1751,40 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
                       return acc;
                     }, {})
                   ).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([country, count], i) => (
-                    <div key={country} className="flex items-center gap-2 text-[9px]">
-                      <span className="text-muted-foreground w-3">{i + 1}.</span>
-                      <span className="flex-1 truncate">{country}</span>
-                      <div className="w-16 bg-border/30 rounded-full h-1.5">
-                        <div className="bg-primary/60 h-full rounded-full" style={{ width: `${(count / Math.max(...Object.values(filtered.reduce((a: Record<string, number>, t) => { const tg = t.targetCountry || t.target; a[tg] = (a[tg] || 0) + 1; return a; }, {})), 1)) * 100}%` }} />
-                      </div>
-                      <span className="font-mono w-4 text-right text-primary">{count}</span>
+                    <div key={country} className="flex items-center gap-1.5 text-[8px]">
+                      <span className="text-muted-foreground/50 font-mono w-3">{i + 1}.</span>
+                      <span className="flex-1 truncate font-mono">{country}</span>
+                      <span className="font-mono w-3 text-right text-primary">{count}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Malware & Ransomware */}
-              <div>
-                <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <Bug className="h-3 w-3" /> Active Threat Categories
-                </label>
+              {/* Recent IOCs */}
+              <div className="cyber-panel p-3">
+                <div className="cyber-section-header">
+                  <Bug className="h-3 w-3" /> RECENT IOCs
+                </div>
+                <div className="space-y-0.5">
+                  {stats.allIocs.length > 0 ? stats.allIocs.map((ioc, i) => (
+                    <div key={i} className="text-[7px] font-mono text-muted-foreground/70 truncate">{ioc}</div>
+                  )) : (
+                    <span className="text-[8px] text-muted-foreground/40 italic font-mono">No IOCs available</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Active Threat Categories */}
+              <div className="cyber-panel p-3">
+                <div className="cyber-section-header">THREAT CATEGORIES</div>
                 <div className="space-y-1">
                   {["Ransomware", "Wiper Malware", "DDoS Attack", "Espionage", "Zero-Day Exploit", "Phishing Campaign"].map(cat => {
                     const count = filtered.filter(t => t.type.includes(cat) || t.description.toLowerCase().includes(cat.toLowerCase())).length;
                     if (count === 0) return null;
                     return (
-                      <div key={cat} className="flex items-center justify-between text-[9px]">
+                      <div key={cat} className="flex items-center justify-between text-[8px] font-mono">
                         <span className="text-muted-foreground">{cat}</span>
-                        <span className="font-mono text-foreground font-bold">{count}</span>
+                        <span className="text-foreground font-bold">{count}</span>
                       </div>
                     );
                   })}
@@ -1778,7 +1795,8 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
         </div>
       </div>
 
-      {/* ── DATE HISTOGRAM ── */}
+      {/* ═══ BOTTOM ZONE — Consolidated ═══ */}
+      {/* Histogram + Timeline combined strip */}
       {(() => {
         const now = new Date();
         const msPerDay = 86400000;
@@ -1794,189 +1812,149 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
             const order: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
             return (order[t.severity] || 0) > (order[peak] || 0) ? t.severity : peak;
           }, "low");
-          return { date: dayStart.toISOString().split("T")[0], count: dayThreats.length, peakSev, threats: dayThreats };
+          return { date: dayStart.toISOString().split("T")[0], count: dayThreats.length, peakSev };
         });
         const maxCount = Math.max(...buckets.map(b => b.count), 1);
         const sevColor: Record<string, string> = { critical: "hsl(0 90% 55%)", high: "hsl(25 95% 55%)", medium: "hsl(45 95% 55%)", low: "hsl(190 80% 55%)" };
 
         const criticalThreats = threats.filter(t => t.severity === "critical");
-        const topAttacker = criticalThreats.reduce((acc: Record<string, number>, t) => { acc[t.attacker] = (acc[t.attacker] || 0) + 1; return acc; }, {});
-        const topTarget = criticalThreats.reduce((acc: Record<string, number>, t) => { const tgt = t.targetCountry || t.target; acc[tgt] = (acc[tgt] || 0) + 1; return acc; }, {});
-        const topCVE = criticalThreats.reduce((acc: Record<string, number>, t) => { if (t.cve) acc[t.cve] = (acc[t.cve] || 0) + 1; return acc; }, {});
-        const sortedAttacker = Object.entries(topAttacker).sort((a, b) => b[1] - a[1]);
-        const sortedTarget = Object.entries(topTarget).sort((a, b) => b[1] - a[1]);
-        const sortedCVE = Object.entries(topCVE).sort((a, b) => b[1] - a[1]);
 
         return (
-          <div className="border-t border-border bg-card/40">
-            {/* Histogram bars */}
-            <div className="px-4 pt-1.5 pb-0.5">
-              <div className="flex items-center gap-1 mb-1">
-                <Activity className="h-3 w-3 text-primary" />
-                <span className="text-[7px] font-mono text-muted-foreground uppercase tracking-wider">28-Day Incident Density</span>
-                <span className="text-[7px] font-mono text-muted-foreground ml-auto">{threats.length} total</span>
-              </div>
-              <div className="relative h-[32px] flex items-end gap-[1px]">
+          <div className="border-t border-border bg-card/30">
+            {/* Histogram + slider row */}
+            <div className="flex items-end gap-0 px-3 pt-1">
+              {/* Mini histogram */}
+              <div className="flex-1 relative h-[28px] flex items-end gap-[1px]">
                 {buckets.map((b, i) => (
                   <div key={i} className="flex-1 relative group cursor-pointer" style={{ height: "100%" }}>
                     <div
-                      className="absolute bottom-0 left-0 right-0 rounded-t-sm transition-all hover:opacity-80"
+                      className="absolute bottom-0 left-0 right-0 transition-all hover:opacity-80"
                       style={{
                         height: b.count > 0 ? `${Math.max((b.count / maxCount) * 100, 8)}%` : "2px",
                         background: b.count > 0 ? sevColor[b.peakSev] || sevColor.low : "hsl(var(--border))",
-                        opacity: b.count > 0 ? 0.85 : 0.3,
+                        opacity: b.count > 0 ? 0.7 : 0.2,
                       }}
                     />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 rounded bg-popover border border-border text-[7px] font-mono text-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
-                      {b.date} · {b.count} incident{b.count !== 1 ? "s" : ""}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-popover border border-border text-[7px] font-mono text-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-lg">
+                      {b.date} · {b.count}
                     </div>
                   </div>
                 ))}
-                {/* Current position indicator */}
-                <div
-                  className="absolute top-0 bottom-0 w-[2px] bg-primary shadow-[0_0_6px_hsl(var(--primary))] pointer-events-none z-10"
-                  style={{ left: `${timelinePos}%` }}
-                />
+                {/* Position indicator */}
+                <div className="absolute top-0 bottom-0 w-[2px] bg-primary shadow-[0_0_6px_hsl(var(--primary))] pointer-events-none z-10" style={{ left: `${timelinePos}%` }} />
               </div>
             </div>
 
-            {/* Critical Ultra Analysis */}
-            <div className="px-4 py-1 border-t border-destructive/20">
-              <div className="flex items-center gap-2">
-                <Skull className="h-3 w-3 text-destructive" />
-                <span className="text-[8px] font-mono font-bold text-destructive uppercase tracking-wider">Critical Ultra Analysis</span>
-                <span className="text-[7px] font-mono px-1.5 py-0.5 rounded-full bg-destructive/20 text-destructive border border-destructive/30">{criticalThreats.length}</span>
-                {criticalThreats.length > 0 && (
-                  <div className="flex items-center gap-3 ml-auto text-[7px] font-mono">
-                    {sortedAttacker[0] && (
-                      <span className="text-muted-foreground">Top Attacker: <span className="text-destructive font-bold">{sortedAttacker[0][0]}</span></span>
-                    )}
-                    {sortedTarget[0] && (
-                      <span className="text-muted-foreground">Top Target: <span className="text-orange-400 font-bold">{sortedTarget[0][0]}</span></span>
-                    )}
-                    {sortedCVE[0] && (
-                      <span className="px-1 py-0.5 rounded bg-destructive/10 text-destructive border border-destructive/20">{sortedCVE[0][0]}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-              {criticalThreats.length > 0 ? (
-                <div className="flex gap-2 mt-1 overflow-x-auto pb-0.5">
-                  {criticalThreats.slice(0, 3).map(ct => (
-                    <div
-                      key={ct.id}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded border border-destructive/30 bg-destructive/5 text-[7px] font-mono flex-shrink-0 cursor-pointer hover:bg-destructive/10 transition-colors"
-                      onClick={() => setSelectedThreat(ct)}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-                      <span>{ct.attackerFlag}</span>
-                      <span className="font-bold text-foreground">{ct.attacker}</span>
-                      <ChevronRight className="h-2 w-2 text-destructive" />
-                      <span>{ct.targetFlag}</span>
-                      <span className="text-foreground">{ct.target}</span>
-                      {ct.cve && <span className="px-1 rounded bg-destructive/15 text-destructive border border-destructive/25">{ct.cve}</span>}
-                      <span className="text-muted-foreground truncate max-w-[180px]">— {ct.description}</span>
-                    </div>
+            {/* Timeline controls */}
+            <div className="flex items-center gap-2 px-3 py-1">
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <button onClick={() => setTimelinePos(Math.max(0, timelinePos - 4.17))} className="p-0.5 hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+                  <SkipBack className="h-3 w-3" />
+                </button>
+                <button onClick={() => { setIsPlaying(!isPlaying); if (timelinePos >= 100) setTimelinePos(0); }} className="p-0.5 hover:bg-secondary transition-colors text-primary">
+                  {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                </button>
+                <button onClick={() => setTimelinePos(Math.min(100, timelinePos + 4.17))} className="p-0.5 hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+                  <SkipForward className="h-3 w-3" />
+                </button>
+                <div className="hidden sm:flex items-center gap-0.5 ml-1 border-l border-border/30 pl-1">
+                  {SPEEDS.map((s) => (
+                    <button key={s} onClick={() => setSpeed(s)} className={`px-1 py-0.5 text-[7px] font-mono font-bold transition-all ${speed === s ? "bg-primary/15 text-primary" : "text-muted-foreground/40 hover:text-foreground"}`}>
+                      {s}×
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <div className="text-[8px] font-mono text-muted-foreground mt-0.5">No critical incidents in 4-week window</div>
-              )}
+              </div>
+              <span className="text-[8px] font-mono text-muted-foreground/40 hidden sm:block">-4w</span>
+              <div className="flex-1 min-w-0">
+                <input
+                  type="range" min={0} max={100} step={0.5} value={timelinePos}
+                  onChange={(e) => { setTimelinePos(parseFloat(e.target.value)); setIsPlaying(false); }}
+                  className="w-full h-0.5 bg-secondary appearance-none cursor-pointer accent-primary"
+                />
+              </div>
+              <span className={`text-[9px] font-mono font-bold w-12 text-right flex-shrink-0 ${isLive ? "text-destructive" : "text-primary"}`}>
+                {timelineLabel}
+              </span>
+              <button onClick={() => { setTimelinePos(100); setIsPlaying(false); }} className={`text-[7px] px-1.5 py-0.5 border font-mono font-bold transition-all flex-shrink-0 ${isLive ? "bg-destructive/15 text-destructive border-destructive/30" : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/30"}`}>
+                LIVE
+              </button>
             </div>
+
+            {/* Critical Ultra — thin alert bar */}
+            {criticalThreats.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 border-t border-destructive/15 bg-destructive/5">
+                <Skull className="h-3 w-3 text-destructive flex-shrink-0" />
+                <span className="text-[7px] font-mono font-bold text-destructive uppercase tracking-wider">CRITICAL</span>
+                <span className="text-[7px] font-mono px-1 bg-destructive/15 text-destructive border border-destructive/20">{criticalThreats.length}</span>
+                <div className="flex gap-2 overflow-x-auto flex-1 scrollbar-hide">
+                  {criticalThreats.slice(0, 4).map(ct => (
+                    <button
+                      key={ct.id}
+                      className="flex items-center gap-1 px-1.5 py-0.5 border border-destructive/20 bg-destructive/5 text-[7px] font-mono flex-shrink-0 hover:bg-destructive/10 transition-colors"
+                      onClick={() => setSelectedThreat(ct)}
+                    >
+                      <span className="h-1 w-1 rounded-full bg-destructive animate-pulse" />
+                      <span>{ct.attackerFlag} {ct.attacker}</span>
+                      <ChevronRight className="h-2 w-2 text-destructive/50" />
+                      <span>{ct.targetFlag} {ct.target}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
 
-      {/* ── TIMELINE SLIDER ── */}
-      <div className="px-2 sm:px-4 py-1.5 border-t border-border bg-card/60 flex items-center gap-1.5 sm:gap-3">
-        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-          <button onClick={() => setTimelinePos(Math.max(0, timelinePos - 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
-            <SkipBack className="h-3 w-3" />
-          </button>
-          <button onClick={() => { setIsPlaying(!isPlaying); if (timelinePos >= 100) setTimelinePos(0); }} className="p-1 rounded hover:bg-secondary transition-colors text-primary">
-            {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          </button>
-          <button onClick={() => setTimelinePos(Math.min(100, timelinePos + 4.17))} className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
-            <SkipForward className="h-3 w-3" />
-          </button>
-          <div className="hidden sm:flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
-            {SPEEDS.map((s) => (
-              <button key={s} onClick={() => setSpeed(s)} className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${speed === s ? "bg-primary/20 text-primary border border-primary/40" : "text-muted-foreground/60 hover:text-foreground hover:bg-secondary/50 border border-transparent"}`}>
-                {s}×
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <span className="text-[9px] font-mono text-muted-foreground hidden sm:block w-12">-4w</span>
-
-        <div className="flex-1 relative min-w-0">
-          <input
-            type="range" min={0} max={100} step={0.5} value={timelinePos}
-            onChange={(e) => { setTimelinePos(parseFloat(e.target.value)); setIsPlaying(false); }}
-            className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
-          />
-          {/* Week ticks */}
-          <div className="absolute top-3 left-0 right-0 hidden sm:flex justify-between pointer-events-none">
-            {["4w", "·", "3w", "·", "2w", "·", "1w", "·", "NOW"].map((label, i) => (
-              <span key={i} className="text-[7px] font-mono text-muted-foreground/40">
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <span className={`text-[10px] font-mono font-bold w-10 sm:w-16 text-right flex-shrink-0 ${isLive ? "text-destructive" : "text-primary"}`}>
-          {timelineLabel}
-        </span>
-
-        <button onClick={() => { setTimelinePos(100); setIsPlaying(false); }} className={`text-[8px] px-2 py-0.5 rounded border font-mono font-bold transition-all flex-shrink-0 ${isLive ? "bg-destructive/20 text-destructive border-destructive/40" : "border-border text-muted-foreground hover:text-destructive hover:border-destructive/40"}`}>
-          LIVE
-        </button>
-      </div>
-
-      {/* ── BOTTOM PANEL — Event Feed ── */}
-      <div className="h-[100px] sm:h-[140px] border-t border-border bg-card/30 flex flex-col">
-        <div className="flex items-center justify-between px-3 py-1 border-b border-border">
+      {/* ═══ COLLAPSIBLE EVENT FEED ═══ */}
+      <div className={`border-t border-border bg-card/20 flex flex-col transition-all duration-200 ${feedCollapsed ? "h-[28px]" : "h-[100px]"}`}>
+        <button
+          onClick={() => setFeedCollapsed(!feedCollapsed)}
+          className="flex items-center justify-between px-3 py-1 border-b border-border/50 hover:bg-card/30 transition-colors flex-shrink-0"
+        >
           <div className="flex items-center gap-2">
             <Radio className={`h-3 w-3 ${isLive ? "text-destructive animate-pulse" : "text-yellow-400"}`} />
-            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">
-              {isLive ? "Live Operations Feed" : `Replay Feed · ${hoursAgoLabel}`}
+            <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">
+              {isLive ? "Live Feed" : `Replay · ${hoursAgoLabel}`}
             </span>
+            <span className="text-[7px] font-mono text-muted-foreground/50">{filtered.length} events</span>
           </div>
-          <span className="text-[9px] font-mono text-muted-foreground">{filtered.length} events</span>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1" ref={feedRef}>
-            {filtered.map((t) => (
-              <div
-                key={t.id}
-                className={`flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/30 cursor-pointer transition-colors text-[9px] group ${selectedThreat?.id === t.id ? "bg-primary/10 border border-primary/20" : ""}`}
-                onClick={() => setSelectedThreat(t)}
-              >
-                <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: SEVERITY_COLORS[t.severity] }} />
-                <span className="text-muted-foreground font-mono w-16 flex-shrink-0">{t.date}</span>
-                <span className="flex-shrink-0">{t.attackerFlag}</span>
-                <button onClick={(e) => { e.stopPropagation(); handleFetchDossier(t.attacker); }} className="font-bold truncate w-28 flex-shrink-0 text-left hover:text-primary hover:underline transition-colors cursor-pointer" title="View actor dossier">{t.attacker}</button>
-                <ChevronRight className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
-                <span className="flex-shrink-0">{t.targetFlag}</span>
-                <span className="truncate w-24 flex-shrink-0">{t.target}</span>
-                <span className="text-muted-foreground truncate flex-1">{t.description}</span>
-                <span className={`px-1 py-0.5 rounded border text-[7px] uppercase font-mono flex-shrink-0 ${SEVERITY_BG[t.severity]}`}>{t.severity}</span>
-                {t.verified && <span className="px-1 py-0.5 rounded border text-[7px] uppercase font-mono flex-shrink-0 bg-green-500/15 text-green-400 border-green-500/25">✓</span>}
-              </div>
-            ))}
-            {filtered.length === 0 && !loading && (
-              <div className="text-center text-[10px] text-muted-foreground py-4">
-                {threats.length > 0 ? "No threats match current filters" : "Awaiting intelligence data — OSINT feeds initializing"}
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+          <ChevronRight className={`h-3 w-3 text-muted-foreground transition-transform ${feedCollapsed ? "rotate-90" : "-rotate-90"}`} />
+        </button>
+        {!feedCollapsed && (
+          <ScrollArea className="flex-1">
+            <div className="px-2 py-1 space-y-0.5" ref={feedRef}>
+              {filtered.map((t) => (
+                <div
+                  key={t.id}
+                  className={`flex items-center gap-2 px-2 py-0.5 hover:bg-muted/20 cursor-pointer transition-colors text-[8px] font-mono group ${selectedThreat?.id === t.id ? "bg-primary/10 border-l-2 border-primary" : ""}`}
+                  onClick={() => setSelectedThreat(t)}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: SEVERITY_COLORS[t.severity] }} />
+                  <span className="text-muted-foreground/50 w-14 flex-shrink-0">{t.date}</span>
+                  <span className="flex-shrink-0">{t.attackerFlag}</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleFetchDossier(t.attacker); }} className="font-bold truncate w-24 flex-shrink-0 text-left hover:text-primary hover:underline transition-colors cursor-pointer">{t.attacker}</button>
+                  <ChevronRight className="h-2 w-2 text-muted-foreground/30 flex-shrink-0" />
+                  <span className="flex-shrink-0">{t.targetFlag}</span>
+                  <span className="truncate w-20 flex-shrink-0">{t.target}</span>
+                  <span className="text-muted-foreground/50 truncate flex-1">{t.description}</span>
+                  <span className={`px-1 py-0.5 border text-[6px] uppercase flex-shrink-0 ${SEVERITY_BG[t.severity]}`}>{t.severity}</span>
+                  {t.verified && <span className="text-[6px] text-green-500">✓</span>}
+                </div>
+              ))}
+              {filtered.length === 0 && !loading && (
+                <div className="text-center text-[9px] text-muted-foreground/50 py-3 font-mono">
+                  {threats.length > 0 ? "No threats match current filters" : "Awaiting intelligence data"}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        )}
       </div>
 
       {error && (
-        <div className="absolute bottom-[180px] left-1/2 -translate-x-1/2 bg-destructive/20 text-destructive text-[9px] px-3 py-1 rounded border border-destructive/30 font-mono">
+        <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 bg-destructive/20 text-destructive text-[8px] px-3 py-1 border border-destructive/30 font-mono z-50">
           {error}
         </div>
       )}
