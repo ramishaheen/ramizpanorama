@@ -25,7 +25,7 @@ serve(async (req) => {
     
     // Use the open FIRMS GeoJSON endpoint (no key needed)
     const geoResponse = await fetch(
-      "https://firms.modaps.eosdis.nasa.gov/api/area/csv/FIRMS_MAP_KEY/VIIRS_SNPP_NRT/world/1",
+      `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${MAP_KEY}/VIIRS_SNPP_NRT/world/1`,
       { signal: AbortSignal.timeout(15000) }
     ).catch(() => null);
 

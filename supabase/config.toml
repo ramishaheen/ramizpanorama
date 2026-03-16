@@ -122,3 +122,15 @@ verify_jwt = false
 
 [functions.yandex-tiles]
 verify_jwt = false
+
+[functions.crucix-fred]
+verify_jwt = false
+
+[functions.crucix-firms]
+verify_jwt = false
+
+[functions.crucix-eia]
+verify_jwt = false
+
+[functions.crucix-ais]
+verify_jwt = false
