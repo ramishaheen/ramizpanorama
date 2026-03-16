@@ -1261,6 +1261,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   const { threats: cyberThreats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [feedCollapsed, setFeedCollapsed] = useState(false);
+  const [showIntelMap, setShowIntelMap] = useState(false);
 
   // Merge cyber threats with OSINT geo alerts converted to CyberThreat format
   const threats = useMemo(() => {
@@ -1289,7 +1290,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("Jordan");
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline" | "interactive">("map");
+  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
   const [showDossier, setShowDossier] = useState(false);
   const { layers, toggleLayer } = useMapLayers();
@@ -1475,12 +1476,11 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
       {/* ═══ TAB BAR — Gotham Segmented Control ═══ */}
       <div className="flex items-center border-b border-border bg-card/20 overflow-x-auto scrollbar-hide">
         {([
-          { key: "map" as const, label: "MAP", icon: Globe, color: "primary" },
-          { key: "graph" as const, label: "GRAPH", icon: Network, color: "primary" },
-          { key: "darkweb" as const, label: "DARK WEB", icon: Skull, color: "primary" },
-          { key: "apt" as const, label: "APT INTEL", icon: Shield, color: "primary" },
-          { key: "timeline" as const, label: "TIMELINE", icon: Clock, color: "primary" },
-          { key: "interactive" as const, label: "INTEL MAP", icon: Globe, color: "primary" },
+          { key: "map" as const, label: "MAP", icon: Globe },
+          { key: "graph" as const, label: "GRAPH", icon: Network },
+          { key: "darkweb" as const, label: "DARK WEB", icon: Skull },
+          { key: "apt" as const, label: "APT INTEL", icon: Shield },
+          { key: "timeline" as const, label: "TIMELINE", icon: Clock },
         ] as const).map((tab) => {
           const Icon = tab.icon;
           return (
@@ -1493,6 +1493,13 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
             </button>
           );
         })}
+        {/* INTEL MAP — opens as popup */}
+        <button
+          onClick={() => setShowIntelMap(true)}
+          className={`cyber-tab flex items-center gap-1.5 flex-shrink-0 ${showIntelMap ? "cyber-tab-active" : ""}`}
+        >
+          <Globe className="h-3 w-3" />INTEL MAP
+        </button>
         {/* Separator + source count */}
         <div className="ml-auto flex items-center gap-2 px-3 flex-shrink-0">
           {sources.length > 0 && <span className="text-[7px] font-mono text-primary/50">{sources.length} FEEDS</span>}
@@ -1641,8 +1648,6 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
               <APTIntelPanel />
             ) : centerView === "timeline" ? (
               <IncidentTimeline threats={filtered} onSelect={handleSelect} />
-            ) : centerView === "interactive" ? (
-              <InteractiveMapSummary />
             ) : (
               <EnhancedDarkWebMonitor
                 entries={darkWeb.entries}
@@ -1957,6 +1962,31 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
         <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 bg-destructive/20 text-destructive text-[8px] px-3 py-1 border border-destructive/30 font-mono z-50">
           {error}
         </div>
+      )}
+
+      {/* ═══ INTEL MAP POPUP ═══ */}
+      {showIntelMap && createPortal(
+        <div className="fixed inset-0 flex flex-col bg-background text-foreground" style={{ zIndex: 100000 }}>
+          {/* Popup header */}
+          <div className="cyber-command-bar flex-shrink-0">
+            <div className="w-[3px] h-5 bg-primary mr-3 flex-shrink-0" />
+            <Globe className="h-4 w-4 text-primary mr-2" />
+            <h2 className="text-[11px] font-mono font-bold tracking-[0.2em] mr-auto">
+              INTERACTIVE <span className="text-primary">INTEL MAP</span>
+            </h2>
+            <button
+              onClick={() => setShowIntelMap(false)}
+              className="p-1 border border-border/50 hover:border-destructive/50 hover:text-destructive transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {/* Map content */}
+          <div className="flex-1 min-h-0 relative cyber-inset-glow">
+            <InteractiveMapSummary />
+          </div>
+        </div>,
+        document.body
       )}
     </div>,
     document.body
