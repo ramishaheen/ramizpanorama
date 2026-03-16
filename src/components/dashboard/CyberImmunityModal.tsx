@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { MapLayersPanel, useMapLayers, filterByLayers } from "@/components/dashboard/cyber/MapLayersPanel";
 import { APTIntelPanel } from "@/components/dashboard/cyber/APTIntelPanel";
 import { IncidentTimeline } from "@/components/dashboard/cyber/IncidentTimeline";
+import InteractiveMapSummary from "@/components/dashboard/InteractiveMapSummary";
 
 import { CyberAlertBanner } from "@/components/dashboard/cyber/CyberAlertBanner";
 import { useIOCLookup, type IOCResult } from "@/hooks/useIOCLookup";
