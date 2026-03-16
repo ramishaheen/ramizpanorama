@@ -101,38 +101,7 @@ export const useCommodityPrices = (): CommodityPrices => {
     }
   }, [pushHistory]);
 
-  // Fetch crypto from CoinGecko
-  const fetchCrypto = useCallback(async () => {
-    try {
-      const res = await fetch(COINGECKO_URL);
-      if (!res.ok) throw new Error("CoinGecko API error");
-      const data = await res.json();
-
-      const btcPrice = data.bitcoin?.usd ?? 0;
-      const btcChange = data.bitcoin?.usd_24h_change ?? 0;
-      const ethPrice = data.ethereum?.usd ?? 0;
-      const ethChange = data.ethereum?.usd_24h_change ?? 0;
-
-      pushHistory("btc", Math.round(btcPrice));
-      pushHistory("eth", parseFloat(ethPrice.toFixed(2)));
-      setPrices(prev => ({
-        ...prev,
-        btc: {
-          price: Math.round(btcPrice),
-          change: Math.round(btcPrice * btcChange / 100),
-          changePercent: parseFloat(btcChange.toFixed(2)),
-        },
-        eth: {
-          price: parseFloat(ethPrice.toFixed(2)),
-          change: parseFloat((ethPrice * ethChange / 100).toFixed(2)),
-          changePercent: parseFloat(ethChange.toFixed(2)),
-        },
-        history: { ...historyRef.current },
-      }));
-    } catch (err) {
-      console.error("Failed to fetch crypto prices:", err);
-    }
-  }, [pushHistory]);
+  // Crypto is now fetched server-side via commodity-prices edge function
 
   useEffect(() => {
     setPrices(prev => ({ ...prev, loading: true }));
