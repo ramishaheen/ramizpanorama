@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     // NASA FIRMS active fire data - last 24 hours, global, CSV format
     // Using MODIS C6.1 and VIIRS SNPP
-    const MAP_KEY = "FIRMS_MAP_KEY"; // Public demo key
+    const MAP_KEY = Deno.env.get("FIRMS_MAP_KEY") || "FIRMS_MAP_KEY";
     const sources = [
       `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${MAP_KEY}/VIIRS_SNPP_NRT/world/1`,
       `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${MAP_KEY}/MODIS_NRT/world/1`,
