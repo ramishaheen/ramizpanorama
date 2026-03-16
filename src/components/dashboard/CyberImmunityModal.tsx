@@ -1290,7 +1290,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("Jordan");
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline" | "interactive">("map");
+  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
   const [showDossier, setShowDossier] = useState(false);
   const { layers, toggleLayer } = useMapLayers();
