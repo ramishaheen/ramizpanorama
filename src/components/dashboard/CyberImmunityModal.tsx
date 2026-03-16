@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { MapLayersPanel, useMapLayers, filterByLayers } from "@/components/dashboard/cyber/MapLayersPanel";
 import { APTIntelPanel } from "@/components/dashboard/cyber/APTIntelPanel";
 import { IncidentTimeline } from "@/components/dashboard/cyber/IncidentTimeline";
+import InteractiveMapSummary from "@/components/dashboard/InteractiveMapSummary";
 
 import { CyberAlertBanner } from "@/components/dashboard/cyber/CyberAlertBanner";
 import { useIOCLookup, type IOCResult } from "@/hooks/useIOCLookup";
@@ -1286,7 +1287,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("Jordan");
   const [severityFilter, setSeverityFilter] = useState("all");
-  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline">("map");
+  const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline" | "interactive">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
   const [showDossier, setShowDossier] = useState(false);
   const { layers, toggleLayer } = useMapLayers();
@@ -1486,6 +1487,9 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
           <button onClick={() => setCenterView("timeline")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "timeline" ? "bg-primary/20 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
             <Clock className="h-3 w-3 inline mr-1" />TIMELINE
           </button>
+          <button onClick={() => setCenterView("interactive")} className={`px-2 py-0.5 rounded text-[9px] border transition-colors ${centerView === "interactive" ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Globe className="h-3 w-3 inline mr-1" />INTERACTIVE MAP
+          </button>
         </div>
       </div>
 
@@ -1599,6 +1603,8 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
               <APTIntelPanel />
             ) : centerView === "timeline" ? (
               <IncidentTimeline threats={filtered} onSelect={handleSelect} />
+            ) : centerView === "interactive" ? (
+              <InteractiveMapSummary />
             ) : (
               <EnhancedDarkWebMonitor
                 entries={darkWeb.entries}
