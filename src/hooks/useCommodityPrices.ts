@@ -24,7 +24,7 @@ export interface CommodityPrices {
 
 const KEYS = ["oil", "brent", "gold", "silver", "gas", "copper", "wheat", "usdils", "usdsar", "ita", "btc", "eth"];
 const MAX_HISTORY = 20;
-const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true";
+// Crypto now fetched server-side via commodity-prices edge function
 
 const initHistory = (): Record<string, number[]> =>
   Object.fromEntries(KEYS.map(k => [k, []]));
@@ -101,55 +101,19 @@ export const useCommodityPrices = (): CommodityPrices => {
     }
   }, [pushHistory]);
 
-  // Fetch crypto from CoinGecko
-  const fetchCrypto = useCallback(async () => {
-    try {
-      const res = await fetch(COINGECKO_URL);
-      if (!res.ok) throw new Error("CoinGecko API error");
-      const data = await res.json();
-
-      const btcPrice = data.bitcoin?.usd ?? 0;
-      const btcChange = data.bitcoin?.usd_24h_change ?? 0;
-      const ethPrice = data.ethereum?.usd ?? 0;
-      const ethChange = data.ethereum?.usd_24h_change ?? 0;
-
-      pushHistory("btc", Math.round(btcPrice));
-      pushHistory("eth", parseFloat(ethPrice.toFixed(2)));
-      setPrices(prev => ({
-        ...prev,
-        btc: {
-          price: Math.round(btcPrice),
-          change: Math.round(btcPrice * btcChange / 100),
-          changePercent: parseFloat(btcChange.toFixed(2)),
-        },
-        eth: {
-          price: parseFloat(ethPrice.toFixed(2)),
-          change: parseFloat((ethPrice * ethChange / 100).toFixed(2)),
-          changePercent: parseFloat(ethChange.toFixed(2)),
-        },
-        history: { ...historyRef.current },
-      }));
-    } catch (err) {
-      console.error("Failed to fetch crypto prices:", err);
-    }
-  }, [pushHistory]);
+  // Crypto is now fetched server-side via commodity-prices edge function
 
   useEffect(() => {
     setPrices(prev => ({ ...prev, loading: true }));
 
-    // Fetch live prices immediately + every 60s
+    // Fetch live prices (includes crypto) immediately + every 60s
     fetchLivePrices();
     const liveInterval = setInterval(fetchLivePrices, 60_000);
 
-    // Crypto: real CoinGecko data every 30s
-    fetchCrypto();
-    const cryptoInterval = setInterval(fetchCrypto, 30_000);
-
     return () => {
       clearInterval(liveInterval);
-      clearInterval(cryptoInterval);
     };
-  }, [refreshKey, fetchLivePrices, fetchCrypto]);
+  }, [refreshKey, fetchLivePrices]);
 
   const refresh = useCallback(() => {
     refreshKeyRef.current += 1;

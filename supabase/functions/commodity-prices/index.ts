@@ -29,6 +29,29 @@ const SYMBOLS: Record<string, string> = {
   "ITA": "ita",
 };
 
+async function fetchCryptoPrices(): Promise<Record<string, PriceResult>> {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true");
+    if (!res.ok) return {};
+    const data = await res.json();
+    const results: Record<string, PriceResult> = {};
+    if (data.bitcoin?.usd) {
+      const p = data.bitcoin.usd;
+      const c = data.bitcoin.usd_24h_change ?? 0;
+      results.btc = { key: "btc", price: Math.round(p), change: Math.round(p * c / 100), changePercent: parseFloat(c.toFixed(2)) };
+    }
+    if (data.ethereum?.usd) {
+      const p = data.ethereum.usd;
+      const c = data.ethereum.usd_24h_change ?? 0;
+      results.eth = { key: "eth", price: parseFloat(p.toFixed(2)), change: parseFloat((p * c / 100).toFixed(2)), changePercent: parseFloat(c.toFixed(2)) };
+    }
+    return results;
+  } catch (e) {
+    console.error("CoinGecko error:", e);
+    return {};
+  }
+}
+
 async function fetchYahooQuote(symbol: string, key: string): Promise<PriceResult | null> {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=2d&interval=1d`;
@@ -81,9 +104,12 @@ serve(async (req) => {
   }
 
   try {
-    const results = await Promise.allSettled(
-      Object.entries(SYMBOLS).map(([symbol, key]) => fetchYahooQuote(symbol, key))
-    );
+    const [yahooResults, cryptoPrices] = await Promise.all([
+      Promise.allSettled(
+        Object.entries(SYMBOLS).map(([symbol, key]) => fetchYahooQuote(symbol, key))
+      ),
+      fetchCryptoPrices(),
+    ]);
 
     const prices: Record<string, PriceResult> = {};
 
@@ -92,22 +118,25 @@ serve(async (req) => {
       Object.assign(prices, cachedData.prices);
     }
 
-    for (const r of results) {
+    for (const r of yahooResults) {
       if (r.status === "fulfilled" && r.value) {
         prices[r.value.key] = r.value;
       }
     }
 
+    // Merge crypto prices
+    Object.assign(prices, cryptoPrices);
+
     const responseData = {
       prices,
       timestamp: new Date().toISOString(),
-      source: "yahoo_finance",
+      source: "yahoo_finance+coingecko",
       cached: false,
     };
 
     cachedData = { prices, timestamp: responseData.timestamp };
     cacheTime = Date.now();
-    console.log(`Cached ${Object.keys(prices).length} prices from Yahoo Finance`);
+    console.log(`Cached ${Object.keys(prices).length} prices from Yahoo Finance + CoinGecko`);
 
     return new Response(JSON.stringify(responseData), {
       status: 200,
