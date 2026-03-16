@@ -1476,12 +1476,11 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
       {/* ═══ TAB BAR — Gotham Segmented Control ═══ */}
       <div className="flex items-center border-b border-border bg-card/20 overflow-x-auto scrollbar-hide">
         {([
-          { key: "map" as const, label: "MAP", icon: Globe, color: "primary" },
-          { key: "graph" as const, label: "GRAPH", icon: Network, color: "primary" },
-          { key: "darkweb" as const, label: "DARK WEB", icon: Skull, color: "primary" },
-          { key: "apt" as const, label: "APT INTEL", icon: Shield, color: "primary" },
-          { key: "timeline" as const, label: "TIMELINE", icon: Clock, color: "primary" },
-          { key: "interactive" as const, label: "INTEL MAP", icon: Globe, color: "primary" },
+          { key: "map" as const, label: "MAP", icon: Globe },
+          { key: "graph" as const, label: "GRAPH", icon: Network },
+          { key: "darkweb" as const, label: "DARK WEB", icon: Skull },
+          { key: "apt" as const, label: "APT INTEL", icon: Shield },
+          { key: "timeline" as const, label: "TIMELINE", icon: Clock },
         ] as const).map((tab) => {
           const Icon = tab.icon;
           return (
@@ -1494,6 +1493,13 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
             </button>
           );
         })}
+        {/* INTEL MAP — opens as popup */}
+        <button
+          onClick={() => setShowIntelMap(true)}
+          className={`cyber-tab flex items-center gap-1.5 flex-shrink-0 ${showIntelMap ? "cyber-tab-active" : ""}`}
+        >
+          <Globe className="h-3 w-3" />INTEL MAP
+        </button>
         {/* Separator + source count */}
         <div className="ml-auto flex items-center gap-2 px-3 flex-shrink-0">
           {sources.length > 0 && <span className="text-[7px] font-mono text-primary/50">{sources.length} FEEDS</span>}
