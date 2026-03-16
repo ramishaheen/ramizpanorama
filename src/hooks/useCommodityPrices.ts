@@ -106,19 +106,14 @@ export const useCommodityPrices = (): CommodityPrices => {
   useEffect(() => {
     setPrices(prev => ({ ...prev, loading: true }));
 
-    // Fetch live prices immediately + every 60s
+    // Fetch live prices (includes crypto) immediately + every 60s
     fetchLivePrices();
     const liveInterval = setInterval(fetchLivePrices, 60_000);
 
-    // Crypto: real CoinGecko data every 30s
-    fetchCrypto();
-    const cryptoInterval = setInterval(fetchCrypto, 30_000);
-
     return () => {
       clearInterval(liveInterval);
-      clearInterval(cryptoInterval);
     };
-  }, [refreshKey, fetchLivePrices, fetchCrypto]);
+  }, [refreshKey, fetchLivePrices]);
 
   const refresh = useCallback(() => {
     refreshKeyRef.current += 1;
