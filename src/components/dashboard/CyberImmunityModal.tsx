@@ -1261,6 +1261,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   const { threats: cyberThreats, loading, error, lastUpdated, sources, refresh } = useCyberThreats();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [feedCollapsed, setFeedCollapsed] = useState(false);
+  const [showIntelMap, setShowIntelMap] = useState(false);
 
   // Merge cyber threats with OSINT geo alerts converted to CyberThreat format
   const threats = useMemo(() => {
