@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Layers, Eye, EyeOff } from "lucide-react";
+import type { CyberThreat } from "@/hooks/useCyberThreats";
 
 export interface LayerConfig {
   id: string;
@@ -11,18 +12,19 @@ export interface LayerConfig {
 
 const DEFAULT_LAYERS: LayerConfig[] = [
   { id: "global", label: "Global Attack Activity", color: "hsl(190 80% 55%)", filterType: "", enabled: true },
-  { id: "botnet", label: "Botnet Activity", color: "hsl(280 70% 60%)", filterType: "botnet", enabled: false },
+  { id: "botnet", label: "Botnet / C2 Activity", color: "hsl(280 70% 60%)", filterType: "botnet", enabled: false },
   { id: "malware", label: "Malware Spread", color: "hsl(330 80% 55%)", filterType: "malware", enabled: false },
   { id: "apt", label: "APT Campaigns", color: "hsl(0 80% 55%)", filterType: "apt", enabled: false },
   { id: "ddos", label: "DDoS Activity", color: "hsl(45 95% 55%)", filterType: "ddos", enabled: false },
   { id: "ransomware", label: "Ransomware Activity", color: "hsl(25 90% 55%)", filterType: "ransomware", enabled: false },
   { id: "zeroday", label: "Zero-Day Exploits", color: "hsl(160 80% 50%)", filterType: "zeroday", enabled: false },
-  { id: "scanning", label: "Vulnerability Scanning", color: "hsl(210 70% 55%)", filterType: "scanning", enabled: false },
+  { id: "scanning", label: "Recon / Scanning", color: "hsl(210 70% 55%)", filterType: "scanning", enabled: false },
 ];
 
 interface MapLayersPanelProps {
   layers: LayerConfig[];
   onToggle: (id: string) => void;
+  threats?: CyberThreat[];
 }
 
 export function useMapLayers() {
@@ -35,30 +37,47 @@ export function useMapLayers() {
   return { layers, toggleLayer };
 }
 
-export function filterByLayers(threats: any[], layers: LayerConfig[]) {
+function matchesFilter(t: CyberThreat, filterType: string): boolean {
+  // First check the categories array from AI
+  if (t.categories && t.categories.length > 0) {
+    if (t.categories.includes(filterType)) return true;
+  }
+  // Fallback to text matching
+  const type = (t.type || "").toLowerCase();
+  const desc = (t.description || "").toLowerCase();
+  const details = (t.details || "").toLowerCase();
+  const combined = type + " " + desc + " " + details;
+
+  switch (filterType) {
+    case "botnet": return combined.includes("botnet") || combined.includes("c2") || combined.includes("command and control") || combined.includes("c&c") || combined.includes("zombie");
+    case "malware": return combined.includes("malware") || combined.includes("wiper") || combined.includes("trojan") || combined.includes("rat") || combined.includes("infostealer") || combined.includes("backdoor") || combined.includes("payload") || type.includes("wiper");
+    case "apt": return combined.includes("apt") || combined.includes("espionage") || combined.includes("nation state") || combined.includes("nation-state") || type.includes("espionage") || type.includes("offensive cyber") || type.includes("counter-intelligence");
+    case "ddos": return combined.includes("ddos") || combined.includes("denial of service") || combined.includes("flood") || type.includes("ddos") || type.includes("network disruption");
+    case "ransomware": return combined.includes("ransomware") || combined.includes("ransom") || combined.includes("extortion") || type.includes("ransomware");
+    case "zeroday": return !!t.cve || combined.includes("zero-day") || combined.includes("0-day") || combined.includes("zero day") || type.includes("zero-day");
+    case "scanning": return combined.includes("scan") || combined.includes("probe") || combined.includes("reconnaissance") || combined.includes("recon") || combined.includes("enumeration") || combined.includes("brute force") || combined.includes("credential spray");
+    default: return true;
+  }
+}
+
+export function filterByLayers(threats: CyberThreat[], layers: LayerConfig[]): CyberThreat[] {
   const active = layers.filter(l => l.enabled);
   if (active.length === 0) return threats;
   if (active.some(l => l.id === "global")) return threats;
 
-  return threats.filter(t => {
-    const type = (t.type || "").toLowerCase();
-    const desc = (t.description || "").toLowerCase();
-    const details = (t.details || "").toLowerCase();
-    const combined = type + " " + desc + " " + details;
+  return threats.filter(t => active.some(l => matchesFilter(t, l.filterType)));
+}
 
-    return active.some(l => {
-      switch (l.filterType) {
-        case "botnet": return combined.includes("botnet") || combined.includes("c2") || combined.includes("command and control");
-        case "malware": return combined.includes("malware") || combined.includes("wiper") || combined.includes("trojan");
-        case "apt": return combined.includes("apt") || combined.includes("espionage") || combined.includes("nation state");
-        case "ddos": return combined.includes("ddos") || combined.includes("denial of service") || type.includes("network disruption");
-        case "ransomware": return combined.includes("ransomware") || combined.includes("ransom");
-        case "zeroday": return !!t.cve || combined.includes("zero-day") || combined.includes("0-day") || type.includes("zero-day");
-        case "scanning": return combined.includes("scan") || combined.includes("probe") || combined.includes("reconnaissance");
-        default: return true;
-      }
-    });
+export function getLayerCounts(threats: CyberThreat[], layers: LayerConfig[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  layers.forEach(l => {
+    if (l.id === "global") {
+      counts[l.id] = threats.length;
+    } else {
+      counts[l.id] = threats.filter(t => matchesFilter(t, l.filterType)).length;
+    }
   });
+  return counts;
 }
 
 export function MapLayersPanel({ layers, onToggle }: MapLayersPanelProps) {
