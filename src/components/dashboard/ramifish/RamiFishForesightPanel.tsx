@@ -278,115 +278,121 @@ const SCENARIO_COLORS = [
 ];
 
 export default function RamiFishForesightPanel({ output, isComplete }: Props) {
-  const scenarios = useMemo(() => isComplete && output ? extractScenarios(output) : [], [output, isComplete]);
-  const entities = useMemo(() => isComplete && output ? extractEntities(output) : [], [output, isComplete]);
-  const relations = useMemo(() => isComplete && output ? extractRelations(output) : [], [output, isComplete]);
-  const radarDims = useMemo(() => isComplete && output ? extractRadar(output) : [], [output, isComplete]);
-  const asciiDiagram = useMemo(() => isComplete && output ? extractAsciiDiagram(output) : null, [output, isComplete]);
+  // Parse on every output change (not just isComplete) so graphs update live
+  const scenarios = useMemo(() => output ? extractScenarios(output) : [], [output]);
+  const entities = useMemo(() => output ? extractEntities(output) : [], [output]);
+  const relations = useMemo(() => output ? extractRelations(output) : [], [output]);
+  const radarDims = useMemo(() => output ? extractRadar(output) : [], [output]);
+  const asciiDiagram = useMemo(() => output ? extractAsciiDiagram(output) : null, [output]);
 
   const hasGraph = entities.length >= 2;
   const hasRadar = radarDims.length >= 3;
+  const hasVisuals = hasGraph || hasRadar || (!!asciiDiagram && !hasGraph);
 
-  if (!isComplete || !output) return null;
-  if (!scenarios.length && !hasGraph && !hasRadar && !asciiDiagram) return null;
+  if (!output) return null;
+  if (!scenarios.length && !hasVisuals) return null;
 
   return (
     <div className="border-t border-border bg-[hsl(220,30%,5%)] p-4 space-y-4 max-h-[55%] overflow-y-auto">
-      {/* ── Relation Graph + Radar side by side ── */}
-      {(hasGraph || hasRadar) && (
-        <div className={`grid gap-4 ${hasGraph && hasRadar ? "grid-cols-[1fr_280px]" : "grid-cols-1"}`}>
-          {/* Relation Graph */}
-          {hasGraph && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <GitBranch className="w-3.5 h-3.5 text-primary" />
-                <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
-                  Entity Relation Diagram
-                </span>
-                <span className="font-mono text-[8px] text-muted-foreground ml-auto">
-                  {entities.length} entities / {relations.length} relations
-                </span>
-              </div>
-              <div className="bg-[hsl(220,30%,8%)] border border-border rounded-sm p-2 overflow-hidden">
-                <RelationGraph entities={entities} relations={relations} />
-              </div>
+      {/* ── Main layout: Scenarios LEFT + Diagrams RIGHT ── */}
+      <div className={`grid gap-4 ${scenarios.length > 0 && hasVisuals ? "grid-cols-[1fr_1fr]" : "grid-cols-1"}`}>
+
+        {/* LEFT — Foresight Scenarios */}
+        {scenarios.length > 0 && (
+          <div className="border border-border rounded bg-[hsl(220,30%,7%)] p-3">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm">🔮</span>
+              <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
+                Future Foresight Scenarios
+              </span>
             </div>
-          )}
-
-          {/* Radar Chart */}
-          {hasRadar && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Radar className="w-3.5 h-3.5 text-primary" />
-                <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
-                  Threat Radar
-                </span>
-              </div>
-              <div className="bg-[hsl(220,30%,8%)] border border-border rounded-sm p-2 flex items-center justify-center">
-                <RadarChart dims={radarDims} />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ASCII Diagram fallback */}
-      {asciiDiagram && !hasGraph && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <GitBranch className="w-3.5 h-3.5 text-primary" />
-            <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
-              Data Relation Diagram
-            </span>
-          </div>
-          <pre className="bg-[hsl(220,30%,8%)] border border-border rounded-sm p-3 text-[10px] font-mono text-foreground/80 whitespace-pre-wrap leading-relaxed overflow-x-auto">
-            {asciiDiagram}
-          </pre>
-        </div>
-      )}
-
-      {/* Foresight Scenarios */}
-      {scenarios.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm">🔮</span>
-            <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
-              Future Foresight Scenarios
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {scenarios.map((s, i) => {
-              const Icon = SCENARIO_ICONS[i] || TrendingUp;
-              return (
-                <div key={i} className={`border rounded-sm p-3 ${SCENARIO_COLORS[i] || SCENARIO_COLORS[0]} transition-colors`}>
-                  <div className="flex items-start gap-2 mb-2">
-                    <Icon className="w-4 h-4 text-foreground/70 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-mono text-[10px] font-bold text-foreground leading-tight">{s.title}</div>
-                      <div className="font-mono text-[9px] text-primary font-bold mt-0.5">{s.probability}</div>
+            <div className="space-y-3">
+              {scenarios.map((s, i) => {
+                const Icon = SCENARIO_ICONS[i] || TrendingUp;
+                return (
+                  <div key={i} className={`border rounded-sm p-3 ${SCENARIO_COLORS[i] || SCENARIO_COLORS[0]} transition-colors`}>
+                    <div className="flex items-start gap-2 mb-2">
+                      <Icon className="w-4 h-4 text-foreground/70 mt-0.5 shrink-0" />
+                      <div>
+                        <div className="font-mono text-[10px] font-bold text-foreground leading-tight">{s.title}</div>
+                        <div className="font-mono text-[9px] text-primary font-bold mt-0.5">{s.probability}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 mt-2">
+                      <div>
+                        <span className="font-mono text-[8px] text-muted-foreground uppercase">Timeframe: </span>
+                        <span className="font-mono text-[9px] text-foreground/80">{s.timeframe}</span>
+                      </div>
+                      <div>
+                        <span className="font-mono text-[8px] text-muted-foreground uppercase">Trigger: </span>
+                        <span className="font-mono text-[9px] text-foreground/80">{s.trigger}</span>
+                      </div>
+                      <div className="font-mono text-[9px] text-foreground/70 mt-1 line-clamp-3">{s.description}</div>
+                      <div className="border-t border-border/50 pt-1.5 mt-1.5">
+                        <span className="font-mono text-[8px] text-muted-foreground uppercase">Impact: </span>
+                        <span className="font-mono text-[9px] text-foreground/80">{s.impact}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-1.5 mt-2">
-                    <div>
-                      <span className="font-mono text-[8px] text-muted-foreground uppercase">Timeframe: </span>
-                      <span className="font-mono text-[9px] text-foreground/80">{s.timeframe}</span>
-                    </div>
-                    <div>
-                      <span className="font-mono text-[8px] text-muted-foreground uppercase">Trigger: </span>
-                      <span className="font-mono text-[9px] text-foreground/80">{s.trigger}</span>
-                    </div>
-                    <div className="font-mono text-[9px] text-foreground/70 mt-1 line-clamp-3">{s.description}</div>
-                    <div className="border-t border-border/50 pt-1.5 mt-1.5">
-                      <span className="font-mono text-[8px] text-muted-foreground uppercase">Impact: </span>
-                      <span className="font-mono text-[9px] text-foreground/80">{s.impact}</span>
-                    </div>
-                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* RIGHT — Relation Graph + Radar stacked in a box */}
+        {hasVisuals && (
+          <div className="border border-border rounded bg-[hsl(220,30%,7%)] p-3 space-y-4">
+            {/* Relation Graph */}
+            {hasGraph && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <GitBranch className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
+                    Entity Relation Diagram
+                  </span>
+                  <span className="font-mono text-[8px] text-muted-foreground ml-auto">
+                    {entities.length} entities · {relations.length} relations
+                  </span>
                 </div>
-              );
-            })}
+                <div className="bg-[hsl(220,30%,5%)] border border-border rounded-sm p-2 overflow-hidden">
+                  <RelationGraph entities={entities} relations={relations} />
+                </div>
+              </div>
+            )}
+
+            {/* ASCII Diagram fallback */}
+            {asciiDiagram && !hasGraph && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <GitBranch className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
+                    Data Relation Diagram
+                  </span>
+                </div>
+                <pre className="bg-[hsl(220,30%,5%)] border border-border rounded-sm p-3 text-[10px] font-mono text-foreground/80 whitespace-pre-wrap leading-relaxed overflow-x-auto">
+                  {asciiDiagram}
+                </pre>
+              </div>
+            )}
+
+            {/* Radar Chart */}
+            {hasRadar && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Radar className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-primary uppercase">
+                    Threat Radar
+                  </span>
+                </div>
+                <div className="bg-[hsl(220,30%,5%)] border border-border rounded-sm p-2 flex items-center justify-center">
+                  <RadarChart dims={radarDims} />
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
