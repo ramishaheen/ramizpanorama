@@ -79,50 +79,6 @@ async function callGeminiDirect(systemPrompt: string, userPrompt: string, apiKey
   return response;
 }
 
-// Transform Gemini SSE stream into OpenAI-compatible SSE stream
-function transformGeminiStream(geminiBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  const reader = geminiBody.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffer = "";
-
-  return new ReadableStream({
-    async pull(controller) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-          return;
-        }
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx: number;
-        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIdx).trim();
-          buffer = buffer.slice(newlineIdx + 1);
-
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              const openaiChunk = {
-                choices: [{ delta: { content: text }, index: 0, finish_reason: null }],
-              };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
-            }
-          } catch {
-            // skip malformed chunks
-          }
-        }
-      }
-    },
-  });
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
