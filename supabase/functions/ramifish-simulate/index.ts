@@ -61,66 +61,24 @@ async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: s
 }
 
 async function callGeminiDirect(systemPrompt: string, userPrompt: string, apiKey: string) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          { role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
-        ],
-        generationConfig: { temperature: 0.9, maxOutputTokens: 8192 },
-      }),
-    }
-  );
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      stream: true,
+    }),
+  });
   return response;
 }
 
-// Transform Gemini SSE stream into OpenAI-compatible SSE stream
-function transformGeminiStream(geminiBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
-  const reader = geminiBody.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffer = "";
-
-  return new ReadableStream({
-    async pull(controller) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-          return;
-        }
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx: number;
-        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIdx).trim();
-          buffer = buffer.slice(newlineIdx + 1);
-
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              const openaiChunk = {
-                choices: [{ delta: { content: text }, index: 0, finish_reason: null }],
-              };
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
-            }
-          } catch {
-            // skip malformed chunks
-          }
-        }
-      }
-    },
-  });
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -146,8 +104,7 @@ serve(async (req) => {
         const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, RAMIFISH_KEY);
         if (geminiResp.ok) {
           console.log("RamiFish: dedicated Gemini key succeeded, streaming...");
-          const transformedStream = transformGeminiStream(geminiResp.body!);
-          return new Response(transformedStream, {
+          return new Response(geminiResp.body, {
             headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
           });
         }
@@ -196,9 +153,8 @@ serve(async (req) => {
       });
     }
 
-    console.log("RamiFish: Gemini fallback succeeded, transforming stream...");
-    const transformedStream = transformGeminiStream(geminiResp.body!);
-    return new Response(transformedStream, {
+    console.log("RamiFish: Gemini fallback succeeded, streaming...");
+    return new Response(geminiResp.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
