@@ -70,6 +70,7 @@ interface Props {
   threats: CyberThreat[];
   onSelect: (t: CyberThreat) => void;
   selectedId?: string;
+  activeLayers?: LayerConfig[];
 }
 
 /* ── Reticle markers layer ── */
