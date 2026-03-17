@@ -62,7 +62,7 @@ async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: s
 
 async function callGeminiDirect(systemPrompt: string, userPrompt: string, apiKey: string) {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:streamGenerateContent?alt=sse&key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
