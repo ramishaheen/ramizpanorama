@@ -1302,6 +1302,24 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
     }
   }, [centerView, threats.length]);
 
+  /* Periodic auto-refresh: cyber threats every 90s, dark web every 3 min */
+  useEffect(() => {
+    const threatInterval = setInterval(() => {
+      refresh();
+    }, 90 * 1000);
+
+    const darkWebInterval = setInterval(() => {
+      if (threats.length > 0 && !darkWeb.loading) {
+        fetchDarkWeb();
+      }
+    }, 3 * 60 * 1000);
+
+    return () => {
+      clearInterval(threatInterval);
+      clearInterval(darkWebInterval);
+    };
+  }, [refresh, threats.length, darkWeb.loading, fetchDarkWeb]);
+
   const handleFetchDossier = useCallback((actorName: string) => {
     setShowDossier(true);
     fetchDossier(actorName);
@@ -1464,8 +1482,12 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
         )}
 
         {/* Right controls */}
-        {lastUpdated && <span className="text-[8px] font-mono text-muted-foreground/50 mr-2 max-sm:hidden">{new Date(lastUpdated).toLocaleTimeString()}</span>}
-        <button onClick={refresh} className="p-1 border border-border/50 hover:border-primary/50 hover:text-primary transition-colors mr-1" title="Refresh">
+        {lastUpdated && (
+          <span className="text-[8px] font-mono text-muted-foreground/50 mr-2 max-sm:hidden" title="Last data refresh">
+            ↻ {new Date(lastUpdated).toLocaleTimeString()}
+          </span>
+        )}
+        <button onClick={() => { refresh(); if (threats.length > 0) fetchDarkWeb(); }} className="p-1 border border-border/50 hover:border-primary/50 hover:text-primary transition-colors mr-1" title="Refresh all data">
           <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
         </button>
         <button onClick={onClose} className="p-1 border border-border/50 hover:border-destructive/50 hover:text-destructive transition-colors">

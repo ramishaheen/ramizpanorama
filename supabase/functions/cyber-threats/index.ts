@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       const raw = await callAI([
         {
           role: 'system',
-          content: `You are a cybersecurity intelligence analyst. You MUST ONLY report incidents that are directly supported by the OSINT data provided below. Do NOT fabricate, speculate, or invent incidents. Every report must be traceable to specific data points in the input.
+          content: `You are a cybersecurity intelligence analyst. Today is ${new Date().toISOString().split('T')[0]} (UTC: ${new Date().toISOString()}). You MUST ONLY report incidents that are directly supported by the OSINT data provided below. Do NOT fabricate, speculate, or invent incidents. Every report must be traceable to specific data points in the input.
 
 Given OSINT data from multiple credible cybersecurity sources, generate a structured JSON array of cyber incidents.
 
