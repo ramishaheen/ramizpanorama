@@ -62,8 +62,9 @@ function buildLiveScenarios(threats: CyberThreat[]): { label: string; text: stri
   });
 }
 
-export default function RamiFishModal({ open, onClose }: Props) {
+export default function RamiFishModal({ open, onClose, liveThreats = [] }: Props) {
   const [phase, setPhase] = useState<Phase>("input");
+  const liveSeeds = useMemo(() => buildLiveScenarios(liveThreats), [liveThreats]);
   const [seedText, setSeedText] = useState("");
   const [question, setQuestion] = useState("");
   const [agentCount, setAgentCount] = useState(6);
