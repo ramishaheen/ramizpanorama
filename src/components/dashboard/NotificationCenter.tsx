@@ -82,15 +82,18 @@ interface NotificationCenterProps {
   rockets: RocketType[];
   alertMuted?: boolean;
   telegramMarkers?: TelegramMarker[];
+  geoAlerts?: GeoAlert[];
 }
 
-export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }: NotificationCenterProps) => {
+export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [], geoAlerts = [] }: NotificationCenterProps) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const seenRocketIds = useRef<Set<string>>(new Set());
   const seenTelegramIds = useRef<Set<string>>(new Set());
+  const seenGeoAlertIds = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
   const telegramInitRef = useRef(false);
+  const geoInitRef = useRef(false);
   const { t } = useLanguage();
 
   // Track new rocket launches
