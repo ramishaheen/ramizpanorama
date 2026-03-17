@@ -11,6 +11,7 @@ export interface CyberThreat {
   targetCountry?: string;
   targetFlag: string;
   type: string;
+  categories?: string[];
   severity: "critical" | "high" | "medium" | "low";
   description: string;
   details: string;
