@@ -93,6 +93,7 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
   const initializedRef = useRef(false);
   const telegramInitRef = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
   // Track new rocket launches → add missile notifications
