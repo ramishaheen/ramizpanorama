@@ -5,22 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
-  try {
-    const { seedText, question, agentCount = 6, rounds = 5 } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    if (!seedText || !question) {
-      return new Response(JSON.stringify({ error: "seedText and question are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const systemPrompt = `You are RamiFish — a swarm intelligence prediction engine. You simulate a panel of ${agentCount} diverse AI analyst agents who debate and predict outcomes based on seed intelligence.
+function buildSystemPrompt(agentCount: number, rounds: number) {
+  return `You are RamiFish — a swarm intelligence prediction engine. You simulate a panel of ${agentCount} diverse AI analyst agents who debate and predict outcomes based on seed intelligence.
 
 ## Your Process
 1. PHASE: AGENT GENERATION — Create ${agentCount} distinct analyst personas with names, expertise areas, and cognitive biases. Each agent should have a unique perspective (e.g., military strategist, economist, diplomat, intelligence analyst, historian, regional expert).
@@ -49,43 +35,158 @@ Use clear markdown headers for each phase. For each agent's contribution, prefix
 - Each agent must maintain a consistent personality across rounds
 - Show genuine intellectual conflict, not artificial agreement
 - Ground predictions in the provided seed data`;
+}
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+function buildUserPrompt(seedText: string, question: string, rounds: number) {
+  return `## Seed Intelligence\n${seedText}\n\n## Prediction Question\n${question}\n\nBegin the swarm simulation now. Create the agents, run ${rounds} rounds of debate, then produce the final prediction report.`;
+}
+
+async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: string) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      stream: true,
+    }),
+  });
+  return response;
+}
+
+async function callGeminiDirect(systemPrompt: string, userPrompt: string, apiKey: string) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:streamGenerateContent?alt=sse&key=${apiKey}`,
+    {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `## Seed Intelligence\n${seedText}\n\n## Prediction Question\n${question}\n\nBegin the swarm simulation now. Create the agents, run ${rounds} rounds of debate, then produce the final prediction report.` },
+        contents: [
+          { role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
         ],
-        stream: true,
+        generationConfig: { temperature: 0.9, maxOutputTokens: 8192 },
       }),
-    });
+    }
+  );
+  return response;
+}
 
-    if (!response.ok) {
-      const status = response.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+// Transform Gemini SSE stream into OpenAI-compatible SSE stream
+function transformGeminiStream(geminiBody: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = geminiBody.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = "";
+
+  return new ReadableStream({
+    async pull(controller) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIdx).trim();
+          buffer = buffer.slice(newlineIdx + 1);
+
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              const openaiChunk = {
+                choices: [{ delta: { content: text }, index: 0, finish_reason: null }],
+              };
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
+            }
+          } catch {
+            // skip malformed chunks
+          }
+        }
       }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    },
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const { seedText, question, agentCount = 6, rounds = 5 } = await req.json();
+
+    if (!seedText || !question) {
+      return new Response(JSON.stringify({ error: "seedText and question are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const systemPrompt = buildSystemPrompt(agentCount, rounds);
+    const userPrompt = buildUserPrompt(seedText, question, rounds);
+
+    // Try Lovable AI first
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (LOVABLE_API_KEY) {
+      console.log("RamiFish: trying Lovable AI gateway...");
+      try {
+        const response = await callLovableAI(systemPrompt, userPrompt, LOVABLE_API_KEY);
+        if (response.ok) {
+          console.log("RamiFish: Lovable AI succeeded, streaming...");
+          return new Response(response.body, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+        const status = response.status;
+        const body = await response.text();
+        console.warn(`RamiFish: Lovable AI failed (${status}), will try Gemini fallback. Body: ${body.slice(0, 200)}`);
+
+        // For 429/402 from Lovable, fall through to Gemini
+        if (status !== 429 && status !== 402) {
+          return new Response(JSON.stringify({ error: "AI gateway error" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e) {
+        console.warn("RamiFish: Lovable AI exception, trying Gemini fallback:", e);
       }
-      const t = await response.text();
-      console.error("AI gateway error:", status, t);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+    }
+
+    // Fallback: direct Gemini API
+    const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GEMINI_API_KEY_2");
+    if (!GEMINI_KEY) {
+      return new Response(JSON.stringify({ error: "AI credits exhausted and no Gemini fallback key configured." }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("RamiFish: falling back to direct Gemini API...");
+    const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, GEMINI_KEY);
+
+    if (!geminiResp.ok) {
+      const errText = await geminiResp.text();
+      console.error("RamiFish: Gemini fallback failed:", geminiResp.status, errText.slice(0, 300));
+      return new Response(JSON.stringify({ error: `Gemini API error (${geminiResp.status})` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
+    console.log("RamiFish: Gemini fallback succeeded, transforming stream...");
+    const transformedStream = transformGeminiStream(geminiResp.body!);
+    return new Response(transformedStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
