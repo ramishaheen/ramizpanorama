@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Bell, Rocket, X, AlertTriangle, Shield, Anchor, Plane, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -254,14 +255,14 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
 
       {/* Dropdown Panel */}
       <AnimatePresence>
-        {open && (
+        {open && createPortal(
           <motion.div
             initial={{ opacity: 0, y: -8, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
             className="fixed right-4 top-14 w-[360px] max-w-[90vw] bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-2xl overflow-hidden"
-            style={{ zIndex: 99999 }}
+            style={{ zIndex: 999999 }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card">
@@ -340,8 +341,10 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
                 </div>
               </ScrollArea>
             )}
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
+
       </AnimatePresence>
     </div>
   );
