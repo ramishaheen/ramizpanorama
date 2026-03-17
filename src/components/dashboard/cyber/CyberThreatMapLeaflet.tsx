@@ -75,7 +75,7 @@ interface Props {
 
 /* ── Reticle markers layer ── */
 function ReticleMarkers({ nodes, onHover, onLeave, hoveredNode }: {
-  nodes: { country: string; count: number; severity: string; lat: number; lng: number }[];
+  nodes: { country: string; count: number; color: string; lat: number; lng: number }[];
   onHover: (c: string) => void;
   onLeave: () => void;
   hoveredNode: string | null;
