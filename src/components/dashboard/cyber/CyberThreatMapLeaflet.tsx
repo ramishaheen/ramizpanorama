@@ -409,7 +409,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, a
             key={`corridor-core-${i}`}
             positions={c.points}
             pathOptions={{
-              color: SEVERITY_COLORS[c.maxSeverity] || SEVERITY_COLORS.medium,
+              color: c.color,
               weight: 2 + c.intensity * 3,
               opacity: 0.3 + c.intensity * 0.4,
               lineCap: "round",
