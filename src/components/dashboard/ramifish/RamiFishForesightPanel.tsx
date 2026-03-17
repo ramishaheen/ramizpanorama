@@ -278,17 +278,16 @@ const SCENARIO_COLORS = [
 ];
 
 export default function RamiFishForesightPanel({ output, isComplete }: Props) {
-  if (!isComplete || !output) return null;
-
-  const scenarios = extractScenarios(output);
-  const entities = useMemo(() => extractEntities(output), [output]);
-  const relations = useMemo(() => extractRelations(output), [output]);
-  const radarDims = useMemo(() => extractRadar(output), [output]);
-  const asciiDiagram = useMemo(() => extractAsciiDiagram(output), [output]);
+  const scenarios = useMemo(() => isComplete && output ? extractScenarios(output) : [], [output, isComplete]);
+  const entities = useMemo(() => isComplete && output ? extractEntities(output) : [], [output, isComplete]);
+  const relations = useMemo(() => isComplete && output ? extractRelations(output) : [], [output, isComplete]);
+  const radarDims = useMemo(() => isComplete && output ? extractRadar(output) : [], [output, isComplete]);
+  const asciiDiagram = useMemo(() => isComplete && output ? extractAsciiDiagram(output) : null, [output, isComplete]);
 
   const hasGraph = entities.length >= 2;
   const hasRadar = radarDims.length >= 3;
 
+  if (!isComplete || !output) return null;
   if (!scenarios.length && !hasGraph && !hasRadar && !asciiDiagram) return null;
 
   return (
