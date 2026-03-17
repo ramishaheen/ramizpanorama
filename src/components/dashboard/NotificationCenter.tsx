@@ -200,7 +200,11 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        panelRef.current && !panelRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
