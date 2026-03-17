@@ -138,7 +138,27 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(agentCount, rounds);
     const userPrompt = buildUserPrompt(seedText, question, rounds);
 
-    // Try Lovable AI first
+    // 1) Try dedicated RamiFish Gemini key first
+    const RAMIFISH_KEY = Deno.env.get("RAMIFISH_GEMINI_KEY");
+    if (RAMIFISH_KEY) {
+      console.log("RamiFish: trying dedicated Gemini key...");
+      try {
+        const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, RAMIFISH_KEY);
+        if (geminiResp.ok) {
+          console.log("RamiFish: dedicated Gemini key succeeded, streaming...");
+          const transformedStream = transformGeminiStream(geminiResp.body!);
+          return new Response(transformedStream, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+        const errText = await geminiResp.text();
+        console.warn(`RamiFish: dedicated Gemini failed (${geminiResp.status}), falling back. ${errText.slice(0, 200)}`);
+      } catch (e) {
+        console.warn("RamiFish: dedicated Gemini exception, falling back:", e);
+      }
+    }
+
+    // 2) Fallback: Lovable AI gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (LOVABLE_API_KEY) {
       console.log("RamiFish: trying Lovable AI gateway...");
@@ -150,22 +170,14 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
           });
         }
-        const status = response.status;
         const body = await response.text();
-        console.warn(`RamiFish: Lovable AI failed (${status}), will try Gemini fallback. Body: ${body.slice(0, 200)}`);
-
-        // For 429/402 from Lovable, fall through to Gemini
-        if (status !== 429 && status !== 402) {
-          return new Response(JSON.stringify({ error: "AI gateway error" }), {
-            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
+        console.warn(`RamiFish: Lovable AI failed (${response.status}), trying shared Gemini. ${body.slice(0, 200)}`);
       } catch (e) {
-        console.warn("RamiFish: Lovable AI exception, trying Gemini fallback:", e);
+        console.warn("RamiFish: Lovable AI exception, trying shared Gemini:", e);
       }
     }
 
-    // Fallback: direct Gemini API
+    // 3) Last resort: shared Gemini keys
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GEMINI_API_KEY_2");
     if (!GEMINI_KEY) {
       return new Response(JSON.stringify({ error: "AI credits exhausted and no Gemini fallback key configured." }), {
