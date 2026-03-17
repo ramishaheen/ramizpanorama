@@ -311,9 +311,16 @@ async function fetchAllOSINTData() {
     }).then(async (res) => {
       if (!res.ok) return;
       const text = await res.text();
-      const titles = [...text.matchAll(/<title>(.*?)<\/title>/g)].slice(1, 9).map(m => m[1]);
-      results.talosNews = titles.map((t) => ({ title: t }));
-      if (titles.length > 0) results.sources.push('Cisco Talos');
+      // Extract title + description pairs from RSS items
+      const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 12);
+      results.talosNews = items.map((m) => {
+        const title = m[1].match(/<title>(.*?)<\/title>/)?.[1] || '';
+        const desc = m[1].match(/<description>([\s\S]*?)<\/description>/)?.[1]?.replace(/<[^>]+>/g, '').substring(0, 300) || '';
+        const pubDate = m[1].match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '';
+        const link = m[1].match(/<link>(.*?)<\/link>/)?.[1] || '';
+        return { title, description: desc, pubDate, link };
+      });
+      if (results.talosNews.length > 0) results.sources.push('Cisco Talos');
     }),
 
     fetch('https://www.bleepingcomputer.com/feed/', {
