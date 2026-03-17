@@ -306,6 +306,9 @@ export default function RamiFishModal({ open, onClose }: Props) {
               </div>
             )}
           </div>
+
+          {/* Foresight Panel — appears after completion */}
+          <RamiFishForesightPanel output={output} isComplete={phase === "complete"} />
         </div>
       </div>
 

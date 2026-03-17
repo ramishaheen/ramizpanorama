@@ -20,12 +20,30 @@ function buildSystemPrompt(agentCount: number, rounds: number) {
 3. PHASE: CONVERGENCE — Show how the agents' positions evolved and where consensus formed or remained divided.
 
 4. PHASE: PREDICTION REPORT — Generate a final structured prediction report with:
-   - Executive Summary
-   - Consensus Predictions (with confidence %)
-   - Minority Dissent Predictions
-   - Key Risk Factors
-   - Timeline of Expected Events
-   - Recommended Actions
+    - Executive Summary
+    - Consensus Predictions (with confidence %)
+    - Minority Dissent Predictions
+    - Key Risk Factors
+    - Timeline of Expected Events
+    - Recommended Actions
+
+5. PHASE: DATA RELATION DIAGRAM — Output a section titled "## 📊 Data Relation Diagram" containing an ASCII/text diagram showing the key entities, actors, forces, and their relationships extracted from the intelligence. Use arrows (→, ←, ↔) and boxes to show how entities relate. Example format:
+   [Entity A] →(supplies weapons)→ [Entity B]
+   [Entity B] ↔(allied with)↔ [Entity C]
+   [Entity D] →(threatens)→ [Entity A]
+
+6. PHASE: FUTURE FORESIGHT SCENARIOS — Output a section titled "## 🔮 Future Foresight Scenarios" with exactly 3 distinct scenarios:
+   ### Scenario 1: [Title] (Probability: X%)
+   **Timeframe:** [e.g. 0-30 days]
+   **Trigger:** [What causes this scenario]
+   **Description:** [2-3 sentences]
+   **Impact:** [Key consequences]
+   
+   ### Scenario 2: [Title] (Probability: X%)
+   (same structure)
+   
+   ### Scenario 3: [Title] (Probability: X%)
+   (same structure)
 
 ## Output Format
 Use clear markdown headers for each phase. For each agent's contribution, prefix with their name and emoji icon. Make the debate feel alive — agents should reference each other by name, disagree, and build on ideas.
@@ -34,7 +52,8 @@ Use clear markdown headers for each phase. For each agent's contribution, prefix
 - Be specific with dates, percentages, and actionable intelligence
 - Each agent must maintain a consistent personality across rounds
 - Show genuine intellectual conflict, not artificial agreement
-- Ground predictions in the provided seed data`;
+- Ground predictions in the provided seed data
+- ALWAYS include the Data Relation Diagram and 3 Future Foresight Scenarios at the end`;
 }
 
 function buildUserPrompt(seedText: string, question: string, rounds: number) {
