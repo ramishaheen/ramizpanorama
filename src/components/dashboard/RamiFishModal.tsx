@@ -206,13 +206,34 @@ export default function RamiFishModal({ open, onClose, liveThreats = [] }: Props
               />
             </div>
 
-            {/* Quick Seeds */}
+            {/* Live Scenarios */}
+            {liveSeeds.length > 0 && liveSeeds !== FALLBACK_SEEDS && (
+              <div>
+                <label className="font-mono text-[9px] font-semibold tracking-[0.1em] text-primary uppercase mb-1.5 block">
+                  🔴 Live Feed Scenarios
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {liveSeeds.map(s => (
+                    <button
+                      key={s.label}
+                      onClick={() => { setSeedText(s.text); setQuestion(`What are the most likely outcomes in the next 30 days?`); }}
+                      disabled={isStreaming}
+                      className="px-2 py-1 text-[9px] font-mono bg-destructive/10 border border-destructive/30 rounded-sm hover:border-destructive hover:text-destructive transition-colors disabled:opacity-50"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Classic Quick Seeds */}
             <div>
               <label className="font-mono text-[9px] font-semibold tracking-[0.1em] text-muted-foreground uppercase mb-1.5 block">
                 Quick Scenarios
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {liveSeeds.map(s => (
+                {FALLBACK_SEEDS.map(s => (
                   <button
                     key={s.label}
                     onClick={() => { setSeedText(s.text); setQuestion(`What are the most likely outcomes in the next 30 days?`); }}
