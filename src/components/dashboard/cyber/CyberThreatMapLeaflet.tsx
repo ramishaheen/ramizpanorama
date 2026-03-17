@@ -86,6 +86,7 @@ function ReticleMarkers({ nodes, onHover, onLeave, hoveredNode }: {
     const markers: L.Marker[] = [];
     nodes.forEach(n => {
       const color = n.color;
+      const size = Math.min(12 + n.count * 2, 32);
 
       const icon = L.divIcon({
         className: "cyber-reticle-marker",
