@@ -260,7 +260,7 @@ function ImpactRipples({ impacts }: { impacts: { id: number; lat: number; lng: n
   return null;
 }
 
-export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }: Props) {
+export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, activeLayers }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [showRamiFish, setShowRamiFish] = useState(false);
   const [impacts, setImpacts] = useState<{ id: number; lat: number; lng: number; color: string }[]>([]);

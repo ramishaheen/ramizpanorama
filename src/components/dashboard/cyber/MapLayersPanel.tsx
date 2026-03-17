@@ -68,6 +68,16 @@ export function filterByLayers(threats: CyberThreat[], layers: LayerConfig[]): C
   return threats.filter(t => active.some(l => matchesFilter(t, l.filterType)));
 }
 
+/** Returns the layer color for a threat based on active layers, or null to fall back to severity */
+export function getThreatLayerColor(t: CyberThreat, layers: LayerConfig[]): string | null {
+  const active = layers.filter(l => l.enabled && l.id !== "global");
+  if (active.length === 0) return null; // global or none → use severity
+  for (const l of active) {
+    if (matchesFilter(t, l.filterType)) return l.color;
+  }
+  return null;
+}
+
 export function getLayerCounts(threats: CyberThreat[], layers: LayerConfig[]): Record<string, number> {
   const counts: Record<string, number> = {};
   layers.forEach(l => {
