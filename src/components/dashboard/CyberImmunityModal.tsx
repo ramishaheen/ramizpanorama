@@ -1377,12 +1377,13 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
     let r = timelineFiltered;
     if (countryFilter !== "All") r = r.filter((t) => t.attackerCountry === countryFilter || t.targetCountry === countryFilter || t.attacker.includes(countryFilter) || t.target.includes(countryFilter));
     if (severityFilter !== "all") r = r.filter((t) => t.severity === severityFilter);
+    if (sourceFilter !== "All") r = r.filter((t) => t.sourceName === sourceFilter);
     if (search) {
       const q = search.toLowerCase();
-      r = r.filter((t) => t.attacker.toLowerCase().includes(q) || t.target.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.details.toLowerCase().includes(q) || (t.cve && t.cve.toLowerCase().includes(q)) || (t.iocs && t.iocs.some((i) => i.toLowerCase().includes(q))));
+      r = r.filter((t) => t.attacker.toLowerCase().includes(q) || t.target.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.details.toLowerCase().includes(q) || (t.cve && t.cve.toLowerCase().includes(q)) || (t.sourceName && t.sourceName.toLowerCase().includes(q)) || (t.iocs && t.iocs.some((i) => i.toLowerCase().includes(q))));
     }
     return r;
-  }, [timelineFiltered, countryFilter, severityFilter, search]);
+  }, [timelineFiltered, countryFilter, severityFilter, sourceFilter, search]);
 
   /* stats */
   const stats = useMemo(() => {
