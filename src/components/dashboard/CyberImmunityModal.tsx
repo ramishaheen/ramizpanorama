@@ -168,10 +168,10 @@ function lonLatToSvg(lon: number, lat: number, w: number, h: number): [number, n
 }
 
 /* ── Threat Map (Leaflet-based) ── */
-function ThreatMap({ threats, onSelect, selectedId }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void; selectedId?: string }) {
+function ThreatMap({ threats, onSelect, selectedId, activeLayers }: { threats: CyberThreat[]; onSelect: (t: CyberThreat) => void; selectedId?: string; activeLayers?: import("@/components/dashboard/cyber/MapLayersPanel").LayerConfig[] }) {
   return (
     <div className="relative w-full h-full cyber-threat-map">
-      <CyberThreatMapLeaflet threats={threats} onSelect={onSelect} selectedId={selectedId} />
+      <CyberThreatMapLeaflet threats={threats} onSelect={onSelect} selectedId={selectedId} activeLayers={activeLayers} />
     </div>
   );
 }
@@ -1678,7 +1678,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
               </div>
             ) : centerView === "map" ? (
               <div className="relative w-full h-full">
-                <ThreatMap threats={filterByLayers(filtered, layers)} onSelect={handleSelect} selectedId={selectedThreat?.id} />
+                <ThreatMap threats={filterByLayers(filtered, layers)} onSelect={handleSelect} selectedId={selectedThreat?.id} activeLayers={layers} />
                 <MapLayersPanel layers={layers} onToggle={toggleLayer} threats={filtered} />
               </div>
             ) : centerView === "graph" ? (

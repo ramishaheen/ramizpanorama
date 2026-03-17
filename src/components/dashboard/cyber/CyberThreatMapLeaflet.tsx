@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { CyberThreat } from "@/hooks/useCyberThreats";
+import type { LayerConfig } from "@/components/dashboard/cyber/MapLayersPanel";
+import { getThreatLayerColor } from "@/components/dashboard/cyber/MapLayersPanel";
 import RamiFishModal from "@/components/dashboard/RamiFishModal";
 import "leaflet/dist/leaflet.css";
 
@@ -68,11 +70,12 @@ interface Props {
   threats: CyberThreat[];
   onSelect: (t: CyberThreat) => void;
   selectedId?: string;
+  activeLayers?: LayerConfig[];
 }
 
 /* ── Reticle markers layer ── */
 function ReticleMarkers({ nodes, onHover, onLeave, hoveredNode }: {
-  nodes: { country: string; count: number; severity: string; lat: number; lng: number }[];
+  nodes: { country: string; count: number; color: string; lat: number; lng: number }[];
   onHover: (c: string) => void;
   onLeave: () => void;
   hoveredNode: string | null;
@@ -82,7 +85,7 @@ function ReticleMarkers({ nodes, onHover, onLeave, hoveredNode }: {
   useEffect(() => {
     const markers: L.Marker[] = [];
     nodes.forEach(n => {
-      const color = SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium;
+      const color = n.color;
       const size = Math.min(12 + n.count * 2, 32);
 
       const icon = L.divIcon({
@@ -257,7 +260,7 @@ function ImpactRipples({ impacts }: { impacts: { id: number; lat: number; lng: n
   return null;
 }
 
-export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }: Props) {
+export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, activeLayers }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [showRamiFish, setShowRamiFish] = useState(false);
   const [impacts, setImpacts] = useState<{ id: number; lat: number; lng: number; color: string }[]>([]);
@@ -265,39 +268,49 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
   const impactIdRef = useRef(0);
   const mapRef = useRef<L.Map | null>(null);
 
+  const getColor = useCallback((t: CyberThreat): string => {
+    if (activeLayers) {
+      const lc = getThreatLayerColor(t, activeLayers);
+      if (lc) return lc;
+    }
+    return SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium;
+  }, [activeLayers]);
+
   const nodes = useMemo(() => {
-    const map = new Map<string, { country: string; count: number; severity: string; lat: number; lng: number }>();
+    const map = new Map<string, { country: string; count: number; color: string; lat: number; lng: number }>();
     threats.forEach((t) => {
+      const color = getColor(t);
       for (const c of [t.attackerCountry || t.attacker, t.targetCountry || t.target]) {
         const key = c || "Unknown";
         const [lat, lng] = getCoords(key);
         const existing = map.get(key);
         if (existing) {
           existing.count++;
-          if (t.severity === "critical" || (t.severity === "high" && existing.severity !== "critical")) existing.severity = t.severity;
+          // Prefer layer/severity color from more severe threat
+          if (t.severity === "critical" || (t.severity === "high")) existing.color = color;
         } else {
-          map.set(key, { country: key, count: 1, severity: t.severity, lat, lng });
+          map.set(key, { country: key, count: 1, color, lat, lng });
         }
       }
     });
     return Array.from(map.values());
-  }, [threats]);
+  }, [threats, getColor]);
 
   const corridors = useMemo(() => {
-    const pairMap = new Map<string, { count: number; maxSeverity: string; from: [number, number]; to: [number, number] }>();
+    const pairMap = new Map<string, { count: number; color: string; from: [number, number]; to: [number, number] }>();
     threats.forEach((t) => {
       const ac = t.attackerCountry || t.attacker || "Unknown";
       const tc = t.targetCountry || t.target || "Unknown";
       const key = `${ac}→${tc}`;
       const from = getCoords(ac);
       const to = getCoords(tc);
+      const color = getColor(t);
       const existing = pairMap.get(key);
       if (existing) {
         existing.count++;
-        if (t.severity === "critical") existing.maxSeverity = "critical";
-        else if (t.severity === "high" && existing.maxSeverity !== "critical") existing.maxSeverity = "high";
+        if (t.severity === "critical" || t.severity === "high") existing.color = color;
       } else {
-        pairMap.set(key, { count: 1, maxSeverity: t.severity, from, to });
+        pairMap.set(key, { count: 1, color, from, to });
       }
     });
     const maxCount = Math.max(...Array.from(pairMap.values()).map(v => v.count), 1);
@@ -306,7 +319,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
       intensity: v.count / maxCount,
       points: arcPoints(v.from, v.to),
     }));
-  }, [threats]);
+  }, [threats, getColor]);
 
   const arcs = useMemo(() => {
     return threats.slice(0, 30).map((t) => {
@@ -315,12 +328,12 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
       return {
         id: t.id,
         points: arcPoints(getCoords(ac), getCoords(tc)),
-        color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium,
+        color: getColor(t),
         threat: t,
         isSelected: t.id === selectedId,
       };
     });
-  }, [threats, selectedId]);
+  }, [threats, selectedId, getColor]);
 
   const totalAttacks = threats.length;
   const activeCorridors = corridors.length;
@@ -382,7 +395,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
             key={`corridor-glow-${i}`}
             positions={c.points}
             pathOptions={{
-              color: SEVERITY_COLORS[c.maxSeverity] || SEVERITY_COLORS.medium,
+              color: c.color,
               weight: 6 + c.intensity * 10,
               opacity: 0.06,
               lineCap: "round",
@@ -397,7 +410,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
             key={`corridor-core-${i}`}
             positions={c.points}
             pathOptions={{
-              color: SEVERITY_COLORS[c.maxSeverity] || SEVERITY_COLORS.medium,
+              color: c.color,
               weight: 2 + c.intensity * 3,
               opacity: 0.3 + c.intensity * 0.4,
               lineCap: "round",
@@ -431,8 +444,8 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
             center={[n.lat, n.lng]}
             radius={Math.min(8 + n.count * 2, 28)}
             pathOptions={{
-              color: SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium,
-              fillColor: SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium,
+              color: n.color,
+              fillColor: n.color,
               fillOpacity: 0.08,
               weight: 1,
               opacity: 0.25,
@@ -529,7 +542,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
         return (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[460] pointer-events-none">
             <div className="px-4 py-2.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border rounded-sm min-w-[140px]"
-              style={{ borderColor: SEVERITY_COLORS[nd.severity], borderLeftWidth: 3 }}>
+              style={{ borderColor: nd.color, borderLeftWidth: 3 }}>
               <div className="font-mono text-[11px] font-bold text-primary">{nd.country}</div>
               <div className="font-mono text-[9px] text-muted-foreground">TOTAL: {nd.count} INCIDENTS</div>
             </div>
