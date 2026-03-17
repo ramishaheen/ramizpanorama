@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, Brain, Zap, Upload, Play, RotateCcw, Users, FileText } from "lucide-react";
 import { toast } from "sonner";
+import RamiFishForesightPanel from "./ramifish/RamiFishForesightPanel";
 
 interface Props {
   open: boolean;
@@ -305,6 +306,9 @@ export default function RamiFishModal({ open, onClose }: Props) {
               </div>
             )}
           </div>
+
+          {/* Foresight Panel — appears after completion */}
+          <RamiFishForesightPanel output={output} isComplete={phase === "complete"} />
         </div>
       </div>
 
