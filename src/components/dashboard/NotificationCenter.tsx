@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
-import { Bell, Rocket, X, AlertTriangle, Shield, Anchor, Plane, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Bell, Rocket, X, AlertTriangle, Shield, Anchor, Plane } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type { Rocket as RocketType } from "@/data/mockData";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
-import { useLanguage, translations as tr } from "@/hooks/useLanguage";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export interface NotificationItem {
   id: string;
@@ -27,7 +27,6 @@ function getRegionName(lat: number, lng: number): string {
   return `${lat.toFixed(1)}°N ${lng.toFixed(1)}°E`;
 }
 
-// Air-raid siren
 function playMissileAlertSound() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -92,24 +91,18 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
   const seenTelegramIds = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
   const telegramInitRef = useRef(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
-  // Track new rocket launches → add missile notifications
+  // Track new rocket launches
   useEffect(() => {
     if (!initializedRef.current) {
       rockets.forEach((r) => seenRocketIds.current.add(r.id));
       initializedRef.current = true;
       return;
     }
-
     const newLaunches = rockets.filter(
-      (r) =>
-        (r.status === "launched" || r.status === "in_flight") &&
-        !seenRocketIds.current.has(r.id)
+      (r) => (r.status === "launched" || r.status === "in_flight") && !seenRocketIds.current.has(r.id)
     );
-
     if (newLaunches.length > 0) {
       const newNotifs: NotificationItem[] = newLaunches.map((r) => ({
         id: `missile-${r.id}-${Date.now()}`,
@@ -120,30 +113,20 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
         timestamp: Date.now(),
         read: false,
       }));
-
       setNotifications((prev) => [...newNotifs, ...prev].slice(0, 50));
-
-      if (!alertMuted) {
-        playMissileAlertSound();
-      }
+      if (!alertMuted) playMissileAlertSound();
     }
-
     newLaunches.forEach((r) => seenRocketIds.current.add(r.id));
     rockets.forEach((r) => seenRocketIds.current.add(r.id));
   }, [rockets, alertMuted]);
 
-  // Track WarsLeaks critical/high alerts — deduplicated by headline
+  // Track WarsLeaks
   useEffect(() => {
     if (telegramMarkers.length === 0) return;
-
-    // On first load, mark all existing as seen (don't spam old alerts)
     if (!telegramInitRef.current) {
       telegramMarkers.forEach((m) => seenTelegramIds.current.add(m.headline));
       telegramInitRef.current = true;
-      // Still add critical ones on first load
-      const criticalMarkers = telegramMarkers.filter(
-        (m) => m.severity === "critical" || m.special
-      );
+      const criticalMarkers = telegramMarkers.filter((m) => m.severity === "critical" || m.special);
       if (criticalMarkers.length > 0) {
         const newNotifs: NotificationItem[] = criticalMarkers.map((m) => ({
           id: `wl-${m.id}`,
@@ -155,7 +138,6 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
           read: false,
         }));
         setNotifications((prev) => {
-          // Deduplicate by title
           const existingTitles = new Set(prev.map((n) => n.title));
           const unique = newNotifs.filter((n) => !existingTitles.has(n.title));
           return [...unique, ...prev].slice(0, 50);
@@ -163,14 +145,9 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
       }
       return;
     }
-
-    // On subsequent updates, only add NEW critical/high alerts not seen before
     const newCritical = telegramMarkers.filter(
-      (m) =>
-        (m.severity === "critical" || m.severity === "high" || m.special) &&
-        !seenTelegramIds.current.has(m.headline)
+      (m) => (m.severity === "critical" || m.severity === "high" || m.special) && !seenTelegramIds.current.has(m.headline)
     );
-
     if (newCritical.length > 0) {
       const newNotifs: NotificationItem[] = newCritical.map((m) => ({
         id: `wl-${m.id}`,
@@ -181,50 +158,23 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
         timestamp: Date.now(),
         read: false,
       }));
-
       setNotifications((prev) => {
         const existingTitles = new Set(prev.map((n) => n.title));
         const unique = newNotifs.filter((n) => !existingTitles.has(n.title));
         return [...unique, ...prev].slice(0, 50);
       });
-
       if (!alertMuted && newCritical.some((m) => m.severity === "critical" || m.special)) {
         playMissileAlertSound();
       }
     }
-
     telegramMarkers.forEach((m) => seenTelegramIds.current.add(m.headline));
   }, [telegramMarkers, alertMuted]);
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        panelRef.current && !panelRef.current.contains(target) &&
-        dropdownRef.current && !dropdownRef.current.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
-  };
-
-  const dismiss = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const clearAll = () => setNotifications([]);
+  const dismiss = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
 
   const formatTime = (ts: number) => {
     const diff = Math.floor((Date.now() - ts) / 1000);
@@ -234,83 +184,72 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
   };
 
   return (
-    <div className="relative" ref={panelRef}>
-      {/* Bell Icon */}
-      <button
-        onClick={() => {
-          setOpen((v) => !v);
-          if (!open) markAllRead();
-        }}
-        className={`relative flex items-center justify-center h-7 w-7 rounded-full border transition-all duration-300 ${
-          unreadCount > 0
-            ? "border-destructive/50 text-destructive bg-destructive/10 shadow-[0_0_12px_hsl(0_80%_50%/0.2)]"
-            : open
-            ? "border-primary bg-primary/20 text-primary"
-            : "border-border hover:border-primary/50 text-muted-foreground hover:text-primary hover:bg-primary/5"
-        }`}
-        title={t("Notifications", "الإشعارات")}
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) markAllRead(); }}>
+      <PopoverTrigger asChild>
+        <button
+          className={`relative flex items-center justify-center h-7 w-7 rounded-full border transition-all duration-300 ${
+            unreadCount > 0
+              ? "border-destructive/50 text-destructive bg-destructive/10 shadow-[0_0_12px_hsl(0_80%_50%/0.2)]"
+              : open
+              ? "border-primary bg-primary/20 text-primary"
+              : "border-border hover:border-primary/50 text-muted-foreground hover:text-primary hover:bg-primary/5"
+          }`}
+          title={t("Notifications", "الإشعارات")}
+        >
+          <Bell className="h-3.5 w-3.5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 text-[8px] font-bold bg-destructive text-white rounded-full animate-pulse">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[360px] max-w-[90vw] p-0 bg-card/95 backdrop-blur-xl border-border shadow-2xl overflow-hidden"
+        style={{ zIndex: 999999 }}
       >
-        <Bell className="h-3.5 w-3.5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 text-[8px] font-bold bg-destructive text-white rounded-full animate-pulse">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
-      </button>
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card">
+          <div className="flex items-center gap-2">
+            <Bell className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-foreground">
+              {t("Notifications", "الإشعارات")}
+            </span>
+            {notifications.length > 0 && (
+              <span className="text-[9px] font-mono text-muted-foreground">({notifications.length})</span>
+            )}
+          </div>
+          {notifications.length > 0 && (
+            <button
+              onClick={clearAll}
+              className="text-[8px] font-mono text-muted-foreground hover:text-foreground uppercase transition-colors px-1.5 py-0.5 rounded hover:bg-secondary/50"
+            >
+              {t("Clear All", "مسح الكل")}
+            </button>
+          )}
+        </div>
 
-      {/* Dropdown Panel */}
-      <AnimatePresence>
-        {open && createPortal(
-          <motion.div
-            ref={dropdownRef}
-            initial={{ opacity: 0, y: -8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="fixed right-4 top-14 w-[360px] max-w-[90vw] bg-card/95 backdrop-blur-xl border border-border rounded-lg shadow-2xl overflow-hidden"
-            style={{ zIndex: 999999 }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card">
-              <div className="flex items-center gap-2">
-                <Bell className="h-3.5 w-3.5 text-primary" />
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-foreground">
-                  {t("Notifications", "الإشعارات")}
-                </span>
-                {notifications.length > 0 && (
-                  <span className="text-[9px] font-mono text-muted-foreground">
-                    ({notifications.length})
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {notifications.length > 0 && (
-                  <button
-                    onClick={clearAll}
-                    className="text-[8px] font-mono text-muted-foreground hover:text-foreground uppercase transition-colors px-1.5 py-0.5 rounded hover:bg-secondary/50"
-                  >
-                    {t("Clear All", "مسح الكل")}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Notification List */}
-            {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <Bell className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-[10px] font-mono text-muted-foreground/50">
-                  {t("No notifications yet", "لا توجد إشعارات بعد")}
-                </p>
-              </div>
-            ) : (
-              <ScrollArea className="max-h-[400px]">
-                <div className="p-1.5 space-y-1">
+        {/* Notification List */}
+        {notifications.length === 0 ? (
+          <div className="px-4 py-8 text-center">
+            <Bell className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-[10px] font-mono text-muted-foreground/50">
+              {t("No notifications yet", "لا توجد إشعارات بعد")}
+            </p>
+          </div>
+        ) : (
+          <div className="h-[320px] max-h-[60vh]">
+            <ScrollArea className="h-full">
+              <div className="p-1.5 space-y-1">
+                <AnimatePresence initial={false}>
                   {notifications.map((notif) => (
                     <motion.div
                       key={notif.id}
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
                       className={`relative rounded border px-2.5 py-2 transition-colors ${severityBg[notif.severity]} ${
                         !notif.read ? "ring-1 ring-primary/20" : ""
                       }`}
@@ -325,18 +264,13 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
                           }`}>
                             {notif.title}
                           </p>
-                          <p className="text-[9px] text-muted-foreground leading-snug mt-0.5">
-                            {notif.detail}
-                          </p>
+                          <p className="text-[9px] text-muted-foreground leading-snug mt-0.5">{notif.detail}</p>
                           <span className="text-[7px] font-mono text-muted-foreground/50 mt-0.5 block">
                             {formatTime(notif.timestamp)}
                           </span>
                         </div>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            dismiss(notif.id);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); dismiss(notif.id); }}
                           className="flex-shrink-0 p-0.5 text-muted-foreground/40 hover:text-foreground transition-colors rounded"
                         >
                           <X className="h-3 w-3" />
@@ -344,14 +278,12 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
                       </div>
                     </motion.div>
                   ))}
-                </div>
-              </ScrollArea>
-            )}
-          </motion.div>,
-          document.body
+                </AnimatePresence>
+              </div>
+            </ScrollArea>
+          </div>
         )}
-
-      </AnimatePresence>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 };
