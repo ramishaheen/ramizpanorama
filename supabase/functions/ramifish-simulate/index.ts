@@ -104,8 +104,7 @@ serve(async (req) => {
         const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, RAMIFISH_KEY);
         if (geminiResp.ok) {
           console.log("RamiFish: dedicated Gemini key succeeded, streaming...");
-          const transformedStream = transformGeminiStream(geminiResp.body!);
-          return new Response(transformedStream, {
+          return new Response(geminiResp.body, {
             headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
           });
         }
