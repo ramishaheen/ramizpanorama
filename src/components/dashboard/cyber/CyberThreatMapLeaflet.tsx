@@ -268,23 +268,33 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, a
   const impactIdRef = useRef(0);
   const mapRef = useRef<L.Map | null>(null);
 
+  const getColor = useCallback((t: CyberThreat): string => {
+    if (activeLayers) {
+      const lc = getThreatLayerColor(t, activeLayers);
+      if (lc) return lc;
+    }
+    return SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium;
+  }, [activeLayers]);
+
   const nodes = useMemo(() => {
-    const map = new Map<string, { country: string; count: number; severity: string; lat: number; lng: number }>();
+    const map = new Map<string, { country: string; count: number; color: string; lat: number; lng: number }>();
     threats.forEach((t) => {
+      const color = getColor(t);
       for (const c of [t.attackerCountry || t.attacker, t.targetCountry || t.target]) {
         const key = c || "Unknown";
         const [lat, lng] = getCoords(key);
         const existing = map.get(key);
         if (existing) {
           existing.count++;
-          if (t.severity === "critical" || (t.severity === "high" && existing.severity !== "critical")) existing.severity = t.severity;
+          // Prefer layer/severity color from more severe threat
+          if (t.severity === "critical" || (t.severity === "high")) existing.color = color;
         } else {
-          map.set(key, { country: key, count: 1, severity: t.severity, lat, lng });
+          map.set(key, { country: key, count: 1, color, lat, lng });
         }
       }
     });
     return Array.from(map.values());
-  }, [threats]);
+  }, [threats, getColor]);
 
   const corridors = useMemo(() => {
     const pairMap = new Map<string, { count: number; maxSeverity: string; from: [number, number]; to: [number, number] }>();
