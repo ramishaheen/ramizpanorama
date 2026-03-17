@@ -134,28 +134,32 @@ serve(async (req) => {
       }
     }
 
-    // 3) Last resort: shared Gemini keys
-    const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GEMINI_API_KEY_2");
-    if (!GEMINI_KEY) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted and no Gemini fallback key configured." }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // 3) Last resort: try each shared Gemini key individually
+    const geminiKeys = [
+      Deno.env.get("GEMINI_API_KEY"),
+      Deno.env.get("GEMINI_API_KEY_2"),
+    ].filter(Boolean) as string[];
+
+    for (const key of geminiKeys) {
+      console.log("RamiFish: trying shared Gemini key...");
+      try {
+        const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, key);
+        if (geminiResp.ok) {
+          console.log("RamiFish: shared Gemini key succeeded, streaming...");
+          return new Response(geminiResp.body, {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+        const errText = await geminiResp.text();
+        console.warn(`RamiFish: shared Gemini failed (${geminiResp.status}), trying next. ${errText.slice(0, 200)}`);
+      } catch (e) {
+        console.warn("RamiFish: shared Gemini exception, trying next:", e);
+      }
     }
 
-    console.log("RamiFish: falling back to direct Gemini API...");
-    const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, GEMINI_KEY);
-
-    if (!geminiResp.ok) {
-      const errText = await geminiResp.text();
-      console.error("RamiFish: Gemini fallback failed:", geminiResp.status, errText.slice(0, 300));
-      return new Response(JSON.stringify({ error: `Gemini API error (${geminiResp.status})` }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log("RamiFish: Gemini fallback succeeded, streaming...");
-    return new Response(geminiResp.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    // All providers exhausted
+    return new Response(JSON.stringify({ error: "All AI providers are temporarily rate-limited. Please try again in a minute." }), {
+      status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("ramifish error:", e);
