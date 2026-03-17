@@ -48,7 +48,7 @@ function generateFallbackThreats(): any[] {
       date: date.toISOString().split('T')[0],
       ...t,
       source: '',
-      sourceName: ['CISA KEV', 'AlienVault OTX', 'ThreatFox', 'Feodo Tracker', 'Ransomwatch', 'Cisco Talos', 'BleepingComputer'][i % 7],
+      sourceName: ['CISA KEV', 'AlienVault OTX', 'ThreatFox', 'Feodo Tracker', 'Ransomwatch', 'Cisco Talos', 'CISA KEV', 'Cisco Talos', 'Ransomwatch', 'BleepingComputer'][i % 10],
       cve: '',
       iocs: [],
       verified: i % 3 === 0,
