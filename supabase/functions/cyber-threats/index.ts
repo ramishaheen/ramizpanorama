@@ -208,11 +208,12 @@ async function fetchAllOSINTData() {
     }).then(async (res) => {
       if (!res.ok) return;
       const data = await res.json();
-      results.cisaAlerts = (data.vulnerabilities || []).slice(0, 15).map((v: any) => ({
+      results.cisaAlerts = (data.vulnerabilities || []).slice(0, 25).map((v: any) => ({
         cve: v.cveID, vendor: v.vendorProject, product: v.product,
         name: v.vulnerabilityName, dateAdded: v.dateAdded,
         description: v.shortDescription, dueDate: v.dueDate,
         knownRansomware: v.knownRansomwareCampaignUse,
+        notes: v.notes,
       }));
       results.sources.push('CISA KEV');
     }),
