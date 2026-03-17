@@ -1679,7 +1679,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
             ) : centerView === "map" ? (
               <div className="relative w-full h-full">
                 <ThreatMap threats={filterByLayers(filtered, layers)} onSelect={handleSelect} selectedId={selectedThreat?.id} />
-                <MapLayersPanel layers={layers} onToggle={toggleLayer} />
+                <MapLayersPanel layers={layers} onToggle={toggleLayer} threats={filtered} />
               </div>
             ) : centerView === "graph" ? (
               <RelationshipGraph threats={filtered} />
