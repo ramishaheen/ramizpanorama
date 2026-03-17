@@ -328,12 +328,12 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, a
       return {
         id: t.id,
         points: arcPoints(getCoords(ac), getCoords(tc)),
-        color: SEVERITY_COLORS[t.severity] || SEVERITY_COLORS.medium,
+        color: getColor(t),
         threat: t,
         isSelected: t.id === selectedId,
       };
     });
-  }, [threats, selectedId]);
+  }, [threats, selectedId, getColor]);
 
   const totalAttacks = threats.length;
   const activeCorridors = corridors.length;
