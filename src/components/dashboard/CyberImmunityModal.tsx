@@ -1302,6 +1302,24 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
     }
   }, [centerView, threats.length]);
 
+  /* Periodic auto-refresh: cyber threats every 90s, dark web every 3 min */
+  useEffect(() => {
+    const threatInterval = setInterval(() => {
+      refresh();
+    }, 90 * 1000);
+
+    const darkWebInterval = setInterval(() => {
+      if (threats.length > 0 && !darkWeb.loading) {
+        fetchDarkWeb();
+      }
+    }, 3 * 60 * 1000);
+
+    return () => {
+      clearInterval(threatInterval);
+      clearInterval(darkWebInterval);
+    };
+  }, [refresh, threats.length, darkWeb.loading, fetchDarkWeb]);
+
   const handleFetchDossier = useCallback((actorName: string) => {
     setShowDossier(true);
     fetchDossier(actorName);
