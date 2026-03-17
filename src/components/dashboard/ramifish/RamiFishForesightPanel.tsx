@@ -52,40 +52,70 @@ function extractScenarios(output: string): Scenario[] {
 
 function extractEntities(output: string): Entity[] {
   const entities: Entity[] = [];
-  const regex = /ENTITY:\s*(.+?)\s*\|\s*TYPE:\s*(\w+)\s*\|\s*THREAT:\s*(\d+)/gi;
+  // Match variations: with or without markdown formatting, backticks, bold, bullets etc.
+  const regex = /(?:^|\n)[*\-\s`]*ENTITY:\s*(.+?)\s*\|\s*TYPE:\s*(\w+)\s*\|\s*THREAT:\s*(\d+)/gi;
   let m;
   while ((m = regex.exec(output)) !== null) {
-    entities.push({ name: m[1].trim(), type: m[2].trim().toLowerCase(), threat: parseInt(m[3]) });
+    entities.push({ name: m[1].replace(/[`*]/g, '').trim(), type: m[2].trim().toLowerCase(), threat: parseInt(m[3]) });
+  }
+  // Fallback: try table format  "| Name | Type | Threat |"
+  if (entities.length === 0) {
+    const tableRegex = /\|\s*([^|]+?)\s*\|\s*(actor|target|force|org|event)\s*\|\s*(\d+)\s*\|/gi;
+    while ((m = tableRegex.exec(output)) !== null) {
+      const name = m[1].replace(/[`*]/g, '').trim();
+      if (name && name.toLowerCase() !== 'name' && name.toLowerCase() !== 'entity') {
+        entities.push({ name, type: m[2].trim().toLowerCase(), threat: parseInt(m[3]) });
+      }
+    }
   }
   return entities;
 }
 
 function extractRelations(output: string): Relation[] {
   const relations: Relation[] = [];
-  const regex = /RELATION:\s*(.+?)\s*->\s*(.+?)\s*\|\s*TYPE:\s*(\w+)\s*\|\s*WEIGHT:\s*(\d+)/gi;
+  const regex = /(?:^|\n)[*\-\s`]*RELATION:\s*(.+?)\s*->\s*(.+?)\s*\|\s*TYPE:\s*(\w+)\s*\|\s*WEIGHT:\s*(\d+)/gi;
   let m;
   while ((m = regex.exec(output)) !== null) {
-    relations.push({ source: m[1].trim(), target: m[2].trim(), type: m[3].trim().toLowerCase(), weight: parseInt(m[4]) });
+    relations.push({ source: m[1].replace(/[`*]/g, '').trim(), target: m[2].replace(/[`*]/g, '').trim(), type: m[3].trim().toLowerCase(), weight: parseInt(m[4]) });
+  }
+  // Fallback: table format "| Source | Target | Type | Weight |"
+  if (relations.length === 0) {
+    const tableRegex = /\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*(threatens|attacks|opposes|destabilizes|supplies|funds|allied|supports|controls)\s*\|\s*(\d+)\s*\|/gi;
+    while ((m = tableRegex.exec(output)) !== null) {
+      const src = m[1].replace(/[`*]/g, '').trim();
+      if (src && src.toLowerCase() !== 'source') {
+        relations.push({ source: src, target: m[2].replace(/[`*]/g, '').trim(), type: m[3].trim().toLowerCase(), weight: parseInt(m[4]) });
+      }
+    }
   }
   return relations;
 }
 
 function extractRadar(output: string): RadarDim[] {
   const dims: RadarDim[] = [];
-  const regex = /RADAR:\s*(.+?)\s*\|\s*VALUE:\s*(\d+)/gi;
+  const regex = /(?:^|\n)[*\-\s`]*RADAR:\s*(.+?)\s*\|\s*VALUE:\s*(\d+)/gi;
   let m;
   while ((m = regex.exec(output)) !== null) {
-    dims.push({ label: m[1].trim(), value: Math.min(parseInt(m[2]), 100) });
+    dims.push({ label: m[1].replace(/[`*]/g, '').trim(), value: Math.min(parseInt(m[2]), 100) });
+  }
+  // Fallback: table "| Dimension | Value |"
+  if (dims.length === 0) {
+    const tableRegex = /\|\s*(Military Escalation|Economic Impact|Diplomatic Risk|Cyber Threat|Humanitarian Crisis|Regional Instability|[^|]{3,30})\s*\|\s*(\d+)%?\s*\|/gi;
+    while ((m = tableRegex.exec(output)) !== null) {
+      const label = m[1].replace(/[`*]/g, '').trim();
+      if (label.toLowerCase() !== 'dimension' && label.toLowerCase() !== 'label') {
+        dims.push({ label, value: Math.min(parseInt(m[2]), 100) });
+      }
+    }
   }
   return dims;
 }
 
 function extractAsciiDiagram(output: string): string | null {
-  const diagMatch = output.match(/## 📊 Data Relation Diagram[\s\S]*?(?=## 🔮|$)/i);
+  const diagMatch = output.match(/##\s*📊\s*Data Relation Diagram[\s\S]*?(?=##\s*🔮|$)/i);
   if (!diagMatch) return null;
-  // Get only lines that look like ASCII art (arrows, boxes) — skip the structured ENTITY/RELATION/RADAR lines
   const lines = diagMatch[0].split("\n").slice(1)
-    .filter(l => l.trim() && !l.match(/^(ENTITY|RELATION|RADAR):/i))
+    .filter(l => l.trim() && !l.match(/^[*\-\s`]*(ENTITY|RELATION|RADAR):/i) && !l.match(/^\|.*\|.*\|/))
     .join("\n");
   return lines || null;
 }
