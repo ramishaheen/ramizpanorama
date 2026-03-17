@@ -212,7 +212,7 @@ export default function RamiFishModal({ open, onClose, liveThreats = [] }: Props
                 Quick Scenarios
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {EXAMPLE_SEEDS.map(s => (
+                {liveSeeds.map(s => (
                   <button
                     key={s.label}
                     onClick={() => { setSeedText(s.text); setQuestion(`What are the most likely outcomes in the next 30 days?`); }}
