@@ -137,20 +137,30 @@ Each entry MUST have ALL these fields:
 - targetCountry: full country name of target
 - targetFlag: emoji flag
 - type: one of "SCADA/ICS Attack", "Signal Intelligence", "Electronic Warfare", "Network Disruption", "Financial Disruption", "Information Operations", "Critical Infrastructure", "Espionage", "Wiper Malware", "Offensive Cyber", "Counter-Intelligence", "Defensive", "Ransomware", "Supply Chain", "Zero-Day Exploit", "DDoS Attack", "Phishing Campaign"
+- categories: array of strings, one or more from: "apt", "botnet", "malware", "ddos", "ransomware", "zeroday", "scanning". Assign based on the nature of the incident. E.g. an APT using a zero-day = ["apt", "zeroday"]. A ransomware botnet = ["ransomware", "botnet", "malware"].
 - severity: one of "critical", "high", "medium", "low"
 - description: one-line summary (under 150 chars)
-- details: 2-3 sentence analysis with technical specifics
+- details: 2-3 sentence analysis with technical specifics. Include keywords about the attack method (botnet, C2 server, malware variant, vulnerability scanning, DDoS flood, ransomware encryption, zero-day exploit).
 - source: URL if available, empty string if not
 - sourceName: MUST be one of the exact source names listed above
 - cve: relevant CVE ID if applicable, empty string if not
 - iocs: array of up to 3 IOCs - can be empty array
 - verified: boolean
 
-Generate 28-35 incidents covering the ENTIRE WORLD. Ensure at least:
+Generate 30-38 incidents covering the ENTIRE WORLD. Ensure:
 - 4-5 incidents sourced from CISA KEV (with real CVE IDs from the feed)
 - 4-5 incidents sourced from Cisco Talos (referencing real blog headlines)
 - 3-4 incidents sourced from Ransomwatch (referencing real group names)
 - Rest from other OSINT feeds
+
+CRITICAL CATEGORY COVERAGE — you MUST include at minimum:
+- 3+ "botnet" incidents (C2 infrastructure, botnets, command-and-control)
+- 4+ "malware" incidents (trojans, wipers, RATs, infostealers)
+- 5+ "apt" incidents (nation-state espionage campaigns)
+- 3+ "ddos" incidents (volumetric attacks, application-layer floods)
+- 3+ "ransomware" incidents (ransomware deployments, data extortion)
+- 2+ "zeroday" incidents (novel exploits, unpatched CVEs)
+- 2+ "scanning" incidents (vulnerability scanning, reconnaissance, probing)
 
 Include attacks from/targeting: Russia, China, North Korea, USA, Europe (UK, France, Germany), Southeast Asia, Latin America, Africa, and the Middle East/Iran region. Ensure geographic diversity. Return ONLY the JSON array, no markdown.`
         },
