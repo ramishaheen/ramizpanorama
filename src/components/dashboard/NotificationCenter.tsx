@@ -3,7 +3,7 @@ import { Bell, Rocket, X, AlertTriangle, Shield, Anchor, Plane } from "lucide-re
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import type { Rocket as RocketType } from "@/data/mockData";
+import type { Rocket as RocketType, GeoAlert } from "@/data/mockData";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 import { useLanguage } from "@/hooks/useLanguage";
 
