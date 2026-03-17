@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       const raw = await callAI([
         {
           role: 'system',
-          content: `You are a cybersecurity intelligence analyst. Today is ${new Date().toISOString().split('T')[0]} (UTC: ${new Date().toISOString()}). You MUST ONLY report incidents that are directly supported by the OSINT data provided below. Do NOT fabricate, speculate, or invent incidents. Every report must be traceable to specific data points in the input.
+           content: `You are a cybersecurity intelligence analyst. Today is ${new Date().toISOString().split('T')[0]} (UTC: ${new Date().toISOString()}). You MUST ONLY report incidents that are directly supported by the OSINT data provided below. Do NOT fabricate, speculate, or invent incidents. Every report must be traceable to specific data points in the input.
 
 Given OSINT data from multiple credible cybersecurity sources, generate a structured JSON array of cyber incidents.
 
@@ -116,6 +116,16 @@ STRICT RULES:
 4. Use Talos/BleepingComputer RSS headlines for real-world incident context
 5. Set "verified": true ONLY when the incident directly matches a specific feed entry (CVE, IOC, or news article)
 6. Set "verified": false for AI-correlated intelligence that combines multiple weak signals
+7. CRITICAL: For "sourceName", you MUST use the EXACT source that provided the primary data point:
+   - "CISA KEV" — for any CVE found in the CISA Known Exploited Vulnerabilities catalog
+   - "Cisco Talos" — for threats referenced from Cisco Talos Intelligence blog/RSS
+   - "Ransomwatch" — for ransomware group activities from ransomwatch feed
+   - "AlienVault OTX" — for OTX pulse-attributed campaigns
+   - "ThreatFox" — for IOC-matched threats
+   - "Feodo Tracker" — for C2 infrastructure matches
+   - "NIST NVD" — for CVE severity data
+   - "BleepingComputer" — for news-correlated incidents
+8. Include the "source" field with a real URL when possible (e.g., CISA KEV URL, Talos blog link)
 
 Each entry MUST have ALL these fields:
 - id: unique string like "cy-live-001"  
@@ -131,12 +141,18 @@ Each entry MUST have ALL these fields:
 - description: one-line summary (under 150 chars)
 - details: 2-3 sentence analysis with technical specifics
 - source: URL if available, empty string if not
-- sourceName: short name like "CISA", "BleepingComputer", etc.
+- sourceName: MUST be one of the exact source names listed above
 - cve: relevant CVE ID if applicable, empty string if not
 - iocs: array of up to 3 IOCs - can be empty array
 - verified: boolean
 
-Generate 25-30 incidents covering the ENTIRE WORLD — not just the Middle East. Include attacks from/targeting: Russia, China, North Korea, USA, Europe (UK, France, Germany), Southeast Asia, Latin America, Africa, and the Middle East/Iran region. Ensure geographic diversity. Return ONLY the JSON array, no markdown.`
+Generate 28-35 incidents covering the ENTIRE WORLD. Ensure at least:
+- 4-5 incidents sourced from CISA KEV (with real CVE IDs from the feed)
+- 4-5 incidents sourced from Cisco Talos (referencing real blog headlines)
+- 3-4 incidents sourced from Ransomwatch (referencing real group names)
+- Rest from other OSINT feeds
+
+Include attacks from/targeting: Russia, China, North Korea, USA, Europe (UK, France, Germany), Southeast Asia, Latin America, Africa, and the Middle East/Iran region. Ensure geographic diversity. Return ONLY the JSON array, no markdown.`
         },
         {
           role: 'user',
