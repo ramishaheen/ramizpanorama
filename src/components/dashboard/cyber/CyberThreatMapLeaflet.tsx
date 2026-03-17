@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { CyberThreat } from "@/hooks/useCyberThreats";
+import type { LayerConfig } from "@/components/dashboard/cyber/MapLayersPanel";
+import { getThreatLayerColor } from "@/components/dashboard/cyber/MapLayersPanel";
 import RamiFishModal from "@/components/dashboard/RamiFishModal";
 import "leaflet/dist/leaflet.css";
 
