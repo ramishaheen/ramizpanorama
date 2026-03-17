@@ -173,6 +173,56 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [], 
     telegramMarkers.forEach((m) => seenTelegramIds.current.add(m.headline));
   }, [telegramMarkers, alertMuted]);
 
+  // Track live geo alerts (updated every ~45s via simulate-intel)
+  useEffect(() => {
+    if (geoAlerts.length === 0) return;
+    if (!geoInitRef.current) {
+      geoAlerts.forEach((a) => seenGeoAlertIds.current.add(a.id));
+      geoInitRef.current = true;
+      const critical = geoAlerts.filter((a) => a.severity === "critical" || a.severity === "high");
+      if (critical.length > 0) {
+        const newNotifs: NotificationItem[] = critical.slice(0, 5).map((a) => ({
+          id: `geo-${a.id}`,
+          type: (a.type === "MILITARY" ? "military" : "alert") as NotificationItem["type"],
+          title: a.title,
+          detail: `${a.region} • ${a.source}`,
+          severity: a.severity as NotificationItem["severity"],
+          timestamp: new Date(a.timestamp).getTime(),
+          read: false,
+        }));
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          const unique = newNotifs.filter((n) => !existingIds.has(n.id));
+          return [...unique, ...prev].slice(0, 50);
+        });
+      }
+      return;
+    }
+    const newAlerts = geoAlerts.filter(
+      (a) => !seenGeoAlertIds.current.has(a.id) && (a.severity === "critical" || a.severity === "high")
+    );
+    if (newAlerts.length > 0) {
+      const newNotifs: NotificationItem[] = newAlerts.map((a) => ({
+        id: `geo-${a.id}`,
+        type: (a.type === "MILITARY" ? "military" : "alert") as NotificationItem["type"],
+        title: a.title,
+        detail: `${a.region} • ${a.source}`,
+        severity: a.severity as NotificationItem["severity"],
+        timestamp: new Date(a.timestamp).getTime(),
+        read: false,
+      }));
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n.id));
+        const unique = newNotifs.filter((n) => !existingIds.has(n.id));
+        return [...unique, ...prev].slice(0, 50);
+      });
+      if (!alertMuted && newAlerts.some((a) => a.severity === "critical")) {
+        playMissileAlertSound();
+      }
+    }
+    geoAlerts.forEach((a) => seenGeoAlertIds.current.add(a.id));
+  }, [geoAlerts, alertMuted]);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));

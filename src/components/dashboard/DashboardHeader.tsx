@@ -135,7 +135,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
             </button>
 
             {/* Notification Center */}
-            <NotificationCenter rockets={rockets} alertMuted={alertMuted} telegramMarkers={telegramMarkers} />
+            <NotificationCenter rockets={rockets} alertMuted={alertMuted} telegramMarkers={telegramMarkers} geoAlerts={geoAlerts} />
 
             {/* Alert mute */}
             <button
