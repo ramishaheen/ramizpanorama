@@ -136,11 +136,11 @@ Each entry MUST have ALL these fields:
 - iocs: array of up to 3 IOCs - can be empty array
 - verified: boolean
 
-Generate 20-25 incidents. Return ONLY the JSON array, no markdown.`
+Generate 25-30 incidents covering the ENTIRE WORLD — not just the Middle East. Include attacks from/targeting: Russia, China, North Korea, USA, Europe (UK, France, Germany), Southeast Asia, Latin America, Africa, and the Middle East/Iran region. Ensure geographic diversity. Return ONLY the JSON array, no markdown.`
         },
         {
           role: 'user',
-          content: `OSINT data:\n\n${JSON.stringify(osintData, null, 2)}\n\nGenerate structured cyber incident reports.`
+          content: `OSINT data:\n\n${JSON.stringify(osintData, null, 2)}\n\nGenerate structured cyber incident reports with GLOBAL coverage. Include threat actors from ALL regions: Russian APTs (Fancy Bear, Sandworm, Cozy Bear), Chinese APTs (Volt Typhoon, APT41, APT10), North Korean groups (Lazarus, Kimsuky), Iranian groups (APT33, MuddyWater, Charming Kitten), as well as ransomware groups, hacktivists, and state-sponsored operations worldwide.`
         }
       ]);
 
