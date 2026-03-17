@@ -153,9 +153,8 @@ serve(async (req) => {
       });
     }
 
-    console.log("RamiFish: Gemini fallback succeeded, transforming stream...");
-    const transformedStream = transformGeminiStream(geminiResp.body!);
-    return new Response(transformedStream, {
+    console.log("RamiFish: Gemini fallback succeeded, streaming...");
+    return new Response(geminiResp.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
