@@ -297,20 +297,20 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, a
   }, [threats, getColor]);
 
   const corridors = useMemo(() => {
-    const pairMap = new Map<string, { count: number; maxSeverity: string; from: [number, number]; to: [number, number] }>();
+    const pairMap = new Map<string, { count: number; color: string; from: [number, number]; to: [number, number] }>();
     threats.forEach((t) => {
       const ac = t.attackerCountry || t.attacker || "Unknown";
       const tc = t.targetCountry || t.target || "Unknown";
       const key = `${ac}→${tc}`;
       const from = getCoords(ac);
       const to = getCoords(tc);
+      const color = getColor(t);
       const existing = pairMap.get(key);
       if (existing) {
         existing.count++;
-        if (t.severity === "critical") existing.maxSeverity = "critical";
-        else if (t.severity === "high" && existing.maxSeverity !== "critical") existing.maxSeverity = "high";
+        if (t.severity === "critical" || t.severity === "high") existing.color = color;
       } else {
-        pairMap.set(key, { count: 1, maxSeverity: t.severity, from, to });
+        pairMap.set(key, { count: 1, color, from, to });
       }
     });
     const maxCount = Math.max(...Array.from(pairMap.values()).map(v => v.count), 1);
@@ -319,7 +319,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, a
       intensity: v.count / maxCount,
       points: arcPoints(v.from, v.to),
     }));
-  }, [threats]);
+  }, [threats, getColor]);
 
   const arcs = useMemo(() => {
     return threats.slice(0, 30).map((t) => {
