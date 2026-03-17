@@ -43,12 +43,22 @@ function generateFallbackThreats(): any[] {
     const daysAgo = Math.floor((i / templates.length) * 28);
     const date = new Date(today);
     date.setDate(date.getDate() - daysAgo);
+    const categoryMap: string[][] = [
+      ["apt","malware"], ["apt"], ["apt","malware"], ["malware","apt"], ["apt","zeroday"],
+      ["ransomware","malware"], ["apt","scanning"], ["apt","malware"], ["ddos"], ["apt","malware"],
+      ["ransomware","botnet"], ["apt"], ["apt","scanning"], ["ddos","botnet"], ["scanning"],
+      ["apt","malware"], ["apt","malware"], ["apt"], ["apt","malware"], ["ransomware"],
+      ["apt","zeroday"], ["apt","malware"], ["apt"], ["apt","malware"], ["zeroday"],
+      ["apt","scanning"], ["ransomware"], ["scanning"], ["malware","botnet"], ["apt"],
+      ["ddos","botnet"], ["botnet","malware"], ["apt","zeroday"], ["scanning","botnet"],
+    ];
     threats.push({
       id: `cy-live-${String(i + 1).padStart(3, '0')}`,
       date: date.toISOString().split('T')[0],
       ...t,
       source: '',
       sourceName: ['CISA KEV', 'AlienVault OTX', 'ThreatFox', 'Feodo Tracker', 'Ransomwatch', 'Cisco Talos', 'CISA KEV', 'Cisco Talos', 'Ransomwatch', 'BleepingComputer'][i % 10],
+      categories: categoryMap[i % categoryMap.length],
       cve: '',
       iocs: [],
       verified: i % 3 === 0,
