@@ -3,7 +3,7 @@ import { Bell, Rocket, X, AlertTriangle, Shield, Anchor, Plane } from "lucide-re
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import type { Rocket as RocketType } from "@/data/mockData";
+import type { Rocket as RocketType, GeoAlert } from "@/data/mockData";
 import type { TelegramMarker } from "@/hooks/useTelegramIntel";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -82,15 +82,18 @@ interface NotificationCenterProps {
   rockets: RocketType[];
   alertMuted?: boolean;
   telegramMarkers?: TelegramMarker[];
+  geoAlerts?: GeoAlert[];
 }
 
-export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }: NotificationCenterProps) => {
+export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [], geoAlerts = [] }: NotificationCenterProps) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const seenRocketIds = useRef<Set<string>>(new Set());
   const seenTelegramIds = useRef<Set<string>>(new Set());
+  const seenGeoAlertIds = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
   const telegramInitRef = useRef(false);
+  const geoInitRef = useRef(false);
   const { t } = useLanguage();
 
   // Track new rocket launches
@@ -169,6 +172,56 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
     }
     telegramMarkers.forEach((m) => seenTelegramIds.current.add(m.headline));
   }, [telegramMarkers, alertMuted]);
+
+  // Track live geo alerts (updated every ~45s via simulate-intel)
+  useEffect(() => {
+    if (geoAlerts.length === 0) return;
+    if (!geoInitRef.current) {
+      geoAlerts.forEach((a) => seenGeoAlertIds.current.add(a.id));
+      geoInitRef.current = true;
+      const critical = geoAlerts.filter((a) => a.severity === "critical" || a.severity === "high");
+      if (critical.length > 0) {
+        const newNotifs: NotificationItem[] = critical.slice(0, 5).map((a) => ({
+          id: `geo-${a.id}`,
+          type: (a.type === "MILITARY" ? "military" : "alert") as NotificationItem["type"],
+          title: a.title,
+          detail: `${a.region} • ${a.source}`,
+          severity: a.severity as NotificationItem["severity"],
+          timestamp: new Date(a.timestamp).getTime(),
+          read: false,
+        }));
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          const unique = newNotifs.filter((n) => !existingIds.has(n.id));
+          return [...unique, ...prev].slice(0, 50);
+        });
+      }
+      return;
+    }
+    const newAlerts = geoAlerts.filter(
+      (a) => !seenGeoAlertIds.current.has(a.id) && (a.severity === "critical" || a.severity === "high")
+    );
+    if (newAlerts.length > 0) {
+      const newNotifs: NotificationItem[] = newAlerts.map((a) => ({
+        id: `geo-${a.id}`,
+        type: (a.type === "MILITARY" ? "military" : "alert") as NotificationItem["type"],
+        title: a.title,
+        detail: `${a.region} • ${a.source}`,
+        severity: a.severity as NotificationItem["severity"],
+        timestamp: new Date(a.timestamp).getTime(),
+        read: false,
+      }));
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n.id));
+        const unique = newNotifs.filter((n) => !existingIds.has(n.id));
+        return [...unique, ...prev].slice(0, 50);
+      });
+      if (!alertMuted && newAlerts.some((a) => a.severity === "critical")) {
+        playMissileAlertSound();
+      }
+    }
+    geoAlerts.forEach((a) => seenGeoAlertIds.current.add(a.id));
+  }, [geoAlerts, alertMuted]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
