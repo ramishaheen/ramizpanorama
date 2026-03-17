@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { CyberThreat } from "@/hooks/useCyberThreats";
+import RamiFishModal from "@/components/dashboard/RamiFishModal";
 import "leaflet/dist/leaflet.css";
 
 /* ── Country coords (lat, lng for Leaflet) ── */
