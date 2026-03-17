@@ -85,7 +85,8 @@ const SEVERITY_BG: Record<string, string> = {
   low: "bg-primary/20 text-primary border-primary/30",
 };
 
-const COUNTRY_FILTERS = ["All", "Israel", "Iran", "Jordan", "Oman", "Qatar", "Bahrain", "USA", "Russia", "China", "Saudi Arabia", "UAE", "Turkey", "Syria"];
+const COUNTRY_FILTERS = ["All", "Israel", "Iran", "Jordan", "Oman", "Qatar", "Bahrain", "USA", "Russia", "China", "North Korea", "Saudi Arabia", "UAE", "Turkey", "Syria", "UK", "France", "Germany", "Japan", "South Korea", "India", "Ukraine", "Brazil", "Australia", "Egypt"];
+const SOURCE_FILTERS = ["All", "CISA KEV", "Cisco Talos", "Ransomwatch", "AlienVault OTX", "ThreatFox", "Feodo Tracker", "NIST NVD", "BleepingComputer"];
 const SPEEDS = [1, 2, 5] as const;
 const SPEED_INTERVALS: Record<number, number> = { 1: 1500, 2: 750, 5: 300 };
 const EXPECTED_SOURCES = ["CISA KEV", "AlienVault OTX", "abuse.ch URLhaus", "NIST NVD", "CERT-FR", "ThreatFox", "Feodo Tracker", "Ransomwatch", "Cisco Talos", "BleepingComputer"];
@@ -1288,8 +1289,9 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   }, [cyberThreats, geoAlerts]);
   const { darkWeb, dossier, fetchDarkWeb, fetchDossier, clearDossier } = useDarkWebIntel(threats);
   const [search, setSearch] = useState("");
-  const [countryFilter, setCountryFilter] = useState("Jordan");
+   const [countryFilter, setCountryFilter] = useState("All");
   const [severityFilter, setSeverityFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("All");
   const [centerView, setCenterView] = useState<"map" | "graph" | "darkweb" | "apt" | "timeline">("map");
   const [selectedThreat, setSelectedThreat] = useState<CyberThreat | null>(null);
   const [showDossier, setShowDossier] = useState(false);
@@ -1375,12 +1377,13 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
     let r = timelineFiltered;
     if (countryFilter !== "All") r = r.filter((t) => t.attackerCountry === countryFilter || t.targetCountry === countryFilter || t.attacker.includes(countryFilter) || t.target.includes(countryFilter));
     if (severityFilter !== "all") r = r.filter((t) => t.severity === severityFilter);
+    if (sourceFilter !== "All") r = r.filter((t) => t.sourceName === sourceFilter);
     if (search) {
       const q = search.toLowerCase();
-      r = r.filter((t) => t.attacker.toLowerCase().includes(q) || t.target.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.details.toLowerCase().includes(q) || (t.cve && t.cve.toLowerCase().includes(q)) || (t.iocs && t.iocs.some((i) => i.toLowerCase().includes(q))));
+      r = r.filter((t) => t.attacker.toLowerCase().includes(q) || t.target.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.details.toLowerCase().includes(q) || (t.cve && t.cve.toLowerCase().includes(q)) || (t.sourceName && t.sourceName.toLowerCase().includes(q)) || (t.iocs && t.iocs.some((i) => i.toLowerCase().includes(q))));
     }
     return r;
-  }, [timelineFiltered, countryFilter, severityFilter, search]);
+  }, [timelineFiltered, countryFilter, severityFilter, sourceFilter, search]);
 
   /* stats */
   const stats = useMemo(() => {
@@ -1559,7 +1562,21 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
                   </select>
                 </div>
 
-                {/* Severity Filter — Dot Toggles */}
+                {/* Source Filter */}
+                <div>
+                  <div className="cyber-section-header">INTEL SOURCE</div>
+                  <select
+                    value={sourceFilter}
+                    onChange={(e) => setSourceFilter(e.target.value)}
+                    className="w-full h-7 text-[9px] font-mono bg-background/60 border border-border text-foreground px-2 focus:border-primary/50 focus:outline-none transition-colors"
+                  >
+                    {SOURCE_FILTERS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+
                 <div>
                   <div className="cyber-section-header">SEVERITY</div>
                   <div className="flex items-center gap-2">
