@@ -352,8 +352,8 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
   return (
     <div className="relative w-full h-full cyber-threat-map" style={{ minHeight: 300 }}>
       <MapContainer
-        center={[25, 45]}
-        zoom={2.5}
+        center={[30, 30]}
+        zoom={2}
         minZoom={2}
         maxZoom={6}
         scrollWheelZoom={true}
