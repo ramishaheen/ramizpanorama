@@ -538,7 +538,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
       })()}
 
       {/* RamiFish Modal */}
-      <RamiFishModal open={showRamiFish} onClose={() => setShowRamiFish(false)} />
+      <RamiFishModal open={showRamiFish} onClose={() => setShowRamiFish(false)} liveThreats={threats} />
     </div>
   );
 }

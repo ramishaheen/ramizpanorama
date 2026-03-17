@@ -1,21 +1,66 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, Brain, Zap, Upload, Play, RotateCcw, Users, FileText } from "lucide-react";
 import { toast } from "sonner";
 import RamiFishForesightPanel from "./ramifish/RamiFishForesightPanel";
+import type { CyberThreat } from "@/hooks/useCyberThreats";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  liveThreats?: CyberThreat[];
 }
 
 type Phase = "input" | "running" | "complete";
 
-const EXAMPLE_SEEDS = [
+const FALLBACK_SEEDS = [
   { label: "Iran–Israel Escalation", text: "Recent intelligence indicates increased Iranian missile production, IRGC naval exercises in the Strait of Hormuz, and Israeli Air Force deployment to forward bases. Diplomatic channels have gone silent after the collapse of Vienna talks." },
   { label: "Taiwan Strait Crisis", text: "PLA amphibious exercises detected near Fujian province. US carrier group repositioning from Japan. Taiwan activating reserve forces. Semiconductor supply chain showing early disruption signals." },
   { label: "Oil Supply Shock", text: "Houthi attacks on Red Sea shipping intensifying. Saudi Aramco reports pipeline sabotage attempt. Strategic petroleum reserves at 10-year low. OPEC+ emergency meeting scheduled." },
 ];
+
+function buildLiveScenarios(threats: CyberThreat[]): { label: string; text: string }[] {
+  if (!threats || threats.length === 0) return FALLBACK_SEEDS;
+
+  // Group by attack type and pick the most intense clusters
+  const typeGroups: Record<string, CyberThreat[]> = {};
+  threats.forEach(t => {
+    const key = t.type || "Unknown";
+    if (!typeGroups[key]) typeGroups[key] = [];
+    typeGroups[key].push(t);
+  });
+
+  // Sort groups by severity weight
+  const sevWeight: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+  const ranked = Object.entries(typeGroups)
+    .map(([type, items]) => ({
+      type,
+      items,
+      score: items.reduce((s, t) => s + (sevWeight[t.severity] || 1), 0),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  return ranked.map(({ type, items }) => {
+    const topItems = items
+      .sort((a, b) => (sevWeight[b.severity] || 0) - (sevWeight[a.severity] || 0))
+      .slice(0, 4);
+
+    const actors = [...new Set(topItems.map(t => t.attacker))].join(", ");
+    const targets = [...new Set(topItems.map(t => t.target))].join(", ");
+    const descriptions = topItems.map(t => t.description).join(". ");
+    const details = topItems.map(t => t.details).join(" ");
+    const cves = topItems.filter(t => t.cve).map(t => t.cve).join(", ");
+    const iocs = topItems.flatMap(t => t.iocs || []).slice(0, 5).join(", ");
+
+    const seedText = `LIVE INTELLIGENCE — ${type.toUpperCase()} THREAT CLUSTER (${new Date().toISOString().split('T')[0]})\n\nAttackers: ${actors}\nTargets: ${targets}\n${cves ? `CVEs: ${cves}\n` : ""}${iocs ? `IOCs: ${iocs}\n` : ""}\nSummary: ${descriptions}\n\nDetailed Analysis: ${details.substring(0, 600)}`;
+
+    // Build a short label
+    const label = `${topItems[0]?.attackerFlag || "🌐"} ${type} (${topItems.length} active)`;
+
+    return { label, text: seedText };
+  });
+}
 
 export default function RamiFishModal({ open, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>("input");
