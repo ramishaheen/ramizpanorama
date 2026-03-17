@@ -93,6 +93,7 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
   const initializedRef = useRef(false);
   const telegramInitRef = useRef(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
   // Track new rocket launches → add missile notifications
@@ -199,7 +200,11 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        panelRef.current && !panelRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -257,6 +262,7 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
       <AnimatePresence>
         {open && createPortal(
           <motion.div
+            ref={dropdownRef}
             initial={{ opacity: 0, y: -8, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
