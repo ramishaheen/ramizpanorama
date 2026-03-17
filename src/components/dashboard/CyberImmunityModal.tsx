@@ -1562,7 +1562,21 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
                   </select>
                 </div>
 
-                {/* Severity Filter — Dot Toggles */}
+                {/* Source Filter */}
+                <div>
+                  <div className="cyber-section-header">INTEL SOURCE</div>
+                  <select
+                    value={sourceFilter}
+                    onChange={(e) => setSourceFilter(e.target.value)}
+                    className="w-full h-7 text-[9px] font-mono bg-background/60 border border-border text-foreground px-2 focus:border-primary/50 focus:outline-none transition-colors"
+                  >
+                    {SOURCE_FILTERS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+
                 <div>
                   <div className="cyber-section-header">SEVERITY</div>
                   <div className="flex items-center gap-2">
