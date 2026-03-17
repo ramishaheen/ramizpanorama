@@ -341,8 +341,10 @@ export const NotificationCenter = ({ rockets, alertMuted, telegramMarkers = [] }
                 </div>
               </ScrollArea>
             )}
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
+
       </AnimatePresence>
     </div>
   );
