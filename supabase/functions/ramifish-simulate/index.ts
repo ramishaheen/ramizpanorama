@@ -28,11 +28,12 @@ function buildSystemPrompt(agentCount: number, rounds: number) {
     - Recommended Actions
 
 5. PHASE: DATA RELATION DIAGRAM — Output a section titled "## 📊 Data Relation Diagram" containing:
-   a) First, a structured entity list in this EXACT format (one per line):
+   CRITICAL: Output each line below as PLAIN TEXT — NO markdown formatting, NO backticks, NO bold, NO bullet points, NO code blocks around these lines. Each line must start at column 0.
+   a) First, a structured entity list in this EXACT format (one per line, plain text only):
       ENTITY: [Name] | TYPE: [actor/target/force/org/event] | THREAT: [0-100]
-   b) Then relation lines in this EXACT format (one per line):
+   b) Then relation lines in this EXACT format (one per line, plain text only):
       RELATION: [Source] -> [Target] | TYPE: [supplies/threatens/allied/opposes/funds/controls/destabilizes/supports/attacks] | WEIGHT: [1-10]
-   c) Then radar dimensions in this EXACT format (one per line):
+   c) Then radar dimensions in this EXACT format (one per line, plain text only):
       RADAR: [Dimension Name] | VALUE: [0-100]
       Use these 6 dimensions: Military Escalation, Economic Impact, Diplomatic Risk, Cyber Threat, Humanitarian Crisis, Regional Instability
    d) After the structured data, also include an ASCII text diagram with arrows showing relationships visually.
