@@ -80,8 +80,9 @@ export function getLayerCounts(threats: CyberThreat[], layers: LayerConfig[]): R
   return counts;
 }
 
-export function MapLayersPanel({ layers, onToggle }: MapLayersPanelProps) {
+export function MapLayersPanel({ layers, onToggle, threats = [] }: MapLayersPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const counts = useMemo(() => getLayerCounts(threats, layers), [threats, layers]);
 
   if (collapsed) {
     return (
@@ -96,7 +97,7 @@ export function MapLayersPanel({ layers, onToggle }: MapLayersPanelProps) {
   }
 
   return (
-    <div className="absolute bottom-2 left-2 w-48 bg-card/95 border border-border rounded backdrop-blur-sm" style={{ zIndex: 1000 }}>
+    <div className="absolute bottom-2 left-2 w-52 bg-card/95 border border-border rounded backdrop-blur-sm" style={{ zIndex: 1000 }}>
       <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border">
         <div className="flex items-center gap-1.5">
           <Layers className="h-3 w-3 text-primary" />
@@ -107,30 +108,36 @@ export function MapLayersPanel({ layers, onToggle }: MapLayersPanelProps) {
         </button>
       </div>
       <div className="p-1.5 space-y-0.5">
-        {layers.map(layer => (
-          <button
-            key={layer.id}
-            onClick={() => onToggle(layer.id)}
-            className={`w-full flex items-center gap-2 px-2 py-1 rounded text-[8px] font-mono transition-all ${
-              layer.enabled
-                ? "bg-primary/10 text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-            }`}
-          >
-            <div className="flex items-center gap-1.5 flex-1">
-              <div
-                className="h-2 w-2 rounded-full flex-shrink-0 transition-opacity"
-                style={{ background: layer.color, opacity: layer.enabled ? 1 : 0.3 }}
-              />
-              <span className="truncate">{layer.label}</span>
-            </div>
-            {layer.enabled ? (
-              <Eye className="h-2.5 w-2.5 text-primary flex-shrink-0" />
-            ) : (
-              <EyeOff className="h-2.5 w-2.5 flex-shrink-0 opacity-40" />
-            )}
-          </button>
-        ))}
+        {layers.map(layer => {
+          const count = counts[layer.id] || 0;
+          return (
+            <button
+              key={layer.id}
+              onClick={() => onToggle(layer.id)}
+              className={`w-full flex items-center gap-2 px-2 py-1 rounded text-[8px] font-mono transition-all ${
+                layer.enabled
+                  ? "bg-primary/10 text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 flex-1">
+                <div
+                  className="h-2 w-2 rounded-full flex-shrink-0 transition-opacity"
+                  style={{ background: layer.color, opacity: layer.enabled ? 1 : 0.3 }}
+                />
+                <span className="truncate">{layer.label}</span>
+              </div>
+              <span className={`text-[7px] font-mono min-w-[18px] text-right ${layer.enabled ? "text-primary" : "text-muted-foreground/50"}`}>
+                {count}
+              </span>
+              {layer.enabled ? (
+                <Eye className="h-2.5 w-2.5 text-primary flex-shrink-0" />
+              ) : (
+                <EyeOff className="h-2.5 w-2.5 flex-shrink-0 opacity-40" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
