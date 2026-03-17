@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { MapContainer, TileLayer, Polyline, CircleMarker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { CyberThreat } from "@/hooks/useCyberThreats";
 import "leaflet/dist/leaflet.css";
@@ -41,7 +41,10 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: "#38bdf8",
 };
 
-/* Generate bezier-like arc points between two lat/lng */
+const SEVERITY_EMOJI: Record<string, string> = {
+  critical: "🔴", high: "🟠", medium: "🟡", low: "🔵",
+};
+
 function arcPoints(from: [number, number], to: [number, number], segments = 30): [number, number][] {
   const pts: [number, number][] = [];
   const midLat = (from[0] + to[0]) / 2;
@@ -66,7 +69,7 @@ interface Props {
   selectedId?: string;
 }
 
-/* Reticle markers layer */
+/* ── Reticle markers layer ── */
 function ReticleMarkers({ nodes, onHover, onLeave, hoveredNode }: {
   nodes: { country: string; count: number; severity: string; lat: number; lng: number }[];
   onHover: (c: string) => void;
@@ -79,7 +82,6 @@ function ReticleMarkers({ nodes, onHover, onLeave, hoveredNode }: {
     const markers: L.Marker[] = [];
     nodes.forEach(n => {
       const color = SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium;
-      const isHovered = hoveredNode === n.country;
       const size = Math.min(12 + n.count * 2, 32);
 
       const icon = L.divIcon({
@@ -111,8 +113,154 @@ function ReticleMarkers({ nodes, onHover, onLeave, hoveredNode }: {
   return null;
 }
 
+/* ── Animated Attack Projectiles ── */
+interface ProjectileState {
+  progress: number;
+  speed: number;
+  delay: number;
+  elapsed: number;
+}
+
+function AttackProjectiles({ arcs, onImpact }: {
+  arcs: { id: string; points: [number, number][]; color: string; threat: CyberThreat }[];
+  onImpact: (target: string, color: string, lat: number, lng: number) => void;
+}) {
+  const map = useMap();
+  const markersRef = useRef<L.Marker[]>([]);
+  const statesRef = useRef<ProjectileState[]>([]);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    // Clean up old markers
+    markersRef.current.forEach(m => map.removeLayer(m));
+    markersRef.current = [];
+    statesRef.current = [];
+
+    if (arcs.length === 0) return;
+
+    // Create projectile markers
+    arcs.forEach((arc, i) => {
+      const isCritical = arc.threat.severity === "critical";
+      const dotSize = isCritical ? 10 : 6;
+      const icon = L.divIcon({
+        className: "cyber-projectile-marker",
+        html: `<div class="cyber-projectile-dot" style="--proj-color:${arc.color};width:${dotSize}px;height:${dotSize}px;background:${arc.color}"></div>`,
+        iconSize: [dotSize, dotSize],
+        iconAnchor: [dotSize / 2, dotSize / 2],
+      });
+
+      const marker = L.marker(arc.points[0], { icon, interactive: false, pane: "markerPane" }).addTo(map);
+      markersRef.current.push(marker);
+
+      const speed = isCritical ? 0.012 : arc.threat.severity === "high" ? 0.008 : 0.005;
+      statesRef.current.push({
+        progress: 0,
+        speed,
+        delay: i * 0.4 + Math.random() * 1.5, // staggered start
+        elapsed: 0,
+      });
+    });
+
+    let lastTime = performance.now();
+
+    const animate = (now: number) => {
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      statesRef.current.forEach((state, i) => {
+        if (i >= arcs.length || i >= markersRef.current.length) return;
+        const arc = arcs[i];
+        const marker = markersRef.current[i];
+
+        if (state.delay > 0) {
+          state.delay -= dt;
+          // Hide while waiting
+          marker.setLatLng(arc.points[0]);
+          marker.setOpacity(0);
+          return;
+        }
+
+        marker.setOpacity(1);
+        state.progress += state.speed;
+
+        if (state.progress >= 1) {
+          // Impact!
+          const target = arc.threat.targetCountry || arc.threat.target || "Unknown";
+          const lastPt = arc.points[arc.points.length - 1];
+          onImpact(target, arc.color, lastPt[0], lastPt[1]);
+          // Reset with new delay
+          state.progress = 0;
+          state.delay = 1 + Math.random() * 3;
+          marker.setOpacity(0);
+          return;
+        }
+
+        // Interpolate position along arc
+        const totalPts = arc.points.length;
+        const exactIdx = state.progress * (totalPts - 1);
+        const idx = Math.floor(exactIdx);
+        const frac = exactIdx - idx;
+        const nextIdx = Math.min(idx + 1, totalPts - 1);
+        const lat = arc.points[idx][0] + (arc.points[nextIdx][0] - arc.points[idx][0]) * frac;
+        const lng = arc.points[idx][1] + (arc.points[nextIdx][1] - arc.points[idx][1]) * frac;
+        marker.setLatLng([lat, lng]);
+      });
+
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      markersRef.current.forEach(m => map.removeLayer(m));
+      markersRef.current = [];
+      statesRef.current = [];
+    };
+  }, [arcs, map, onImpact]);
+
+  return null;
+}
+
+/* ── Impact Ripple Layer ── */
+function ImpactRipples({ impacts }: { impacts: { id: number; lat: number; lng: number; color: string }[] }) {
+  const map = useMap();
+  const markersRef = useRef<Map<number, L.Marker>>(new Map());
+
+  useEffect(() => {
+    impacts.forEach(imp => {
+      if (markersRef.current.has(imp.id)) return;
+      const icon = L.divIcon({
+        className: "cyber-projectile-marker",
+        html: `<div class="cyber-impact-ring" style="--impact-color:${imp.color};width:24px;height:24px"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+      const marker = L.marker([imp.lat, imp.lng], { icon, interactive: false }).addTo(map);
+      markersRef.current.set(imp.id, marker);
+      // Remove after animation
+      setTimeout(() => {
+        map.removeLayer(marker);
+        markersRef.current.delete(imp.id);
+      }, 1100);
+    });
+  }, [impacts, map]);
+
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach(m => map.removeLayer(m));
+      markersRef.current.clear();
+    };
+  }, [map]);
+
+  return null;
+}
+
 export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [impacts, setImpacts] = useState<{ id: number; lat: number; lng: number; color: string }[]>([]);
+  const [tickerEntries, setTickerEntries] = useState<{ id: number; text: string; emoji: string }[]>([]);
+  const impactIdRef = useRef(0);
   const mapRef = useRef<L.Map | null>(null);
 
   const nodes = useMemo(() => {
@@ -183,9 +331,24 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
   const handleHover = useCallback((c: string) => setHoveredNode(c), []);
   const handleLeave = useCallback(() => setHoveredNode(null), []);
 
+  const handleImpact = useCallback((target: string, color: string, lat: number, lng: number) => {
+    const id = ++impactIdRef.current;
+    setImpacts(prev => [...prev.slice(-15), { id, lat, lng, color }]);
+    // Remove after 1.1s
+    setTimeout(() => setImpacts(prev => prev.filter(i => i.id !== id)), 1200);
+
+    // Find the threat for ticker
+    const t = threats.find(th => (th.targetCountry || th.target) === target);
+    if (t) {
+      const attacker = t.attackerCountry || t.attacker || "?";
+      const emoji = SEVERITY_EMOJI[t.severity] || "⚪";
+      const text = `${attacker} → ${target} | ${t.type} | ${t.severity.toUpperCase()}`;
+      setTickerEntries(prev => [{ id, text, emoji }, ...prev].slice(0, 4));
+    }
+  }, [threats]);
+
   return (
     <div className="relative w-full h-full cyber-threat-map" style={{ minHeight: 300 }}>
-      {/* Leaflet Map */}
       <MapContainer
         center={[25, 45]}
         zoom={2.5}
@@ -205,14 +368,13 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
           subdomains="abcd"
           opacity={0.7}
         />
-        {/* Second tile layer for labels with lower opacity */}
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
           subdomains="abcd"
           opacity={0.3}
         />
 
-        {/* Corridor glow (wide, faint) */}
+        {/* Corridor glow */}
         {corridors.map((c, i) => (
           <Polyline
             key={`corridor-glow-${i}`}
@@ -260,7 +422,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
           />
         ))}
 
-        {/* Target circle markers (impact zone glow) */}
+        {/* Node glow circles */}
         {nodes.map(n => (
           <CircleMarker
             key={`glow-${n.country}`}
@@ -278,6 +440,12 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
         ))}
 
         <ReticleMarkers nodes={nodes} onHover={handleHover} onLeave={handleLeave} hoveredNode={hoveredNode} />
+
+        {/* Animated projectiles */}
+        <AttackProjectiles arcs={arcs} onImpact={handleImpact} />
+
+        {/* Impact ripples */}
+        <ImpactRipples impacts={impacts} />
       </MapContainer>
 
       {/* Scan line overlay */}
@@ -327,6 +495,22 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
               <span className="font-mono text-[9px] text-[hsl(0,0%,60%)] uppercase">{sev}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Live Attack Ticker — bottom left */}
+      <div className="absolute bottom-3 left-3 z-[450] pointer-events-none">
+        <div className="px-3 py-2 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(190,40%,25%)] border-l-2 border-l-destructive rounded-sm min-w-[200px] max-w-[280px]">
+          <div className="font-mono text-[9px] font-semibold tracking-[0.1em] text-destructive mb-1.5">LIVE ATTACK FEED</div>
+          {tickerEntries.length === 0 ? (
+            <div className="font-mono text-[9px] text-muted-foreground">Awaiting attack data…</div>
+          ) : (
+            tickerEntries.map(e => (
+              <div key={e.id} className="cyber-ticker-entry font-mono text-[9px] text-[hsl(0,0%,65%)] truncate mb-0.5 last:mb-0">
+                {e.emoji} {e.text}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
