@@ -541,7 +541,7 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, a
         return (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[460] pointer-events-none">
             <div className="px-4 py-2.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border rounded-sm min-w-[140px]"
-              style={{ borderColor: SEVERITY_COLORS[nd.severity], borderLeftWidth: 3 }}>
+              style={{ borderColor: nd.color, borderLeftWidth: 3 }}>
               <div className="font-mono text-[11px] font-bold text-primary">{nd.country}</div>
               <div className="font-mono text-[9px] text-muted-foreground">TOTAL: {nd.count} INCIDENTS</div>
             </div>
