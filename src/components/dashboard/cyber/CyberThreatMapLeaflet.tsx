@@ -464,8 +464,8 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
       </div>
 
       {/* HUD Title */}
-      <div className="absolute top-3 left-3 z-[450] pointer-events-none">
-        <div className="px-3 py-1.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(190,40%,25%)] border-l-2 border-l-primary rounded-sm flex items-center gap-2">
+      <div className="absolute top-3 left-3 z-[450] flex items-center gap-2">
+        <div className="px-3 py-1.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(190,40%,25%)] border-l-2 border-l-primary rounded-sm flex items-center gap-2 pointer-events-none">
           <span className="font-mono text-[10px] font-bold tracking-[0.12em] text-primary">
             CYBER THREAT OPERATIONS CENTER
           </span>
@@ -475,6 +475,12 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId }:
           </span>
           <span className="font-mono text-[8px] font-semibold text-[hsl(142,70%,45%)]">LIVE</span>
         </div>
+        <button
+          onClick={() => setShowRamiFish(true)}
+          className="px-3 py-1.5 bg-[hsl(220,30%,6%)]/95 backdrop-blur-md border border-[hsl(35,90%,50%)] rounded-sm flex items-center gap-1.5 hover:bg-[hsl(35,90%,50%)]/10 transition-colors"
+        >
+          <span className="font-mono text-[10px] font-bold tracking-[0.1em] text-[hsl(35,90%,55%)]">🐟 RamiFish</span>
+        </button>
       </div>
 
       {/* HUD Live Stats */}
