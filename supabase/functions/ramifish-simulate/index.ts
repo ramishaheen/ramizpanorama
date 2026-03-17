@@ -27,10 +27,15 @@ function buildSystemPrompt(agentCount: number, rounds: number) {
     - Timeline of Expected Events
     - Recommended Actions
 
-5. PHASE: DATA RELATION DIAGRAM — Output a section titled "## 📊 Data Relation Diagram" containing an ASCII/text diagram showing the key entities, actors, forces, and their relationships extracted from the intelligence. Use arrows (→, ←, ↔) and boxes to show how entities relate. Example format:
-   [Entity A] →(supplies weapons)→ [Entity B]
-   [Entity B] ↔(allied with)↔ [Entity C]
-   [Entity D] →(threatens)→ [Entity A]
+5. PHASE: DATA RELATION DIAGRAM — Output a section titled "## 📊 Data Relation Diagram" containing:
+   a) First, a structured entity list in this EXACT format (one per line):
+      ENTITY: [Name] | TYPE: [actor/target/force/org/event] | THREAT: [0-100]
+   b) Then relation lines in this EXACT format (one per line):
+      RELATION: [Source] -> [Target] | TYPE: [supplies/threatens/allied/opposes/funds/controls/destabilizes/supports/attacks] | WEIGHT: [1-10]
+   c) Then radar dimensions in this EXACT format (one per line):
+      RADAR: [Dimension Name] | VALUE: [0-100]
+      Use these 6 dimensions: Military Escalation, Economic Impact, Diplomatic Risk, Cyber Threat, Humanitarian Crisis, Regional Instability
+   d) After the structured data, also include an ASCII text diagram with arrows showing relationships visually.
 
 6. PHASE: FUTURE FORESIGHT SCENARIOS — Output a section titled "## 🔮 Future Foresight Scenarios" with exactly 3 distinct scenarios:
    ### Scenario 1: [Title] (Probability: X%)
