@@ -443,8 +443,8 @@ export default function CyberThreatMapLeaflet({ threats, onSelect, selectedId, a
             center={[n.lat, n.lng]}
             radius={Math.min(8 + n.count * 2, 28)}
             pathOptions={{
-              color: SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium,
-              fillColor: SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.medium,
+              color: n.color,
+              fillColor: n.color,
               fillOpacity: 0.08,
               weight: 1,
               opacity: 0.25,
