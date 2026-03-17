@@ -1482,8 +1482,12 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
         )}
 
         {/* Right controls */}
-        {lastUpdated && <span className="text-[8px] font-mono text-muted-foreground/50 mr-2 max-sm:hidden">{new Date(lastUpdated).toLocaleTimeString()}</span>}
-        <button onClick={refresh} className="p-1 border border-border/50 hover:border-primary/50 hover:text-primary transition-colors mr-1" title="Refresh">
+        {lastUpdated && (
+          <span className="text-[8px] font-mono text-muted-foreground/50 mr-2 max-sm:hidden" title="Last data refresh">
+            ↻ {new Date(lastUpdated).toLocaleTimeString()}
+          </span>
+        )}
+        <button onClick={() => { refresh(); if (threats.length > 0) fetchDarkWeb(); }} className="p-1 border border-border/50 hover:border-primary/50 hover:text-primary transition-colors mr-1" title="Refresh all data">
           <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
         </button>
         <button onClick={onClose} className="p-1 border border-border/50 hover:border-destructive/50 hover:text-destructive transition-colors">
