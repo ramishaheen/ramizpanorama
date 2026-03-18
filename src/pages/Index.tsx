@@ -110,7 +110,7 @@ type MobileTab = typeof MOBILE_TABS[number]["id"];
 
 // Component entry
 const Index = () => {
-  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt } = useLiveDashboard();
+  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt, simulationActive, setSimulationActive } = useLiveDashboard();
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
   const telegramIntel = useTelegramIntel();
@@ -297,7 +297,7 @@ const Index = () => {
     return (
       <div className="flex flex-col h-screen overflow-hidden relative">
         <RotateDeviceOverlay />
-        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} />
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} simulationActive={simulationActive} onToggleSimulation={() => setSimulationActive(v => !v)} />
         <StatsBar
           airspaceCount={dailyCounts.airspaceCount}
           vesselCount={dailyCounts.vesselCount}
@@ -395,7 +395,7 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
       {componentVisibility.header && (
-        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} />
+        <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} simulationActive={simulationActive} onToggleSimulation={() => setSimulationActive(v => !v)} />
       )}
       {componentVisibility.statsBar && (
         <StatsBar

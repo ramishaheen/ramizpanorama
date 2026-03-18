@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, RiskScore, TimelineEvent, Rocket } from "@/data/mockData";
 
 export function useLiveDashboard() {
+  const [simulationActive, setSimulationActive] = useState(false);
   const [dataFresh, setDataFresh] = useState(false);
   const freshTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -97,8 +98,9 @@ export function useLiveDashboard() {
   // Track last poll timestamp
   const [lastPollAt, setLastPollAt] = useState<string | null>(null);
 
-  // Live simulation polling — triggers DB writes that feed realtime subscriptions
+  // Live simulation polling — only runs when user manually enables it
   useEffect(() => {
+    if (!simulationActive) return;
     let active = true;
     const poll = async () => {
       if (!active) return;
@@ -109,14 +111,14 @@ export function useLiveDashboard() {
         console.warn('simulate-intel poll error:', err);
       }
     };
-    const initialDelay = setTimeout(poll, 5000);
+    const initialDelay = setTimeout(poll, 2000);
     const interval = setInterval(poll, 45000);
     return () => {
       active = false;
       clearTimeout(initialDelay);
       clearInterval(interval);
     };
-  }, []);
+  }, [simulationActive]);
 
   // Daily filtered counts
   const todayStart = useMemo(() => {
@@ -142,7 +144,7 @@ export function useLiveDashboard() {
     };
   }, [airspaceAlerts, vessels, geoAlerts, rockets, todayStart]);
 
-  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt };
+  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt, simulationActive, setSimulationActive };
 }
 
 // Mappers from DB rows to app types

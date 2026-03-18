@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-
+import { Play, Square } from "lucide-react";
 
 interface Props {
   lastPollAt: string | null;
   activeSources: number;
   dataFresh: boolean;
+  simulationActive?: boolean;
+  onToggleSimulation?: () => void;
 }
 
 function timeAgo(iso: string): string {
@@ -16,7 +18,7 @@ function timeAgo(iso: string): string {
   return `${mins}m ago`;
 }
 
-export function LiveDataFeedIndicator({ lastPollAt, activeSources, dataFresh }: Props) {
+export function LiveDataFeedIndicator({ lastPollAt, activeSources, dataFresh, simulationActive = false, onToggleSimulation }: Props) {
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -26,6 +28,26 @@ export function LiveDataFeedIndicator({ lastPollAt, activeSources, dataFresh }: 
 
   return (
     <div className="flex items-center gap-1.5">
+      {/* Simulation toggle button */}
+      {onToggleSimulation && (
+        <button
+          onClick={onToggleSimulation}
+          className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-mono transition-all ${
+            simulationActive
+              ? "border-success/50 bg-success/10 text-success"
+              : "border-border/50 bg-muted/30 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+          }`}
+          title={simulationActive ? "Stop live simulation" : "Start live simulation"}
+        >
+          {simulationActive ? (
+            <Square className="h-2.5 w-2.5" />
+          ) : (
+            <Play className="h-2.5 w-2.5" />
+          )}
+          <span>SIM</span>
+        </button>
+      )}
+
       <span className="relative flex h-2 w-2">
         <span
           className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${

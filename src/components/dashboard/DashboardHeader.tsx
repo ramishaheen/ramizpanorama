@@ -21,9 +21,11 @@ interface DashboardHeaderProps {
   geoAlerts?: GeoAlert[];
   lastPollAt?: string | null;
   activeSources?: number;
+  simulationActive?: boolean;
+  onToggleSimulation?: () => void;
 }
 
-export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [], geoAlerts = [], lastPollAt, activeSources = 0 }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rockets = [], telegramMarkers = [], geoAlerts = [], lastPollAt, activeSources = 0, simulationActive = false, onToggleSimulation }: DashboardHeaderProps) => {
   const now = new Date();
   const { lang, isArabic, toggle, t } = useLanguage();
   const [chatOpen, setChatOpen] = useState(false);
@@ -169,6 +171,8 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
               lastPollAt={lastPollAt ?? null}
               activeSources={activeSources}
               dataFresh={!!dataFresh}
+              simulationActive={simulationActive}
+              onToggleSimulation={onToggleSimulation}
             />
             <div className="flex items-center gap-1.5">
               <Wifi className="h-3 w-3 text-success animate-pulse" />
