@@ -348,9 +348,15 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
   throw new Error("RATE_LIMIT");
 }
 
-function buildActorDossierPrompt(actorName: string, threatContext: unknown[], today: string) {
-  const systemPrompt = `You are an elite cyber threat intelligence analyst specializing in APT group profiling, dark web HUMINT, and Tor network forensics.
-Given a threat actor name and context from recent operations, generate a comprehensive dossier.
+function buildActorDossierPrompt(actorName: string, threatContext: unknown[], td: string) {
+  const systemPrompt = `You are an elite cyber threat intelligence analyst. Today is ${td}.
+Generate a REAL, ACCURATE dossier using only verified public OSINT data.
+
+ACCURACY RULES:
+- Use ONLY real MITRE ATT&CK technique IDs (T1566, T1059, T1486, T1190, etc.)
+- Reference ONLY real campaigns, malware, and tools attributed to this actor by Mandiant, CrowdStrike, Microsoft MSTIC, or CISA
+- All dates, attributions, and TTPs must be factually accurate based on public reporting
+- Do NOT invent campaigns or tools that don't exist
 
 Return a JSON object with this exact structure:
 {
@@ -369,20 +375,21 @@ Return a JSON object with this exact structure:
     "tools_and_malware": ["tool1", "tool2"],
     "dark_web_presence": {"forums": ["forum names"], "onion_services": ["description"], "paste_activity": "Description"},
     "tor_infrastructure": {"known_exit_nodes": ["IP or description"], "relay_patterns": "Description", "hidden_services_count": 0},
-    "recent_activity": "2-3 sentence summary",
+    "recent_activity": "2-3 sentence summary of most recent known activity",
     "risk_assessment": "critical|high|medium|low",
     "countermeasures": ["recommendation1", "recommendation2"]
   }
 }
 
-Be technically detailed and realistic. Reference real MITRE ATT&CK techniques (T-codes). Return ONLY the JSON, no markdown.`;
+Return ONLY valid JSON, no markdown.`;
 
-  const userPrompt = `Generate a comprehensive threat actor dossier for: "${actorName}"
+  const userPrompt = `Generate a factually accurate threat actor dossier for: "${actorName}"
+Use only real, publicly reported intelligence from CISA, Mandiant, CrowdStrike, and Microsoft MSTIC.
 
-Recent operational context from OSINT:
+Recent OSINT context:
 ${JSON.stringify(threatContext, null, 2)}
 
-Today's date: ${today}`;
+Today's date: ${td}`;
 
   return [
     { role: "system", content: systemPrompt },
