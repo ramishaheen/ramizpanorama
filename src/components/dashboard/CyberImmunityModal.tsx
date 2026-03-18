@@ -1528,7 +1528,13 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
         >
           <Globe className="h-3 w-3" />INTEL MAP
         </button>
-        {/* Separator + source count */}
+        <button
+          onClick={() => setShowFBIWanted(true)}
+          className={`cyber-tab flex items-center gap-1.5 flex-shrink-0 ${showFBIWanted ? "cyber-tab-active" : ""}`}
+          style={{ color: "hsl(var(--destructive))" }}
+        >
+          <Skull className="h-3 w-3" />FBI WANTED
+        </button>
         <div className="ml-auto flex items-center gap-2 px-3 flex-shrink-0">
           {sources.length > 0 && <span className="text-[7px] font-mono text-primary/50">{sources.length} FEEDS</span>}
         </div>
