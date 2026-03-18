@@ -18,6 +18,48 @@ const HOTSPOTS = [
 let cache: { data: any; ts: number } | null = null;
 const TTL = 15 * 60 * 1000;
 
+async function fetchRegion(mapKey: string, h: typeof HOTSPOTS[number]): Promise<any[]> {
+  const coords = `${h.lomin},${h.lamin},${h.lomax},${h.lamax}`;
+  const sources = ["VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT"];
+
+  for (const source of sources) {
+    try {
+      const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${mapKey}/${source}/${coords}/1`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) {
+        const body = await res.text();
+        console.warn(`FIRMS ${source} ${h.name}: HTTP ${res.status} - ${body.substring(0, 200)}`);
+        continue;
+      }
+      const csv = await res.text();
+      const lines = csv.trim().split("\n");
+      if (lines.length < 2) continue;
+
+      const headers = lines[0].split(",");
+      const idx = (n: string) => headers.indexOf(n);
+      const latI = idx("latitude"), lngI = idx("longitude"), brI = idx("bright_ti4"),
+        frpI = idx("frp"), confI = idx("confidence"), dateI = idx("acq_date"), timeI = idx("acq_time");
+
+      return lines.slice(1).map((line, i) => {
+        const c = line.split(",");
+        return {
+          id: `f-${h.name.replace(/\s/g, "")}-${i}`,
+          lat: parseFloat(c[latI]) || 0,
+          lng: parseFloat(c[lngI]) || 0,
+          brightness: parseFloat(c[brI]) || 0,
+          frp: parseFloat(c[frpI]) || 0,
+          confidence: c[confI] || "nominal",
+          date: c[dateI] || "",
+          time: c[timeI] || "",
+        };
+      }).filter(f => f.lat !== 0 && f.lng !== 0).slice(0, 100);
+    } catch (e) {
+      console.warn(`FIRMS ${source} ${h.name} error:`, e);
+    }
+  }
+  return [];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,50 +71,25 @@ serve(async (req) => {
 
   const mapKey = Deno.env.get("FIRMS_MAP_KEY");
   if (!mapKey) {
-    return new Response(JSON.stringify({ error: "FIRMS_MAP_KEY not configured", fires: [] }), {
+    return new Response(JSON.stringify({ error: "FIRMS_MAP_KEY not configured", hotspots: [] }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
   try {
-    const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${mapKey}/VIIRS_SNPP_NRT/world/1`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
-    if (!res.ok) throw new Error(`FIRMS HTTP ${res.status}`);
+    // Fetch each region separately to avoid "world" query limits
+    const results = await Promise.allSettled(HOTSPOTS.map(h => fetchRegion(mapKey, h)));
 
-    const csv = await res.text();
-    const lines = csv.trim().split("\n");
-    if (lines.length < 2) throw new Error("No FIRMS data");
-
-    const headers = lines[0].split(",");
-    const idx = (n: string) => headers.indexOf(n);
-    const latI = idx("latitude"), lngI = idx("longitude"), brI = idx("bright_ti4"),
-      frpI = idx("frp"), confI = idx("confidence"), dateI = idx("acq_date"), timeI = idx("acq_time");
-
-    const allFires = lines.slice(1).map((line, i) => {
-      const c = line.split(",");
-      return {
-        id: `f-${i}`,
-        lat: parseFloat(c[latI]) || 0,
-        lng: parseFloat(c[lngI]) || 0,
-        brightness: parseFloat(c[brI]) || 0,
-        frp: parseFloat(c[frpI]) || 0,
-        confidence: c[confI] || "nominal",
-        date: c[dateI] || "",
-        time: c[timeI] || "",
-      };
-    }).filter(f => f.lat !== 0 && f.lng !== 0);
-
-    // Bin fires into hotspots
-    const hotspotFires = HOTSPOTS.map(h => ({
+    const hotspotFires = HOTSPOTS.map((h, i) => ({
       region: h.name,
-      fires: allFires.filter(f =>
-        f.lat >= h.lamin && f.lat <= h.lamax && f.lng >= h.lomin && f.lng <= h.lomax
-      ).slice(0, 100),
+      fires: results[i].status === "fulfilled" ? results[i].value : [],
     }));
+
+    const totalGlobal = hotspotFires.reduce((s, h) => s + h.fires.length, 0);
 
     const data = {
       hotspots: hotspotFires,
-      totalGlobal: allFires.length,
+      totalGlobal,
       timestamp: new Date().toISOString(),
       source: "NASA FIRMS VIIRS",
     };
