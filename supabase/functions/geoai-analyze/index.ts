@@ -111,7 +111,7 @@ Analyze based on the geographic location context. For coordinates in the Middle 
       });
     }
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    let aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -124,17 +124,51 @@ Analyze based on the geographic location context. For coordinates in the Middle 
       }),
     });
 
+    // Fallback to direct Gemini API if gateway credits exhausted
+    if (aiResponse.status === 402 || aiResponse.status === 429) {
+      const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY_2") || Deno.env.get("GEMINI_API_KEY");
+      if (GEMINI_KEY) {
+        console.log("Gateway returned " + aiResponse.status + ", falling back to direct Gemini API");
+        // Convert OpenAI messages format to Gemini format
+        const parts: any[] = [];
+        for (const msg of messages) {
+          if (typeof msg.content === "string") {
+            parts.push({ text: msg.content });
+          } else if (Array.isArray(msg.content)) {
+            for (const part of msg.content) {
+              if (part.type === "text") parts.push({ text: part.text });
+              else if (part.type === "image_url" && part.image_url?.url) {
+                // For URL-based images, just add as text reference
+                parts.push({ text: `[Satellite image at coordinates ${lat}, ${lng}]` });
+              }
+            }
+          }
+        }
+        const geminiResp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+            }),
+          }
+        );
+        if (geminiResp.ok) {
+          const gData = await geminiResp.json();
+          const rawText = gData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+          aiResponse = new Response(JSON.stringify({ choices: [{ message: { content: rawText } }] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        } else {
+          console.error("Gemini fallback failed:", geminiResp.status);
+        }
+      }
+    }
+
     if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const errText = await aiResponse.text();
       console.error("AI gateway error:", aiResponse.status, errText);
       throw new Error(`AI analysis failed: ${aiResponse.status}`);
