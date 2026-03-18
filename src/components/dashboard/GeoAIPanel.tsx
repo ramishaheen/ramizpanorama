@@ -78,11 +78,33 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
 
   const mapOverlaysRef = useRef<any[]>([]);
   const infoWindowRef = useRef<any>(null);
+  const sweepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const toggleSection = (key: string) =>
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
+  const injectHoloStyles = () => {
+    if (document.getElementById("geoai-holo-style")) return;
+    const style = document.createElement("style");
+    style.id = "geoai-holo-style";
+    style.textContent = `
+      @keyframes geoai-pulse { 0%,100% { transform:scale(1); opacity:0.3; } 50% { transform:scale(2.5); opacity:0; } }
+      @keyframes geoai-threat-pulse { 0%,100% { transform:scale(1); opacity:0.5; } 50% { transform:scale(1.8); opacity:0; } }
+      @keyframes geoai-rotate { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+      @keyframes geoai-holo-flicker { 0%,100% { opacity:0.6; } 30% { opacity:1; } 60% { opacity:0.8; } }
+      @keyframes geoai-hex-pulse { 0%,100% { transform:scale(1); filter:brightness(1); } 50% { transform:scale(1.12); filter:brightness(1.3); } }
+      @keyframes geoai-dash-march { 0% { stroke-dashoffset:0; } 100% { stroke-dashoffset:-24; } }
+      @keyframes geoai-scan-sweep { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+      @keyframes geoai-ring-expand { 0%,100% { transform:scale(1); opacity:0.4; } 50% { transform:scale(1.15); opacity:0.15; } }
+    `;
+    document.head.appendChild(style);
+  };
+
   const clearMapOverlays = useCallback(() => {
+    if (sweepIntervalRef.current) {
+      clearInterval(sweepIntervalRef.current);
+      sweepIntervalRef.current = null;
+    }
     mapOverlaysRef.current.forEach(o => {
       if (o.setMap) o.setMap(null);
       if (o.close) o.close();
@@ -94,10 +116,95 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
     }
   }, []);
 
-  // Cleanup overlays on unmount
-  useEffect(() => {
-    return () => clearMapOverlays();
-  }, [clearMapOverlays]);
+  // Show holographic scan area immediately when analysis starts
+  const showScanArea = useCallback(() => {
+    const google = (window as any).google;
+    const map = mapRef?.current;
+    if (!map || !google?.maps) return;
+
+    clearMapOverlays();
+    injectHoloStyles();
+
+    const scatterRadius = getScatterRadius(zoom);
+    const cyan = "#00ffd5";
+
+    // Outer holographic ring — glowing dashed
+    const outerRing = new google.maps.Circle({
+      center: { lat, lng },
+      radius: scatterRadius,
+      map,
+      fillColor: cyan,
+      fillOpacity: 0.03,
+      strokeColor: cyan,
+      strokeOpacity: 0.5,
+      strokeWeight: 1.5,
+      clickable: false,
+    });
+    mapOverlaysRef.current.push(outerRing);
+
+    // Inner rings at 33% and 66%
+    [0.33, 0.66].forEach(frac => {
+      const ring = new google.maps.Circle({
+        center: { lat, lng },
+        radius: scatterRadius * frac,
+        map,
+        fillColor: "transparent",
+        fillOpacity: 0,
+        strokeColor: cyan,
+        strokeOpacity: 0.15,
+        strokeWeight: 0.7,
+        clickable: false,
+      });
+      mapOverlaysRef.current.push(ring);
+    });
+
+    // Center holographic scanner marker with rotating ring
+    const scannerDiv = document.createElement("div");
+    scannerDiv.innerHTML = `
+      <div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+        <svg width="48" height="48" viewBox="0 0 48 48" style="position:absolute;animation:geoai-scan-sweep 4s linear infinite;">
+          <circle cx="24" cy="24" r="20" fill="none" stroke="${cyan}" stroke-width="1" stroke-dasharray="6 4" stroke-opacity="0.6" style="animation:geoai-dash-march 1.5s linear infinite;" />
+          <line x1="24" y1="4" x2="24" y2="18" stroke="${cyan}" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" />
+        </svg>
+        <svg width="48" height="48" viewBox="0 0 48 48" style="position:absolute;animation:geoai-ring-expand 3s ease-in-out infinite;">
+          <circle cx="24" cy="24" r="16" fill="none" stroke="${cyan}" stroke-width="0.5" stroke-opacity="0.25" />
+        </svg>
+        <div style="width:6px;height:6px;border-radius:50%;background:${cyan};box-shadow:0 0 12px ${cyan}, 0 0 24px ${cyan}40;"></div>
+      </div>
+    `;
+
+    if (google.maps.marker?.AdvancedMarkerElement) {
+      const scanMarker = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat, lng },
+        map,
+        content: scannerDiv,
+        zIndex: 9998,
+      });
+      mapOverlaysRef.current.push(scanMarker);
+    }
+
+    // Animated sweep polyline (radar style)
+    let sweepAngle = 0;
+    const sweepLine = new google.maps.Polyline({
+      path: [
+        { lat, lng },
+        offsetLatLng(lat, lng, scatterRadius),
+      ],
+      map,
+      strokeColor: cyan,
+      strokeOpacity: 0.4,
+      strokeWeight: 1,
+      clickable: false,
+    });
+    mapOverlaysRef.current.push(sweepLine);
+
+    sweepIntervalRef.current = setInterval(() => {
+      sweepAngle = (sweepAngle + 3) % 360;
+      const endLat = lat + (scatterRadius / 111320) * Math.cos((sweepAngle * Math.PI) / 180);
+      const endLng = lng + (scatterRadius / (111320 * Math.cos(lat * (Math.PI / 180)))) * Math.sin((sweepAngle * Math.PI) / 180);
+      sweepLine.setPath([{ lat, lng }, { lat: endLat, lng: endLng }]);
+    }, 40);
+  }, [lat, lng, zoom, mapRef, clearMapOverlays]);
 
   const renderDetectionsOnMap = useCallback((data: any) => {
     const google = (window as any).google;
@@ -105,61 +212,88 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
     if (!map || !google?.maps) return;
 
     clearMapOverlays();
+    injectHoloStyles();
 
     const a = data?.analysis || {};
     const objects = a.objects_detected || [];
     const strategicValue = a.strategic_value || "low";
     const scatterRadius = getScatterRadius(zoom);
+    const cyan = "#00ffd5";
 
-    // Draw scanning area circle
     const circleColor = STRATEGIC_CIRCLE_COLORS[strategicValue] || STRATEGIC_CIRCLE_COLORS.low;
-    const circle = new google.maps.Circle({
+
+    // Outer holographic ring with strategic color
+    const outerRing = new google.maps.Circle({
       center: { lat, lng },
       radius: scatterRadius,
       map,
       fillColor: circleColor,
-      fillOpacity: 0.08,
-      strokeColor: circleColor,
-      strokeOpacity: 0.4,
+      fillOpacity: 0.05,
+      strokeColor: cyan,
+      strokeOpacity: 0.5,
       strokeWeight: 1.5,
       clickable: false,
     });
-    mapOverlaysRef.current.push(circle);
+    mapOverlaysRef.current.push(outerRing);
 
-    // Scanning center pulse marker
-    const centerDiv = document.createElement("div");
-    centerDiv.innerHTML = `
-      <div style="position:relative;width:20px;height:20px;">
-        <div style="position:absolute;inset:0;border-radius:50%;background:${circleColor};opacity:0.3;animation:geoai-pulse 2s ease-in-out infinite;"></div>
-        <div style="position:absolute;top:6px;left:6px;width:8px;height:8px;border-radius:50%;background:${circleColor};border:1px solid white;"></div>
+    // Inner grid rings
+    [0.33, 0.66].forEach(frac => {
+      const ring = new google.maps.Circle({
+        center: { lat, lng },
+        radius: scatterRadius * frac,
+        map,
+        fillColor: "transparent",
+        fillOpacity: 0,
+        strokeColor: cyan,
+        strokeOpacity: 0.12,
+        strokeWeight: 0.6,
+        clickable: false,
+      });
+      mapOverlaysRef.current.push(ring);
+    });
+
+    // Cross-hair grid lines through center
+    const gridLen = scatterRadius / 111320;
+    const gridLngLen = scatterRadius / (111320 * Math.cos(lat * (Math.PI / 180)));
+    [
+      [{ lat: lat - gridLen, lng }, { lat: lat + gridLen, lng }],
+      [{ lat, lng: lng - gridLngLen }, { lat, lng: lng + gridLngLen }],
+    ].forEach(path => {
+      const line = new google.maps.Polyline({
+        path, map,
+        strokeColor: cyan,
+        strokeOpacity: 0.1,
+        strokeWeight: 0.5,
+        clickable: false,
+      });
+      mapOverlaysRef.current.push(line);
+    });
+
+    // Center holographic hub with rotating scanner
+    const hubDiv = document.createElement("div");
+    hubDiv.innerHTML = `
+      <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
+        <svg width="44" height="44" viewBox="0 0 44 44" style="position:absolute;animation:geoai-rotate 6s linear infinite;">
+          <circle cx="22" cy="22" r="18" fill="none" stroke="${cyan}" stroke-width="0.8" stroke-dasharray="5 3" stroke-opacity="0.5" style="animation:geoai-dash-march 2s linear infinite;" />
+        </svg>
+        <svg width="44" height="44" viewBox="0 0 44 44" style="position:absolute;animation:geoai-holo-flicker 2.5s ease-in-out infinite;">
+          <polygon points="22,4 40,22 22,40 4,22" fill="none" stroke="${circleColor}" stroke-width="0.7" stroke-opacity="0.35" />
+        </svg>
+        <div style="width:5px;height:5px;border-radius:50%;background:${circleColor};box-shadow:0 0 10px ${circleColor}, 0 0 20px ${circleColor}50;"></div>
       </div>
     `;
     if (google.maps.marker?.AdvancedMarkerElement) {
-      const centerMarker = new google.maps.marker.AdvancedMarkerElement({
-        position: { lat, lng },
-        map,
-        content: centerDiv,
-        zIndex: 9999,
+      const hub = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat, lng }, map, content: hubDiv, zIndex: 9999,
       });
-      mapOverlaysRef.current.push(centerMarker);
+      mapOverlaysRef.current.push(hub);
     }
 
-    // Add pulse animation style if not already present
-    if (!document.getElementById("geoai-pulse-style")) {
-      const style = document.createElement("style");
-      style.id = "geoai-pulse-style";
-      style.textContent = `
-        @keyframes geoai-pulse { 0%,100% { transform:scale(1); opacity:0.3; } 50% { transform:scale(2.5); opacity:0; } }
-        @keyframes geoai-threat-pulse { 0%,100% { transform:scale(1); opacity:0.5; } 50% { transform:scale(1.8); opacity:0; } }
-      `;
-      document.head.appendChild(style);
-    }
-
-    // Create shared InfoWindow
+    // Shared InfoWindow
     const infoWindow = new google.maps.InfoWindow();
     infoWindowRef.current = infoWindow;
 
-    // Add object detection markers
+    // Hexagonal detection markers + connecting lines
     objects.forEach((obj: any, i: number) => {
       const threatLevel = obj.threat_level || "none";
       const colors = THREAT_MARKER_COLORS[threatLevel] || THREAT_MARKER_COLORS.none;
@@ -167,16 +301,45 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
       const conf = Math.round((obj.confidence || 0) * 100);
       const isHighThreat = threatLevel === "critical" || threatLevel === "high";
 
+      // Connecting line from center to detection
+      const connLine = new google.maps.Polyline({
+        path: [{ lat, lng }, pos],
+        map,
+        strokeColor: colors.fill,
+        strokeOpacity: 0.2,
+        strokeWeight: 0.8,
+        clickable: false,
+        icons: [{
+          icon: { path: "M 0,-0.5 0,0.5", strokeOpacity: 0.4, strokeColor: colors.fill, scale: 2 },
+          offset: "0", repeat: "8px",
+        }],
+      });
+      mapOverlaysRef.current.push(connLine);
+
+      // Hexagonal marker element
+      const hexSize = isHighThreat ? 36 : 30;
       const markerDiv = document.createElement("div");
       markerDiv.style.cursor = "pointer";
       markerDiv.innerHTML = `
-        <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-          ${isHighThreat ? `<div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;background:${colors.glow};animation:geoai-threat-pulse 1.5s ease-in-out infinite;"></div>` : ""}
-          <div style="position:relative;width:20px;height:20px;border-radius:50%;background:${colors.fill};border:2px solid ${colors.stroke};box-shadow:0 0 8px ${colors.glow};display:flex;align-items:center;justify-content:center;">
-            <span style="color:white;font-size:8px;font-weight:bold;font-family:monospace;">${i + 1}</span>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;animation:geoai-holo-flicker 3s ease-in-out infinite;animation-delay:${i * 0.3}s;">
+          ${isHighThreat ? `<div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:${hexSize + 8}px;height:${hexSize + 8}px;animation:geoai-threat-pulse 1.5s ease-in-out infinite;">
+            <svg width="${hexSize + 8}" height="${hexSize + 8}" viewBox="0 0 44 44">
+              <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="${colors.glow}" stroke-width="1" stroke-opacity="0.4" />
+            </svg>
+          </div>` : ""}
+          <div style="position:relative;width:${hexSize}px;height:${hexSize}px;animation:geoai-hex-pulse 3s ease-in-out infinite;animation-delay:${i * 0.2}s;">
+            <svg width="${hexSize}" height="${hexSize}" viewBox="0 0 36 36" style="position:absolute;top:0;left:0;">
+              <polygon points="18,2 33,10 33,26 18,34 3,26 3,10" fill="${colors.fill}20" stroke="${colors.stroke}" stroke-width="1.2" />
+            </svg>
+            <svg width="${hexSize}" height="${hexSize}" viewBox="0 0 36 36" style="position:absolute;top:0;left:0;animation:geoai-rotate 8s linear infinite;">
+              <circle cx="18" cy="18" r="15" fill="none" stroke="${colors.fill}" stroke-width="0.6" stroke-dasharray="4 3" stroke-opacity="0.35" />
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+              <span style="color:${colors.stroke};font-size:9px;font-weight:bold;font-family:monospace;text-shadow:0 0 6px ${colors.glow};">${i + 1}</span>
+            </div>
           </div>
-          <div style="margin-top:2px;background:rgba(0,0,0,0.85);border:1px solid ${colors.fill}40;border-radius:3px;padding:1px 4px;white-space:nowrap;max-width:120px;">
-            <span style="color:${colors.fill};font-size:7px;font-family:monospace;font-weight:bold;">${obj.label || "Object"}</span>
+          <div style="margin-top:2px;background:rgba(0,0,0,0.85);border:1px solid ${colors.fill}50;border-radius:3px;padding:1px 5px;white-space:nowrap;backdrop-filter:blur(4px);">
+            <span style="color:${colors.fill};font-size:7px;font-family:monospace;font-weight:bold;text-shadow:0 0 4px ${colors.glow};">${obj.label || "OBJ"}</span>
             <span style="color:#9ca3af;font-size:6px;font-family:monospace;margin-left:3px;">${conf}%</span>
           </div>
         </div>
@@ -184,10 +347,7 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
 
       if (google.maps.marker?.AdvancedMarkerElement) {
         const marker = new google.maps.marker.AdvancedMarkerElement({
-          position: pos,
-          map,
-          content: markerDiv,
-          zIndex: 10000 + i,
+          position: pos, map, content: markerDiv, zIndex: 10000 + i,
         });
 
         marker.addListener("click", () => {
@@ -195,13 +355,13 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
           const description = obj.description || "";
           const count = obj.estimated_count || 1;
           infoWindow.setContent(`
-            <div style="font-family:monospace;font-size:11px;max-width:200px;padding:4px;">
-              <div style="font-weight:bold;color:${colors.fill};text-transform:uppercase;margin-bottom:4px;">${obj.label || "Detection"}</div>
-              <div style="color:#666;margin-bottom:2px;">Category: <b>${category}</b></div>
-              <div style="color:#666;margin-bottom:2px;">Count: <b>${count}</b></div>
-              <div style="color:#666;margin-bottom:2px;">Confidence: <b>${conf}%</b></div>
-              <div style="color:#666;margin-bottom:2px;">Threat: <b style="color:${colors.fill}">${threatLevel.toUpperCase()}</b></div>
-              ${description ? `<div style="color:#888;margin-top:4px;font-size:10px;">${description}</div>` : ""}
+            <div style="font-family:monospace;font-size:11px;max-width:220px;padding:6px;background:#0a0a0a;border:1px solid ${colors.fill}40;border-radius:6px;">
+              <div style="font-weight:bold;color:${colors.fill};text-transform:uppercase;margin-bottom:4px;text-shadow:0 0 6px ${colors.glow};">⬡ ${obj.label || "Detection"}</div>
+              <div style="color:#888;margin-bottom:2px;">Category: <b style="color:#ccc;">${category}</b></div>
+              <div style="color:#888;margin-bottom:2px;">Count: <b style="color:#ccc;">${count}</b></div>
+              <div style="color:#888;margin-bottom:2px;">Confidence: <b style="color:#ccc;">${conf}%</b></div>
+              <div style="color:#888;margin-bottom:2px;">Threat: <b style="color:${colors.fill}">${threatLevel.toUpperCase()}</b></div>
+              ${description ? `<div style="color:#666;margin-top:4px;font-size:10px;border-top:1px solid ${colors.fill}20;padding-top:4px;">${description}</div>` : ""}
             </div>
           `);
           infoWindow.open(map, marker);
@@ -211,17 +371,49 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
       }
     });
 
+    // Animated sweep line
+    let sweepAngle = 0;
+    const sweepLine = new google.maps.Polyline({
+      path: [{ lat, lng }, { lat: lat + gridLen, lng }],
+      map,
+      strokeColor: cyan,
+      strokeOpacity: 0.3,
+      strokeWeight: 0.8,
+      clickable: false,
+    });
+    mapOverlaysRef.current.push(sweepLine);
+
+    sweepIntervalRef.current = setInterval(() => {
+      sweepAngle = (sweepAngle + 2) % 360;
+      const endLat = lat + (scatterRadius / 111320) * Math.cos((sweepAngle * Math.PI) / 180);
+      const endLng = lng + (scatterRadius / (111320 * Math.cos(lat * (Math.PI / 180)))) * Math.sin((sweepAngle * Math.PI) / 180);
+      sweepLine.setPath([{ lat, lng }, { lat: endLat, lng: endLng }]);
+    }, 50);
+
     if (objects.length > 0) {
       toast({
-        title: `${objects.length} Objects Plotted`,
-        description: `Detection markers added to map around ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
+        title: `⬡ ${objects.length} Objects Detected`,
+        description: `Holographic markers placed around ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
       });
     }
   }, [lat, lng, zoom, mapRef, clearMapOverlays]);
 
+  // Auto-clear holographic overlays when switching away from object detection
+  useEffect(() => {
+    if (analysisType !== "objects" && analysisType !== "full") {
+      clearMapOverlays();
+    }
+  }, [analysisType, clearMapOverlays]);
+
   const runAnalysis = useCallback(async () => {
     setLoading(true);
     setResult(null);
+
+    // Show holographic scan area immediately for object detection
+    if (analysisType === "objects" || analysisType === "full") {
+      showScanArea();
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke("geoai-analyze", {
         body: { lat, lng, zoom, analysisType },
@@ -231,17 +423,18 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
       setResult(data);
       toast({ title: "GeoAI Analysis Complete", description: `${analysisType} analysis at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°` });
 
-      // Render detections on map for object detection or full analysis
+      // Replace scan area with full detection overlays
       if (analysisType === "objects" || analysisType === "full") {
         renderDetectionsOnMap(data);
       }
     } catch (e: any) {
       console.error("GeoAI error:", e);
+      clearMapOverlays();
       toast({ title: "GeoAI Error", description: e.message || "Analysis failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [lat, lng, zoom, analysisType, renderDetectionsOnMap]);
+  }, [lat, lng, zoom, analysisType, renderDetectionsOnMap, showScanArea, clearMapOverlays]);
 
   const a = result?.analysis || {};
   const hasOverlays = mapOverlaysRef.current.length > 0;
