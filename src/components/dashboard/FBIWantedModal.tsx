@@ -72,12 +72,6 @@ export function FBIWantedModal({ onClose }: FBIWantedModalProps) {
         params.set("poster_classification", classMap[classification] || "");
       }
 
-      const { data, error: fnError } = await supabase.functions.invoke("fbi-wanted", {
-        body: null,
-        headers: {},
-      });
-
-      // Use query params via GET-style
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fbi-wanted?${params.toString()}`,
         {
