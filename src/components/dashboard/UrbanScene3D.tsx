@@ -2402,9 +2402,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               { icon: <Maximize2 className="h-3.5 w-3.5" />, action: handleToggleTilt, tip: "Toggle 3D Tilt" },
               { icon: <Compass className="h-3.5 w-3.5" />, action: handleResetView, tip: "Reset View" },
               { icon: <span className="text-[10px] font-bold">360°</span>, action: () => setStreetViewActive(true), tip: "Enter 360° Street View" },
+              { icon: <Brain className={`h-3.5 w-3.5 ${showGeoAI ? "text-emerald-400" : ""}`} />, action: () => setShowGeoAI(!showGeoAI), tip: "GeoAI Analysis" },
             ].map((btn, i) => (
               <button key={i} onClick={btn.action} title={btn.tip}
-                className="w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border border-primary/25 text-primary hover:bg-primary/15 hover:border-primary/50 transition-all"
+                className={`w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border transition-all ${
+                  btn.tip === "GeoAI Analysis" && showGeoAI
+                    ? "border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/15"
+                    : "border-primary/25 text-primary hover:bg-primary/15 hover:border-primary/50"
+                }`}
                 style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                 {btn.icon}
               </button>
