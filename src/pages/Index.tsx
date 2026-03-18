@@ -110,7 +110,7 @@ type MobileTab = typeof MOBILE_TABS[number]["id"];
 
 // Component entry
 const Index = () => {
-  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt } = useLiveDashboard();
+  const { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt, simulationActive, setSimulationActive } = useLiveDashboard();
   const citizenSecurity = useCitizenSecurity();
   const warUpdates = useWarUpdates();
   const telegramIntel = useTelegramIntel();
