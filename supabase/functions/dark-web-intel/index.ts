@@ -12,7 +12,7 @@ function buildFallback() {
     success: true,
     entries: [
       { id: "dw-f-001", type: "ransomware_leak", title: "LockBit 4.0 Claims Major Telecom Provider in Gulf Region", detail: "LockBit affiliate posted proof-of-access screenshots showing internal network topology of a tier-1 telecom in the UAE. Claimed 2.3TB of customer records, billing data, and network configurations. Deadline set for 72 hours. Initial access vector appears to be CVE-2024-21762 on exposed Fortinet devices.", severity: "critical", timestamp: ts(2,15), indicators: ["185.220.101.34", "lockbit4xxxx.onion", "CVE-2024-21762"], torExitNodes: ["185.220.101.34"], hiddenServiceFingerprint: "lockbit4xxxx.onion", relatedActors: ["LockBit"], region: "Middle East", category: "Ransomware Ops" },
-      { id: "dw-f-002", type: "exploit_trade", title: "0-Day RCE for Palo Alto PAN-OS Listed on Exploit.in", detail: "High-reputation seller 'z3r0day_broker' listed a pre-auth RCE for PAN-OS GlobalProtect at $150,000. Claims bypass of all current patches. Multiple buyers expressing interest in thread. Vulnerability class suggests memory corruption in SSL VPN handler.", severity: "critical", timestamp: ts(3,42), indicators: ["CVE-2024-XXXXX", "exploit.in/thread/87421"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["z3r0day_broker"], region: "Global", category: "Exploit Trading" },
+      { id: "dw-f-002", type: "exploit_trade", title: "0-Day RCE for Palo Alto PAN-OS Listed on Exploit.in", detail: "High-reputation seller 'z3r0day_broker' listed a pre-auth RCE for PAN-OS GlobalProtect at $150,000. Claims bypass of all current patches including CVE-2024-3400 mitigations. Multiple buyers expressing interest in thread. Vulnerability class suggests memory corruption in SSL VPN handler.", severity: "critical", timestamp: ts(3,42), indicators: ["CVE-2024-3400", "exploit.in/thread/87421"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["z3r0day_broker"], region: "Global", category: "Exploit Trading" },
       { id: "dw-f-003", type: "credential_dump", title: "500K Corporate Credentials from Middle East Targets on BreachForums", detail: "Threat actor 'ShinyHunters_ME' dumped credentials allegedly harvested via large-scale phishing campaigns targeting government and financial institutions in Saudi Arabia, Jordan, and Egypt. Includes email/password pairs with MFA bypass tokens.", severity: "high", timestamp: ts(1,20), indicators: ["breachforums.st", "shinyhunters_me@proton.me"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["ShinyHunters"], region: "Middle East", category: "Credential Markets" },
       { id: "dw-f-004", type: "botnet_c2", title: "Mirai Variant 'HailBot' C2 Infrastructure Expansion Detected", detail: "New C2 panel discovered hosting HailBot variant targeting IoT devices in Central Asian telecom networks. Panel fingerprinted at 3 IPs across bulletproof hosting in Moldova. Estimated 45,000 compromised devices serving as DDoS amplifiers.", severity: "high", timestamp: ts(4,10), indicators: ["91.243.44.122", "91.243.44.123", "91.243.44.124", "hailbot-panel.xyz"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["HailBot Operators"], region: "Central Asia", category: "Botnet Infrastructure" },
       { id: "dw-f-005", type: "onion", title: "Iranian APT Infrastructure: New .onion C2 Relay Network", detail: "Cluster of 7 newly registered .onion hidden services correlating with MuddyWater TTPS. Services running customized PowerShell Empire backends with Farsi-language admin panels. Targeting pattern suggests espionage campaign against Iraqi government ministries.", severity: "critical", timestamp: ts(5,33), indicators: ["muddyc2xxxxx.onion", "muddyc2yyyyy.onion", "PowerShell Empire"], torExitNodes: ["162.247.74.206"], hiddenServiceFingerprint: "muddyc2xxxxx.onion", relatedActors: ["MuddyWater", "APT34"], region: "Middle East", category: "C2 Infrastructure" },
@@ -22,7 +22,7 @@ function buildFallback() {
       { id: "dw-f-009", type: "hidden_service", title: "New Bulletproof Hosting Panel Detected on Tor", detail: "Automated bulletproof hosting service offering 'abuse-resistant' VPS with .onion management panel. Accepting crypto payments. Fingerprint matches infrastructure previously used by Conti/Royal ransomware operators.", severity: "medium", timestamp: ts(9,45), indicators: ["bphost7xxxx.onion"], torExitNodes: [], hiddenServiceFingerprint: "bphost7xxxx.onion", relatedActors: ["Royal Ransomware"], region: "Eastern Europe", category: "C2 Infrastructure" },
       { id: "dw-f-010", type: "ransomware_leak", title: "ALPHV/BlackCat: Israeli Defense Contractor Data Published", detail: "ALPHV successor posted 890GB of data allegedly from Israeli defense subcontractor. Includes CAD files, internal communications, and supply chain documentation. Verification pending but file structure appears authentic.", severity: "critical", timestamp: ts(10,5), indicators: ["alphvxxxx.onion", "defense-leak-il.torrent"], torExitNodes: [], hiddenServiceFingerprint: "alphvxxxx.onion", relatedActors: ["ALPHV", "BlackCat"], region: "Middle East", category: "Ransomware Ops" },
       { id: "dw-f-011", type: "paste", title: "Pastebin: Iranian IRGC-Linked IP Ranges Enumerated", detail: "Paste containing detailed enumeration of IP ranges associated with IRGC cyber units, including command infrastructure, VPN endpoints, and proxy chains. Likely published by dissident group or rival intelligence service.", severity: "medium", timestamp: ts(11,30), indicators: ["pastebin.com/raw/xxxxx", "5.160.0.0/16"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["IRGC Cyber"], region: "Middle East", category: "Data Leaks" },
-      { id: "dw-f-012", type: "exploit_trade", title: "Ivanti Connect Secure 0-Day Chain Offered for $200K", detail: "Two-stage exploit chain for Ivanti Connect Secure and Policy Secure gateways. Seller claims pre-auth RCE with sandbox escape. Demo video shows full shell access on patched appliance. Multiple enterprise targets confirmed vulnerable.", severity: "critical", timestamp: ts(12,0), indicators: ["CVE-2024-YYYYY", "ivanti-0day-demo.mp4"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["Unknown Broker"], region: "Global", category: "Exploit Trading" },
+      { id: "dw-f-012", type: "exploit_trade", title: "Ivanti Connect Secure Exploit Chain Offered for $200K", detail: "Two-stage exploit chain for Ivanti Connect Secure (CVE-2023-46805 + CVE-2024-21887) and Policy Secure gateways. Seller claims pre-auth RCE with sandbox escape. Demo video shows full shell access on patched appliance. Multiple enterprise targets confirmed vulnerable.", severity: "critical", timestamp: ts(12,0), indicators: ["CVE-2023-46805", "CVE-2024-21887"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["Unknown Broker"], region: "Global", category: "Exploit Trading" },
       { id: "dw-f-013", type: "credential_dump", title: "Turkish Government Email Credentials Leaked on Telegram", detail: "Channel 'Zer0Leaks_TR' posted 23,000 email/password pairs from gov.tr domains. Includes Ministry of Interior and Ministry of Defense accounts. Passwords appear plaintext, suggesting SQL injection or legacy system compromise.", severity: "high", timestamp: ts(13,15), indicators: ["t.me/Zer0Leaks_TR", "*.gov.tr"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["Zer0Leaks"], region: "Middle East", category: "Data Leaks" },
       { id: "dw-f-014", type: "botnet_c2", title: "Emotet Resurgence: New Loader Variant with Anti-Analysis", detail: "Emotet infrastructure showing renewed activity after 4-month dormancy. New loader variant uses polyglot PE/DLL injection and legitimate cloud storage for C2 communications. First observed targeting banks in Jordan and Lebanon.", severity: "high", timestamp: ts(14,40), indicators: ["emotet-loader-v5.dll", "dropbox.com/s/xxx", "103.141.xx.xx"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["TA542", "Mealybug"], region: "Middle East", category: "Botnet Infrastructure" },
       { id: "dw-f-015", type: "forum", title: "RAMP Forum: Recruiting Insiders at Gulf Energy Companies", detail: "Multiple posts on Russian-language RAMP forum seeking insiders at ADNOC, Saudi Aramco, and Qatar Energy. Offering $50K-$200K for VPN credentials or internal network access. Posts authored by known initial access broker 'AccessKing'.", severity: "critical", timestamp: ts(15,20), indicators: ["ramp4xxxxx.onion", "AccessKing"], torExitNodes: [], hiddenServiceFingerprint: null, relatedActors: ["AccessKing"], region: "Middle East", category: "Forum Chatter" },
@@ -107,8 +107,8 @@ function buildFallback() {
         ],
         exploits: [
           { name: "FortiGate RCE PoC", targetCVE: "CVE-2024-21762", availability: "public", price: "$0" },
-          { name: "PAN-OS 0day Chain", targetCVE: "CVE-2024-XXXXX", availability: "0day", price: "$150,000" },
-          { name: "Ivanti Chain Exploit", targetCVE: "CVE-2024-YYYYY", availability: "0day", price: "$200,000" },
+          { name: "PAN-OS 0day Chain", targetCVE: "CVE-2024-3400", availability: "weaponized", price: "$150,000" },
+          { name: "Ivanti Chain Exploit", targetCVE: "CVE-2023-46805", availability: "weaponized", price: "$200,000" },
           { name: "ScreenConnect Bypass", targetCVE: "CVE-2024-1709", availability: "public", price: "$0" },
           { name: "TeamCity Admin Takeover", targetCVE: "CVE-2024-27198", availability: "public", price: "$0" },
         ],
@@ -116,8 +116,8 @@ function buildFallback() {
           { cve: "CVE-2024-21762", vendor: "Fortinet", status: "released" },
           { cve: "CVE-2024-3400", vendor: "Palo Alto", status: "released" },
           { cve: "CVE-2024-1709", vendor: "ConnectWise", status: "released" },
-          { cve: "CVE-2024-XXXXX", vendor: "Palo Alto", status: "pending" },
-          { cve: "CVE-2024-YYYYY", vendor: "Ivanti", status: "pending" },
+          { cve: "CVE-2024-3400", vendor: "Palo Alto", status: "released" },
+          { cve: "CVE-2023-46805", vendor: "Ivanti", status: "released" },
         ],
       },
       malware: {
@@ -348,9 +348,15 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
   throw new Error("RATE_LIMIT");
 }
 
-function buildActorDossierPrompt(actorName: string, threatContext: unknown[], today: string) {
-  const systemPrompt = `You are an elite cyber threat intelligence analyst specializing in APT group profiling, dark web HUMINT, and Tor network forensics.
-Given a threat actor name and context from recent operations, generate a comprehensive dossier.
+function buildActorDossierPrompt(actorName: string, threatContext: unknown[], td: string) {
+  const systemPrompt = `You are an elite cyber threat intelligence analyst. Today is ${td}.
+Generate a REAL, ACCURATE dossier using only verified public OSINT data.
+
+ACCURACY RULES:
+- Use ONLY real MITRE ATT&CK technique IDs (T1566, T1059, T1486, T1190, etc.)
+- Reference ONLY real campaigns, malware, and tools attributed to this actor by Mandiant, CrowdStrike, Microsoft MSTIC, or CISA
+- All dates, attributions, and TTPs must be factually accurate based on public reporting
+- Do NOT invent campaigns or tools that don't exist
 
 Return a JSON object with this exact structure:
 {
@@ -369,20 +375,21 @@ Return a JSON object with this exact structure:
     "tools_and_malware": ["tool1", "tool2"],
     "dark_web_presence": {"forums": ["forum names"], "onion_services": ["description"], "paste_activity": "Description"},
     "tor_infrastructure": {"known_exit_nodes": ["IP or description"], "relay_patterns": "Description", "hidden_services_count": 0},
-    "recent_activity": "2-3 sentence summary",
+    "recent_activity": "2-3 sentence summary of most recent known activity",
     "risk_assessment": "critical|high|medium|low",
     "countermeasures": ["recommendation1", "recommendation2"]
   }
 }
 
-Be technically detailed and realistic. Reference real MITRE ATT&CK techniques (T-codes). Return ONLY the JSON, no markdown.`;
+Return ONLY valid JSON, no markdown.`;
 
-  const userPrompt = `Generate a comprehensive threat actor dossier for: "${actorName}"
+  const userPrompt = `Generate a factually accurate threat actor dossier for: "${actorName}"
+Use only real, publicly reported intelligence from CISA, Mandiant, CrowdStrike, and Microsoft MSTIC.
 
-Recent operational context from OSINT:
+Recent OSINT context:
 ${JSON.stringify(threatContext, null, 2)}
 
-Today's date: ${today}`;
+Today's date: ${td}`;
 
   return [
     { role: "system", content: systemPrompt },
@@ -391,9 +398,22 @@ Today's date: ${today}`;
 }
 
 function buildCTIPrompt(threatContext: unknown[], td: string) {
-  const systemPrompt = `You are an elite dark web intelligence analyst. Generate a comprehensive CTI report as JSON.
+  const systemPrompt = `You are an elite dark web intelligence analyst producing REAL, ACCURATE cyber threat intelligence.
+Today is ${td}. ALL data MUST reflect real-world events, actors, and vulnerabilities as of this date.
 
-Return this EXACT structure (abbreviated for clarity — populate ALL fields with detailed data):
+CRITICAL RULES FOR ACCURACY:
+1. Use ONLY real CVE IDs that actually exist (e.g. CVE-2024-21762, CVE-2023-46805, CVE-2024-3400). Never invent fake CVE IDs.
+2. Reference ONLY real APT groups with correct attributions (APT28=Russia/GRU, APT33=Iran/IRGC, Lazarus=DPRK, APT41=China/MSS, etc.)
+3. Use ONLY real ransomware groups that are actually active: LockBit, ALPHV/BlackCat, Cl0p, Play, Black Basta, Akira, Rhysida, Medusa, BianLian, RansomHub
+4. Reference ONLY real malware families: Cobalt Strike, Emotet, QakBot, IcedID, DarkGate, Remcos RAT, AsyncRAT, SystemBC, Raspberry Robin
+5. Use ONLY real dark web forums: XSS.is, Exploit.in, BreachForums, RAMP, Dread, RuTor
+6. Reference ONLY real MITRE ATT&CK technique IDs (T1566, T1059, T1486, T1190, T1078, etc.)
+7. All timestamps must be from today (${td}) with realistic UTC hours
+8. IP addresses should be from realistic ASNs known for malicious hosting (AS44477 Stark Industries, AS200019 AlexHost, AS60068 CDT, etc.)
+9. Reference real security vendors and OSINT sources: CISA KEV, Mandiant, CrowdStrike, Recorded Future, Flashpoint, DarkOwl, Intel471
+10. Financial data must use real cryptocurrency addresses format (BTC: bc1q..., XMR: 4...)
+
+Return this EXACT structure (populate ALL fields with detailed, REAL data):
 {
   "entries": [20-25 items with id, type, title, detail, severity, timestamp, indicators, torExitNodes, hiddenServiceFingerprint, relatedActors, region, category],
   "torAnalysis": { suspiciousExitNodes: [], hiddenServiceStats: {}, networkTrends: "" },
@@ -406,9 +426,12 @@ Return this EXACT structure (abbreviated for clarity — populate ALL fields wit
   "temporalTrends": [4 weekly entries]
 }
 
-Focus on Middle East, Central Asia, Eastern Europe. Use realistic IOCs, CVEs, MITRE techniques. Return ONLY valid JSON.`;
+Focus on Middle East, Central Asia, Eastern Europe. Return ONLY valid JSON, no markdown.`;
 
-  const userPrompt = `Generate CTI report for ${td}. Context:\n${JSON.stringify(threatContext, null, 2)}`;
+  const userPrompt = `Generate a REAL-WORLD CTI dark web intelligence report for ${td}. Use only verified threat actor names, real CVEs, real malware families, and real dark web forum names. Reference actual ongoing campaigns and recently disclosed vulnerabilities.
+
+Current threat landscape context:
+${JSON.stringify(threatContext, null, 2)}`;
 
   return [
     { role: "system", content: systemPrompt },
