@@ -132,7 +132,7 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose }: GeoAIPanelProps) => {
 
       {/* Results */}
       {result && (
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 overflow-auto" style={{ maxHeight: "calc(85vh - 180px)" }}>
           <div className="px-3 py-2 space-y-1">
             {/* Summary */}
             {a.summary && (
