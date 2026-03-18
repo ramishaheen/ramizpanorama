@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car, Layers, ChevronLeft, ChevronRight, Rocket, Video, Camera, Signal, Newspaper, Satellite } from "lucide-react";
+import { X, RefreshCw, Search, Building2, Plane, Navigation, Eye, EyeOff, Flame, AlertTriangle, MapPin, Shield, Anchor, Radio, Maximize2, RotateCcw, ZoomIn, ZoomOut, Compass, Target, CloudRain, Ship, Activity, Car, Layers, ChevronLeft, ChevronRight, Rocket, Video, Camera, Signal, Newspaper, Satellite, Brain } from "lucide-react";
+import { GeoAIPanel } from "./GeoAIPanel";
 import { PRESETS, MARITIME_CORRIDORS, CITY_LANDMARKS_3D } from "./urban3d/constants";
 import { FlightStat, DataRow, LayerControl } from "./urban3d/LayerControl";
 import { LiveIncidentsOverlay } from "./urban3d/LiveIncidentsOverlay";
@@ -254,6 +255,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   // Lite Mode — performance optimization
   const [liteMode, setLiteMode] = useState(false);
   const savedLayersRef = useRef<Record<string, boolean> | null>(null);
+
+  // GeoAI panel
+  const [showGeoAI, setShowGeoAI] = useState(false);
 
   const toggleLiteMode = useCallback(() => {
     setLiteMode(prev => {
@@ -2398,9 +2402,14 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               { icon: <Maximize2 className="h-3.5 w-3.5" />, action: handleToggleTilt, tip: "Toggle 3D Tilt" },
               { icon: <Compass className="h-3.5 w-3.5" />, action: handleResetView, tip: "Reset View" },
               { icon: <span className="text-[10px] font-bold">360°</span>, action: () => setStreetViewActive(true), tip: "Enter 360° Street View" },
+              { icon: <Brain className={`h-3.5 w-3.5 ${showGeoAI ? "text-emerald-400" : ""}`} />, action: () => setShowGeoAI(!showGeoAI), tip: "GeoAI Analysis" },
             ].map((btn, i) => (
               <button key={i} onClick={btn.action} title={btn.tip}
-                className="w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border border-primary/25 text-primary hover:bg-primary/15 hover:border-primary/50 transition-all"
+                className={`w-8 h-8 flex items-center justify-center rounded-md bg-black/80 backdrop-blur border transition-all ${
+                  btn.tip === "GeoAI Analysis" && showGeoAI
+                    ? "border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/15"
+                    : "border-primary/25 text-primary hover:bg-primary/15 hover:border-primary/50"
+                }`}
                 style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
                 {btn.icon}
               </button>
@@ -2416,6 +2425,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
               <span className="text-sm font-bold text-primary">{zoomLevel}</span>
               <span className="text-[8px] text-muted-foreground/60"> / 21</span>
             </div>
+          </div>
+        )}
+
+        {/* GeoAI Analysis Panel */}
+        {showGeoAI && (
+          <div className="absolute right-14 bottom-16 z-[14] pointer-events-auto">
+            <GeoAIPanel lat={lat} lng={lng} zoom={zoomLevel} onClose={() => setShowGeoAI(false)} />
           </div>
         )}
 

@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.social-analyzer]
 verify_jwt = false
+
+[functions.geoai-analyze]
+verify_jwt = false
