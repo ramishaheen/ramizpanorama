@@ -1486,14 +1486,6 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
           </span>
         )}
 
-        {/* FBI Most Wanted */}
-        <button
-          onClick={() => setShowFBIWanted(true)}
-          className="flex items-center gap-1.5 text-[8px] font-mono font-bold px-2 py-0.5 border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors mr-auto"
-        >
-          <Skull className="h-3 w-3" />
-          FBI WANTED
-        </button>
 
         {/* Right controls */}
         {lastUpdated && (
