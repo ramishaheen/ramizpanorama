@@ -2038,6 +2038,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
         </div>,
         document.body
       )}
+      {showFBIWanted && <FBIWantedModal onClose={() => setShowFBIWanted(false)} />}
     </div>,
     document.body
   );
