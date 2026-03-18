@@ -107,8 +107,8 @@ function buildFallback() {
         ],
         exploits: [
           { name: "FortiGate RCE PoC", targetCVE: "CVE-2024-21762", availability: "public", price: "$0" },
-          { name: "PAN-OS 0day Chain", targetCVE: "CVE-2024-XXXXX", availability: "0day", price: "$150,000" },
-          { name: "Ivanti Chain Exploit", targetCVE: "CVE-2024-YYYYY", availability: "0day", price: "$200,000" },
+          { name: "PAN-OS 0day Chain", targetCVE: "CVE-2024-3400", availability: "weaponized", price: "$150,000" },
+          { name: "Ivanti Chain Exploit", targetCVE: "CVE-2023-46805", availability: "weaponized", price: "$200,000" },
           { name: "ScreenConnect Bypass", targetCVE: "CVE-2024-1709", availability: "public", price: "$0" },
           { name: "TeamCity Admin Takeover", targetCVE: "CVE-2024-27198", availability: "public", price: "$0" },
         ],
