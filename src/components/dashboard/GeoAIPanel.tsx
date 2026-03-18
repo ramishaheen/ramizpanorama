@@ -77,7 +77,7 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose }: GeoAIPanelProps) => {
   );
 
   return (
-    <div className="bg-black/90 backdrop-blur-xl border border-emerald-500/30 rounded-lg w-[320px] max-h-[80vh] overflow-hidden flex flex-col"
+    <div className="bg-black/90 backdrop-blur-xl border border-emerald-500/30 rounded-lg w-[340px] max-h-[85vh] flex flex-col"
       style={{ boxShadow: "0 4px 30px rgba(0,0,0,0.6), 0 0 25px rgba(16,185,129,0.08)" }}>
       {/* Header */}
       <div className="px-3 py-2 border-b border-emerald-500/20 flex items-center justify-between">
