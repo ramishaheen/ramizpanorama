@@ -391,9 +391,22 @@ Today's date: ${today}`;
 }
 
 function buildCTIPrompt(threatContext: unknown[], td: string) {
-  const systemPrompt = `You are an elite dark web intelligence analyst. Generate a comprehensive CTI report as JSON.
+  const systemPrompt = `You are an elite dark web intelligence analyst producing REAL, ACCURATE cyber threat intelligence.
+Today is ${td}. ALL data MUST reflect real-world events, actors, and vulnerabilities as of this date.
 
-Return this EXACT structure (abbreviated for clarity — populate ALL fields with detailed data):
+CRITICAL RULES FOR ACCURACY:
+1. Use ONLY real CVE IDs that actually exist (e.g. CVE-2024-21762, CVE-2023-46805, CVE-2024-3400). Never invent fake CVE IDs.
+2. Reference ONLY real APT groups with correct attributions (APT28=Russia/GRU, APT33=Iran/IRGC, Lazarus=DPRK, APT41=China/MSS, etc.)
+3. Use ONLY real ransomware groups that are actually active: LockBit, ALPHV/BlackCat, Cl0p, Play, Black Basta, Akira, Rhysida, Medusa, BianLian, RansomHub
+4. Reference ONLY real malware families: Cobalt Strike, Emotet, QakBot, IcedID, DarkGate, Remcos RAT, AsyncRAT, SystemBC, Raspberry Robin
+5. Use ONLY real dark web forums: XSS.is, Exploit.in, BreachForums, RAMP, Dread, RuTor
+6. Reference ONLY real MITRE ATT&CK technique IDs (T1566, T1059, T1486, T1190, T1078, etc.)
+7. All timestamps must be from today (${td}) with realistic UTC hours
+8. IP addresses should be from realistic ASNs known for malicious hosting (AS44477 Stark Industries, AS200019 AlexHost, AS60068 CDT, etc.)
+9. Reference real security vendors and OSINT sources: CISA KEV, Mandiant, CrowdStrike, Recorded Future, Flashpoint, DarkOwl, Intel471
+10. Financial data must use real cryptocurrency addresses format (BTC: bc1q..., XMR: 4...)
+
+Return this EXACT structure (populate ALL fields with detailed, REAL data):
 {
   "entries": [20-25 items with id, type, title, detail, severity, timestamp, indicators, torExitNodes, hiddenServiceFingerprint, relatedActors, region, category],
   "torAnalysis": { suspiciousExitNodes: [], hiddenServiceStats: {}, networkTrends: "" },
@@ -406,9 +419,12 @@ Return this EXACT structure (abbreviated for clarity — populate ALL fields wit
   "temporalTrends": [4 weekly entries]
 }
 
-Focus on Middle East, Central Asia, Eastern Europe. Use realistic IOCs, CVEs, MITRE techniques. Return ONLY valid JSON.`;
+Focus on Middle East, Central Asia, Eastern Europe. Return ONLY valid JSON, no markdown.`;
 
-  const userPrompt = `Generate CTI report for ${td}. Context:\n${JSON.stringify(threatContext, null, 2)}`;
+  const userPrompt = `Generate a REAL-WORLD CTI dark web intelligence report for ${td}. Use only verified threat actor names, real CVEs, real malware families, and real dark web forum names. Reference actual ongoing campaigns and recently disclosed vulnerabilities.
+
+Current threat landscape context:
+${JSON.stringify(threatContext, null, 2)}`;
 
   return [
     { role: "system", content: systemPrompt },
