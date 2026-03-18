@@ -256,6 +256,9 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
   const [liteMode, setLiteMode] = useState(false);
   const savedLayersRef = useRef<Record<string, boolean> | null>(null);
 
+  // GeoAI panel
+  const [showGeoAI, setShowGeoAI] = useState(false);
+
   const toggleLiteMode = useCallback(() => {
     setLiteMode(prev => {
       const next = !prev;
