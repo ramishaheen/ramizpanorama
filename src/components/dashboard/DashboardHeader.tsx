@@ -171,6 +171,8 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
               lastPollAt={lastPollAt ?? null}
               activeSources={activeSources}
               dataFresh={!!dataFresh}
+              simulationActive={simulationActive}
+              onToggleSimulation={onToggleSimulation}
             />
             <div className="flex items-center gap-1.5">
               <Wifi className="h-3 w-3 text-success animate-pulse" />
