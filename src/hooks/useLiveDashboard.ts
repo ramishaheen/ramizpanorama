@@ -98,8 +98,9 @@ export function useLiveDashboard() {
   // Track last poll timestamp
   const [lastPollAt, setLastPollAt] = useState<string | null>(null);
 
-  // Live simulation polling — triggers DB writes that feed realtime subscriptions
+  // Live simulation polling — only runs when user manually enables it
   useEffect(() => {
+    if (!simulationActive) return;
     let active = true;
     const poll = async () => {
       if (!active) return;
@@ -110,14 +111,14 @@ export function useLiveDashboard() {
         console.warn('simulate-intel poll error:', err);
       }
     };
-    const initialDelay = setTimeout(poll, 5000);
+    const initialDelay = setTimeout(poll, 2000);
     const interval = setInterval(poll, 45000);
     return () => {
       active = false;
       clearTimeout(initialDelay);
       clearInterval(interval);
     };
-  }, []);
+  }, [simulationActive]);
 
   // Daily filtered counts
   const todayStart = useMemo(() => {
