@@ -2428,6 +2428,13 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
           </div>
         )}
 
+        {/* GeoAI Analysis Panel */}
+        {showGeoAI && (
+          <div className="absolute right-14 bottom-16 z-[14] pointer-events-auto">
+            <GeoAIPanel lat={lat} lng={lng} zoom={zoomLevel} onClose={() => setShowGeoAI(false)} />
+          </div>
+        )}
+
         {/* Layer Panel Sidebar */}
         <div className={`absolute top-0 left-0 z-[16] h-full transition-all duration-300 pointer-events-auto ${showLayerPanel ? "w-64" : "w-0"}`}>
           {showLayerPanel && (
