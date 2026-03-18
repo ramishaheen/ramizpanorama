@@ -1477,14 +1477,23 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
 
         {/* Live / Replay badge */}
         {isLive ? (
-          <span className="flex items-center gap-1.5 text-[8px] font-mono font-bold text-destructive px-2 py-0.5 border border-destructive/30 bg-destructive/10 mr-auto">
+          <span className="flex items-center gap-1.5 text-[8px] font-mono font-bold text-destructive px-2 py-0.5 border border-destructive/30 bg-destructive/10">
             <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />LIVE
           </span>
         ) : (
-          <span className="flex items-center gap-1.5 text-[8px] font-mono font-bold text-yellow-400 px-2 py-0.5 border border-yellow-500/30 bg-yellow-500/10 mr-auto">
+          <span className="flex items-center gap-1.5 text-[8px] font-mono font-bold text-yellow-400 px-2 py-0.5 border border-yellow-500/30 bg-yellow-500/10">
             <Clock className="h-3 w-3" />REPLAY · {hoursAgoLabel}
           </span>
         )}
+
+        {/* FBI Most Wanted */}
+        <button
+          onClick={() => setShowFBIWanted(true)}
+          className="flex items-center gap-1.5 text-[8px] font-mono font-bold px-2 py-0.5 border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors mr-auto"
+        >
+          <Skull className="h-3 w-3" />
+          FBI WANTED
+        </button>
 
         {/* Right controls */}
         {lastUpdated && (
