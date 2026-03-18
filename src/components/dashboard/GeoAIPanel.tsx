@@ -398,9 +398,22 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
     }
   }, [lat, lng, zoom, mapRef, clearMapOverlays]);
 
+  // Auto-clear holographic overlays when switching away from object detection
+  useEffect(() => {
+    if (analysisType !== "objects" && analysisType !== "full") {
+      clearMapOverlays();
+    }
+  }, [analysisType, clearMapOverlays]);
+
   const runAnalysis = useCallback(async () => {
     setLoading(true);
     setResult(null);
+
+    // Show holographic scan area immediately for object detection
+    if (analysisType === "objects" || analysisType === "full") {
+      showScanArea();
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke("geoai-analyze", {
         body: { lat, lng, zoom, analysisType },
@@ -410,17 +423,18 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps)
       setResult(data);
       toast({ title: "GeoAI Analysis Complete", description: `${analysisType} analysis at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°` });
 
-      // Render detections on map for object detection or full analysis
+      // Replace scan area with full detection overlays
       if (analysisType === "objects" || analysisType === "full") {
         renderDetectionsOnMap(data);
       }
     } catch (e: any) {
       console.error("GeoAI error:", e);
+      clearMapOverlays();
       toast({ title: "GeoAI Error", description: e.message || "Analysis failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [lat, lng, zoom, analysisType, renderDetectionsOnMap]);
+  }, [lat, lng, zoom, analysisType, renderDetectionsOnMap, showScanArea, clearMapOverlays]);
 
   const a = result?.analysis || {};
   const hasOverlays = mapOverlaysRef.current.length > 0;
