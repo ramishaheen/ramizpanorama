@@ -2431,7 +2431,7 @@ export const UrbanScene3D = ({ onClose, initialCoords, initialEvent }: UrbanScen
         {/* GeoAI Analysis Panel */}
         {showGeoAI && (
           <div className="absolute right-14 bottom-16 z-[14] pointer-events-auto">
-            <GeoAIPanel lat={lat} lng={lng} zoom={zoomLevel} onClose={() => setShowGeoAI(false)} />
+            <GeoAIPanel lat={lat} lng={lng} zoom={zoomLevel} onClose={() => setShowGeoAI(false)} mapRef={mapInstanceRef} />
           </div>
         )}
 

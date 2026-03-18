@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
   Brain, Scan, Mountain, Eye, RefreshCw, X, AlertTriangle,
   ChevronDown, ChevronRight, Shield, Map, Building2, Layers, Trees,
-  Crosshair, Activity, Droplets, Factory, Truck
+  Crosshair, Activity, Droplets, Factory, Truck, Trash2
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -14,6 +14,7 @@ interface GeoAIPanelProps {
   zoom: number;
   onClose: () => void;
   onFlyTo?: (lat: number, lng: number) => void;
+  mapRef?: React.RefObject<any>;
 }
 
 type AnalysisType = "full" | "objects" | "terrain" | "change";
@@ -34,7 +35,39 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   equipment: Factory, natural: Trees,
 };
 
-export const GeoAIPanel = ({ lat, lng, zoom, onClose }: GeoAIPanelProps) => {
+const THREAT_MARKER_COLORS: Record<string, { fill: string; stroke: string; glow: string }> = {
+  critical: { fill: "#ef4444", stroke: "#fca5a5", glow: "rgba(239,68,68,0.5)" },
+  high: { fill: "#f97316", stroke: "#fdba74", glow: "rgba(249,115,22,0.4)" },
+  medium: { fill: "#eab308", stroke: "#fde047", glow: "rgba(234,179,8,0.4)" },
+  low: { fill: "#3b82f6", stroke: "#93c5fd", glow: "rgba(59,130,246,0.3)" },
+  none: { fill: "#6b7280", stroke: "#9ca3af", glow: "rgba(107,114,128,0.2)" },
+};
+
+const STRATEGIC_CIRCLE_COLORS: Record<string, string> = {
+  critical: "#ef4444",
+  high: "#f97316",
+  moderate: "#eab308",
+  low: "#10b981",
+};
+
+function getScatterRadius(zoom: number): number {
+  // Meters to scatter objects around center based on zoom
+  if (zoom >= 20) return 50;
+  if (zoom >= 18) return 100;
+  if (zoom >= 16) return 200;
+  if (zoom >= 14) return 400;
+  return 800;
+}
+
+function offsetLatLng(lat: number, lng: number, radiusMeters: number): { lat: number; lng: number } {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = Math.random() * radiusMeters;
+  const dLat = (dist * Math.cos(angle)) / 111320;
+  const dLng = (dist * Math.sin(angle)) / (111320 * Math.cos(lat * (Math.PI / 180)));
+  return { lat: lat + dLat, lng: lng + dLng };
+}
+
+export const GeoAIPanel = ({ lat, lng, zoom, onClose, mapRef }: GeoAIPanelProps) => {
   const [loading, setLoading] = useState(false);
   const [analysisType, setAnalysisType] = useState<AnalysisType>("full");
   const [result, setResult] = useState<any>(null);
@@ -43,8 +76,148 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose }: GeoAIPanelProps) => {
     military: true, risk: true, changes: true, actions: true,
   });
 
+  const mapOverlaysRef = useRef<any[]>([]);
+  const infoWindowRef = useRef<any>(null);
+
   const toggleSection = (key: string) =>
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const clearMapOverlays = useCallback(() => {
+    mapOverlaysRef.current.forEach(o => {
+      if (o.setMap) o.setMap(null);
+      if (o.close) o.close();
+    });
+    mapOverlaysRef.current = [];
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close();
+      infoWindowRef.current = null;
+    }
+  }, []);
+
+  // Cleanup overlays on unmount
+  useEffect(() => {
+    return () => clearMapOverlays();
+  }, [clearMapOverlays]);
+
+  const renderDetectionsOnMap = useCallback((data: any) => {
+    const google = (window as any).google;
+    const map = mapRef?.current;
+    if (!map || !google?.maps) return;
+
+    clearMapOverlays();
+
+    const a = data?.analysis || {};
+    const objects = a.objects_detected || [];
+    const strategicValue = a.strategic_value || "low";
+    const scatterRadius = getScatterRadius(zoom);
+
+    // Draw scanning area circle
+    const circleColor = STRATEGIC_CIRCLE_COLORS[strategicValue] || STRATEGIC_CIRCLE_COLORS.low;
+    const circle = new google.maps.Circle({
+      center: { lat, lng },
+      radius: scatterRadius,
+      map,
+      fillColor: circleColor,
+      fillOpacity: 0.08,
+      strokeColor: circleColor,
+      strokeOpacity: 0.4,
+      strokeWeight: 1.5,
+      clickable: false,
+    });
+    mapOverlaysRef.current.push(circle);
+
+    // Scanning center pulse marker
+    const centerDiv = document.createElement("div");
+    centerDiv.innerHTML = `
+      <div style="position:relative;width:20px;height:20px;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:${circleColor};opacity:0.3;animation:geoai-pulse 2s ease-in-out infinite;"></div>
+        <div style="position:absolute;top:6px;left:6px;width:8px;height:8px;border-radius:50%;background:${circleColor};border:1px solid white;"></div>
+      </div>
+    `;
+    if (google.maps.marker?.AdvancedMarkerElement) {
+      const centerMarker = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat, lng },
+        map,
+        content: centerDiv,
+        zIndex: 9999,
+      });
+      mapOverlaysRef.current.push(centerMarker);
+    }
+
+    // Add pulse animation style if not already present
+    if (!document.getElementById("geoai-pulse-style")) {
+      const style = document.createElement("style");
+      style.id = "geoai-pulse-style";
+      style.textContent = `
+        @keyframes geoai-pulse { 0%,100% { transform:scale(1); opacity:0.3; } 50% { transform:scale(2.5); opacity:0; } }
+        @keyframes geoai-threat-pulse { 0%,100% { transform:scale(1); opacity:0.5; } 50% { transform:scale(1.8); opacity:0; } }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Create shared InfoWindow
+    const infoWindow = new google.maps.InfoWindow();
+    infoWindowRef.current = infoWindow;
+
+    // Add object detection markers
+    objects.forEach((obj: any, i: number) => {
+      const threatLevel = obj.threat_level || "none";
+      const colors = THREAT_MARKER_COLORS[threatLevel] || THREAT_MARKER_COLORS.none;
+      const pos = offsetLatLng(lat, lng, scatterRadius);
+      const conf = Math.round((obj.confidence || 0) * 100);
+      const isHighThreat = threatLevel === "critical" || threatLevel === "high";
+
+      const markerDiv = document.createElement("div");
+      markerDiv.style.cursor = "pointer";
+      markerDiv.innerHTML = `
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+          ${isHighThreat ? `<div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;background:${colors.glow};animation:geoai-threat-pulse 1.5s ease-in-out infinite;"></div>` : ""}
+          <div style="position:relative;width:20px;height:20px;border-radius:50%;background:${colors.fill};border:2px solid ${colors.stroke};box-shadow:0 0 8px ${colors.glow};display:flex;align-items:center;justify-content:center;">
+            <span style="color:white;font-size:8px;font-weight:bold;font-family:monospace;">${i + 1}</span>
+          </div>
+          <div style="margin-top:2px;background:rgba(0,0,0,0.85);border:1px solid ${colors.fill}40;border-radius:3px;padding:1px 4px;white-space:nowrap;max-width:120px;">
+            <span style="color:${colors.fill};font-size:7px;font-family:monospace;font-weight:bold;">${obj.label || "Object"}</span>
+            <span style="color:#9ca3af;font-size:6px;font-family:monospace;margin-left:3px;">${conf}%</span>
+          </div>
+        </div>
+      `;
+
+      if (google.maps.marker?.AdvancedMarkerElement) {
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          position: pos,
+          map,
+          content: markerDiv,
+          zIndex: 10000 + i,
+        });
+
+        marker.addListener("click", () => {
+          const category = obj.category || "unknown";
+          const description = obj.description || "";
+          const count = obj.estimated_count || 1;
+          infoWindow.setContent(`
+            <div style="font-family:monospace;font-size:11px;max-width:200px;padding:4px;">
+              <div style="font-weight:bold;color:${colors.fill};text-transform:uppercase;margin-bottom:4px;">${obj.label || "Detection"}</div>
+              <div style="color:#666;margin-bottom:2px;">Category: <b>${category}</b></div>
+              <div style="color:#666;margin-bottom:2px;">Count: <b>${count}</b></div>
+              <div style="color:#666;margin-bottom:2px;">Confidence: <b>${conf}%</b></div>
+              <div style="color:#666;margin-bottom:2px;">Threat: <b style="color:${colors.fill}">${threatLevel.toUpperCase()}</b></div>
+              ${description ? `<div style="color:#888;margin-top:4px;font-size:10px;">${description}</div>` : ""}
+            </div>
+          `);
+          infoWindow.open(map, marker);
+        });
+
+        mapOverlaysRef.current.push(marker);
+      }
+    });
+
+    if (objects.length > 0) {
+      toast({
+        title: `${objects.length} Objects Plotted`,
+        description: `Detection markers added to map around ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`,
+      });
+    }
+  }, [lat, lng, zoom, mapRef, clearMapOverlays]);
 
   const runAnalysis = useCallback(async () => {
     setLoading(true);
@@ -57,15 +230,21 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose }: GeoAIPanelProps) => {
       if (data?.error) throw new Error(data.error);
       setResult(data);
       toast({ title: "GeoAI Analysis Complete", description: `${analysisType} analysis at ${lat.toFixed(4)}°, ${lng.toFixed(4)}°` });
+
+      // Render detections on map for object detection or full analysis
+      if (analysisType === "objects" || analysisType === "full") {
+        renderDetectionsOnMap(data);
+      }
     } catch (e: any) {
       console.error("GeoAI error:", e);
       toast({ title: "GeoAI Error", description: e.message || "Analysis failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [lat, lng, zoom, analysisType]);
+  }, [lat, lng, zoom, analysisType, renderDetectionsOnMap]);
 
   const a = result?.analysis || {};
+  const hasOverlays = mapOverlaysRef.current.length > 0;
 
   const SectionHeader = ({ id, title, icon: Icon, count }: { id: string; title: string; icon: React.ElementType; count?: number }) => (
     <button onClick={() => toggleSection(id)} className="w-full flex items-center gap-1.5 py-1.5 px-2 rounded hover:bg-secondary/20 transition-colors">
@@ -91,9 +270,17 @@ export const GeoAIPanel = ({ lat, lng, zoom, onClose }: GeoAIPanelProps) => {
             <span className="text-[7px] font-mono text-muted-foreground/60 block">Geospatial Intelligence</span>
           </div>
         </div>
-        <button onClick={onClose} className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10">
-          <X className="h-3.5 w-3.5 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-1">
+          {hasOverlays && (
+            <button onClick={() => { clearMapOverlays(); toast({ title: "Detections Cleared", description: "Map markers removed" }); }}
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 transition-colors" title="Clear map detections">
+              <Trash2 className="h-3 w-3 text-red-400" />
+            </button>
+          )}
+          <button onClick={onClose} className="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10">
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Coords + Analysis Type */}
