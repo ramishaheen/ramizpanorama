@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.crucix-ais]
 verify_jwt = false
+
+[functions.social-analyzer]
+verify_jwt = false
