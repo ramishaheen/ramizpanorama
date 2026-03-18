@@ -116,8 +116,8 @@ function buildFallback() {
           { cve: "CVE-2024-21762", vendor: "Fortinet", status: "released" },
           { cve: "CVE-2024-3400", vendor: "Palo Alto", status: "released" },
           { cve: "CVE-2024-1709", vendor: "ConnectWise", status: "released" },
-          { cve: "CVE-2024-XXXXX", vendor: "Palo Alto", status: "pending" },
-          { cve: "CVE-2024-YYYYY", vendor: "Ivanti", status: "pending" },
+          { cve: "CVE-2024-3400", vendor: "Palo Alto", status: "released" },
+          { cve: "CVE-2023-46805", vendor: "Ivanti", status: "released" },
         ],
       },
       malware: {
