@@ -203,9 +203,23 @@ const Index = () => {
     document.addEventListener("mouseup", onUp);
   }, [rightWidth]);
 
-  const toggleLayer = (layer: keyof LayerState) => {
-    setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
-  };
+  const toggleLayer = useCallback((layer: keyof LayerState) => {
+    setLayers(prev => {
+      const next = { ...prev, [layer]: !prev[layer] };
+      // Stop simulation when all major data layers are turned off
+      if (!next[layer] && simulationActive) {
+        // If the user explicitly turns off a layer, check if it warrants stopping sim
+        const dataLayers: (keyof LayerState)[] = ['traffic', 'flights', 'maritime', 'airspace', 'alerts', 'rockets', 'aisVessels', 'conflicts'];
+        if (dataLayers.includes(layer)) {
+          const anyDataLayerOn = dataLayers.some(k => next[k]);
+          if (!anyDataLayerOn) {
+            setSimulationActive(false);
+          }
+        }
+      }
+      return next;
+    });
+  }, [simulationActive, setSimulationActive]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
