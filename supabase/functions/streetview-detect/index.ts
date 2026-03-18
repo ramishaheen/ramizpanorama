@@ -87,8 +87,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Call Gemini via Lovable AI Gateway
-    const aiResp = await fetch(AI_GATEWAY_URL, {
+    // Call Gemini via Lovable AI Gateway, fallback to direct Gemini API
+    let aiResp = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_KEY}`,
@@ -110,17 +110,42 @@ Deno.serve(async (req) => {
       }),
     });
 
+    // Fallback to direct Gemini API if gateway credits exhausted
+    if (aiResp.status === 402 || aiResp.status === 429) {
+      const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY_2") || Deno.env.get("GEMINI_API_KEY");
+      if (GEMINI_KEY) {
+        console.log("Gateway returned " + aiResp.status + ", falling back to direct Gemini API");
+        const geminiResp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: DETECTION_PROMPT },
+                  { inline_data: { mime_type: imageMime, data: imageData } },
+                ],
+              }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+            }),
+          }
+        );
+        if (geminiResp.ok) {
+          const gData = await geminiResp.json();
+          const rawText = gData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+          // Repackage into OpenAI-compatible format for downstream parsing
+          aiResp = new Response(JSON.stringify({ choices: [{ message: { content: rawText } }] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        } else {
+          console.error("Gemini fallback also failed:", geminiResp.status);
+        }
+      }
+    }
+
     if (!aiResp.ok) {
-      if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const errText = await aiResp.text();
       console.error("AI error:", aiResp.status, errText);
       return new Response(JSON.stringify({ error: "AI analysis failed" }), {
