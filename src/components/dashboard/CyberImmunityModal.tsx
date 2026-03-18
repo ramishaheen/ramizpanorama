@@ -1299,6 +1299,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   const [showDossier, setShowDossier] = useState(false);
   const { layers, toggleLayer } = useMapLayers();
   const [showFBIWanted, setShowFBIWanted] = useState(false);
+  const [showSocialAnalyzer, setShowSocialAnalyzer] = useState(false);
 
   /* Auto-fetch dark web intel when switching to darkweb tab */
   useEffect(() => {
