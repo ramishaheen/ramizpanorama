@@ -25,6 +25,7 @@ import { useIOCLookup, type IOCResult } from "@/hooks/useIOCLookup";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { FBIWantedModal } from "@/components/dashboard/FBIWantedModal";
+import { SocialAnalyzerModal } from "@/components/dashboard/SocialAnalyzerModal";
 
 interface OsintGeoAlert {
   id: string;
@@ -1298,6 +1299,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
   const [showDossier, setShowDossier] = useState(false);
   const { layers, toggleLayer } = useMapLayers();
   const [showFBIWanted, setShowFBIWanted] = useState(false);
+  const [showSocialAnalyzer, setShowSocialAnalyzer] = useState(false);
 
   /* Auto-fetch dark web intel when switching to darkweb tab */
   useEffect(() => {
@@ -1534,6 +1536,13 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
           style={{ color: "hsl(var(--destructive))" }}
         >
           <Skull className="h-3 w-3" />FBI WANTED
+        </button>
+        <button
+          onClick={() => setShowSocialAnalyzer(true)}
+          className={`cyber-tab flex items-center gap-1.5 flex-shrink-0 ${showSocialAnalyzer ? "cyber-tab-active" : ""}`}
+          style={{ color: "hsl(var(--primary))" }}
+        >
+          <UserSearch className="h-3 w-3" />SOCIAL ANALYZER
         </button>
         <div className="ml-auto flex items-center gap-2 px-3 flex-shrink-0">
           {sources.length > 0 && <span className="text-[7px] font-mono text-primary/50">{sources.length} FEEDS</span>}
@@ -2037,6 +2046,7 @@ export const CyberImmunityModal = ({ onClose, geoAlerts = [] }: CyberImmunityMod
         document.body
       )}
       {showFBIWanted && <FBIWantedModal onClose={() => setShowFBIWanted(false)} />}
+      {showSocialAnalyzer && <SocialAnalyzerModal onClose={() => setShowSocialAnalyzer(false)} />}
     </div>,
     document.body
   );
