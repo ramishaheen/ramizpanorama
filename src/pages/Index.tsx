@@ -203,9 +203,16 @@ const Index = () => {
     document.addEventListener("mouseup", onUp);
   }, [rightWidth]);
 
-  const toggleLayer = (layer: keyof LayerState) => {
-    setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
-  };
+  const toggleLayer = useCallback((layer: keyof LayerState) => {
+    setLayers(prev => {
+      const next = { ...prev, [layer]: !prev[layer] };
+      // Turning off traffic layer also stops live simulation
+      if (layer === 'traffic' && !next.traffic && simulationActive) {
+        setSimulationActive(false);
+      }
+      return next;
+    });
+  }, [simulationActive, setSimulationActive]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
