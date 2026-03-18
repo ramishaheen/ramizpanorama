@@ -25,6 +25,7 @@ import { useIOCLookup, type IOCResult } from "@/hooks/useIOCLookup";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { FBIWantedModal } from "@/components/dashboard/FBIWantedModal";
+import { SocialAnalyzerModal } from "@/components/dashboard/SocialAnalyzerModal";
 
 interface OsintGeoAlert {
   id: string;
