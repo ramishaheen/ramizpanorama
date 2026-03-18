@@ -144,7 +144,7 @@ export function useLiveDashboard() {
     };
   }, [airspaceAlerts, vessels, geoAlerts, rockets, todayStart]);
 
-  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt };
+  return { airspaceAlerts, vessels, geoAlerts, riskScore, timeline, rockets, loading, dataFresh, dailyCounts, lastPollAt, simulationActive, setSimulationActive };
 }
 
 // Mappers from DB rows to app types
