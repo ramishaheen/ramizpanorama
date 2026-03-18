@@ -206,16 +206,9 @@ const Index = () => {
   const toggleLayer = useCallback((layer: keyof LayerState) => {
     setLayers(prev => {
       const next = { ...prev, [layer]: !prev[layer] };
-      // Stop simulation when all major data layers are turned off
-      if (!next[layer] && simulationActive) {
-        // If the user explicitly turns off a layer, check if it warrants stopping sim
-        const dataLayers: (keyof LayerState)[] = ['traffic', 'flights', 'maritime', 'airspace', 'alerts', 'rockets', 'aisVessels', 'conflicts'];
-        if (dataLayers.includes(layer)) {
-          const anyDataLayerOn = dataLayers.some(k => next[k]);
-          if (!anyDataLayerOn) {
-            setSimulationActive(false);
-          }
-        }
+      // Turning off traffic layer also stops live simulation
+      if (layer === 'traffic' && !next.traffic && simulationActive) {
+        setSimulationActive(false);
       }
       return next;
     });
