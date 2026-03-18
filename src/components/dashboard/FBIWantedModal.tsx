@@ -4,7 +4,6 @@ import { X, Search, RefreshCw, ExternalLink, AlertTriangle, ChevronLeft, Chevron
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 
 interface FBIWantedPerson {
   uid: string;
