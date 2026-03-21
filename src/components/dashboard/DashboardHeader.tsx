@@ -119,15 +119,6 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
               <span className="text-[10px] font-mono uppercase tracking-wider font-bold hidden sm:inline">4D Map</span>
             </button>
 
-            {/* Nomad */}
-            <button
-              onClick={() => setShowNomad(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded border-l-2 border border-success/30 border-l-success text-success hover:bg-success/10 transition-colors flex-shrink-0"
-              title="Project N.O.M.A.D. — Offline Knowledge Platform"
-            >
-              <Server className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-mono uppercase tracking-wider font-bold hidden sm:inline">Nomad</span>
-            </button>
           </div>
 
           {/* ── DIVIDER ── */}
