@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube, Globe, ShieldAlert, Server } from "lucide-react";
+import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube, Globe, ShieldAlert } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
 import { NotificationCenter } from "./NotificationCenter";
