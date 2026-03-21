@@ -206,6 +206,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
       {showLiveChannels && <LiveChannelsModal onClose={() => setShowLiveChannels(false)} />}
       {show4DMap && <FourDMap onClose={() => setShow4DMap(false)} rockets={rockets} />}
       {showCyberImmunity && <CyberImmunityModal onClose={() => setShowCyberImmunity(false)} geoAlerts={geoAlerts} />}
+      {showNomad && <NomadModal onClose={() => setShowNomad(false)} />}
     </>
   );
 };
