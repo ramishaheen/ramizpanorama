@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube, Globe, ShieldAlert } from "lucide-react";
+import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube, Globe, ShieldAlert, Server } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
 import { NotificationCenter } from "./NotificationCenter";
 import { LiveChannelsModal } from "./LiveChannelsModal";
 import { FourDMap } from "./FourDMap";
 import { CyberImmunityModal } from "./CyberImmunityModal";
+import { NomadModal } from "./NomadModal";
 import warosLogo from "@/assets/waros-logo.png";
 import { LiveDataFeedIndicator } from "./LiveDataFeedIndicator";
 import type { Rocket, GeoAlert } from "@/data/mockData";
@@ -33,7 +34,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
   const [showLiveChannels, setShowLiveChannels] = useState(false);
   const [show4DMap, setShow4DMap] = useState(false);
   const [showCyberImmunity, setShowCyberImmunity] = useState(false);
-
+  const [showNomad, setShowNomad] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setShowBalloon(false), 10000);
     return () => clearTimeout(timer);
@@ -117,6 +118,16 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
               <Globe className="h-3.5 w-3.5" />
               <span className="text-[10px] font-mono uppercase tracking-wider font-bold hidden sm:inline">4D Map</span>
             </button>
+
+            {/* Nomad */}
+            <button
+              onClick={() => setShowNomad(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded border-l-2 border border-success/30 border-l-success text-success hover:bg-success/10 transition-colors flex-shrink-0"
+              title="Project N.O.M.A.D. — Offline Knowledge Platform"
+            >
+              <Server className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-mono uppercase tracking-wider font-bold hidden sm:inline">Nomad</span>
+            </button>
           </div>
 
           {/* ── DIVIDER ── */}
@@ -195,6 +206,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
       {showLiveChannels && <LiveChannelsModal onClose={() => setShowLiveChannels(false)} />}
       {show4DMap && <FourDMap onClose={() => setShow4DMap(false)} rockets={rockets} />}
       {showCyberImmunity && <CyberImmunityModal onClose={() => setShowCyberImmunity(false)} geoAlerts={geoAlerts} />}
+      {showNomad && <NomadModal onClose={() => setShowNomad(false)} />}
     </>
   );
 };
