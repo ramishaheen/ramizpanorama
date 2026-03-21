@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube, Globe, ShieldAlert } from "lucide-react";
+import { Wifi, Volume2, VolumeX, Languages, MessageCircle, Youtube, Globe, ShieldAlert, Server } from "lucide-react";
 import { useLanguage, translations } from "@/hooks/useLanguage";
 import { WarChatPanel } from "./WarChatPanel";
 import { NotificationCenter } from "./NotificationCenter";
 import { LiveChannelsModal } from "./LiveChannelsModal";
 import { FourDMap } from "./FourDMap";
 import { CyberImmunityModal } from "./CyberImmunityModal";
+import { NomadModal } from "./NomadModal";
 import warosLogo from "@/assets/waros-logo.png";
 import { LiveDataFeedIndicator } from "./LiveDataFeedIndicator";
 import type { Rocket, GeoAlert } from "@/data/mockData";
