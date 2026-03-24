@@ -453,10 +453,10 @@ const Index = () => {
                         </button>
                         <button
                           onClick={() => setLeftCollapsed(true)}
-                          className="hover:bg-secondary/50 transition-colors rounded p-0.5"
+                          className="hover:bg-primary/5 transition-colors p-0.5"
                           title="Collapse sidebar"
                         >
-                          <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+                          <PanelLeftClose className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
                         </button>
                       </div>
                       <div className="flex-1 overflow-y-auto">
