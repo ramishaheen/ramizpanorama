@@ -65,40 +65,42 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
   const locale = isArabic ? 'ar-SA' : 'en-US';
 
   return (
-    <div className="bg-card border border-border rounded-lg p-3">
+    <div className="maven-glass border-l-2 border-l-primary/40 p-3">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+          <div className="h-3 w-0.5 bg-primary rounded-full" />
           {t(tr["section.timeline"].en, tr["section.timeline"].ar)}
+          <span className="text-[7px] font-mono text-primary/50 ml-1">TIME REWIND</span>
         </h3>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-            className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+            className="p-1 hover:bg-primary/8 transition-all duration-150 text-muted-foreground hover:text-primary"
           >
             <SkipBack className="h-3 w-3" />
           </button>
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="p-1 rounded hover:bg-secondary transition-colors text-primary"
+            className={`p-1.5 transition-all duration-150 ${isPlaying ? 'bg-primary/15 text-primary glow-primary' : 'hover:bg-primary/8 text-primary'}`}
           >
             {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </button>
           <button
             onClick={() => setCurrentIndex(Math.min(events.length - 1, currentIndex + 1))}
-            className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+            className="p-1 hover:bg-primary/8 transition-all duration-150 text-muted-foreground hover:text-primary"
           >
             <SkipForward className="h-3 w-3" />
           </button>
           {/* Speed controls */}
-          <div className="flex items-center gap-0.5 ml-1 border-l border-border/40 pl-1">
+          <div className="flex items-center gap-0.5 ml-1 border-l border-border/20 pl-1">
             {SPEEDS.map((s) => (
               <button
                 key={s}
                 onClick={() => setSpeed(s)}
-                className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold transition-all ${
+                className={`px-1.5 py-0.5 text-[8px] font-mono font-bold transition-all duration-150 ${
                   speed === s
-                    ? "bg-primary/20 text-primary border border-primary/40"
-                    : "text-muted-foreground/60 hover:text-foreground hover:bg-secondary/50 border border-transparent"
+                    ? "bg-primary/15 text-primary border border-primary/30 glow-primary"
+                    : "text-muted-foreground/40 hover:text-foreground hover:bg-secondary/30 border border-transparent"
                 }`}
               >
                 {s}×
@@ -108,23 +110,28 @@ export const TimelineSlider = ({ events, onTimeChange }: TimelineSliderProps) =>
         </div>
       </div>
 
-      <input
-        type="range"
-        min={0}
-        max={events.length - 1}
-        value={currentIndex}
-        onChange={handleSliderChange}
-        className="w-full h-1 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
-      />
+      {/* Timeline scrubber with glow track */}
+      <div className="relative py-1">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-0.5 bg-border/30" />
+        <div className="absolute top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-primary/60 to-primary/20" style={{ width: `${(currentIndex / Math.max(1, events.length - 1)) * 100}%` }} />
+        <input
+          type="range"
+          min={0}
+          max={events.length - 1}
+          value={currentIndex}
+          onChange={handleSliderChange}
+          className="relative w-full h-1 bg-transparent appearance-none cursor-pointer accent-primary z-10"
+        />
+      </div>
 
       <div className="flex items-center justify-between mt-1 mb-3">
-        <span className="text-[9px] font-mono text-muted-foreground">
+        <span className="text-[8px] font-mono text-muted-foreground/40 tabular-nums">
           {new Date(events[0]?.timestamp).toLocaleTimeString(locale, { hour12: false })}
         </span>
-        <span className="text-[10px] font-mono text-primary font-semibold">
+        <span className="text-[10px] font-mono text-primary font-bold tabular-nums px-2 py-0.5 bg-primary/8 border border-primary/20">
           {events[currentIndex] && new Date(events[currentIndex].timestamp).toLocaleTimeString(locale, { hour12: false })} UTC
         </span>
-        <span className="text-[9px] font-mono text-muted-foreground">
+        <span className="text-[8px] font-mono text-muted-foreground/40 tabular-nums">
           {new Date(events[events.length - 1]?.timestamp).toLocaleTimeString(locale, { hour12: false })}
         </span>
       </div>

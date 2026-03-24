@@ -57,13 +57,18 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
   return (
     <>
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border/20 maven-glass-heavy">
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+            <div className="h-3 w-0.5 bg-destructive rounded-full" />
             {t(tr["section.intel_feed"].en, tr["section.intel_feed"].ar)}
           </h3>
           <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-            <span className="text-[9px] text-muted-foreground font-mono">{t(tr["section.live"].en, tr["section.live"].ar)}</span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+            </span>
+            <span className="text-[8px] text-success font-mono font-bold uppercase">{t(tr["section.live"].en, tr["section.live"].ar)}</span>
+            <span className="text-[7px] font-mono text-muted-foreground/40 border border-border/20 px-1">{sorted.length}</span>
           </div>
         </div>
 
@@ -75,21 +80,23 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
                   key={alert.id}
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.03 }}
+                  transition={{ delay: i * 0.03, duration: 0.15 }}
                   onClick={() => setSelectedAlert(alert)}
-                  className={`border-l-2 ${severityBorder[alert.severity]} bg-card/40 rounded-r px-2 py-1.5 cursor-pointer hover:bg-secondary/50 transition-colors`}
+                  className={`border-l-2 ${severityBorder[alert.severity]} px-2 py-1.5 cursor-pointer transition-all duration-150 hover:bg-primary/5 hover:translate-x-0.5 ${
+                    alert.severity === 'critical' ? 'maven-breathe-critical bg-critical/3' : 'bg-card/20'
+                  }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${severityDot[alert.severity]}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${severityDot[alert.severity]} ${alert.severity === 'critical' ? 'animate-pulse' : ''}`} />
                     <div className={`flex-shrink-0 ${severityText[alert.severity]}`}>
                       {typeIcons[alert.type]}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
-                        <span className={`text-[8px] font-mono uppercase tracking-wider ${severityText[alert.severity]}`}>
+                        <span className={`text-[8px] font-mono uppercase tracking-wider font-bold ${severityText[alert.severity]}`}>
                           {alert.type}
                         </span>
-                        <span className="text-[8px] text-muted-foreground/70 truncate">
+                        <span className="text-[7px] text-muted-foreground/50 font-mono">
                           {alert.region}
                         </span>
                       </div>
@@ -97,7 +104,7 @@ export const NotificationPanel = ({ alerts }: NotificationPanelProps) => {
                         {alert.title}
                       </p>
                     </div>
-                    <span className="text-[8px] text-muted-foreground/50 font-mono flex-shrink-0">
+                    <span className="text-[7px] text-muted-foreground/40 font-mono flex-shrink-0 tabular-nums">
                       {new Date(alert.timestamp).toLocaleTimeString(locale, { hour12: false, hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
