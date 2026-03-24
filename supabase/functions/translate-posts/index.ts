@@ -20,7 +20,7 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    const apiKey = Deno.env.get("NVIDIA_API_KEY");
     if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
 
     const numbered = texts.map((t: string, i: number) => `[${i}] ${t}`).join("\n---\n");
@@ -30,14 +30,14 @@ serve(async (req) => {
 
     let response;
     try {
-      response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gemini-2.5-flash",
+          model: "moonshotai/kimi-k2-thinking",
           messages: [
             {
               role: "system",

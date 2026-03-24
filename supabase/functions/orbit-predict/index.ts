@@ -140,7 +140,7 @@ serve(async (req) => {
       const passes = findPasses(params, targetLat || 31.5, targetLng || 34.8, radiusKm || 1500, hoursAhead || 48);
 
       // Call AI for deep analysis — with robust error handling
-      const apiKey = Deno.env.get("GEMINI_API_KEY");
+      const apiKey = Deno.env.get("NVIDIA_API_KEY");
       let aiAnalysis = "";
       let aiStatus = "ok";
       let aiError = "";
@@ -182,14 +182,14 @@ Be precise with times and positions. Use UTC.`;
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 30000);
 
-          const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
             method: "POST",
             headers: {
               Authorization: `Bearer ${apiKey}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: "gemini-2.5-flash",
+              model: "moonshotai/kimi-k2-thinking",
               messages: [
                 { role: "system", content: "You are a satellite orbital mechanics and OSINT intelligence expert. Provide precise, technical analysis." },
                 { role: "user", content: aiPrompt },

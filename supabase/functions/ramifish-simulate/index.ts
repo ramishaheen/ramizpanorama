@@ -86,14 +86,14 @@ async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: s
 }
 
 async function callGeminiDirect(systemPrompt: string, userPrompt: string, apiKey: string) {
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gemini-2.5-flash",
+      model: "moonshotai/kimi-k2-thinking",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -161,7 +161,7 @@ serve(async (req) => {
 
     // 3) Last resort: try each shared Gemini key individually
     const geminiKeys = [
-      Deno.env.get("GEMINI_API_KEY"),
+      Deno.env.get("NVIDIA_API_KEY"),
       Deno.env.get("GEMINI_API_KEY_2"),
     ].filter(Boolean) as string[];
 

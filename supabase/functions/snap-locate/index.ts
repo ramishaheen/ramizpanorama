@@ -3,7 +3,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const GEMINI_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const AI_GATEWAY_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 // ── Pass 1 Prompt: Evidence Extraction ──
@@ -227,14 +227,14 @@ Deno.serve(async (req) => {
 
     // ═══ PASS 1: Evidence Extraction (Flash) ═══
     console.log("Pass 1: Extracting visual evidence...");
-    const pass1Body = buildPass1Body(image_base64, mime_type, "gemini-2.5-flash");
+    const pass1Body = buildPass1Body(image_base64, mime_type, "moonshotai/kimi-k2-thinking");
     const pass1GatewayBody = buildPass1Body(image_base64, mime_type, "moonshotai/kimi-k2-thinking");
 
     let pass1Resp = await callAI(
       GEMINI_KEY ? pass1Body : pass1GatewayBody,
       GEMINI_KEY,
       LOVABLE_KEY,
-      "gemini-2.5-flash",
+      "moonshotai/kimi-k2-thinking",
     );
 
     if (!pass1Resp.ok) {
@@ -265,14 +265,14 @@ Deno.serve(async (req) => {
 
     // ═══ PASS 2: Coordinate Pinpointing (Pro) ═══
     console.log("Pass 2: Pinpointing coordinates...");
-    const pass2Body = buildPass2Body(image_base64, mime_type, evidenceStr, "gemini-2.5-pro");
+    const pass2Body = buildPass2Body(image_base64, mime_type, evidenceStr, "moonshotai/kimi-k2-thinking");
     const pass2GatewayBody = buildPass2Body(image_base64, mime_type, evidenceStr, "moonshotai/kimi-k2-thinking");
 
     let pass2Resp = await callAI(
       GEMINI_KEY ? pass2Body : pass2GatewayBody,
       GEMINI_KEY,
       LOVABLE_KEY,
-      "gemini-2.5-pro",
+      "moonshotai/kimi-k2-thinking",
     );
 
     if (!pass2Resp.ok) {

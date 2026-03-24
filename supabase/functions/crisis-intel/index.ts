@@ -111,20 +111,20 @@ function parseToolCallResult(aiData: any): any | null {
 }
 
 async function callGemini(messages: any[], toolDef: any): Promise<any | null> {
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  const GEMINI_API_KEY = Deno.env.get("NVIDIA_API_KEY");
   if (!GEMINI_API_KEY) return null;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45000);
   try {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "moonshotai/kimi-k2-thinking",
         messages,
         tools: [toolDef],
         tool_choice: { type: "function", function: { name: "report_crisis_events" } },
