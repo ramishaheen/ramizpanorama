@@ -39,11 +39,11 @@
     --critical: 0 72% 50%;
     --critical-foreground: 0 0% 100%;
 
-    --border: 200 40% 18%;
-    --input: 216 18% 14%;
+    --border: 200 40% 14%;
+    --input: 220 18% 10%;
     --ring: 192 95% 48%;
 
-    --radius: 0.25rem;
+    --radius: 0.125rem;
 
     --glow-primary: 0 0 24px hsl(192 95% 48% / 0.25), 0 0 4px hsl(192 95% 48% / 0.15);
     --glow-warning: 0 0 24px hsl(42 100% 50% / 0.25), 0 0 4px hsl(42 100% 50% / 0.15);
