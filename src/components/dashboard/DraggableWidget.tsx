@@ -33,13 +33,13 @@ export const DraggableWidget = ({ id, children, disabled = false }: DraggableWid
         <div
           {...attributes}
           {...listeners}
-          className="absolute -left-0.5 top-1 z-20 flex flex-col items-center gap-px px-0.5 py-1 rounded cursor-grab active:cursor-grabbing bg-primary/10 border border-primary/20 opacity-40 group-hover:opacity-100 transition-all duration-150 hover:bg-primary/25 shadow-sm"
+          className="absolute -left-0.5 top-1 z-20 flex flex-col items-center gap-px px-0.5 py-1 cursor-grab active:cursor-grabbing bg-primary/8 border border-primary/15 opacity-0 group-hover:opacity-80 transition-all duration-200 hover:bg-primary/15"
           title="Drag to reorder"
         >
-          <GripVertical className="h-3 w-3 text-primary/70" />
+          <GripVertical className="h-3 w-3 text-primary/60" />
         </div>
       )}
-      <div className={`rounded-lg transition-all duration-150 ${isDragging ? "ring-1 ring-primary/40 shadow-lg" : "group-hover:ring-1 group-hover:ring-primary/15"}`}>
+      <div className={`transition-all duration-200 ${isDragging ? "ring-1 ring-primary/30 shadow-[0_8px_32px_hsl(216_28%_2%/0.5)]" : "group-hover:shadow-[0_2px_12px_hsl(192_95%_48%/0.06)]"}`}>
         {children}
       </div>
     </div>

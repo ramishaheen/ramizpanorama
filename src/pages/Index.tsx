@@ -290,10 +290,15 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-center space-y-3">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">جاري تحميل المعلومات…</p>
+      <div className="flex items-center justify-center h-screen bg-background maven-grid-subtle">
+        <div className="text-center space-y-4 maven-glass p-8">
+          <div className="h-8 w-8 border-2 border-primary/60 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-[0.2em]">Initializing Intelligence Systems…</p>
+          <div className="flex justify-center gap-1">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="h-1 w-6 rounded-full bg-primary/20 animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -400,7 +405,10 @@ const Index = () => {
 
   // ─── DESKTOP LAYOUT ───
   return (
-    <div className="flex flex-col h-screen overflow-hidden relative">
+    <div className="flex flex-col h-screen overflow-hidden relative bg-background">
+      {/* Ambient grid overlay */}
+      <div className="absolute inset-0 maven-grid-subtle pointer-events-none z-0 opacity-40" />
+      <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {componentVisibility.header && (
         <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} simulationActive={simulationActive} onToggleSimulation={() => setSimulationActive(v => !v)} />
       )}
@@ -428,15 +436,15 @@ const Index = () => {
               {/* Left sidebar - resizable & collapsible */}
               {componentVisibility.leftSidebar && (
                 <>
-                  {!leftCollapsed ? (
-                    <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
-                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+                {!leftCollapsed ? (
+                    <div className="flex-shrink-0 border-r border-border/25 flex flex-col maven-glass-heavy" style={{ width: leftWidth }}>
+                      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border/20">
                         <button
                           onClick={() => setLayoutLocked(l => !l)}
-                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[8px] font-mono uppercase tracking-wider transition-all duration-150 ${
                             layoutLocked
-                              ? "text-warning bg-warning/10 border border-warning/30"
-                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                              ? "text-warning bg-warning/8 border border-warning/20"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
                           }`}
                           title={layoutLocked ? "Unlock widget reordering" : "Lock widget positions"}
                         >
@@ -445,14 +453,14 @@ const Index = () => {
                         </button>
                         <button
                           onClick={() => setLeftCollapsed(true)}
-                          className="hover:bg-secondary/50 transition-colors rounded p-0.5"
+                          className="hover:bg-primary/5 transition-colors p-0.5"
                           title="Collapse sidebar"
                         >
-                          <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+                          <PanelLeftClose className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
                         </button>
                       </div>
-                      <div className="flex-1 overflow-y-auto">
-                        <div className="p-3 space-y-1">
+                      <div className="flex-1 overflow-y-auto intel-feed-scroll">
+                        <div className="p-2.5 space-y-0.5">
                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
                             <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
                               {leftOrder.map((id) => {
@@ -465,10 +473,11 @@ const Index = () => {
                                 return (
                                   <div key={id}>
                                     {section && (
-                                      <div className="flex items-center gap-1.5 pt-3 pb-1 px-1">
+                                      <div className="flex items-center gap-1.5 pt-3 pb-1.5 px-1">
+                                        <div className="h-3 w-0.5 rounded-full bg-gradient-to-b from-primary to-primary/20" />
                                         <section.icon className={`h-2.5 w-2.5 ${section.color}`} />
-                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${section.color} font-bold`}>{section.label}</span>
-                                        <div className="flex-1 h-px bg-border/40" />
+                                        <span className={`text-[8px] font-mono uppercase tracking-[0.15em] ${section.color} font-bold`}>{section.label}</span>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-border/30 to-transparent" />
                                       </div>
                                     )}
                                     <DraggableWidget id={id} disabled={layoutLocked}>
@@ -656,6 +665,7 @@ const Index = () => {
       </div>
 
       {componentVisibility.disclaimer && <Disclaimer />}
+      </div>
     </div>
   );
 };

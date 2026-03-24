@@ -71,11 +71,15 @@ const StatusDot = ({ status }: { status?: "normal" | "elevated" | "critical" }) 
 const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liveContent, liveModifier }: { icon: any; label: string; value?: number | string; color: string; pulse?: boolean; prefix?: string; tooltip?: string; liveContent?: React.ReactNode; liveModifier?: "normal" | "elevated" | "critical" }) => {
   const card = (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-1 px-1.5 py-0.5 bg-card border rounded transition-all duration-500 relative flex-shrink-0 min-w-[85px] sm:min-w-0 ${pulse ? "border-primary/50 glow-primary" : "border-border"}`}
+      className={`flex items-center gap-1.5 px-2 py-1 maven-glass-light border transition-all duration-200 relative flex-shrink-0 min-w-[85px] sm:min-w-0 ${
+        pulse ? "border-primary/30 glow-primary" : "border-transparent hover:border-primary/15"
+      } ${liveModifier === "critical" ? "maven-breathe-critical" : liveModifier === "elevated" ? "maven-breathe-warning" : ""}`}
     >
-      <Icon className={`h-2.5 w-2.5 ${color} ${pulse ? "animate-pulse" : ""} flex-shrink-0`} />
+      <div className="flex items-center justify-center h-5 w-5 rounded-sm bg-gradient-to-br from-secondary to-muted flex-shrink-0">
+        <Icon className={`h-2.5 w-2.5 ${color} ${pulse ? "animate-pulse" : ""}`} />
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-0.5">
           {liveContent ? liveContent : (
@@ -85,10 +89,10 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
             </>
           )}
         </div>
-        <div className="text-[8px] text-muted-foreground uppercase tracking-wider leading-none">{label}</div>
+        <div className="text-[7px] text-muted-foreground uppercase tracking-[0.12em] leading-none font-medium">{label}</div>
       </div>
       <StatusDot status={liveModifier} />
-      {tooltip && <Info className="h-2 w-2 text-muted-foreground/40 flex-shrink-0" />}
+      {tooltip && <Info className="h-2 w-2 text-muted-foreground/30 flex-shrink-0" />}
     </motion.div>
   );
 
@@ -98,7 +102,7 @@ const StatCard = ({ icon: Icon, label, value, color, pulse, prefix, tooltip, liv
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>{card}</TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-[420px] max-h-[400px] overflow-y-auto text-[10px] font-mono leading-relaxed whitespace-pre-line bg-card border-border">
+        <TooltipContent side="bottom" className="max-w-[420px] max-h-[400px] overflow-y-auto text-[10px] font-mono leading-relaxed whitespace-pre-line maven-glass-heavy border-border/60">
           {tooltip}
         </TooltipContent>
       </Tooltip>
@@ -224,11 +228,11 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`flex overflow-x-auto mobile-stats-scroll sm:grid sm:grid-cols-7 gap-1 px-2 sm:px-3 py-1 transition-shadow duration-500 ${dataFresh ? "shadow-[inset_0_0_20px_hsl(190_100%_50%/0.06)]" : ""}`}>
+      <div className={`flex overflow-x-auto mobile-stats-scroll sm:grid sm:grid-cols-7 gap-0.5 px-2 sm:px-3 py-1 maven-glass-light border-b border-border/20 transition-all duration-300 ${dataFresh ? "maven-breathe" : ""}`}>
         <div className="flex items-center justify-center px-1">
           <div className="text-center">
-            <div className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest leading-none">TODAY</div>
-            <div className="text-[8px] font-mono text-muted-foreground leading-none mt-0.5">{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+            <div className="text-[9px] font-mono font-bold text-primary uppercase tracking-[0.2em] leading-none">TODAY</div>
+            <div className="text-[7px] font-mono text-muted-foreground leading-none mt-0.5 tabular-nums">{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
           </div>
         </div>
         <StatCard icon={Plane} label={t(tr["stat.airspace"].en, tr["stat.airspace"].ar)} value={airspaceCount} color="text-primary" pulse={dataFresh} />
@@ -262,7 +266,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
 
       {/* War cost cards - COLLAPSIBLE */}
       {warCosts.data && !warCosts.error && (
-        <div className="border-t border-border/50 bg-card/30">
+        <div className="border-t border-border/15 bg-card/20 backdrop-blur-sm">
           <button
             onClick={() => setWarCostOpen(o => !o)}
             className="w-full flex items-center justify-between px-2.5 py-1 hover:bg-secondary/30 transition-colors"
