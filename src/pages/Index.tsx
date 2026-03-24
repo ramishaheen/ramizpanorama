@@ -473,10 +473,11 @@ const Index = () => {
                                 return (
                                   <div key={id}>
                                     {section && (
-                                      <div className="flex items-center gap-1.5 pt-3 pb-1 px-1">
+                                      <div className="flex items-center gap-1.5 pt-3 pb-1.5 px-1">
+                                        <div className="h-3 w-0.5 rounded-full bg-gradient-to-b from-primary to-primary/20" />
                                         <section.icon className={`h-2.5 w-2.5 ${section.color}`} />
-                                        <span className={`text-[9px] font-mono uppercase tracking-widest ${section.color} font-bold`}>{section.label}</span>
-                                        <div className="flex-1 h-px bg-border/40" />
+                                        <span className={`text-[8px] font-mono uppercase tracking-[0.15em] ${section.color} font-bold`}>{section.label}</span>
+                                        <div className="flex-1 h-px bg-gradient-to-r from-border/30 to-transparent" />
                                       </div>
                                     )}
                                     <DraggableWidget id={id} disabled={layoutLocked}>
