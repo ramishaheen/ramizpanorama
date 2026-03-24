@@ -89,26 +89,48 @@ export const AIPredictions = () => {
   }, [fetchPredictions]);
 
   return (
-    <div className="bg-card border border-border rounded-lg p-3">
+    <div className="maven-glass border-l-2 border-l-primary/40 p-3 relative overflow-hidden">
+      {/* Neural network background pattern */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
+        backgroundImage: 'radial-gradient(circle at 20% 30%, hsl(192 95% 48% / 0.15) 1px, transparent 1px), radial-gradient(circle at 80% 70%, hsl(192 95% 48% / 0.1) 1px, transparent 1px)',
+        backgroundSize: '24px 24px, 32px 32px'
+      }} />
+      <div className="relative z-10">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-          <Activity className="h-3 w-3 text-primary" />
+          <div className="relative">
+            <Activity className="h-3 w-3 text-primary" />
+            <div className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary animate-ping opacity-40" />
+          </div>
           {t(tr["section.predictions"].en, tr["section.predictions"].ar)}
         </h3>
-        <button
-          onClick={fetchPredictions}
-          disabled={loading}
-          className="p-1 rounded hover:bg-secondary/60 transition-colors"
-          title={t("Refresh predictions", "تحديث التوقعات")}
-        >
-          <RefreshCw className={`h-3 w-3 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[7px] font-mono uppercase tracking-wider text-primary/60 px-1.5 py-0.5 border border-primary/15 bg-primary/5">AI ENGINE</span>
+          <button
+            onClick={fetchPredictions}
+            disabled={loading}
+            className="p-1 rounded-sm hover:bg-primary/10 transition-all duration-150"
+            title={t("Refresh predictions", "تحديث التوقعات")}
+          >
+            <RefreshCw className={`h-3 w-3 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {loading && !data && (
-        <div className="flex items-center justify-center py-6">
-          <Loader2 className="h-4 w-4 text-primary animate-spin" />
-          <span className="text-[10px] text-muted-foreground ml-2 font-mono">{t(tr["pred.analyzing"].en, tr["pred.analyzing"].ar)}</span>
+        <div className="flex flex-col items-center justify-center py-8 gap-2">
+          <div className="relative">
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+            <div className="absolute inset-0 h-5 w-5 border border-primary/20 rounded-full animate-ping" />
+          </div>
+          <span className="text-[10px] text-primary/80 font-mono uppercase tracking-wider">{t(tr["pred.analyzing"].en, tr["pred.analyzing"].ar)}</span>
+          <div className="flex gap-1">
+            {[0,1,2,3,4].map(i => (
+              <div key={i} className="h-1 w-6 bg-primary/20 rounded-full overflow-hidden">
+                <div className="h-full bg-primary/60 rounded-full animate-pulse" style={{ animationDelay: `${i * 150}ms`, width: `${60 + Math.random() * 40}%` }} />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
