@@ -5,14 +5,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI_API_KEY) {
-    return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), {
+  const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+  if (!NVIDIA_API_KEY) {
+    return new Response(JSON.stringify({ error: "NVIDIA_API_KEY not configured" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -40,21 +40,6 @@ Deno.serve(async (req) => {
 
       if (!thumbnailUrl) throw new Error("No thumbnail available for analysis");
 
-      // Fetch the image and convert to base64 for Gemini
-      let imageBase64: string | null = null;
-      let imageMimeType = "image/jpeg";
-      try {
-        const imgResp = await fetch(thumbnailUrl);
-        if (imgResp.ok) {
-          const imgBuffer = await imgResp.arrayBuffer();
-          imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
-          const ct = imgResp.headers.get("content-type");
-          if (ct) imageMimeType = ct.split(";")[0].trim();
-        }
-      } catch (e) {
-        console.error("Failed to fetch thumbnail:", e);
-      }
-
       const systemPrompt = `You are a CCTV surveillance AI analyst. Analyze camera images and detect:
 - People (count and positions)
 - Vehicles (cars, trucks, motorcycles, buses)
@@ -79,40 +64,21 @@ Return ONLY valid JSON with this exact structure:
   "event_type": "normal|person_detected|vehicle_detected|crowd_detected|fire_detected|smoke_detected|abnormal_activity|traffic_congestion"
 }`;
 
-      const userText = `Analyze this CCTV camera feed from ${cam.name} in ${cam.city}, ${cam.country}. Detect all objects, people, vehicles, and any security concerns.`;
+      const userText = `Analyze this CCTV camera feed from ${cam.name} in ${cam.city}, ${cam.country}. The camera thumbnail URL is: ${thumbnailUrl}. Detect all objects, people, vehicles, and any security concerns.`;
 
-      // Build Gemini request body
-      const geminiBody: any = {
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: systemPrompt + "\n\n" + userText },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048,
-        },
-      };
-
-      // Add image if successfully fetched
-      if (imageBase64) {
-        geminiBody.contents[0].parts.push({
-          inlineData: { mimeType: imageMimeType, data: imageBase64 },
-        });
-      } else {
-        // Fallback: use image URL via fileData (Gemini supports this for public URLs)
-        geminiBody.contents[0].parts.push({
-          fileData: { mimeType: "image/jpeg", fileUri: thumbnailUrl },
-        });
-      }
-
-      const aiResponse = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+      const aiResponse = await fetch(NVIDIA_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(geminiBody),
+        headers: {
+          Authorization: `Bearer ${NVIDIA_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "moonshotai/kimi-k2-thinking",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userText },
+          ],
+        }),
       });
 
       if (!aiResponse.ok) {
@@ -122,17 +88,18 @@ Return ONLY valid JSON with this exact structure:
           });
         }
         const errText = await aiResponse.text();
-        console.error("Gemini API error:", aiResponse.status, errText);
-        throw new Error(`Gemini analysis failed: ${aiResponse.status}`);
+        console.error("NVIDIA API error:", aiResponse.status, errText);
+        throw new Error(`AI analysis failed: ${aiResponse.status}`);
       }
 
       const aiData = await aiResponse.json();
-      const rawContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const rawContent = aiData.choices?.[0]?.message?.content || "";
 
-      // Parse JSON from response
+      // Parse JSON from response (strip thinking tags if present)
       let analysis;
       try {
-        const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+        const cleaned = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
         analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
       } catch {
         analysis = null;
