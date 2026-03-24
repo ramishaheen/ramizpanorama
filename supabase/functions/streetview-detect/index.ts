@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "moonshotai/kimi-k2-thinking",
+          model: "google/gemma-3-27b-it",
           messages: [
             {
               role: "user",

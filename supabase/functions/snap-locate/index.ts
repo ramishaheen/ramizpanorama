@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
       GEMINI_KEY ? pass2Body : pass2GatewayBody,
       GEMINI_KEY,
       LOVABLE_KEY,
-      "moonshotai/kimi-k2-thinking",
+      "google/gemma-3-27b-it",
     );
 
     if (!pass2Resp.ok) {
