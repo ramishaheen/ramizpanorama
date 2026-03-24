@@ -53,31 +53,67 @@ const layerConfig = [
 export const LayerControls = ({ layers, onToggle }: LayerControlsProps) => {
   const { t } = useLanguage();
 
+  // Group layers into 5 domains for 4D multi-layer mode
+  const domains = [
+    { label: "GROUND", color: "text-success", layers: ["cities", "traffic", "conflicts", "googlePOI", "googleTraffic", "googleRoutes"] as const },
+    { label: "AIR", color: "text-primary", layers: ["flights", "airspace", "weather", "airQuality"] as const },
+    { label: "MARITIME", color: "text-primary", layers: ["maritime", "aisVessels"] as const },
+    { label: "THREATS", color: "text-critical", layers: ["alerts", "rockets", "nuclear", "heatmap", "earthquakes", "wildfires"] as const },
+    { label: "INTEL", color: "text-accent", layers: ["news", "telegram"] as const },
+  ];
+
   return (
-    <div className="bg-card border border-border rounded-lg p-3">
-      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+    <div className="maven-glass border-l-2 border-l-primary/40 p-3">
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+        <div className="h-3 w-0.5 bg-primary rounded-full" />
         {t(tr["section.layers"].en, tr["section.layers"].ar)}
+        <span className="text-[7px] font-mono text-primary/40 ml-auto">4D MODE</span>
       </h3>
-      <div className="space-y-1.5">
-        {layerConfig.map(({ key, trKey, icon: Icon, color }) => (
-          <button
-            key={key}
-            onClick={() => onToggle(key)}
-            className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded transition-colors ${
-              layers[key] ? "bg-secondary/60" : "opacity-40 hover:opacity-70"
-            }`}
-          >
-            {layers[key] ? (
-              <Eye className={`h-3 w-3 ${color}`} />
-            ) : (
-              <EyeOff className="h-3 w-3 text-muted-foreground" />
-            )}
-            <Icon className={`h-3.5 w-3.5 ${layers[key] ? color : "text-muted-foreground"}`} />
-            <span className={`text-xs ${layers[key] ? "text-foreground" : "text-muted-foreground"}`}>
-              {t(tr[trKey]?.en || key, tr[trKey]?.ar || key)}
-            </span>
-          </button>
-        ))}
+
+      <div className="space-y-3">
+        {domains.map(domain => {
+          const domainLayers = layerConfig.filter(l => (domain.layers as readonly string[]).includes(l.key));
+          const activeCount = domainLayers.filter(l => layers[l.key]).length;
+          const allActive = activeCount === domainLayers.length;
+
+          return (
+            <div key={domain.label}>
+              {/* Domain header */}
+              <div className="flex items-center justify-between mb-1 px-1">
+                <span className={`text-[8px] font-mono font-bold uppercase tracking-[0.15em] ${domain.color}`}>
+                  ▎{domain.label}
+                </span>
+                <span className="text-[7px] font-mono text-muted-foreground/40">
+                  {activeCount}/{domainLayers.length}
+                </span>
+              </div>
+              {/* Layer buttons */}
+              <div className="space-y-0.5">
+                {domainLayers.map(({ key, trKey, icon: Icon, color }) => (
+                  <button
+                    key={key}
+                    onClick={() => onToggle(key)}
+                    className={`w-full flex items-center gap-2 px-2 py-1 transition-all duration-150 ${
+                      layers[key]
+                        ? "bg-secondary/40 border-l border-l-primary/30 hover:bg-secondary/60"
+                        : "opacity-30 hover:opacity-60 hover:bg-secondary/15"
+                    }`}
+                  >
+                    {layers[key] ? (
+                      <Eye className={`h-2.5 w-2.5 ${color}`} />
+                    ) : (
+                      <EyeOff className="h-2.5 w-2.5 text-muted-foreground/50" />
+                    )}
+                    <Icon className={`h-3 w-3 ${layers[key] ? color : "text-muted-foreground/50"}`} />
+                    <span className={`text-[9px] font-mono ${layers[key] ? "text-foreground" : "text-muted-foreground/50"}`}>
+                      {t(tr[trKey]?.en || key, tr[trKey]?.ar || key)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

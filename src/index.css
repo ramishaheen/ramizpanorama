@@ -396,6 +396,64 @@
   animation: scan 3s linear infinite;
 }
 
+/* ── 4D War Intelligence Interface Enhancements ── */
+@keyframes threat-path-pulse {
+  0% { stroke-dashoffset: 100; opacity: 0.3; }
+  50% { opacity: 0.8; }
+  100% { stroke-dashoffset: 0; opacity: 0.3; }
+}
+
+@keyframes heat-zone-breathe {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.05); }
+}
+
+@keyframes neural-pulse {
+  0%, 100% { box-shadow: inset 0 0 20px hsl(192 95% 48% / 0.03); }
+  50% { box-shadow: inset 0 0 40px hsl(192 95% 48% / 0.08), 0 0 20px hsl(192 95% 48% / 0.05); }
+}
+
+.maven-neural-bg {
+  animation: neural-pulse 4s ease-in-out infinite;
+}
+
+/* Severity gradient bars */
+.severity-gradient-critical {
+  background: linear-gradient(90deg, hsl(0 72% 50% / 0.6), hsl(0 72% 50% / 0.1));
+}
+
+.severity-gradient-high {
+  background: linear-gradient(90deg, hsl(42 100% 50% / 0.5), hsl(42 100% 50% / 0.1));
+}
+
+.severity-gradient-medium {
+  background: linear-gradient(90deg, hsl(192 95% 48% / 0.4), hsl(192 95% 48% / 0.08));
+}
+
+/* Focus mode dimming */
+.maven-focus-active .maven-focus-target:not(.maven-focused) {
+  opacity: 0.2;
+  filter: blur(1px);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.maven-focus-active .maven-focused {
+  opacity: 1;
+  filter: none;
+  z-index: 10;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* Context-aware hover depth */
+.maven-depth-card {
+  transition: all 0.15s ease-out;
+}
+
+.maven-depth-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px hsl(220 30% 1% / 0.6), 0 0 1px hsl(192 95% 48% / 0.15);
+}
+
 .leaflet-container {
   background: hsl(216 28% 3%) !important;
   font-family: 'Inter', 'IBM Plex Sans', system-ui, sans-serif;
