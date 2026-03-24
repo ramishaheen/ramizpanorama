@@ -356,18 +356,18 @@
 }
 
 @keyframes maven-breathe {
-  0%, 100% { box-shadow: inset 0 0 30px hsl(192 95% 48% / 0.02); }
-  50% { box-shadow: inset 0 0 50px hsl(192 95% 48% / 0.05); }
+  0%, 100% { box-shadow: inset 0 0 40px hsl(192 95% 48% / 0.03), 0 0 0 1px hsl(192 95% 48% / 0.05); }
+  50% { box-shadow: inset 0 0 60px hsl(192 95% 48% / 0.07), 0 0 0 1px hsl(192 95% 48% / 0.12); }
 }
 
 @keyframes maven-breathe-red {
-  0%, 100% { box-shadow: inset 0 0 20px hsl(0 72% 50% / 0.03); }
-  50% { box-shadow: inset 0 0 40px hsl(0 72% 50% / 0.08); }
+  0%, 100% { box-shadow: inset 0 0 30px hsl(0 72% 50% / 0.04), 0 0 0 1px hsl(0 72% 50% / 0.08); }
+  50% { box-shadow: inset 0 0 50px hsl(0 72% 50% / 0.1), 0 0 0 1px hsl(0 72% 50% / 0.18); }
 }
 
 @keyframes maven-breathe-amber {
-  0%, 100% { box-shadow: inset 0 0 20px hsl(42 100% 50% / 0.02); }
-  50% { box-shadow: inset 0 0 40px hsl(42 100% 50% / 0.06); }
+  0%, 100% { box-shadow: inset 0 0 30px hsl(42 100% 50% / 0.03), 0 0 0 1px hsl(42 100% 50% / 0.06); }
+  50% { box-shadow: inset 0 0 50px hsl(42 100% 50% / 0.08), 0 0 0 1px hsl(42 100% 50% / 0.14); }
 }
 
 @keyframes maven-heartbeat {
