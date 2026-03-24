@@ -48,7 +48,7 @@ Example: [{"classification":"tank","confidence":0.85,"priority":"high","assessme
       method: "POST",
       headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "moonshotai/kimi-k2-thinking",
+        model: "google/gemma-3-27b-it",
         messages,
         tools: [{
           type: "function",

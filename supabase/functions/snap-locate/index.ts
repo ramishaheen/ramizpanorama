@@ -227,14 +227,14 @@ Deno.serve(async (req) => {
 
     // ═══ PASS 1: Evidence Extraction (Flash) ═══
     console.log("Pass 1: Extracting visual evidence...");
-    const pass1Body = buildPass1Body(image_base64, mime_type, "moonshotai/kimi-k2-thinking");
-    const pass1GatewayBody = buildPass1Body(image_base64, mime_type, "moonshotai/kimi-k2-thinking");
+    const pass1Body = buildPass1Body(image_base64, mime_type, "google/gemma-3-27b-it");
+    const pass1GatewayBody = buildPass1Body(image_base64, mime_type, "google/gemma-3-27b-it");
 
     let pass1Resp = await callAI(
       GEMINI_KEY ? pass1Body : pass1GatewayBody,
       GEMINI_KEY,
       LOVABLE_KEY,
-      "moonshotai/kimi-k2-thinking",
+      "google/gemma-3-27b-it",
     );
 
     if (!pass1Resp.ok) {
@@ -265,14 +265,14 @@ Deno.serve(async (req) => {
 
     // ═══ PASS 2: Coordinate Pinpointing (Pro) ═══
     console.log("Pass 2: Pinpointing coordinates...");
-    const pass2Body = buildPass2Body(image_base64, mime_type, evidenceStr, "moonshotai/kimi-k2-thinking");
-    const pass2GatewayBody = buildPass2Body(image_base64, mime_type, evidenceStr, "moonshotai/kimi-k2-thinking");
+    const pass2Body = buildPass2Body(image_base64, mime_type, evidenceStr, "google/gemma-3-27b-it");
+    const pass2GatewayBody = buildPass2Body(image_base64, mime_type, evidenceStr, "google/gemma-3-27b-it");
 
     let pass2Resp = await callAI(
       GEMINI_KEY ? pass2Body : pass2GatewayBody,
       GEMINI_KEY,
       LOVABLE_KEY,
-      "moonshotai/kimi-k2-thinking",
+      "google/gemma-3-27b-it",
     );
 
     if (!pass2Resp.ok) {
