@@ -665,6 +665,7 @@ const Index = () => {
       </div>
 
       {componentVisibility.disclaimer && <Disclaimer />}
+      </div>
     </div>
   );
 };
