@@ -120,6 +120,27 @@ export function useLiveDashboard() {
     };
   }, [simulationActive]);
 
+  // Background periodic re-fetch every 60s to keep data fresh even without realtime events
+  useEffect(() => {
+    const refetch = async () => {
+      const [aRes, vRes, gRes, rRes, rkRes] = await Promise.all([
+        supabase.from("airspace_alerts").select("*"),
+        supabase.from("vessels").select("*"),
+        supabase.from("geo_alerts").select("*"),
+        supabase.from("risk_scores").select("*").order("last_updated", { ascending: false }).limit(1),
+        supabase.from("rockets").select("*"),
+      ]);
+      if (aRes.data) setAirspaceAlerts(aRes.data.map(mapAirspace));
+      if (vRes.data) setVessels(vRes.data.map(mapVessel));
+      if (gRes.data) setGeoAlerts(gRes.data.map(mapGeoAlert));
+      if (rRes.data?.[0]) setRiskScore(mapRisk(rRes.data[0]));
+      if (rkRes.data) setRockets(rkRes.data.map(mapRocket));
+      flashFresh();
+    };
+    const interval = setInterval(refetch, 60000);
+    return () => clearInterval(interval);
+  }, [flashFresh]);
+
   // Daily filtered counts
   const todayStart = useMemo(() => {
     const d = new Date();
