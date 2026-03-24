@@ -41,7 +41,7 @@ export const DashboardHeader = ({ dataFresh, alertMuted, onToggleAlertMute, rock
 
   return (
     <>
-      <header className={`flex items-center justify-between px-3 sm:px-5 py-1.5 sm:py-2 border-b maven-glass-heavy transition-all duration-500 ${dataFresh ? "border-primary/30" : "border-transparent"}`}>
+      <header className={`flex items-center justify-between px-3 sm:px-5 py-1.5 sm:py-2 border-b-2 maven-glass-heavy transition-all duration-500 ${dataFresh ? "border-b-primary/50" : "border-b-primary/20"}`}>
         {/* Left: Brand + AI Chat */}
         <div className="flex items-center gap-2.5 sm:gap-3.5 flex-shrink-0">
           <img src={warosLogo} alt="War OS Logo" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow-[0_0_8px_hsl(192_95%_48%/0.3)]" />
