@@ -405,7 +405,10 @@ const Index = () => {
 
   // ─── DESKTOP LAYOUT ───
   return (
-    <div className="flex flex-col h-screen overflow-hidden relative">
+    <div className="flex flex-col h-screen overflow-hidden relative bg-background">
+      {/* Ambient grid overlay */}
+      <div className="absolute inset-0 maven-grid-subtle pointer-events-none z-0 opacity-40" />
+      <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {componentVisibility.header && (
         <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} simulationActive={simulationActive} onToggleSimulation={() => setSimulationActive(v => !v)} />
       )}
