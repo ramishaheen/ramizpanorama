@@ -555,7 +555,7 @@ const Index = () => {
                         className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-10 hover:bg-primary/20 transition-colors"
                         title="Drag to resize"
                       />
-                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/20">
                         <button
                           onClick={() => setLayoutLocked(l => !l)}
                           className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
