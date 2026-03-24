@@ -6,10 +6,10 @@
 
 @layer base {
   :root {
-    --background: 216 28% 4%;
+    --background: 220 30% 3%;
     --foreground: 210 20% 88%;
 
-    --card: 216 24% 7%;
+    --card: 220 28% 5%;
     --card-foreground: 210 20% 88%;
 
     --popover: 216 24% 9%;
@@ -39,16 +39,16 @@
     --critical: 0 72% 50%;
     --critical-foreground: 0 0% 100%;
 
-    --border: 200 40% 18%;
-    --input: 216 18% 14%;
+    --border: 200 40% 14%;
+    --input: 220 18% 10%;
     --ring: 192 95% 48%;
 
-    --radius: 0.25rem;
+    --radius: 0.125rem;
 
-    --glow-primary: 0 0 24px hsl(192 95% 48% / 0.25), 0 0 4px hsl(192 95% 48% / 0.15);
-    --glow-warning: 0 0 24px hsl(42 100% 50% / 0.25), 0 0 4px hsl(42 100% 50% / 0.15);
-    --glow-critical: 0 0 24px hsl(0 72% 50% / 0.25), 0 0 4px hsl(0 72% 50% / 0.15);
-    --glow-success: 0 0 24px hsl(152 65% 42% / 0.25), 0 0 4px hsl(152 65% 42% / 0.15);
+    --glow-primary: 0 0 30px hsl(192 95% 48% / 0.3), 0 0 6px hsl(192 95% 48% / 0.2);
+    --glow-warning: 0 0 30px hsl(42 100% 50% / 0.3), 0 0 6px hsl(42 100% 50% / 0.2);
+    --glow-critical: 0 0 30px hsl(0 72% 50% / 0.3), 0 0 6px hsl(0 72% 50% / 0.2);
+    --glow-success: 0 0 30px hsl(152 65% 42% / 0.3), 0 0 6px hsl(152 65% 42% / 0.2);
 
     --sidebar-background: 216 24% 5%;
     --sidebar-foreground: 210 15% 75%;
@@ -60,10 +60,10 @@
     --sidebar-ring: 192 95% 48%;
 
     /* Maven-specific tokens */
-    --maven-glass: 216 24% 7% / 0.72;
-    --maven-glass-border: 200 40% 22% / 0.4;
-    --maven-depth-shadow: 0 8px 32px hsl(216 28% 2% / 0.6), 0 2px 8px hsl(216 28% 2% / 0.4);
-    --maven-panel-glow: inset 0 0 40px hsl(192 95% 48% / 0.02);
+    --maven-glass: 220 28% 5% / 0.78;
+    --maven-glass-border: 192 40% 20% / 0.35;
+    --maven-depth-shadow: 0 8px 40px hsl(220 30% 1% / 0.7), 0 2px 12px hsl(220 30% 1% / 0.5);
+    --maven-panel-glow: inset 0 1px 0 hsl(192 95% 48% / 0.06), inset 0 0 60px hsl(192 95% 48% / 0.02);
     --maven-ambient: 192 95% 48%;
   }
 }
@@ -133,22 +133,22 @@
   /* ── Maven Glass Panel ── */
   .maven-glass {
     background: hsl(var(--maven-glass));
-    backdrop-filter: blur(20px) saturate(1.3);
-    border: 1px solid hsl(var(--maven-glass-border));
-    box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow);
-  }
-
-  .maven-glass-heavy {
-    background: hsl(216 24% 6% / 0.85);
     backdrop-filter: blur(24px) saturate(1.4);
     border: 1px solid hsl(var(--maven-glass-border));
     box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow);
   }
 
+  .maven-glass-heavy {
+    background: hsl(220 30% 4% / 0.88);
+    backdrop-filter: blur(28px) saturate(1.5);
+    border: 1px solid hsl(192 40% 18% / 0.3);
+    box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow), 0 0 1px hsl(192 95% 48% / 0.1);
+  }
+
   .maven-glass-light {
-    background: hsl(216 24% 8% / 0.55);
+    background: hsl(220 28% 6% / 0.6);
     backdrop-filter: blur(16px) saturate(1.2);
-    border: 1px solid hsl(200 40% 20% / 0.25);
+    border: 1px solid hsl(192 40% 18% / 0.2);
   }
 
   /* ── Maven Depth & Elevation ── */
@@ -196,9 +196,9 @@
 
   .maven-grid-subtle {
     background-image: 
-      linear-gradient(hsl(200 40% 18% / 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(200 40% 18% / 0.08) 1px, transparent 1px);
-    background-size: 32px 32px;
+      linear-gradient(hsl(192 40% 20% / 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(192 40% 20% / 0.12) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
 
   /* ── Maven Breathing / Ambient Animations ── */
@@ -356,18 +356,18 @@
 }
 
 @keyframes maven-breathe {
-  0%, 100% { box-shadow: inset 0 0 30px hsl(192 95% 48% / 0.02); }
-  50% { box-shadow: inset 0 0 50px hsl(192 95% 48% / 0.05); }
+  0%, 100% { box-shadow: inset 0 0 40px hsl(192 95% 48% / 0.03), 0 0 0 1px hsl(192 95% 48% / 0.05); }
+  50% { box-shadow: inset 0 0 60px hsl(192 95% 48% / 0.07), 0 0 0 1px hsl(192 95% 48% / 0.12); }
 }
 
 @keyframes maven-breathe-red {
-  0%, 100% { box-shadow: inset 0 0 20px hsl(0 72% 50% / 0.03); }
-  50% { box-shadow: inset 0 0 40px hsl(0 72% 50% / 0.08); }
+  0%, 100% { box-shadow: inset 0 0 30px hsl(0 72% 50% / 0.04), 0 0 0 1px hsl(0 72% 50% / 0.08); }
+  50% { box-shadow: inset 0 0 50px hsl(0 72% 50% / 0.1), 0 0 0 1px hsl(0 72% 50% / 0.18); }
 }
 
 @keyframes maven-breathe-amber {
-  0%, 100% { box-shadow: inset 0 0 20px hsl(42 100% 50% / 0.02); }
-  50% { box-shadow: inset 0 0 40px hsl(42 100% 50% / 0.06); }
+  0%, 100% { box-shadow: inset 0 0 30px hsl(42 100% 50% / 0.03), 0 0 0 1px hsl(42 100% 50% / 0.06); }
+  50% { box-shadow: inset 0 0 50px hsl(42 100% 50% / 0.08), 0 0 0 1px hsl(42 100% 50% / 0.14); }
 }
 
 @keyframes maven-heartbeat {

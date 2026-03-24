@@ -405,9 +405,11 @@ const Index = () => {
 
   // ─── DESKTOP LAYOUT ───
   return (
-    <div className="flex flex-col h-screen overflow-hidden relative bg-background">
+    <div className="flex flex-col h-screen overflow-hidden relative" style={{ background: 'hsl(220 30% 3%)' }}>
       {/* Ambient grid overlay */}
-      <div className="absolute inset-0 maven-grid-subtle pointer-events-none z-0 opacity-40" />
+      <div className="absolute inset-0 maven-grid-subtle pointer-events-none z-0 opacity-60" />
+      {/* Vignette overlay */}
+      <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, hsl(220 30% 2% / 0.6) 100%)' }} />
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {componentVisibility.header && (
         <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} simulationActive={simulationActive} onToggleSimulation={() => setSimulationActive(v => !v)} />
@@ -547,15 +549,15 @@ const Index = () => {
                     </div>
                   )}
 
-                  {!rightCollapsed ? (
-                    <div className="flex-shrink-0 border-l border-border flex flex-col relative" style={{ width: rightWidth }}>
+              {!rightCollapsed ? (
+                    <div className="flex-shrink-0 border-l border-border/25 flex flex-col relative maven-glass-heavy" style={{ width: rightWidth }}>
                       {/* Full-height resize edge on left side */}
                       <div
                         onMouseDown={handleResizeRight}
                         className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-10 hover:bg-primary/20 transition-colors"
                         title="Drag to resize"
                       />
-                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/20">
                         <button
                           onClick={() => setLayoutLocked(l => !l)}
                           className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
@@ -614,10 +616,10 @@ const Index = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
+                    <div className="w-10 flex-shrink-0 border-l border-border/25 flex flex-col maven-glass">
                       <button
                         onClick={() => setRightCollapsed(false)}
-                        className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                        className="flex items-center justify-center py-1.5 border-b border-border/20 hover:bg-primary/5 transition-colors"
                         title="Expand sidebar"
                       >
                         <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
@@ -634,7 +636,7 @@ const Index = () => {
             <>
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
-                <ResizablePanelGroup direction="horizontal" className="h-full">
+                <ResizablePanelGroup direction="horizontal" className="h-full maven-glass-heavy">
                   <ResizablePanel defaultSize={33} minSize={15}>
                     <div className="h-full overflow-hidden">
                       <CitizenSecurity
