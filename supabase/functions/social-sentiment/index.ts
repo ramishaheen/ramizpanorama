@@ -75,7 +75,7 @@ Return ONLY valid JSON with this exact structure:
 Fill in realistic numbers based on actual web search results. All percentages must sum to 100. Populate bar chart per-platform and trend data with plausible daily values.`;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    const timeout = setTimeout(() => controller.abort(), 55000);
 
     let resp;
     try {
