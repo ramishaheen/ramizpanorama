@@ -36,7 +36,7 @@ import { WarUpdatesPanel } from "./WarUpdatesPanel";
 import { CyberSecurityAlerts } from "./CyberSecurityAlerts";
 import { CitizenSecurity } from "./CitizenSecurity";
 import { SectorPredictions } from "./SectorPredictions";
-import { SocialSentimentBox } from "./SocialSentimentBox";
+import { SocialSentimentInline } from "./SocialSentimentInline";
 
 interface ScoutingModalProps {
   onClose: () => void;
@@ -220,7 +220,7 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
     },
     social: {
       label: "SOCIAL MEDIA HARVESTING",
-      node: <SocialSentimentBox />,
+      node: <SocialSentimentInline />,
     },
   };
 
