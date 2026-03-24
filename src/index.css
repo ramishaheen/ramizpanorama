@@ -45,10 +45,10 @@
 
     --radius: 0.125rem;
 
-    --glow-primary: 0 0 24px hsl(192 95% 48% / 0.25), 0 0 4px hsl(192 95% 48% / 0.15);
-    --glow-warning: 0 0 24px hsl(42 100% 50% / 0.25), 0 0 4px hsl(42 100% 50% / 0.15);
-    --glow-critical: 0 0 24px hsl(0 72% 50% / 0.25), 0 0 4px hsl(0 72% 50% / 0.15);
-    --glow-success: 0 0 24px hsl(152 65% 42% / 0.25), 0 0 4px hsl(152 65% 42% / 0.15);
+    --glow-primary: 0 0 30px hsl(192 95% 48% / 0.3), 0 0 6px hsl(192 95% 48% / 0.2);
+    --glow-warning: 0 0 30px hsl(42 100% 50% / 0.3), 0 0 6px hsl(42 100% 50% / 0.2);
+    --glow-critical: 0 0 30px hsl(0 72% 50% / 0.3), 0 0 6px hsl(0 72% 50% / 0.2);
+    --glow-success: 0 0 30px hsl(152 65% 42% / 0.3), 0 0 6px hsl(152 65% 42% / 0.2);
 
     --sidebar-background: 216 24% 5%;
     --sidebar-foreground: 210 15% 75%;
