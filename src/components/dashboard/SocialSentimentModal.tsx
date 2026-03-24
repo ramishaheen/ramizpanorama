@@ -360,6 +360,7 @@ export const SocialSentimentModal = ({ open, onClose }: Props) => {
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
