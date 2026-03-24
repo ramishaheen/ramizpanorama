@@ -550,7 +550,7 @@ const Index = () => {
                   )}
 
               {!rightCollapsed ? (
-                    <div className="flex-shrink-0 border-l border-border/25 flex flex-col relative maven-glass-heavy" style={{ width: rightWidth }}>
+                    <div className="flex-shrink-0 border-l-2 border-l-primary/20 flex flex-col relative maven-glass-heavy" style={{ width: rightWidth }}>
                       {/* Full-height resize edge on left side */}
                       <div
                         onMouseDown={handleResizeRight}
