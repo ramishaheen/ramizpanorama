@@ -159,10 +159,9 @@ serve(async (req) => {
       }
     }
 
-    // 3) Last resort: try each shared Gemini key individually
-    const geminiKeys = [
+    // 3) Last resort: retry with NVIDIA key
+    const retryKeys = [
       Deno.env.get("NVIDIA_API_KEY"),
-      Deno.env.get("GEMINI_API_KEY_2"),
     ].filter(Boolean) as string[];
 
     for (const key of geminiKeys) {
