@@ -54,8 +54,8 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("NVIDIA_API_KEY");
+    if (!apiKey) throw new Error("NVIDIA_API_KEY not configured");
 
     const liveData = await fetchLiveData();
 
@@ -63,14 +63,14 @@ serve(async (req) => {
       ? `\n\nLIVE_SYSTEM_DATA:\n${JSON.stringify(liveData)}`
       : "\n\n[LIVE_SYSTEM_DATA unavailable]");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "moonshotai/kimi-k2-thinking",
         messages: [
           { role: "system", content: systemWithData },
           ...messages,

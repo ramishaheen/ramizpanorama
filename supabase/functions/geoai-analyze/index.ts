@@ -13,8 +13,8 @@ serve(async (req) => {
     if (!lat || !lng) throw new Error("lat and lng are required");
 
     const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     // Get satellite image from Google Maps Static API
     let imageUrl = "";
@@ -111,61 +111,34 @@ Analyze based on the geographic location context. For coordinates in the Middle 
       });
     }
 
-    let aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    let aiResponse = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${NVIDIA_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "moonshotai/kimi-k2-thinking",
         messages,
         temperature: 0.3,
       }),
     });
 
-    // Fallback to direct Gemini API if gateway credits exhausted
+    // Retry with NVIDIA if rate limited
     if (aiResponse.status === 402 || aiResponse.status === 429) {
-      const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY_2") || Deno.env.get("GEMINI_API_KEY");
-      if (GEMINI_KEY) {
-        console.log("Gateway returned " + aiResponse.status + ", falling back to direct Gemini API");
-        // Convert OpenAI messages format to Gemini format
-        const parts: any[] = [];
-        for (const msg of messages) {
-          if (typeof msg.content === "string") {
-            parts.push({ text: msg.content });
-          } else if (Array.isArray(msg.content)) {
-            for (const part of msg.content) {
-              if (part.type === "text") parts.push({ text: part.text });
-              else if (part.type === "image_url" && part.image_url?.url) {
-                // For URL-based images, just add as text reference
-                parts.push({ text: `[Satellite image at coordinates ${lat}, ${lng}]` });
-              }
-            }
-          }
-        }
-        const geminiResp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts }],
-              generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
-            }),
-          }
-        );
-        if (geminiResp.ok) {
-          const gData = await geminiResp.json();
-          const rawText = gData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-          aiResponse = new Response(JSON.stringify({ choices: [{ message: { content: rawText } }] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        } else {
-          console.error("Gemini fallback failed:", geminiResp.status);
-        }
-      }
+      console.log("Primary NVIDIA call returned " + aiResponse.status + ", retrying...");
+      await new Promise(r => setTimeout(r, 2000));
+      aiResponse = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${NVIDIA_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "moonshotai/kimi-k2-thinking",
+          messages,
+        }),
+      });
     }
 
     if (!aiResponse.ok) {

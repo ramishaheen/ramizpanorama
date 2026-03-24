@@ -91,8 +91,8 @@ Deno.serve(async (req) => {
       const { collection, item_id, feed_id } = body;
       if (!collection || !item_id) throw new Error("collection and item_id required");
 
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+      const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+      if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
       // Fetch thumbnail
       const itemResp = await fetch(`${stacBase}/collections/${collection}/items/${item_id}`);
@@ -107,11 +107,11 @@ Deno.serve(async (req) => {
         : [0, 0];
 
       // AI analysis
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "moonshotai/kimi-k2-thinking",
           messages: [
             {
               role: "system",

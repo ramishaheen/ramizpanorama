@@ -67,14 +67,14 @@ function buildUserPrompt(seedText: string, question: string, rounds: number) {
 }
 
 async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: string) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "moonshotai/kimi-k2-thinking",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -86,14 +86,14 @@ async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: s
 }
 
 async function callGeminiDirect(systemPrompt: string, userPrompt: string, apiKey: string) {
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gemini-2.5-flash",
+      model: "moonshotai/kimi-k2-thinking",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -141,11 +141,11 @@ serve(async (req) => {
     }
 
     // 2) Fallback: Lovable AI gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY) {
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (NVIDIA_API_KEY) {
       console.log("RamiFish: trying Lovable AI gateway...");
       try {
-        const response = await callLovableAI(systemPrompt, userPrompt, LOVABLE_API_KEY);
+        const response = await callLovableAI(systemPrompt, userPrompt, NVIDIA_API_KEY);
         if (response.ok) {
           console.log("RamiFish: Lovable AI succeeded, streaming...");
           return new Response(response.body, {
@@ -159,13 +159,12 @@ serve(async (req) => {
       }
     }
 
-    // 3) Last resort: try each shared Gemini key individually
-    const geminiKeys = [
-      Deno.env.get("GEMINI_API_KEY"),
-      Deno.env.get("GEMINI_API_KEY_2"),
+    // 3) Last resort: retry with NVIDIA key
+    const retryKeys = [
+      Deno.env.get("NVIDIA_API_KEY"),
     ].filter(Boolean) as string[];
 
-    for (const key of geminiKeys) {
+    for (const key of retryKeys) {
       console.log("RamiFish: trying shared Gemini key...");
       try {
         const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, key);

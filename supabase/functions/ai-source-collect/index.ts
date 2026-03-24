@@ -212,23 +212,23 @@ serve(async (req) => {
     let aiAssessment = "";
     let localizationConfidence = 0;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY && totalSources > 0) {
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (NVIDIA_API_KEY && totalSources > 0) {
       try {
         const summaryData = Object.entries(sources)
           .map(([cat, items]) => `${cat}: ${items.length} sources${items.length > 0 ? ` — ${items.slice(0, 3).map((i: any) => i.title).join(", ")}` : ""}`)
           .join("\n");
 
         const aiResponse = await fetch(
-          "https://ai.gateway.lovable.dev/v1/chat/completions",
+          "https://integrate.api.nvidia.com/v1/chat/completions",
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              Authorization: `Bearer ${NVIDIA_API_KEY}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: "moonshotai/kimi-k2-thinking",
               messages: [
                 {
                   role: "system",

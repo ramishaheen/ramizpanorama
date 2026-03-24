@@ -239,15 +239,15 @@ Deno.serve(async (req) => {
 
       let aiReasoning = "";
       if (topMatches.length > 0) {
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        if (LOVABLE_API_KEY) {
+        const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+        if (NVIDIA_API_KEY) {
           try {
             const threatLabel = ["", "MINIMAL", "LOW", "MODERATE", "HIGH", "CRITICAL"][threatLevel] || "UNKNOWN";
-            const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
               method: "POST",
-              headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+              headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
               body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
+                model: "moonshotai/kimi-k2-thinking",
                 messages: [{
                   role: "user",
                   content: `You are a JADC2 weaponeering AI. Generate a 2-sentence tactical recommendation for this engagement:

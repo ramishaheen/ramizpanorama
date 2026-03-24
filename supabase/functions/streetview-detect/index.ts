@@ -3,7 +3,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_GATEWAY_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 const DETECTION_PROMPT = `You are a computer vision AI analyzing a street-level photograph. Detect ALL visible objects and provide bounding box coordinates as percentages of the image dimensions.
 
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const { lat, lng, heading, pitch, fov, image_base64, mime_type } = await req.json();
 
     const GOOGLE_MAPS_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_KEY = Deno.env.get("NVIDIA_API_KEY");
 
     if (!LOVABLE_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "moonshotai/kimi-k2-thinking",
         messages: [
           {
             role: "user",
@@ -110,39 +110,31 @@ Deno.serve(async (req) => {
       }),
     });
 
-    // Fallback to direct Gemini API if gateway credits exhausted
+    // Retry with NVIDIA if rate limited
     if (aiResp.status === 402 || aiResp.status === 429) {
-      const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY_2") || Deno.env.get("GEMINI_API_KEY");
-      if (GEMINI_KEY) {
-        console.log("Gateway returned " + aiResp.status + ", falling back to direct Gemini API");
-        const geminiResp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  { text: DETECTION_PROMPT },
-                  { inline_data: { mime_type: imageMime, data: imageData } },
-                ],
-              }],
-              generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
-            }),
-          }
-        );
-        if (geminiResp.ok) {
-          const gData = await geminiResp.json();
-          const rawText = gData.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-          // Repackage into OpenAI-compatible format for downstream parsing
-          aiResp = new Response(JSON.stringify({ choices: [{ message: { content: rawText } }] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        } else {
-          console.error("Gemini fallback also failed:", geminiResp.status);
-        }
-      }
+      console.log("NVIDIA returned " + aiResp.status + ", retrying after delay...");
+      await new Promise(r => setTimeout(r, 2000));
+      aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("NVIDIA_API_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "moonshotai/kimi-k2-thinking",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: DETECTION_PROMPT },
+                { type: "image_url", image_url: { url: `data:${imageMime};base64,${imageData}` } },
+              ],
+            },
+          ],
+          max_tokens: 4096,
+          temperature: 0.1,
+        }),
+      });
     }
 
     if (!aiResp.ok) {

@@ -39,20 +39,20 @@ let cacheTimestamp = 0;
 const CACHE_TTL_MS = 120_000;
 
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+  const apiKey = Deno.env.get("NVIDIA_API_KEY");
+  if (!apiKey) throw new Error("NVIDIA_API_KEY not configured");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages }),
+      body: JSON.stringify({ model: "moonshotai/kimi-k2-thinking", messages }),
       signal: controller.signal,
     });
 

@@ -108,22 +108,22 @@ Respond ONLY with valid JSON (no markdown):
 
 // Fallback: use Gemini if Perplexity fails
 async function fetchGeminiIntel(): Promise<any> {
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+  const apiKey = Deno.env.get("NVIDIA_API_KEY");
+  if (!apiKey) throw new Error("NVIDIA_API_KEY not configured");
 
   const now = new Date().toISOString();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "moonshotai/kimi-k2-thinking",
         messages: [
           { role: 'system', content: 'You are a military intelligence analyst. Output only valid JSON. Be realistic and specific with coordinates. Base your reports on plausible current events.' },
           { role: 'user', content: `Generate 8 intelligence situation updates for the Middle East. Current time: ${now}. Focus on Iran, Israel, Lebanon, Syria, Iraq, Yemen, Gulf. Include lat/lng. Format: {"updates":[{"id":"","headline":"","body":"","category":"MILITARY|DIPLOMATIC|HUMANITARIAN|ECONOMIC|AIRSPACE|MARITIME|MISSILE","severity":"low|medium|high|critical","region":"","lat":0,"lng":0,"timestamp":"${now}","source":""}],"situation_summary":"","threat_level":"HIGH","last_updated":"${now}"}` }
