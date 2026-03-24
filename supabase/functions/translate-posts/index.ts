@@ -21,7 +21,7 @@ serve(async (req) => {
     }
 
     const apiKey = Deno.env.get("NVIDIA_API_KEY");
-    if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+    if (!apiKey) throw new Error("NVIDIA_API_KEY is not configured");
 
     const numbered = texts.map((t: string, i: number) => `[${i}] ${t}`).join("\n---\n");
 
