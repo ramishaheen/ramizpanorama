@@ -118,7 +118,7 @@ Analyze based on the geographic location context. For coordinates in the Middle 
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "moonshotai/kimi-k2-thinking",
+        model: "google/gemma-3-27b-it",
         messages,
         temperature: 0.3,
       }),
