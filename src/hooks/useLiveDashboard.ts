@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import type { AirspaceAlert, MaritimeVessel, GeoAlert, RiskScore, TimelineEvent, Rocket } from "@/data/mockData";
 
 export function useLiveDashboard() {
-  const [simulationActive, setSimulationActive] = useState(false);
+  const [simulationActive, setSimulationActive] = useState(true);
   const [dataFresh, setDataFresh] = useState(false);
   const freshTimer = useRef<ReturnType<typeof setTimeout>>();
 
