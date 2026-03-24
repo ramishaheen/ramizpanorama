@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
     if (!image_base64) throw new Error("image_base64 is required");
 
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY_2");
-    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_KEY = Deno.env.get("NVIDIA_API_KEY");
 
     // ═══ PASS 1: Evidence Extraction (Flash) ═══
     console.log("Pass 1: Extracting visual evidence...");

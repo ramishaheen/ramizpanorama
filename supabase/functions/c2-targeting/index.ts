@@ -11,8 +11,8 @@ serve(async (req) => {
 
   try {
     const { image_base64, lat, lng, source_sensor } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     const systemPrompt = `You are a military intelligence image analyst (IMINT specialist). Analyze the provided imagery and identify military assets.
 
@@ -46,7 +46,7 @@ Example: [{"classification":"tank","confidence":0.85,"priority":"high","assessme
 
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "moonshotai/kimi-k2-thinking",
         messages,

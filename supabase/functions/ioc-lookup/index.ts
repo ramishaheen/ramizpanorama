@@ -182,7 +182,7 @@ serve(async (req) => {
     };
 
     // AI enrichment
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("NVIDIA_API_KEY");
     if (apiKey) {
       try {
         const dataLines = [`Threat Score: ${threatScore}/100`, `IOC Type: ${iocType}`];

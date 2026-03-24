@@ -39,8 +39,8 @@ let cacheTimestamp = 0;
 const CACHE_TTL_MS = 120_000;
 
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+  const apiKey = Deno.env.get("NVIDIA_API_KEY");
+  if (!apiKey) throw new Error("NVIDIA_API_KEY not configured");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);

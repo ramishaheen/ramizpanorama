@@ -141,11 +141,11 @@ serve(async (req) => {
     }
 
     // 2) Fallback: Lovable AI gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY) {
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (NVIDIA_API_KEY) {
       console.log("RamiFish: trying Lovable AI gateway...");
       try {
-        const response = await callLovableAI(systemPrompt, userPrompt, LOVABLE_API_KEY);
+        const response = await callLovableAI(systemPrompt, userPrompt, NVIDIA_API_KEY);
         if (response.ok) {
           console.log("RamiFish: Lovable AI succeeded, streaming...");
           return new Response(response.body, {

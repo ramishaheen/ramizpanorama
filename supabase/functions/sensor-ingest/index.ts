@@ -132,8 +132,8 @@ Deno.serve(async (req) => {
 
     // ── AUTO_CORRELATE: AI-driven multi-INT correlation ──
     if (action === "auto_correlate") {
-      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+      const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+      if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
       // Get recent entities without high confidence
       const { data: entities } = await sb.from("ontology_entities")
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
       const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "moonshotai/kimi-k2-thinking",
           messages: [

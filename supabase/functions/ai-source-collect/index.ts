@@ -212,8 +212,8 @@ serve(async (req) => {
     let aiAssessment = "";
     let localizationConfidence = 0;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY && totalSources > 0) {
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (NVIDIA_API_KEY && totalSources > 0) {
       try {
         const summaryData = Object.entries(sources)
           .map(([cat, items]) => `${cat}: ${items.length} sources${items.length > 0 ? ` — ${items.slice(0, 3).map((i: any) => i.title).join(", ")}` : ""}`)
@@ -224,7 +224,7 @@ serve(async (req) => {
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              Authorization: `Bearer ${NVIDIA_API_KEY}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({

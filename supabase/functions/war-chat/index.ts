@@ -54,8 +54,8 @@ serve(async (req) => {
 
   try {
     const { messages } = await req.json();
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = Deno.env.get("NVIDIA_API_KEY");
+    if (!apiKey) throw new Error("NVIDIA_API_KEY not configured");
 
     const liveData = await fetchLiveData();
 

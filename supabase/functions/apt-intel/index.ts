@@ -44,8 +44,8 @@ const fallbackGroups: APTGroup[] = [
 ];
 
 async function callAI(messages: Array<{ role: string; content: string }>) {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+  const apiKey = Deno.env.get("NVIDIA_API_KEY");
+  if (!apiKey) throw new Error("NVIDIA_API_KEY not configured");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);

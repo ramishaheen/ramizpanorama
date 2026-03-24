@@ -17,7 +17,7 @@ function getSupabase() {
 
 async function callAI(messages: Array<{ role: string; content: string }>) {
   // Try Lovable AI Gateway first (no API key needed), then fall back to direct Gemini
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  const lovableKey = Deno.env.get("NVIDIA_API_KEY");
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
   const controller = new AbortController();

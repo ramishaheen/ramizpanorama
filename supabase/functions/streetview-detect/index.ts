@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const { lat, lng, heading, pitch, fov, image_base64, mime_type } = await req.json();
 
     const GOOGLE_MAPS_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_KEY = Deno.env.get("NVIDIA_API_KEY");
 
     if (!LOVABLE_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {

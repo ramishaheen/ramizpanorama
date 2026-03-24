@@ -239,13 +239,13 @@ Deno.serve(async (req) => {
 
       let aiReasoning = "";
       if (topMatches.length > 0) {
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        if (LOVABLE_API_KEY) {
+        const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+        if (NVIDIA_API_KEY) {
           try {
             const threatLabel = ["", "MINIMAL", "LOW", "MODERATE", "HIGH", "CRITICAL"][threatLevel] || "UNKNOWN";
             const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
               method: "POST",
-              headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+              headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
               body: JSON.stringify({
                 model: "moonshotai/kimi-k2-thinking",
                 messages: [{

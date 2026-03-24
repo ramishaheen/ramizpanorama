@@ -13,8 +13,8 @@ serve(async (req) => {
     if (!lat || !lng) throw new Error("lat and lng are required");
 
     const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     // Get satellite image from Google Maps Static API
     let imageUrl = "";
@@ -114,7 +114,7 @@ Analyze based on the geographic location context. For coordinates in the Middle 
     let aiResponse = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${NVIDIA_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -10,11 +10,11 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
   const sb = createClient(supabaseUrl, serviceKey);
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY not configured");
 
     // Query 6 tables in parallel
     const [entitiesRes, eventsRes, alertsRes, targetsRes, unitsRes, actionsRes] = await Promise.all([
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
 
     const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${NVIDIA_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "moonshotai/kimi-k2-thinking",
         messages: [

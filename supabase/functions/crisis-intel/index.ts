@@ -146,14 +146,14 @@ async function callGemini(messages: any[], toolDef: any): Promise<any | null> {
 }
 
 async function callLovableGateway(messages: any[], toolDef: any): Promise<any | null> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) return null;
+  const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
+  if (!NVIDIA_API_KEY) return null;
 
   try {
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${NVIDIA_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
