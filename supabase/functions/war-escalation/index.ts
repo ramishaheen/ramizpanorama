@@ -144,7 +144,12 @@ Return valid JSON with this structure:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) {
+    const isRecoverable = e instanceof Error && (
+      e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED" ||
+      e.message === "AI_UNAVAILABLE" || e.name === "AbortError" ||
+      e.message.includes("aborted")
+    );
+    if (isRecoverable) {
       const cached = cachedEscalationResult && Date.now() - escalationCacheTs < ESCALATION_CACHE_TTL_MS ? cachedEscalationResult : null;
       return new Response(JSON.stringify(cached || fallbackEscalation), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
