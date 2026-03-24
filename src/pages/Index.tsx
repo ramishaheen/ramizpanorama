@@ -441,10 +441,10 @@ const Index = () => {
                       <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border/20">
                         <button
                           onClick={() => setLayoutLocked(l => !l)}
-                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[8px] font-mono uppercase tracking-wider transition-all duration-150 ${
                             layoutLocked
-                              ? "text-warning bg-warning/10 border border-warning/30"
-                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                              ? "text-warning bg-warning/8 border border-warning/20"
+                              : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
                           }`}
                           title={layoutLocked ? "Unlock widget reordering" : "Lock widget positions"}
                         >
