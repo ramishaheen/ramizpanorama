@@ -43,7 +43,7 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
   if (!apiKey) throw new Error("NVIDIA_API_KEY not configured");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 55000);
 
   try {
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
@@ -133,7 +133,14 @@ Return valid JSON:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) {
+    const isRecoverable = e instanceof Error && (
+      e.name === "AbortError" ||
+      e.message.includes("aborted") ||
+      e.message === "RATE_LIMIT" ||
+      e.message === "PAYMENT_REQUIRED" ||
+      e.message === "AI_UNAVAILABLE"
+    );
+    if (isRecoverable) {
       const cached = cachedPredictionResult && Date.now() - cacheTimestamp < CACHE_TTL_MS ? cachedPredictionResult : null;
       return new Response(JSON.stringify(cached || fallbackPredictions), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
