@@ -132,23 +132,24 @@
 
   /* ── Maven Glass Panel ── */
   .maven-glass {
-    background: hsl(var(--maven-glass));
+    background: hsl(220 30% 5% / 0.85);
     backdrop-filter: blur(24px) saturate(1.4);
-    border: 1px solid hsl(var(--maven-glass-border));
-    box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow);
+    border: 1px solid hsl(192 60% 30% / 0.25);
+    box-shadow: 0 8px 40px hsl(220 30% 1% / 0.7), 0 2px 12px hsl(220 30% 1% / 0.5), inset 0 1px 0 hsl(192 95% 60% / 0.08), 0 0 1px hsl(192 95% 48% / 0.15);
   }
 
   .maven-glass-heavy {
-    background: hsl(220 30% 4% / 0.88);
-    backdrop-filter: blur(28px) saturate(1.5);
-    border: 1px solid hsl(192 40% 18% / 0.3);
-    box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow), 0 0 1px hsl(192 95% 48% / 0.1);
+    background: hsl(220 35% 4% / 0.92);
+    backdrop-filter: blur(32px) saturate(1.6);
+    border: 1px solid hsl(192 60% 35% / 0.2);
+    box-shadow: 0 12px 48px hsl(220 30% 1% / 0.8), 0 4px 16px hsl(220 30% 1% / 0.6), inset 0 1px 0 hsl(192 95% 60% / 0.1), inset 0 0 80px hsl(192 95% 48% / 0.03), 0 0 2px hsl(192 95% 48% / 0.12);
   }
 
   .maven-glass-light {
-    background: hsl(220 28% 6% / 0.6);
+    background: hsl(220 28% 6% / 0.65);
     backdrop-filter: blur(16px) saturate(1.2);
-    border: 1px solid hsl(192 40% 18% / 0.2);
+    border: 1px solid hsl(192 50% 25% / 0.18);
+    box-shadow: inset 0 1px 0 hsl(192 95% 60% / 0.05);
   }
 
   /* ── Maven Depth & Elevation ── */

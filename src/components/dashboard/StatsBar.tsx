@@ -228,7 +228,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
   return (
     <div className="space-y-0">
       {/* Stats cards */}
-      <div className={`flex overflow-x-auto mobile-stats-scroll sm:grid sm:grid-cols-7 gap-0.5 px-2 sm:px-3 py-1 maven-glass-light border-b border-border/20 transition-all duration-300 ${dataFresh ? "maven-breathe" : ""}`}>
+      <div className={`flex overflow-x-auto mobile-stats-scroll sm:grid sm:grid-cols-7 gap-0.5 px-2 sm:px-3 py-1 maven-glass border-b-2 border-b-primary/15 transition-all duration-300 ${dataFresh ? "maven-breathe" : ""}`}>
         <div className="flex items-center justify-center px-1">
           <div className="text-center">
             <div className="text-[9px] font-mono font-bold text-primary uppercase tracking-[0.2em] leading-none">TODAY</div>

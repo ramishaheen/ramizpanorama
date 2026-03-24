@@ -407,9 +407,12 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen overflow-hidden relative" style={{ background: 'hsl(220 30% 3%)' }}>
       {/* Ambient grid overlay */}
-      <div className="absolute inset-0 maven-grid-subtle pointer-events-none z-0 opacity-60" />
+      <div className="absolute inset-0 pointer-events-none z-0" style={{
+        backgroundImage: 'linear-gradient(hsl(192 40% 25% / 0.08) 1px, transparent 1px), linear-gradient(90deg, hsl(192 40% 25% / 0.08) 1px, transparent 1px)',
+        backgroundSize: '32px 32px'
+      }} />
       {/* Vignette overlay */}
-      <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, hsl(220 30% 2% / 0.6) 100%)' }} />
+      <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at center, transparent 40%, hsl(220 30% 1% / 0.8) 100%)' }} />
       <div className="relative z-10 flex flex-col h-full overflow-hidden">
       {componentVisibility.header && (
         <DashboardHeader dataFresh={dataFresh} alertMuted={alertMuted} onToggleAlertMute={() => setAlertMuted(m => !m)} rockets={rockets} telegramMarkers={telegramIntel.markers} geoAlerts={geoAlerts} lastPollAt={lastPollAt} activeSources={Object.values(layers).filter(Boolean).length} simulationActive={simulationActive} onToggleSimulation={() => setSimulationActive(v => !v)} />
@@ -439,7 +442,7 @@ const Index = () => {
               {componentVisibility.leftSidebar && (
                 <>
                 {!leftCollapsed ? (
-                    <div className="flex-shrink-0 border-r border-border/25 flex flex-col maven-glass-heavy" style={{ width: leftWidth }}>
+                    <div className="flex-shrink-0 border-r-2 border-r-primary/20 flex flex-col maven-glass-heavy" style={{ width: leftWidth }}>
                       <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border/20">
                         <button
                           onClick={() => setLayoutLocked(l => !l)}
@@ -550,7 +553,7 @@ const Index = () => {
                   )}
 
               {!rightCollapsed ? (
-                    <div className="flex-shrink-0 border-l border-border/25 flex flex-col relative maven-glass-heavy" style={{ width: rightWidth }}>
+                    <div className="flex-shrink-0 border-l-2 border-l-primary/20 flex flex-col relative maven-glass-heavy" style={{ width: rightWidth }}>
                       {/* Full-height resize edge on left side */}
                       <div
                         onMouseDown={handleResizeRight}
