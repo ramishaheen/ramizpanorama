@@ -614,10 +614,10 @@ const Index = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-10 flex-shrink-0 border-l border-border flex flex-col">
+                    <div className="w-10 flex-shrink-0 border-l border-border/25 flex flex-col maven-glass">
                       <button
                         onClick={() => setRightCollapsed(false)}
-                        className="flex items-center justify-center py-1.5 border-b border-border hover:bg-secondary/50 transition-colors"
+                        className="flex items-center justify-center py-1.5 border-b border-border/20 hover:bg-primary/5 transition-colors"
                         title="Expand sidebar"
                       >
                         <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
