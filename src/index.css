@@ -196,9 +196,9 @@
 
   .maven-grid-subtle {
     background-image: 
-      linear-gradient(hsl(200 40% 18% / 0.08) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(200 40% 18% / 0.08) 1px, transparent 1px);
-    background-size: 32px 32px;
+      linear-gradient(hsl(192 40% 20% / 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(192 40% 20% / 0.12) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
 
   /* ── Maven Breathing / Ambient Animations ── */
