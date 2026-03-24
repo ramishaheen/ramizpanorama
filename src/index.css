@@ -133,22 +133,22 @@
   /* ── Maven Glass Panel ── */
   .maven-glass {
     background: hsl(var(--maven-glass));
-    backdrop-filter: blur(20px) saturate(1.3);
-    border: 1px solid hsl(var(--maven-glass-border));
-    box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow);
-  }
-
-  .maven-glass-heavy {
-    background: hsl(216 24% 6% / 0.85);
     backdrop-filter: blur(24px) saturate(1.4);
     border: 1px solid hsl(var(--maven-glass-border));
     box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow);
   }
 
+  .maven-glass-heavy {
+    background: hsl(220 30% 4% / 0.88);
+    backdrop-filter: blur(28px) saturate(1.5);
+    border: 1px solid hsl(192 40% 18% / 0.3);
+    box-shadow: var(--maven-depth-shadow), var(--maven-panel-glow), 0 0 1px hsl(192 95% 48% / 0.1);
+  }
+
   .maven-glass-light {
-    background: hsl(216 24% 8% / 0.55);
+    background: hsl(220 28% 6% / 0.6);
     backdrop-filter: blur(16px) saturate(1.2);
-    border: 1px solid hsl(200 40% 20% / 0.25);
+    border: 1px solid hsl(192 40% 18% / 0.2);
   }
 
   /* ── Maven Depth & Elevation ── */
