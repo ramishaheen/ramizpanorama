@@ -290,10 +290,15 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-center space-y-3">
-          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">جاري تحميل المعلومات…</p>
+      <div className="flex items-center justify-center h-screen bg-background maven-grid-subtle">
+        <div className="text-center space-y-4 maven-glass p-8">
+          <div className="h-8 w-8 border-2 border-primary/60 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-[0.2em]">Initializing Intelligence Systems…</p>
+          <div className="flex justify-center gap-1">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="h-1 w-6 rounded-full bg-primary/20 animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </div>
         </div>
       </div>
     );
