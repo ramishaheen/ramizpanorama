@@ -459,8 +459,8 @@ const Index = () => {
                           <PanelLeftClose className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
                         </button>
                       </div>
-                      <div className="flex-1 overflow-y-auto">
-                        <div className="p-3 space-y-1">
+                      <div className="flex-1 overflow-y-auto intel-feed-scroll">
+                        <div className="p-2.5 space-y-0.5">
                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLeftDragEnd}>
                             <SortableContext items={leftOrder} strategy={verticalListSortingStrategy}>
                               {leftOrder.map((id) => {
