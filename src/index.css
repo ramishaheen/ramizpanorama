@@ -355,6 +355,39 @@
   animation-duration: 120s;
 }
 
+@keyframes maven-breathe {
+  0%, 100% { box-shadow: inset 0 0 30px hsl(192 95% 48% / 0.02); }
+  50% { box-shadow: inset 0 0 50px hsl(192 95% 48% / 0.05); }
+}
+
+@keyframes maven-breathe-red {
+  0%, 100% { box-shadow: inset 0 0 20px hsl(0 72% 50% / 0.03); }
+  50% { box-shadow: inset 0 0 40px hsl(0 72% 50% / 0.08); }
+}
+
+@keyframes maven-breathe-amber {
+  0%, 100% { box-shadow: inset 0 0 20px hsl(42 100% 50% / 0.02); }
+  50% { box-shadow: inset 0 0 40px hsl(42 100% 50% / 0.06); }
+}
+
+@keyframes maven-heartbeat {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  25% { opacity: 1; transform: scale(1.15); }
+  35% { opacity: 0.8; transform: scale(1.05); }
+  45% { opacity: 1; transform: scale(1.1); }
+  60% { opacity: 0.7; transform: scale(1); }
+}
+
+@keyframes maven-ambient-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes maven-data-stream {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 0% 100%; }
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
@@ -364,8 +397,8 @@
 }
 
 .leaflet-container {
-  background: hsl(220 20% 5%) !important;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: hsl(216 28% 3%) !important;
+  font-family: 'Inter', 'IBM Plex Sans', system-ui, sans-serif;
 }
 
 .leaflet-tile-pane {
@@ -377,35 +410,35 @@
 }
 
 .leaflet-control-zoom a {
-  background: hsl(220 18% 12%) !important;
-  color: hsl(190 100% 50%) !important;
-  border-color: hsl(220 15% 18%) !important;
+  background: hsl(216 24% 9%) !important;
+  color: hsl(192 95% 48%) !important;
+  border-color: hsl(216 18% 14%) !important;
 }
 
 .leaflet-control-attribution {
-  background: hsl(220 18% 10% / 0.8) !important;
-  color: hsl(215 15% 50%) !important;
+  background: hsl(216 24% 7% / 0.8) !important;
+  color: hsl(215 12% 45%) !important;
   font-size: 9px !important;
 }
 
 /* Intel feed scrollbar */
 .intel-feed-scroll::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 .intel-feed-scroll::-webkit-scrollbar-track {
-  background: hsl(220 18% 10%);
+  background: transparent;
   border-radius: 3px;
 }
 .intel-feed-scroll::-webkit-scrollbar-thumb {
-  background: hsl(190 100% 50% / 0.3);
+  background: hsl(192 95% 48% / 0.2);
   border-radius: 3px;
 }
 .intel-feed-scroll::-webkit-scrollbar-thumb:hover {
-  background: hsl(190 100% 50% / 0.5);
+  background: hsl(192 95% 48% / 0.35);
 }
 .intel-feed-scroll {
   scrollbar-width: thin;
-  scrollbar-color: hsl(190 100% 50% / 0.3) hsl(220 18% 10%);
+  scrollbar-color: hsl(192 95% 48% / 0.2) transparent;
 }
 
 /* Left-side scrollbar via direction trick */
