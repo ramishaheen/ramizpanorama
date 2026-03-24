@@ -164,7 +164,7 @@ serve(async (req) => {
       Deno.env.get("NVIDIA_API_KEY"),
     ].filter(Boolean) as string[];
 
-    for (const key of geminiKeys) {
+    for (const key of retryKeys) {
       console.log("RamiFish: trying shared Gemini key...");
       try {
         const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, key);
