@@ -266,7 +266,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
 
       {/* War cost cards - COLLAPSIBLE */}
       {warCosts.data && !warCosts.error && (
-        <div className="border-t border-border/50 bg-card/30">
+        <div className="border-t border-border/15 bg-card/20 backdrop-blur-sm">
           <button
             onClick={() => setWarCostOpen(o => !o)}
             className="w-full flex items-center justify-between px-2.5 py-1 hover:bg-secondary/30 transition-colors"
