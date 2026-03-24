@@ -143,24 +143,34 @@ export const AIPredictions = () => {
 
       {data && !data.error && (
         <div className="space-y-2">
-          {/* Sentiment & Risk */}
-          <div className="flex items-center gap-2">
+          {/* Sentiment & Risk — styled as tactical badges */}
+          <div className="flex items-center gap-2 flex-wrap">
             {data.overall_market_sentiment && (
-              <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${sentimentColor[data.overall_market_sentiment]}`}>
-                {data.overall_market_sentiment}
+              <span className={`text-[9px] font-mono font-bold px-2 py-0.5 border ${
+                data.overall_market_sentiment === 'BULLISH' ? 'border-success/30 bg-success/8' :
+                data.overall_market_sentiment === 'BEARISH' ? 'border-critical/30 bg-critical/8' :
+                'border-warning/30 bg-warning/8'
+              } ${sentimentColor[data.overall_market_sentiment]}`}>
+                ◆ {data.overall_market_sentiment}
               </span>
             )}
             {data.risk_level && (
-              <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${riskColor[data.risk_level]}`}>
-                {t("RISK", "المخاطر")}: {data.risk_level}
+              <span className={`text-[9px] font-mono font-bold px-2 py-0.5 border ${riskColor[data.risk_level]}`}>
+                ▲ {t("RISK", "المخاطر")}: {data.risk_level}
+              </span>
+            )}
+            {data.predictions && (
+              <span className="text-[8px] font-mono text-muted-foreground/60 ml-auto">
+                {data.predictions.length} SIGNALS
               </span>
             )}
           </div>
 
-          {/* Key Insight */}
+          {/* Key Insight — neural highlight */}
           {data.key_insight && (
-            <div className="px-2 py-1.5 rounded bg-primary/5 border border-primary/20">
-              <p className="text-[10px] text-primary font-mono leading-relaxed">{data.key_insight}</p>
+            <div className="px-2.5 py-2 border-l-2 border-l-primary bg-primary/5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full blur-xl" />
+              <p className="text-[10px] text-primary font-mono leading-relaxed relative z-10">{data.key_insight}</p>
             </div>
           )}
 
