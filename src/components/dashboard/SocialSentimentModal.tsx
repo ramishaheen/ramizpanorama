@@ -104,7 +104,7 @@ export const SocialSentimentModal = ({ open, onClose }: Props) => {
     return "text-muted-foreground";
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
         <motion.div
           className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
