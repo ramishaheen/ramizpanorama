@@ -220,7 +220,7 @@ export function ScoutingModal({ onClose }: ScoutingModalProps) {
     },
     social: {
       label: "SOCIAL MEDIA HARVESTING",
-      node: <SocialSentimentBox />,
+      node: <SocialSentimentInline />,
     },
   };
 
