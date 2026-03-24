@@ -265,8 +265,8 @@ Deno.serve(async (req) => {
 
     // ═══ PASS 2: Coordinate Pinpointing (Pro) ═══
     console.log("Pass 2: Pinpointing coordinates...");
-    const pass2Body = buildPass2Body(image_base64, mime_type, evidenceStr, "moonshotai/kimi-k2-thinking");
-    const pass2GatewayBody = buildPass2Body(image_base64, mime_type, evidenceStr, "moonshotai/kimi-k2-thinking");
+    const pass2Body = buildPass2Body(image_base64, mime_type, evidenceStr, "google/gemma-3-27b-it");
+    const pass2GatewayBody = buildPass2Body(image_base64, mime_type, evidenceStr, "google/gemma-3-27b-it");
 
     let pass2Resp = await callAI(
       GEMINI_KEY ? pass2Body : pass2GatewayBody,
