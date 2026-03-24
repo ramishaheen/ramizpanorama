@@ -227,8 +227,8 @@ Deno.serve(async (req) => {
 
     // ═══ PASS 1: Evidence Extraction (Flash) ═══
     console.log("Pass 1: Extracting visual evidence...");
-    const pass1Body = buildPass1Body(image_base64, mime_type, "moonshotai/kimi-k2-thinking");
-    const pass1GatewayBody = buildPass1Body(image_base64, mime_type, "moonshotai/kimi-k2-thinking");
+    const pass1Body = buildPass1Body(image_base64, mime_type, "google/gemma-3-27b-it");
+    const pass1GatewayBody = buildPass1Body(image_base64, mime_type, "google/gemma-3-27b-it");
 
     let pass1Resp = await callAI(
       GEMINI_KEY ? pass1Body : pass1GatewayBody,
