@@ -634,7 +634,7 @@ const Index = () => {
             <>
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={25} minSize={10} maxSize={50}>
-                <ResizablePanelGroup direction="horizontal" className="h-full">
+                <ResizablePanelGroup direction="horizontal" className="h-full maven-glass-heavy">
                   <ResizablePanel defaultSize={33} minSize={15}>
                     <div className="h-full overflow-hidden">
                       <CitizenSecurity
