@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Loader2, Search, BarChart3, PieChart, TrendingUp,
@@ -103,10 +104,10 @@ export const SocialSentimentModal = ({ open, onClose }: Props) => {
     return "text-muted-foreground";
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+        <motion.div
+          className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
       >
@@ -359,6 +360,7 @@ export const SocialSentimentModal = ({ open, onClose }: Props) => {
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
