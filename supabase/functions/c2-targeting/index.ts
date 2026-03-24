@@ -44,11 +44,11 @@ Example: [{"classification":"tank","confidence":0.85,"priority":"high","assessme
       });
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "moonshotai/kimi-k2-thinking",
         messages,
         tools: [{
           type: "function",

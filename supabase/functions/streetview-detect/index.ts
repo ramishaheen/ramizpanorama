@@ -3,7 +3,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_GATEWAY_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 const DETECTION_PROMPT = `You are a computer vision AI analyzing a street-level photograph. Detect ALL visible objects and provide bounding box coordinates as percentages of the image dimensions.
 
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "moonshotai/kimi-k2-thinking",
         messages: [
           {
             role: "user",

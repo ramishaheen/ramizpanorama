@@ -208,10 +208,10 @@ RECOMMENDATIONS: [1-2 actionable recommendations]`;
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 12000);
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "user", content: aiPrompt }] }),
+          body: JSON.stringify({ model: "moonshotai/kimi-k2-thinking", messages: [{ role: "user", content: aiPrompt }] }),
           signal: controller.signal,
         });
         clearTimeout(timeout);

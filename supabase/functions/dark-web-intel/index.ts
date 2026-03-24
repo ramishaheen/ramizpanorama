@@ -307,14 +307,14 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-  const models = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+  const models = ["moonshotai/kimi-k2-thinking", "moonshotai/kimi-k2-thinking"];
 
   for (const model of models) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 50000);
 
     try {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,

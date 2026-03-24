@@ -150,11 +150,11 @@ Deno.serve(async (req) => {
 
       const entSummary = entities.map((e: any) => `${e.name} (${e.entity_type}, ${e.affiliation}) at ${e.lat.toFixed(3)},${e.lng.toFixed(3)} conf=${e.confidence}`).join("\n");
 
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiResp = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "moonshotai/kimi-k2-thinking",
           messages: [
             { role: "system", content: "You are a multi-INT correlation engine. Given a list of detected entities, identify which ones likely refer to the same real-world object based on proximity, type, and context. Return JSON array of correlations: [{entity_ids: [id1, id2], reason: string, merged_confidence: number}]" },
             { role: "user", content: `Correlate these entities:\n${entSummary}\n\nEntity IDs: ${entities.map((e: any) => e.id).join(", ")}` },

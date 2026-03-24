@@ -150,14 +150,14 @@ async function callLovableGateway(messages: any[], toolDef: any): Promise<any | 
   if (!LOVABLE_API_KEY) return null;
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "moonshotai/kimi-k2-thinking",
         messages,
         tools: [toolDef],
         tool_choice: { type: "function", function: { name: "report_crisis_events" } },

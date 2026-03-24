@@ -4,7 +4,7 @@ const corsHeaders = {
 };
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_GATEWAY_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 // ── Pass 1 Prompt: Evidence Extraction ──
 const pass1Prompt = `You are an elite GEOINT forensic analyst. Your ONLY task is to extract every possible visual clue from this photograph. Do NOT guess coordinates yet.
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
     // ═══ PASS 1: Evidence Extraction (Flash) ═══
     console.log("Pass 1: Extracting visual evidence...");
     const pass1Body = buildPass1Body(image_base64, mime_type, "gemini-2.5-flash");
-    const pass1GatewayBody = buildPass1Body(image_base64, mime_type, "google/gemini-2.5-flash");
+    const pass1GatewayBody = buildPass1Body(image_base64, mime_type, "moonshotai/kimi-k2-thinking");
 
     let pass1Resp = await callAI(
       GEMINI_KEY ? pass1Body : pass1GatewayBody,
@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
     // ═══ PASS 2: Coordinate Pinpointing (Pro) ═══
     console.log("Pass 2: Pinpointing coordinates...");
     const pass2Body = buildPass2Body(image_base64, mime_type, evidenceStr, "gemini-2.5-pro");
-    const pass2GatewayBody = buildPass2Body(image_base64, mime_type, evidenceStr, "google/gemini-2.5-pro");
+    const pass2GatewayBody = buildPass2Body(image_base64, mime_type, evidenceStr, "moonshotai/kimi-k2-thinking");
 
     let pass2Resp = await callAI(
       GEMINI_KEY ? pass2Body : pass2GatewayBody,

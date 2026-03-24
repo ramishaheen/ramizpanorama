@@ -78,14 +78,14 @@ Launch Year: ${s.launchYear || "N/A"}
 TLE Source Group: ${s.source || "N/A"}`;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "moonshotai/kimi-k2-thinking",
         messages: [
           { role: "system", content: SYSTEM_PROMPT + satContext },
           ...messages,
