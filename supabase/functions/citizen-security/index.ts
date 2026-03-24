@@ -142,22 +142,19 @@ RISK: Overall ${risk.overall || 'N/A'}/100, Trend: ${risk.trend || 'N/A'}`
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    if (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED")) {
+    const isAbort = e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"));
+    const isRecoverable = isAbort || (e instanceof Error && (e.message === "RATE_LIMIT" || e.message === "PAYMENT_REQUIRED" || e.message === "AI_UNAVAILABLE"));
+
+    if (isRecoverable) {
       const cached = cachedResult && Date.now() - cachedResult.timestamp < CACHE_TTL_MS ? cachedResult.data : null;
       return new Response(JSON.stringify(cached || fallbackCitizenSecurity), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (e instanceof Error && e.message === "AI_UNAVAILABLE") {
-      return new Response(JSON.stringify({
-        countries: [], overall_assessment: "AI analysis temporarily unavailable.",
-        last_analyzed: new Date().toISOString(), error: "AI temporarily unavailable"
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
     console.error("Citizen security error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify(fallbackCitizenSecurity),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
