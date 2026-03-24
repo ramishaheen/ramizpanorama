@@ -174,39 +174,57 @@ export const AIPredictions = () => {
             </div>
           )}
 
-          {/* Predictions */}
-          <div className="space-y-1 max-h-48 overflow-y-auto">
+          {/* Predictions — attack chain flow cards */}
+          <div className="space-y-1 max-h-48 overflow-y-auto intel-feed-scroll">
             {data.predictions?.map((pred, i) => (
               <div
                 key={i}
-                className="flex items-start gap-2 px-2 py-1.5 rounded bg-secondary/30 border border-border"
+                className={`flex items-start gap-2 px-2.5 py-2 border-l-2 transition-all duration-150 hover:bg-secondary/20 maven-hover ${
+                  pred.direction === 'UP' ? 'border-l-success/50 bg-success/3' :
+                  pred.direction === 'DOWN' ? 'border-l-critical/50 bg-critical/3' :
+                  'border-l-warning/50 bg-warning/3'
+                }`}
               >
-                {directionIcon[pred.direction]}
+                <div className="flex-shrink-0 mt-0.5">
+                  {directionIcon[pred.direction]}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-mono font-semibold text-foreground truncate">
                       {pred.ticker ? `${pred.sector} (${pred.ticker})` : pred.sector}
                     </span>
-                    <span className={`text-[8px] font-mono ${confidenceColor[pred.confidence]}`}>
-                      {pred.confidence}
-                    </span>
-                    <span className="text-[8px] font-mono text-muted-foreground">
+                    <div className="flex items-center gap-0.5">
+                      {/* Confidence bar */}
+                      <div className="flex gap-px">
+                        {[1,2,3].map(level => (
+                          <div key={level} className={`h-1.5 w-1 ${
+                            (pred.confidence === 'HIGH' || (pred.confidence === 'MEDIUM' && level <= 2) || level === 1)
+                              ? (pred.confidence === 'HIGH' ? 'bg-success' : pred.confidence === 'MEDIUM' ? 'bg-warning' : 'bg-muted-foreground')
+                              : 'bg-muted/30'
+                          }`} />
+                        ))}
+                      </div>
+                      <span className={`text-[7px] font-mono ${confidenceColor[pred.confidence]}`}>
+                        {pred.confidence}
+                      </span>
+                    </div>
+                    <span className="text-[7px] font-mono text-muted-foreground/50 border border-border/30 px-1">
                       {pred.timeframe === "SHORT" ? "24-48h" : "1-2w"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {pred.recommendation && (
-                      <span className={`text-[8px] font-mono font-bold px-1 py-0.5 rounded ${
-                        pred.recommendation === "STRONG BUY" ? "bg-success/20 text-success" :
-                        pred.recommendation === "BUY" ? "bg-success/10 text-success/80" :
-                        pred.recommendation === "HOLD" ? "bg-warning/15 text-warning" :
-                        pred.recommendation === "SELL" ? "bg-critical/10 text-critical/80" :
-                        "bg-critical/20 text-critical"
+                      <span className={`text-[7px] font-mono font-bold px-1 py-0.5 ${
+                        pred.recommendation === "STRONG BUY" ? "bg-success/15 text-success border border-success/20" :
+                        pred.recommendation === "BUY" ? "bg-success/8 text-success/80 border border-success/15" :
+                        pred.recommendation === "HOLD" ? "bg-warning/10 text-warning border border-warning/15" :
+                        pred.recommendation === "SELL" ? "bg-critical/8 text-critical/80 border border-critical/15" :
+                        "bg-critical/15 text-critical border border-critical/20"
                       }`}>
                         {pred.recommendation}
                       </span>
                     )}
-                    <p className="text-[9px] text-muted-foreground leading-snug line-clamp-2 flex-1">
+                    <p className="text-[8px] text-muted-foreground leading-snug line-clamp-2 flex-1">
                       {pred.rationale}
                     </p>
                   </div>
@@ -217,22 +235,23 @@ export const AIPredictions = () => {
 
           {/* Last updated */}
           {lastUpdated && (
-            <div className="flex items-center justify-between pt-1 border-t border-border">
-              <span className="text-[8px] font-mono text-muted-foreground">
+            <div className="flex items-center justify-between pt-1.5 border-t border-border/20">
+              <span className="text-[8px] font-mono text-muted-foreground/60">
                 {t(tr["pred.updated"].en, tr["pred.updated"].ar)}: {lastUpdated.toLocaleTimeString(isArabic ? "ar-SA" : "en-US", { hour12: false })}
               </span>
-              <span className="text-[8px] font-mono text-muted-foreground">
+              <span className="text-[7px] font-mono text-primary/40 uppercase">
                 {t(tr["pred.auto_refresh"].en, tr["pred.auto_refresh"].ar)}
               </span>
             </div>
           )}
 
           {/* Legal Disclaimer */}
-          <p className="text-[7px] text-muted-foreground/60 leading-tight">
+          <p className="text-[7px] text-muted-foreground/40 leading-tight">
             {t(tr["pred.disclaimer"].en, tr["pred.disclaimer"].ar)}
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 };
