@@ -60,10 +60,10 @@
     --sidebar-ring: 192 95% 48%;
 
     /* Maven-specific tokens */
-    --maven-glass: 216 24% 7% / 0.72;
-    --maven-glass-border: 200 40% 22% / 0.4;
-    --maven-depth-shadow: 0 8px 32px hsl(216 28% 2% / 0.6), 0 2px 8px hsl(216 28% 2% / 0.4);
-    --maven-panel-glow: inset 0 0 40px hsl(192 95% 48% / 0.02);
+    --maven-glass: 220 28% 5% / 0.78;
+    --maven-glass-border: 192 40% 20% / 0.35;
+    --maven-depth-shadow: 0 8px 40px hsl(220 30% 1% / 0.7), 0 2px 12px hsl(220 30% 1% / 0.5);
+    --maven-panel-glow: inset 0 1px 0 hsl(192 95% 48% / 0.06), inset 0 0 60px hsl(192 95% 48% / 0.02);
     --maven-ambient: 192 95% 48%;
   }
 }
