@@ -439,7 +439,7 @@ const Index = () => {
               {componentVisibility.leftSidebar && (
                 <>
                 {!leftCollapsed ? (
-                    <div className="flex-shrink-0 border-r border-border/25 flex flex-col maven-glass-heavy" style={{ width: leftWidth }}>
+                    <div className="flex-shrink-0 border-r-2 border-r-primary/20 flex flex-col maven-glass-heavy" style={{ width: leftWidth }}>
                       <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border/20">
                         <button
                           onClick={() => setLayoutLocked(l => !l)}
