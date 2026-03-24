@@ -436,9 +436,9 @@ const Index = () => {
               {/* Left sidebar - resizable & collapsible */}
               {componentVisibility.leftSidebar && (
                 <>
-                  {!leftCollapsed ? (
-                    <div className="flex-shrink-0 border-r border-border flex flex-col" style={{ width: leftWidth }}>
-                      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border">
+                {!leftCollapsed ? (
+                    <div className="flex-shrink-0 border-r border-border/25 flex flex-col maven-glass-heavy" style={{ width: leftWidth }}>
+                      <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border/20">
                         <button
                           onClick={() => setLayoutLocked(l => !l)}
                           className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider transition-colors ${
