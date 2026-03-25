@@ -342,7 +342,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
                     />
                   }
                   liveModifier={sector.live_modifier}
-                  tooltip={`🔴 LIVE [${scenario.toUpperCase()}] — ${sector.name}${sector.live_modifier && sector.live_modifier !== "normal" ? ` [${sector.live_modifier.toUpperCase()}]` : ""}\nDaily: $${sectorBillions.toFixed(2)}B/day ($${(sector.daily_cost_millions * scenarioMultiplier).toFixed(0)}M)\nPer second: $${(sector.daily_cost_millions * scenarioMultiplier * 1e6 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${(c.daily_cost_millions * scenarioMultiplier / 1000).toFixed(2)}B/day`).join("\n")}` : ""}`}
+                  tooltip={`🔴 LIVE [${scenario.toUpperCase()}] — ${sector.name}${sector.live_modifier && sector.live_modifier !== "normal" ? ` [${sector.live_modifier.toUpperCase()}]` : ""}\nDaily: $${sectorDailyBillions.toFixed(2)}B/day ($${(sector.daily_cost_millions * scenarioMultiplier).toFixed(0)}M)\nPer second: $${(sector.daily_cost_millions * scenarioMultiplier * 1e6 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${(c.daily_cost_millions * scenarioMultiplier / 1000).toFixed(2)}B/day`).join("\n")}` : ""}`}
                 />
               );
             })}
