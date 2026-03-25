@@ -125,7 +125,8 @@ export default function RamiFishModal({ open, onClose, liveThreats = [] }: Props
           if (jsonStr === "[DONE]") break;
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
+            const delta = parsed.choices?.[0]?.delta;
+            const content = delta?.content || delta?.reasoning_content || "";
             if (content) {
               accumulated += content;
               setOutput(accumulated);
