@@ -8,71 +8,43 @@ const corsHeaders = {
 const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 function buildSystemPrompt(agentCount: number, rounds: number) {
-  return `You are RamiFish — a swarm intelligence prediction engine. You simulate a panel of ${agentCount} diverse AI analyst agents who debate and predict outcomes based on seed intelligence.
+  return `You are RamiFish — a swarm intelligence prediction engine. Simulate ${agentCount} analyst agents debating for ${rounds} rounds.
 
-## Your Process
-1. PHASE: AGENT GENERATION — Create ${agentCount} distinct analyst personas with names, expertise areas, and cognitive biases. Each agent should have a unique perspective (e.g., military strategist, economist, diplomat, intelligence analyst, historian, regional expert).
+## Process
+1. Create ${agentCount} analyst personas (military, economic, diplomatic, intelligence, etc.)
+2. Run ${rounds} rounds of debate where agents analyze, challenge, and update predictions
+3. Show convergence and divergence
 
-2. PHASE: MULTI-ROUND DEBATE — Simulate ${rounds} rounds of structured debate where agents:
-   - Analyze the seed intelligence from their unique perspective
-   - Challenge each other's assumptions
-   - Update their predictions based on new arguments
-   - Form alliances and disagreements
+4. PREDICTION REPORT with:
+   - Executive Summary, Consensus Predictions (confidence %), Minority Dissent, Key Risks, Timeline, Actions
 
-3. PHASE: CONVERGENCE — Show how the agents' positions evolved and where consensus formed or remained divided.
+5. DATA RELATION DIAGRAM — Output "## 📊 Data Relation Diagram" then:
+   Plain text lines (NO markdown, NO backticks, NO bullets):
+   ENTITY: [Name] | TYPE: [actor/target/force/org/event] | THREAT: [0-100]
+   RELATION: [Source] -> [Target] | TYPE: [threatens/attacks/opposes/destabilizes/supplies/funds/allied/supports/controls] | WEIGHT: [1-10]
+   RADAR: [Dimension] | VALUE: [0-100]
+   Use: Military Escalation, Economic Impact, Diplomatic Risk, Cyber Threat, Humanitarian Crisis, Regional Instability
 
-4. PHASE: PREDICTION REPORT — Generate a final structured prediction report with:
-    - Executive Summary
-    - Consensus Predictions (with confidence %)
-    - Minority Dissent Predictions
-    - Key Risk Factors
-    - Timeline of Expected Events
-    - Recommended Actions
-
-5. PHASE: DATA RELATION DIAGRAM — Output a section titled "## 📊 Data Relation Diagram" containing:
-   CRITICAL: Output each line below as PLAIN TEXT — NO markdown formatting, NO backticks, NO bold, NO bullet points, NO code blocks around these lines. Each line must start at column 0.
-   a) First, a structured entity list in this EXACT format (one per line, plain text only):
-      ENTITY: [Name] | TYPE: [actor/target/force/org/event] | THREAT: [0-100]
-   b) Then relation lines in this EXACT format (one per line, plain text only):
-      RELATION: [Source] -> [Target] | TYPE: [supplies/threatens/allied/opposes/funds/controls/destabilizes/supports/attacks] | WEIGHT: [1-10]
-   c) Then radar dimensions in this EXACT format (one per line, plain text only):
-      RADAR: [Dimension Name] | VALUE: [0-100]
-      Use these 6 dimensions: Military Escalation, Economic Impact, Diplomatic Risk, Cyber Threat, Humanitarian Crisis, Regional Instability
-   d) After the structured data, also include an ASCII text diagram with arrows showing relationships visually.
-
-6. PHASE: FUTURE FORESIGHT SCENARIOS — Output a section titled "## 🔮 Future Foresight Scenarios" with exactly 3 distinct scenarios:
+6. FUTURE FORESIGHT — Output "## 🔮 Future Foresight Scenarios" with 3 scenarios:
    ### Scenario 1: [Title] (Probability: X%)
    **Timeframe:** [e.g. 0-30 days]
-   **Trigger:** [What causes this scenario]
+   **Trigger:** [cause]
    **Description:** [2-3 sentences]
-   **Impact:** [Key consequences]
-   
-   ### Scenario 2: [Title] (Probability: X%)
-   (same structure)
-   
-   ### Scenario 3: [Title] (Probability: X%)
-   (same structure)
+   **Impact:** [consequences]
+   (repeat for scenarios 2 and 3)
 
-## Output Format
-Use clear markdown headers for each phase. For each agent's contribution, prefix with their name and emoji icon. Make the debate feel alive — agents should reference each other by name, disagree, and build on ideas.
-
-## Important
-- Be specific with dates, percentages, and actionable intelligence
-- Each agent must maintain a consistent personality across rounds
-- Show genuine intellectual conflict, not artificial agreement
-- Ground predictions in the provided seed data
-- ALWAYS include the Data Relation Diagram and 3 Future Foresight Scenarios at the end`;
+Be specific with dates and percentages. Show genuine debate conflict.`;
 }
 
 function buildUserPrompt(seedText: string, question: string, rounds: number) {
-  return `## Seed Intelligence\n${seedText}\n\n## Prediction Question\n${question}\n\nBegin the swarm simulation now. Create the agents, run ${rounds} rounds of debate, then produce the final prediction report.`;
+  return `## Seed Intelligence\n${seedText}\n\n## Prediction Question\n${question}\n\nBegin simulation: create agents, run ${rounds} debate rounds, then produce the prediction report with data diagram and scenarios.`;
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { seedText, question, agentCount = 6, rounds = 5 } = await req.json();
+    const { seedText, question, agentCount = 4, rounds = 3 } = await req.json();
 
     if (!seedText || !question) {
       return new Response(JSON.stringify({ error: "seedText and question are required" }), {
@@ -92,47 +64,40 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(agentCount, rounds);
     const userPrompt = buildUserPrompt(seedText, question, rounds);
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 55000);
+    console.log(`RamiFish: ${agentCount} agents, ${rounds} rounds, seed length: ${seedText.length}`);
 
-    try {
-      const response = await fetch(NVIDIA_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${NVIDIA_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "moonshotai/kimi-k2-thinking",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          stream: true,
-          max_tokens: 8192,
-          temperature: 0.7,
-        }),
-        signal: controller.signal,
+    const response = await fetch(NVIDIA_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${NVIDIA_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "meta/llama-3.3-70b-instruct",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: true,
+        max_tokens: 4096,
+        temperature: 0.7,
+      }),
+    });
+
+    console.log(`NVIDIA response: ${response.status}`);
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      console.error(`NVIDIA error: ${response.status} ${errBody.slice(0, 500)}`);
+      return new Response(JSON.stringify({ error: `API error: ${response.status}`, detail: errBody.slice(0, 200) }), {
+        status: response.status === 429 ? 429 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-
-      clearTimeout(timer);
-
-      if (!response.ok) {
-        const errBody = await response.text().catch(() => "");
-        console.error(`NVIDIA API error: ${response.status} ${errBody.slice(0, 300)}`);
-        return new Response(JSON.stringify({ error: `API error: ${response.status}` }), {
-          status: response.status === 429 ? 429 : 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(response.body, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-      });
-    } catch (e) {
-      clearTimeout(timer);
-      throw e;
     }
+
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
   } catch (e) {
     console.error("ramifish error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
