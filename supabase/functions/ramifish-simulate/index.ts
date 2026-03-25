@@ -117,16 +117,18 @@ serve(async (req) => {
       });
 
       clearTimeout(timer);
+      console.log(`NVIDIA response status: ${response.status}`);
 
       if (!response.ok) {
         const errBody = await response.text().catch(() => "");
-        console.error(`NVIDIA API error: ${response.status} ${errBody.slice(0, 300)}`);
-        return new Response(JSON.stringify({ error: `API error: ${response.status}` }), {
+        console.error(`NVIDIA API error: ${response.status} ${errBody.slice(0, 500)}`);
+        return new Response(JSON.stringify({ error: `API error: ${response.status}`, detail: errBody.slice(0, 200) }), {
           status: response.status === 429 ? 429 : 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      console.log("Streaming NVIDIA response to client");
       return new Response(response.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
