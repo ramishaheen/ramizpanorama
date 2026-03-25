@@ -292,14 +292,13 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
               pulse
               liveContent={
                 <LiveCostCounter
-                  dailyCostMillions={warCosts.data.total_daily_cost_billions * 1000 * scenarioMultiplier}
+                  dailyCostMillions={(warCosts.data.total_daily_cost_billions * scenarioMultiplier * 1000)}
                   startTimestamp={timestamp}
                   prefix="$"
                   suffix="B/day"
                   color="text-critical"
                   decimals={3}
-                  isBillions
-                  cumulativeBase={warCosts.data.total_daily_cost_billions * scenarioMultiplier}
+                  isBillions={false}
                 />
               }
               tooltip={`🔴 LIVE [${scenario.toUpperCase()}] — Daily cost: $${(warCosts.data.total_daily_cost_billions * scenarioMultiplier).toFixed(2)}B/day\nScenario: ${scenario} (${scenarioMultiplier}x)\n\n── Per-Sector Daily Rate ──\n${warCosts.data.sectors.map(s => `• ${s.name}: $${(s.daily_cost_millions * scenarioMultiplier).toFixed(0)}M/day`).join("\n")}${warCosts.data.country_costs?.length ? `\n\n── Per-Country Daily Cost ──\n${warCosts.data.country_costs.map(c => `🏳 ${c.country}: $${(c.daily_cost_millions * scenarioMultiplier).toFixed(0)}M/day`).join("\n")}` : ""}${warCosts.data.methodology ? `\n\nMethodology: ${warCosts.data.methodology}` : ""}`}
@@ -324,7 +323,7 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
             />
             {warCosts.data.sectors.map((sector) => {
               const SectorIcon = sectorIcons[sector.name] || DollarSign;
-              const sectorBillions = (sector.daily_cost_millions * scenarioMultiplier) / 1000;
+              const sectorDailyBillions = (sector.daily_cost_millions * scenarioMultiplier) / 1000;
               return (
                 <StatCard
                   key={sector.name}
@@ -336,15 +335,14 @@ export const StatsBar = ({ airspaceCount, vesselCount, alertCount, riskScore, ro
                       dailyCostMillions={sector.daily_cost_millions * scenarioMultiplier}
                       startTimestamp={timestamp}
                       prefix="$"
-                      suffix="B/day"
+                      suffix="M/day"
                       color="text-warning"
-                      decimals={3}
-                      isBillions
-                      cumulativeBase={sectorBillions}
+                      decimals={1}
+                      isBillions={false}
                     />
                   }
                   liveModifier={sector.live_modifier}
-                  tooltip={`🔴 LIVE [${scenario.toUpperCase()}] — ${sector.name}${sector.live_modifier && sector.live_modifier !== "normal" ? ` [${sector.live_modifier.toUpperCase()}]` : ""}\nDaily: $${sectorBillions.toFixed(2)}B/day ($${(sector.daily_cost_millions * scenarioMultiplier).toFixed(0)}M)\nPer second: $${(sector.daily_cost_millions * scenarioMultiplier * 1e6 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${(c.daily_cost_millions * scenarioMultiplier / 1000).toFixed(2)}B/day`).join("\n")}` : ""}`}
+                  tooltip={`🔴 LIVE [${scenario.toUpperCase()}] — ${sector.name}${sector.live_modifier && sector.live_modifier !== "normal" ? ` [${sector.live_modifier.toUpperCase()}]` : ""}\nDaily: $${sectorDailyBillions.toFixed(2)}B/day ($${(sector.daily_cost_millions * scenarioMultiplier).toFixed(0)}M)\nPer second: $${(sector.daily_cost_millions * scenarioMultiplier * 1e6 / 86400).toFixed(0)}/sec\n\n${sector.description}${warCosts.data?.country_costs?.length ? `\n\n── Country Impact ──\n${warCosts.data.country_costs.filter(c => c.daily_cost_millions > 0).map(c => `• ${c.country}: $${(c.daily_cost_millions * scenarioMultiplier / 1000).toFixed(2)}B/day`).join("\n")}` : ""}`}
                 />
               );
             })}

@@ -3,18 +3,19 @@ import { motion } from "framer-motion";
 
 interface LiveCostCounterProps {
   dailyCostMillions: number;
-  startTimestamp: string; // when the war cost data was generated
+  startTimestamp: string;
   prefix?: string;
   suffix?: string;
   color?: string;
   decimals?: number;
   isBillions?: boolean;
-  cumulativeBase?: number; // base cumulative value to tick up from
+  cumulativeBase?: number;
 }
 
 /**
  * Converts a daily cost rate into a real-time ticking counter.
- * Uses requestAnimationFrame for smooth 60fps updates.
+ * - isBillions=true + cumulativeBase: ticks UP from cumulativeBase at daily rate (in billions)
+ * - isBillions=false: shows static daily cost value (no ticking needed for daily rate display)
  */
 export const LiveCostCounter = ({
   dailyCostMillions,
@@ -30,28 +31,24 @@ export const LiveCostCounter = ({
   const rafRef = useRef<number>(0);
   const startTimeRef = useRef<number>(Date.now());
 
-  // Cost per millisecond
-  const costPerMs = dailyCostMillions / (24 * 60 * 60 * 1000);
-  // For billions mode: convert daily millions to daily billions rate
-  const costPerMsBillions = dailyCostMillions / (24 * 60 * 60 * 1000) / 1000;
-
   useEffect(() => {
-    const dataTime = new Date(startTimestamp).getTime();
     startTimeRef.current = Date.now();
+
+    if (!isBillions) {
+      // For daily rate display, just show the static value
+      setDisplayValue(dailyCostMillions);
+      return;
+    }
+
+    // For cumulative display: tick up from cumulativeBase at dailyCostMillions rate
+    // dailyCostMillions is in millions, convert to billions per millisecond
+    const dailyBillions = dailyCostMillions / 1000;
+    const billionsPerMs = dailyBillions / (24 * 60 * 60 * 1000);
 
     const tick = () => {
       const elapsed = Date.now() - startTimeRef.current;
-
-      if (isBillions) {
-        // Accumulate from cumulative base in billions
-        const added = elapsed * costPerMsBillions;
-        setDisplayValue(cumulativeBase + added);
-      } else {
-        // Show daily cost ticking up from 0 at rate
-        const added = elapsed * costPerMs;
-        setDisplayValue(dailyCostMillions + added);
-      }
-
+      const added = elapsed * billionsPerMs;
+      setDisplayValue(cumulativeBase + added);
       rafRef.current = requestAnimationFrame(tick);
     };
 
@@ -60,7 +57,7 @@ export const LiveCostCounter = ({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [dailyCostMillions, startTimestamp, costPerMs, costPerMsBillions, isBillions, cumulativeBase]);
+  }, [dailyCostMillions, startTimestamp, isBillions, cumulativeBase]);
 
   const formatted = isBillions
     ? displayValue.toFixed(decimals)
