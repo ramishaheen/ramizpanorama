@@ -5,6 +5,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+
+// Ordered by capability for RamiFish swarm reasoning
+const MODELS = [
+  "moonshotai/kimi-k2-thinking",
+  "deepseek-ai/deepseek-r1",
+  "meta/llama-3.3-70b-instruct",
+];
+
 function buildSystemPrompt(agentCount: number, rounds: number) {
   return `You are RamiFish — a swarm intelligence prediction engine. You simulate a panel of ${agentCount} diverse AI analyst agents who debate and predict outcomes based on seed intelligence.
 
@@ -66,44 +75,47 @@ function buildUserPrompt(seedText: string, question: string, rounds: number) {
   return `## Seed Intelligence\n${seedText}\n\n## Prediction Question\n${question}\n\nBegin the swarm simulation now. Create the agents, run ${rounds} rounds of debate, then produce the final prediction report.`;
 }
 
-async function callLovableAI(systemPrompt: string, userPrompt: string, apiKey: string) {
-  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "moonshotai/kimi-k2-thinking",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: true,
-    }),
-  });
-  return response;
-}
+async function tryModel(model: string, systemPrompt: string, userPrompt: string, apiKey: string, timeoutMs = 55000): Promise<Response | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-async function callGeminiDirect(systemPrompt: string, userPrompt: string, apiKey: string) {
-  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "moonshotai/kimi-k2-thinking",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      stream: true,
-    }),
-  });
-  return response;
-}
+  try {
+    const resp = await fetch(NVIDIA_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: true,
+        max_tokens: 8192,
+        temperature: 0.7,
+      }),
+      signal: controller.signal,
+    });
 
+    clearTimeout(timer);
+
+    if (resp.ok) {
+      console.log(`RamiFish: model ${model} succeeded, streaming...`);
+      return resp;
+    }
+
+    const errBody = await resp.text().catch(() => "");
+    console.warn(`RamiFish: model ${model} failed (${resp.status}): ${errBody.slice(0, 200)}`);
+    return null;
+  } catch (e) {
+    clearTimeout(timer);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`RamiFish: model ${model} exception: ${msg}`);
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -121,74 +133,43 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(agentCount, rounds);
     const userPrompt = buildUserPrompt(seedText, question, rounds);
 
-    // 1) Try dedicated RamiFish Gemini key first
-    const RAMIFISH_KEY = Deno.env.get("RAMIFISH_GEMINI_KEY");
-    if (RAMIFISH_KEY) {
-      console.log("RamiFish: trying dedicated Gemini key...");
-      try {
-        const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, RAMIFISH_KEY);
-        if (geminiResp.ok) {
-          console.log("RamiFish: dedicated Gemini key succeeded, streaming...");
-          return new Response(geminiResp.body, {
+    // Collect all available API keys (deduplicated)
+    const keys = new Set<string>();
+    const nvidiaKey = Deno.env.get("NVIDIA_API_KEY");
+    const ramifishKey = Deno.env.get("RAMIFISH_GEMINI_KEY");
+    if (nvidiaKey) keys.add(nvidiaKey);
+    if (ramifishKey) keys.add(ramifishKey);
+
+    if (keys.size === 0) {
+      return new Response(JSON.stringify({ error: "No AI API keys configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Try each model with each key until one succeeds
+    for (const model of MODELS) {
+      for (const key of keys) {
+        console.log(`RamiFish: trying ${model}...`);
+        const resp = await tryModel(model, systemPrompt, userPrompt, key);
+        if (resp) {
+          return new Response(resp.body, {
             headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
           });
         }
-        const errText = await geminiResp.text();
-        console.warn(`RamiFish: dedicated Gemini failed (${geminiResp.status}), falling back. ${errText.slice(0, 200)}`);
-      } catch (e) {
-        console.warn("RamiFish: dedicated Gemini exception, falling back:", e);
       }
     }
 
-    // 2) Fallback: Lovable AI gateway
-    const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
-    if (NVIDIA_API_KEY) {
-      console.log("RamiFish: trying Lovable AI gateway...");
-      try {
-        const response = await callLovableAI(systemPrompt, userPrompt, NVIDIA_API_KEY);
-        if (response.ok) {
-          console.log("RamiFish: Lovable AI succeeded, streaming...");
-          return new Response(response.body, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
-        }
-        const body = await response.text();
-        console.warn(`RamiFish: Lovable AI failed (${response.status}), trying shared Gemini. ${body.slice(0, 200)}`);
-      } catch (e) {
-        console.warn("RamiFish: Lovable AI exception, trying shared Gemini:", e);
-      }
-    }
-
-    // 3) Last resort: retry with NVIDIA key
-    const retryKeys = [
-      Deno.env.get("NVIDIA_API_KEY"),
-    ].filter(Boolean) as string[];
-
-    for (const key of retryKeys) {
-      console.log("RamiFish: trying shared Gemini key...");
-      try {
-        const geminiResp = await callGeminiDirect(systemPrompt, userPrompt, key);
-        if (geminiResp.ok) {
-          console.log("RamiFish: shared Gemini key succeeded, streaming...");
-          return new Response(geminiResp.body, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
-        }
-        const errText = await geminiResp.text();
-        console.warn(`RamiFish: shared Gemini failed (${geminiResp.status}), trying next. ${errText.slice(0, 200)}`);
-      } catch (e) {
-        console.warn("RamiFish: shared Gemini exception, trying next:", e);
-      }
-    }
-
-    // All providers exhausted
-    return new Response(JSON.stringify({ error: "All AI providers are temporarily rate-limited. Please try again in a minute." }), {
-      status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // All exhausted
+    return new Response(JSON.stringify({ error: "All AI models are temporarily unavailable. Please try again in a minute." }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("ramifish error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
