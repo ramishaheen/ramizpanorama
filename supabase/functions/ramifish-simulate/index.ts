@@ -5,14 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-
-// Ordered by capability for RamiFish swarm reasoning
-const MODELS = [
-  "moonshotai/kimi-k2-thinking",
-  "deepseek-ai/deepseek-r1",
-  "meta/llama-3.3-70b-instruct",
-];
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 function buildSystemPrompt(agentCount: number, rounds: number) {
   return `You are RamiFish — a swarm intelligence prediction engine. You simulate a panel of ${agentCount} diverse AI analyst agents who debate and predict outcomes based on seed intelligence.
@@ -75,48 +68,6 @@ function buildUserPrompt(seedText: string, question: string, rounds: number) {
   return `## Seed Intelligence\n${seedText}\n\n## Prediction Question\n${question}\n\nBegin the swarm simulation now. Create the agents, run ${rounds} rounds of debate, then produce the final prediction report.`;
 }
 
-async function tryModel(model: string, systemPrompt: string, userPrompt: string, apiKey: string, timeoutMs = 55000): Promise<Response | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const resp = await fetch(NVIDIA_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: true,
-        max_tokens: 8192,
-        temperature: 0.7,
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timer);
-
-    if (resp.ok) {
-      console.log(`RamiFish: model ${model} succeeded, streaming...`);
-      return resp;
-    }
-
-    const errBody = await resp.text().catch(() => "");
-    console.warn(`RamiFish: model ${model} failed (${resp.status}): ${errBody.slice(0, 200)}`);
-    return null;
-  } catch (e) {
-    clearTimeout(timer);
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`RamiFish: model ${model} exception: ${msg}`);
-    return null;
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -130,40 +81,57 @@ serve(async (req) => {
       });
     }
 
-    const systemPrompt = buildSystemPrompt(agentCount, rounds);
-    const userPrompt = buildUserPrompt(seedText, question, rounds);
-
-    // Collect all available API keys (deduplicated)
-    const keys = new Set<string>();
-    const nvidiaKey = Deno.env.get("NVIDIA_API_KEY");
-    const ramifishKey = Deno.env.get("RAMIFISH_GEMINI_KEY");
-    if (nvidiaKey) keys.add(nvidiaKey);
-    if (ramifishKey) keys.add(ramifishKey);
-
-    if (keys.size === 0) {
-      return new Response(JSON.stringify({ error: "No AI API keys configured" }), {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Try each model with each key until one succeeds
-    for (const model of MODELS) {
-      for (const key of keys) {
-        console.log(`RamiFish: trying ${model}...`);
-        const resp = await tryModel(model, systemPrompt, userPrompt, key);
-        if (resp) {
-          return new Response(resp.body, {
-            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-          });
-        }
+    const systemPrompt = buildSystemPrompt(agentCount, rounds);
+    const userPrompt = buildUserPrompt(seedText, question, rounds);
+
+    const response = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-pro",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: true,
+        reasoning: { effort: "high" },
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limited — please try again in a moment." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds in Settings → Workspace → Usage." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const errBody = await response.text().catch(() => "");
+      console.error(`RamiFish AI gateway error: ${response.status} ${errBody.slice(0, 300)}`);
+      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // All exhausted
-    return new Response(JSON.stringify({ error: "All AI models are temporarily unavailable. Please try again in a minute." }), {
-      status: 429,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(response.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
     console.error("ramifish error:", e);
