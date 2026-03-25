@@ -6,6 +6,7 @@ const corsHeaders = {
 };
 
 const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const MODEL = "meta/llama-3.3-70b-instruct";
 
 function buildSystemPrompt(agentCount: number, rounds: number) {
   return `You are RamiFish — a swarm intelligence prediction engine. You simulate a panel of ${agentCount} diverse AI analyst agents who debate and predict outcomes based on seed intelligence.
