@@ -94,7 +94,7 @@ serve(async (req) => {
     const userPrompt = buildUserPrompt(seedText, question, rounds);
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 55000);
+    const timer = setTimeout(() => controller.abort(), 120000);
 
     try {
       const response = await fetch(NVIDIA_URL, {
